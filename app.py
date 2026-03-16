@@ -129,6 +129,7 @@ from routes import email_tracking as email_tracking_route
 from routes.contacts import contacts_bp
 from routes.tasks import tasks_bp
 from routes import custom_fields as custom_fields_route
+from routes.scheduled_messages import scheduled_messages_bp
 from services import portal_notification_service  # noqa: F401
 
 db.init_app(app)
@@ -148,6 +149,7 @@ app.register_blueprint(email_tracking_route.bp)
 app.register_blueprint(contacts_bp)
 app.register_blueprint(tasks_bp)
 app.register_blueprint(custom_fields_route.bp)
+app.register_blueprint(scheduled_messages_bp)
 
 # Login endpoint'ine rate limit uygula
 app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
