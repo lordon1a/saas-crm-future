@@ -123,6 +123,27 @@
         </div>
     </main>
 
+    <!-- Company Detail Modal -->
+    <div id="companyDetailModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800" id="companyDetailName">Şirket Detayı</h3>
+                    <p class="text-sm text-slate-500 mt-1" id="companyDetailIndustry"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.location.href='/contacts?company_id=' + currentCompany.id" class="px-4 py-2 bg-brand-50 text-brand-600 rounded-xl text-sm font-semibold hover:bg-brand-100 transition-colors">
+                        <i class="fas fa-users mr-2"></i>Kişileri Gör
+                    </button>
+                    <button onclick="closeCompanyDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-8">
+                <div id="companyDetailContent" class="space-y-6"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- New Company Modal -->
     <div id="newCompanyModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -253,8 +274,194 @@
             });
         }
 
+        let currentCompany = null;
+        let companyCustomFields = [];
+
         function viewCompany(id) {
-            window.location.href = `/contacts?company_id=${id}`;
+            const company = allCompanies.find(c => c.id === id);
+            if (!company) return;
+            
+            currentCompany = company;
+            
+            // Show modal
+            const modal = document.getElementById('companyDetailModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Set header
+            document.getElementById('companyDetailName').textContent = company.name;
+            document.getElementById('companyDetailIndustry').textContent = company.industry || 'Sektör belirtilmemiş';
+            
+            // Load custom fields and render
+            loadCompanyCustomFields(id);
+        }
+
+        function closeCompanyDetailModal() {
+            document.getElementById('companyDetailModal').classList.add('hidden');
+            document.getElementById('companyDetailModal').classList.remove('flex');
+            currentCompany = null;
+        }
+
+        async function loadCompanyCustomFields(companyId) {
+            try {
+                // Load custom field definitions
+                const fieldsRes = await fetch('/api/v1/custom-fields?entity_type=company');
+                const fields = await fieldsRes.json();
+                
+                // Load custom field values
+                const valuesRes = await fetch(`/api/v1/custom-fields/values/company/${companyId}`);
+                const values = await valuesRes.json();
+                
+                companyCustomFields = fields;
+                renderCompanyDetail(values);
+            } catch (e) {
+                console.error(e);
+                renderCompanyDetail({});
+            }
+        }
+
+        function renderCompanyDetail(customFieldValues) {
+            const container = document.getElementById('companyDetailContent');
+            
+            let html = `
+                <div class="bg-slate-50 rounded-xl p-4 space-y-3">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Temel Bilgiler</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-slate-400 mb-1">Website</p>
+                            <p class="text-sm text-slate-700">${currentCompany.website ? `<a href="${currentCompany.website}" target="_blank" class="text-brand-600 hover:underline">${currentCompany.website}</a>` : '-'}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 mb-1">Telefon</p>
+                            <p class="text-sm text-slate-700">${currentCompany.phone || '-'}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 mb-1">Sektör</p>
+                            <p class="text-sm text-slate-700">${currentCompany.industry || '-'}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 mb-1">Çalışan Sayısı</p>
+                            <p class="text-sm text-slate-700">${currentCompany.size || '-'}</p>
+                        </div>
+                        ${currentCompany.address ? `
+                        <div class="col-span-2">
+                            <p class="text-xs text-slate-400 mb-1">Adres</p>
+                            <p class="text-sm text-slate-700">${currentCompany.address}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Custom fields section
+            if (companyCustomFields.length > 0) {
+                html += `
+                    <div class="bg-slate-50 rounded-xl p-4 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Özel Alanlar</h4>
+                        <div class="space-y-3">
+                `;
+                
+                companyCustomFields.forEach(field => {
+                    const value = customFieldValues[field.field_name];
+                    html += renderCustomFieldInput(field, value);
+                });
+                
+                html += `
+                        </div>
+                        <button onclick="saveCompanyCustomFields()" class="w-full mt-4 py-2.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">
+                            <i class="fas fa-save mr-2"></i>Özel Alanları Kaydet
+                        </button>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function renderCustomFieldInput(field, value) {
+            const fieldId = `custom_field_${field.id}`;
+            let input = '';
+            
+            if (field.field_type === 'text') {
+                input = `<input type="text" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'number') {
+                input = `<input type="number" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'date') {
+                input = `<input type="date" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'checkbox') {
+                const checked = value === true || value === 'true' ? 'checked' : '';
+                input = `<label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="${fieldId}" ${checked} class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                    <span class="text-sm text-slate-600">Evet</span>
+                </label>`;
+            } else if (field.field_type === 'dropdown') {
+                const options = field.options ? JSON.parse(field.options) : [];
+                input = `<select id="${fieldId}" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>
+                    <option value="">Seçiniz</option>
+                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>`;
+            } else if (field.field_type === 'multi_select') {
+                const options = field.options ? JSON.parse(field.options) : [];
+                const selectedValues = Array.isArray(value) ? value : [];
+                input = `<div class="space-y-2">
+                    ${options.map(opt => {
+                        const checked = selectedValues.includes(opt) ? 'checked' : '';
+                        return `<label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="${fieldId}" value="${opt}" ${checked} class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                            <span class="text-sm text-slate-600">${opt}</span>
+                        </label>`;
+                    }).join('')}
+                </div>`;
+            }
+            
+            return `
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        ${field.field_name}${field.is_required ? ' *' : ''}
+                    </label>
+                    ${input}
+                </div>
+            `;
+        }
+
+        async function saveCompanyCustomFields() {
+            if (!currentCompany) return;
+            
+            try {
+                const promises = [];
+                
+                for (const field of companyCustomFields) {
+                    const fieldId = `custom_field_${field.id}`;
+                    let value;
+                    
+                    if (field.field_type === 'checkbox') {
+                        value = document.getElementById(fieldId)?.checked || false;
+                    } else if (field.field_type === 'multi_select') {
+                        const checkboxes = document.querySelectorAll(`input[name="${fieldId}"]:checked`);
+                        value = Array.from(checkboxes).map(cb => cb.value);
+                    } else {
+                        value = document.getElementById(fieldId)?.value || '';
+                    }
+                    
+                    promises.push(
+                        fetch('/api/v1/custom-fields/values', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                custom_field_id: field.id,
+                                entity_id: currentCompany.id,
+                                value: value
+                            })
+                        })
+                    );
+                }
+                
+                await Promise.all(promises);
+                showToast('Özel alanlar kaydedildi', 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('Kaydetme başarısız', 'error');
+            }
         }
 
         async function exportCompanies() {
@@ -337,6 +544,7 @@
 
         window.onclick = (e) => {
             if (e.target.id === 'newCompanyModal') closeNewCompanyModal();
+            if (e.target.id === 'companyDetailModal') closeCompanyDetailModal();
         }
 
         loadCompanies();

@@ -127,6 +127,9 @@
                 <button data-deal-tab="overview" onclick="switchDealTab('overview')" class="py-3 text-sm font-semibold border-b-2 border-brand-600 text-brand-600 transition-colors">
                     <i class="fas fa-info-circle mr-1"></i> Genel Bakış
                 </button>
+                <button data-deal-tab="custom-fields" onclick="switchDealTab('custom-fields')" class="py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                    <i class="fas fa-sliders-h mr-1"></i> Özel Alanlar
+                </button>
                 <button data-deal-tab="drive" onclick="switchDealTab('drive')" class="py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
                     <i class="fab fa-google-drive mr-1"></i> Ekli Dosyalar (Drive)
                 </button>
@@ -149,6 +152,11 @@
                     <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
                         <p class="text-xs text-blue-600"><i class="fas fa-info-circle mr-1"></i> Daha fazla detay yakında eklenecek (notlar, aktiviteler, vb.)</p>
                     </div>
+                </div>
+
+                <!-- Custom Fields Tab -->
+                <div data-deal-content="custom-fields" class="p-8 hidden">
+                    <div id="dealCustomFieldsContent" class="space-y-4"></div>
                 </div>
 
                 <!-- Drive Files Tab -->
@@ -320,6 +328,7 @@
 
         let currentDeal = null;
         let driveAttachments = [];
+        let dealCustomFields = [];
 
         function showDealDetails(dealId) {
             const deal = deals.find(d => d.id === dealId);
@@ -345,6 +354,7 @@
             
             // Load drive attachments
             loadDriveAttachments(dealId);
+            loadDealCustomFields(dealId);
         }
 
         function closeDealModal() {
@@ -676,6 +686,149 @@
 
         // Load on page load
         loadPipeline();
+
+        // Modal click outside handlers
+        window.onclick = (e) => {
+            if (e.target.id === 'dealModal') closeDealModal();
+            if (e.target.id === 'drivePickerModal') closeDrivePickerModal();
+        };
+
+        // Custom Fields for Deals
+        async function loadDealCustomFields(dealId) {
+            try {
+                // Load custom field definitions
+                const fieldsRes = await fetch('/api/v1/custom-fields?entity_type=deal');
+                const fields = await fieldsRes.json();
+                
+                // Load custom field values
+                const valuesRes = await fetch(`/api/v1/custom-fields/values/deal/${dealId}`);
+                const values = await valuesRes.json();
+                
+                dealCustomFields = fields;
+                renderDealCustomFields(values);
+            } catch (e) {
+                console.error(e);
+                renderDealCustomFields({});
+            }
+        }
+
+        function renderDealCustomFields(customFieldValues) {
+            const container = document.getElementById('dealCustomFieldsContent');
+            
+            if (dealCustomFields.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-sliders-h text-slate-400 text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">Henüz özel alan tanımlanmamış</p>
+                        <p class="text-xs text-slate-400 mt-1">Ayarlar > Özel Alanlar bölümünden deal için özel alan ekleyebilirsiniz</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="space-y-4">';
+            
+            dealCustomFields.forEach(field => {
+                const value = customFieldValues[field.field_name];
+                html += renderCustomFieldInput(field, value);
+            });
+            
+            html += `
+                <button onclick="saveDealCustomFields()" class="w-full mt-4 py-2.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">
+                    <i class="fas fa-save mr-2"></i>Özel Alanları Kaydet
+                </button>
+            </div>`;
+            
+            container.innerHTML = html;
+        }
+
+        function renderCustomFieldInput(field, value) {
+            const fieldId = `custom_field_${field.id}`;
+            let input = '';
+            
+            if (field.field_type === 'text') {
+                input = `<input type="text" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'number') {
+                input = `<input type="number" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'date') {
+                input = `<input type="date" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'checkbox') {
+                const checked = value === true || value === 'true' ? 'checked' : '';
+                input = `<label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="${fieldId}" ${checked} class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                    <span class="text-sm text-slate-600">Evet</span>
+                </label>`;
+            } else if (field.field_type === 'dropdown') {
+                const options = field.options ? JSON.parse(field.options) : [];
+                input = `<select id="${fieldId}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>
+                    <option value="">Seçiniz</option>
+                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>`;
+            } else if (field.field_type === 'multi_select') {
+                const options = field.options ? JSON.parse(field.options) : [];
+                const selectedValues = Array.isArray(value) ? value : [];
+                input = `<div class="space-y-2">
+                    ${options.map(opt => {
+                        const checked = selectedValues.includes(opt) ? 'checked' : '';
+                        return `<label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="${fieldId}" value="${opt}" ${checked} class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                            <span class="text-sm text-slate-600">${opt}</span>
+                        </label>`;
+                    }).join('')}
+                </div>`;
+            }
+            
+            return `
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        ${field.field_name}${field.is_required ? ' *' : ''}
+                    </label>
+                    ${input}
+                </div>
+            `;
+        }
+
+        async function saveDealCustomFields() {
+            if (!currentDeal) return;
+            
+            try {
+                const promises = [];
+                
+                for (const field of dealCustomFields) {
+                    const fieldId = `custom_field_${field.id}`;
+                    let value;
+                    
+                    if (field.field_type === 'checkbox') {
+                        value = document.getElementById(fieldId)?.checked || false;
+                    } else if (field.field_type === 'multi_select') {
+                        const checkboxes = document.querySelectorAll(`input[name="${fieldId}"]:checked`);
+                        value = Array.from(checkboxes).map(cb => cb.value);
+                    } else {
+                        value = document.getElementById(fieldId)?.value || '';
+                    }
+                    
+                    promises.push(
+                        fetch('/api/v1/custom-fields/values', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                custom_field_id: field.id,
+                                entity_id: currentDeal.id,
+                                value: value
+                            })
+                        })
+                    );
+                }
+                
+                await Promise.all(promises);
+                showToast('✓ Özel alanlar kaydedildi', 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('✗ Kaydetme başarısız', 'error');
+            }
+        }
     </script>
 </body>
 </html>
