@@ -605,6 +605,73 @@
                                 </div>
                             </div>
                         </section>
+
+                        <!-- Email Tracking Dashboard -->
+                        <section id="emailTrackingSection" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">E-posta Takibi</h3>
+                                <button onclick="refreshEmailTracking()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                    <i class="fas fa-sync-alt"></i> Yenile
+                                </button>
+                            </div>
+                            
+                            <!-- Stats Cards -->
+                            <div class="p-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Gönderilen</span>
+                                            <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-paper-plane text-blue-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800" id="statTotalSent">0</div>
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Açılan</span>
+                                            <div class="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-envelope-open text-emerald-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800" id="statTotalOpened">0</div>
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Açılma Oranı</span>
+                                            <div class="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-percentage text-purple-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800"><span id="statOpenRate">0</span>%</div>
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Tıklama Oranı</span>
+                                            <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-mouse-pointer text-orange-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800"><span id="statClickRate">0</span>%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tracked Emails List -->
+                            <div class="p-6">
+                                <div id="emailTrackingList" class="space-y-3"></div>
+                                <div id="emailTrackingEmpty" class="hidden text-center py-12">
+                                    <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-envelope text-slate-400 text-2xl"></i>
+                                    </div>
+                                    <p class="text-sm font-semibold text-slate-600">Henüz takip edilen e-posta yok</p>
+                                    <p class="text-xs text-slate-400 mt-1">Gmail sync ile gönderilen e-postalar otomatik olarak takip edilir</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                 </div>
@@ -1306,6 +1373,7 @@
                         document.getElementById('googleEmailsSection').classList.remove('hidden');
                         document.getElementById('googleEventsSection').classList.remove('hidden');
                         document.getElementById('googleDriveSection').classList.remove('hidden');
+                        document.getElementById('emailTrackingSection').classList.remove('hidden');
                         
                         // Load synced data
                         loadGoogleEmails();
@@ -1525,6 +1593,10 @@
                     
                     // Show Drive section
                     document.getElementById('googleDriveSection').classList.remove('hidden');
+                    document.getElementById('emailTrackingSection').classList.remove('hidden');
+                    
+                    // Load email tracking
+                    await loadEmailTracking();
                     
                 } catch (e) {
                     console.error('Load Drive files error:', e);
@@ -1593,6 +1665,156 @@
                     });
                 }
             });
+
+            // ═══════════════════════════════════════════════════════════════
+            // EMAIL TRACKING
+            // ═══════════════════════════════════════════════════════════════
+
+            async function loadEmailTracking() {
+                try {
+                    const data = await api('/api/settings/google/email-tracking');
+                    
+                    // Update stats
+                    document.getElementById('statTotalSent').textContent = data.stats.total_sent;
+                    document.getElementById('statTotalOpened').textContent = data.stats.total_opened;
+                    document.getElementById('statOpenRate').textContent = data.stats.open_rate;
+                    document.getElementById('statClickRate').textContent = data.stats.click_rate;
+                    
+                    // Render emails list
+                    const list = document.getElementById('emailTrackingList');
+                    const empty = document.getElementById('emailTrackingEmpty');
+                    
+                    if (data.emails.length === 0) {
+                        list.classList.add('hidden');
+                        empty.classList.remove('hidden');
+                        return;
+                    }
+                    
+                    list.classList.remove('hidden');
+                    empty.classList.add('hidden');
+                    
+                    list.innerHTML = data.emails.map(email => {
+                        const sentDate = email.sent_at ? new Date(email.sent_at).toLocaleString('tr-TR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : 'Bilinmiyor';
+                        
+                        const openedDate = email.opened_at ? new Date(email.opened_at).toLocaleString('tr-TR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : null;
+                        
+                        return `
+                            <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-brand-300 transition-all group">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center ${email.opened ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}">
+                                    <i class="fas ${email.opened ? 'fa-envelope-open' : 'fa-envelope'}"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <p class="text-sm font-semibold text-slate-800 truncate">${email.subject || '(Konu yok)'}</p>
+                                        ${email.opened ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">Açıldı</span>' : ''}
+                                    </div>
+                                    <div class="flex items-center gap-3 text-xs text-slate-500">
+                                        <span><i class="fas fa-user text-[10px] mr-1"></i>${email.recipient_email}</span>
+                                        <span><i class="fas fa-clock text-[10px] mr-1"></i>${sentDate}</span>
+                                        ${email.opened ? `<span class="text-emerald-600"><i class="fas fa-eye text-[10px] mr-1"></i>${email.open_count}x açıldı</span>` : ''}
+                                        ${email.click_count > 0 ? `<span class="text-orange-600"><i class="fas fa-mouse-pointer text-[10px] mr-1"></i>${email.click_count}x tıklandı</span>` : ''}
+                                    </div>
+                                </div>
+                                <button onclick="viewEmailTrackingDetail('${email.tracking_id}')" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100">
+                                    <i class="fas fa-chart-line mr-1"></i> Detay
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                } catch (e) {
+                    console.error('Email tracking load error:', e);
+                }
+            }
+
+            async function refreshEmailTracking() {
+                await loadEmailTracking();
+                showToast('E-posta takibi yenilendi');
+            }
+
+            async function viewEmailTrackingDetail(trackingId) {
+                try {
+                    const data = await api(`/api/settings/google/email-tracking/${trackingId}`);
+                    
+                    let clicksHtml = '';
+                    if (data.clicks && data.clicks.length > 0) {
+                        clicksHtml = `
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <p class="text-xs font-bold text-slate-600 mb-2">Tıklanan Linkler:</p>
+                                <div class="space-y-2">
+                                    ${data.clicks.map(click => `
+                                        <div class="p-2 bg-slate-50 rounded-lg">
+                                            <p class="text-xs text-slate-700 truncate">${click.url}</p>
+                                            <p class="text-[10px] text-slate-400 mt-1">${new Date(click.clicked_at).toLocaleString('tr-TR')}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    const modalHtml = `
+                        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4" onclick="this.remove()">
+                            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden" onclick="event.stopPropagation()">
+                                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-slate-800 text-lg">E-posta Takip Detayı</h3>
+                                        <p class="text-xs text-slate-400 mt-0.5">${data.recipient_email}</p>
+                                    </div>
+                                    <button onclick="this.closest('.fixed').remove()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="p-8 space-y-4">
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">Konu</p>
+                                        <p class="text-sm text-slate-700">${data.subject || '(Konu yok)'}</p>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Gönderilme</p>
+                                            <p class="text-sm text-slate-700">${data.sent_at ? new Date(data.sent_at).toLocaleString('tr-TR') : 'Bilinmiyor'}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">İlk Açılma</p>
+                                            <p class="text-sm text-slate-700">${data.opened_at ? new Date(data.opened_at).toLocaleString('tr-TR') : 'Açılmadı'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                            <p class="text-xs font-bold text-emerald-600 uppercase mb-1">Açılma Sayısı</p>
+                                            <p class="text-2xl font-bold text-emerald-700">${data.open_count}</p>
+                                        </div>
+                                        <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                                            <p class="text-xs font-bold text-orange-600 uppercase mb-1">Tıklama Sayısı</p>
+                                            <p class="text-2xl font-bold text-orange-700">${data.click_count}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    ${clicksHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                } catch (e) {
+                    showToast('Detay yüklenemedi', 'error');
+                }
+            }
 
             // ═══════════════════════════════════════════════════════════════
             // INIT

@@ -315,6 +315,34 @@ def seed_demo_data():
         
         logger.info(f"Created {len(custom_fields_data)} custom fields")
         
+        # 13. EMAIL TRACKING (Demo)
+        logger.info("Creating email tracking data...")
+        from models_crm import EmailTracking
+        from services.email_tracking_service import EmailTrackingService
+        
+        # Create some tracked emails
+        for i, contact in enumerate(contacts[:3]):
+            tracking = EmailTrackingService.create_tracking(
+                workspace_id=workspace_id,
+                recipient_email=contact.email,
+                subject=f"Demo Email {i+1}: Teklif Sunumu",
+                contact_id=contact.id
+            )
+            tracking.sent_at = datetime.now() - timedelta(days=i+1)
+            
+            # Simulate opens and clicks
+            if i < 2:  # First 2 emails are opened
+                tracking.opened_at = datetime.now() - timedelta(days=i+1, hours=2)
+                tracking.open_count = i + 2
+                tracking.last_opened_at = datetime.now() - timedelta(hours=i+5)
+            
+            if i == 0:  # First email has clicks
+                tracking.click_count = 3
+                tracking.last_clicked_at = datetime.now() - timedelta(hours=3)
+        
+        db.session.commit()
+        logger.info("Created 3 email tracking records")
+        
         # COMMIT ALL
         db.session.commit()
         

@@ -370,3 +370,82 @@ def delete_drive_attachment(attachment_id):
     db.session.commit()
     
     return jsonify({'status': 'deleted'}), 200
+
+
+# ============================================================================
+# EMAIL TRACKING ENDPOINTS
+# ============================================================================
+
+@bp.route('/api/settings/google/email-tracking', methods=['GET'])
+@_agent_session_required
+def get_email_tracking():
+    """Get email tracking statistics"""
+    from models_crm import EmailTracking
+    from sqlalchemy import func
+    
+    workspace_id = session.get('workspace_id')
+    limit = request.args.get('limit', 50, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    # Get tracked emails
+    tracked_emails = EmailTracking.query.filter_by(
+        workspace_id=workspace_id
+    ).order_by(EmailTracking.sent_at.desc()).limit(limit).offset(offset).all()
+    
+    # Get statistics
+    total_sent = EmailTracking.query.filter_by(workspace_id=workspace_id).count()
+    total_opened = EmailTracking.query.filter_by(workspace_id=workspace_id).filter(
+        EmailTracking.opened_at.isnot(None)
+    ).count()
+    total_clicked = EmailTracking.query.filter_by(workspace_id=workspace_id).filter(
+        EmailTracking.click_count > 0
+    ).count()
+    
+    open_rate = (total_opened / total_sent * 100) if total_sent > 0 else 0
+    click_rate = (total_clicked / total_sent * 100) if total_sent > 0 else 0
+    
+    return jsonify({
+        'emails': [{
+            'id': e.id,
+            'tracking_id': e.tracking_id,
+            'recipient_email': e.recipient_email,
+            'subject': e.subject,
+            'sent_at': e.sent_at.isoformat() if e.sent_at else None,
+            'opened': e.opened_at is not None,
+            'opened_at': e.opened_at.isoformat() if e.opened_at else None,
+            'open_count': e.open_count,
+            'click_count': e.click_count,
+            'last_opened_at': e.last_opened_at.isoformat() if e.last_opened_at else None,
+            'last_clicked_at': e.last_clicked_at.isoformat() if e.last_clicked_at else None
+        } for e in tracked_emails],
+        'stats': {
+            'total_sent': total_sent,
+            'total_opened': total_opened,
+            'total_clicked': total_clicked,
+            'open_rate': round(open_rate, 1),
+            'click_rate': round(click_rate, 1)
+        },
+        'total': total_sent
+    }), 200
+
+
+@bp.route('/api/settings/google/email-tracking/<tracking_id>', methods=['GET'])
+@_agent_session_required
+def get_email_tracking_detail(tracking_id):
+    """Get detailed tracking info for a specific email"""
+    from services.email_tracking_service import EmailTrackingService
+    
+    workspace_id = session.get('workspace_id')
+    
+    # Verify ownership
+    from models_crm import EmailTracking
+    tracking = EmailTracking.query.filter_by(
+        tracking_id=tracking_id,
+        workspace_id=workspace_id
+    ).first()
+    
+    if not tracking:
+        return jsonify({'error': 'Tracking not found'}), 404
+    
+    stats = EmailTrackingService.get_tracking_stats(tracking_id)
+    return jsonify(stats), 200
