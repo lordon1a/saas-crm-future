@@ -320,6 +320,43 @@ with app.app_context():
     except Exception as e:
         logger.warning('Drive attachments migration skip: %s', e)
     
+    # Auto-seed demo user for production
+    try:
+        from models import User, Workspace
+        from services.auth_manager import AuthManager
+        
+        # Check if any user exists
+        user_count = User.query.count()
+        
+        if user_count == 0:
+            logger.info('🌱 No users found, creating demo user...')
+            
+            # Create demo workspace
+            demo_workspace = Workspace(company_name='Demo Company')
+            db.session.add(demo_workspace)
+            db.session.flush()
+            
+            # Create demo admin user
+            password_hash = AuthManager.hash_password('admin123')
+            demo_user = User(
+                workspace_id=demo_workspace.id,
+                name='Demo Admin',
+                email='admin@example.com',
+                password_hash=password_hash,
+                role='admin'
+            )
+            db.session.add(demo_user)
+            db.session.commit()
+            
+            logger.info('✅ Demo user created!')
+            logger.info('   Email: admin@example.com')
+            logger.info('   Password: admin123')
+        else:
+            logger.info(f'✓ Database has {user_count} user(s)')
+            
+    except Exception as e:
+        logger.warning('Demo user seed skip: %s', e)
+    
     logger.info('Database tables created successfully!')
     logger.info('Server starting on http://localhost:5000')
 
