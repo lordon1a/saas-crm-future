@@ -221,6 +221,7 @@ def tasks_page():
 
 with app.app_context():
     db.create_all()
+    
     # Eski DB'de messages tablosuna media sutunlari yoksa ekle (SQLite uyumluluk)
     try:
         uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
@@ -242,6 +243,83 @@ with app.app_context():
                     conn.commit()
     except Exception as e:
         logger.warning('Media columns migration skip: %s', e)
+    
+    # Auto-migration: Google Drive attachments table
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        
+        # Check if drive_attachments table exists
+        if 'drive_attachments' not in inspector.get_table_names():
+            logger.info('🔄 Creating drive_attachments table...')
+            
+            if uri.startswith('sqlite'):
+                # SQLite syntax
+                db.session.execute(text("""
+                    CREATE TABLE drive_attachments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        workspace_id INTEGER NOT NULL,
+                        drive_file_id VARCHAR(200) NOT NULL,
+                        file_name VARCHAR(500) NOT NULL,
+                        mime_type VARCHAR(100),
+                        file_size BIGINT,
+                        thumbnail_url VARCHAR(1000),
+                        web_view_link VARCHAR(1000),
+                        entity_type VARCHAR(50) NOT NULL,
+                        entity_id INTEGER NOT NULL,
+                        attached_by INTEGER,
+                        attached_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        notes TEXT,
+                        FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+                        FOREIGN KEY (attached_by) REFERENCES users(id)
+                    )
+                """))
+            else:
+                # PostgreSQL syntax
+                db.session.execute(text("""
+                    CREATE TABLE drive_attachments (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL,
+                        drive_file_id VARCHAR(200) NOT NULL,
+                        file_name VARCHAR(500) NOT NULL,
+                        mime_type VARCHAR(100),
+                        file_size BIGINT,
+                        thumbnail_url VARCHAR(1000),
+                        web_view_link VARCHAR(1000),
+                        entity_type VARCHAR(50) NOT NULL,
+                        entity_id INTEGER NOT NULL,
+                        attached_by INTEGER,
+                        attached_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        notes TEXT,
+                        FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+                        FOREIGN KEY (attached_by) REFERENCES users(id)
+                    )
+                """))
+            
+            # Create indexes
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_drive_attachments_workspace 
+                ON drive_attachments(workspace_id)
+            """))
+            
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_drive_attachments_file 
+                ON drive_attachments(drive_file_id)
+            """))
+            
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_drive_attachments_entity 
+                ON drive_attachments(entity_type, entity_id)
+            """))
+            
+            db.session.commit()
+            logger.info('✅ drive_attachments table created successfully!')
+        else:
+            logger.info('✓ drive_attachments table already exists')
+            
+    except Exception as e:
+        logger.warning('Drive attachments migration skip: %s', e)
+    
     logger.info('Database tables created successfully!')
     logger.info('Server starting on http://localhost:5000')
 
