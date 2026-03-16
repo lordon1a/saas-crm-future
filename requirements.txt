@@ -12,6 +12,7 @@ google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.149.0
 cryptography==42.0.8
+urllib3==1.26.18
 
 # Production WSGI Server
 gunicorn==21.2.0
