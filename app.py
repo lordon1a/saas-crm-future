@@ -363,6 +363,26 @@ with app.app_context():
                 logger.info('✅ Demo user password reset!')
             else:
                 logger.info('✓ Demo user password is correct')
+        
+        # Auto-seed demo data if workspace is empty
+        try:
+            from models_crm import Company
+            workspace_id = demo_user.workspace_id
+            company_count = Company.query.filter_by(workspace_id=workspace_id).count()
+            
+            if company_count == 0:
+                logger.info('🌱 No demo data found, creating sample data...')
+                # Import and run seed function
+                import sys
+                import os
+                sys.path.insert(0, os.path.dirname(__file__))
+                from seed_demo_data import seed_demo_data
+                seed_demo_data()
+                logger.info('✅ Demo data created!')
+            else:
+                logger.info(f'✓ Demo data exists ({company_count} companies)')
+        except Exception as e:
+            logger.warning('Demo data seed skip: %s', e)
             
     except Exception as e:
         logger.warning('Demo user seed skip: %s', e)
