@@ -325,16 +325,18 @@ with app.app_context():
         from models import User, Workspace
         from services.auth_manager import AuthManager
         
-        # Check if any user exists
-        user_count = User.query.count()
+        # Check if admin@example.com exists
+        demo_user = User.query.filter_by(email='admin@example.com').first()
         
-        if user_count == 0:
-            logger.info('🌱 No users found, creating demo user...')
+        if not demo_user:
+            logger.info('🌱 Demo user not found, creating...')
             
-            # Create demo workspace
-            demo_workspace = Workspace(company_name='Demo Company')
-            db.session.add(demo_workspace)
-            db.session.flush()
+            # Get first workspace or create one
+            demo_workspace = Workspace.query.first()
+            if not demo_workspace:
+                demo_workspace = Workspace(company_name='Demo Company')
+                db.session.add(demo_workspace)
+                db.session.flush()
             
             # Create demo admin user
             password_hash = AuthManager.hash_password('admin123')
@@ -352,7 +354,15 @@ with app.app_context():
             logger.info('   Email: admin@example.com')
             logger.info('   Password: admin123')
         else:
-            logger.info(f'✓ Database has {user_count} user(s)')
+            # User exists, ensure password is admin123
+            logger.info('✓ Demo user exists, verifying password...')
+            if not AuthManager.verify_password(demo_user.password_hash, 'admin123'):
+                logger.info('🔄 Resetting demo user password to admin123...')
+                demo_user.password_hash = AuthManager.hash_password('admin123')
+                db.session.commit()
+                logger.info('✅ Demo user password reset!')
+            else:
+                logger.info('✓ Demo user password is correct')
             
     except Exception as e:
         logger.warning('Demo user seed skip: %s', e)
