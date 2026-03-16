@@ -685,7 +685,8 @@ window.openConversation = (id) => selectConversation(id, '', '', '');
 loadConversations();
 loadQuickReplies();
 loadUserInfo();
-setInterval(loadConversations, 5000);
+// Auto-refresh her 30 saniyede bir (production için optimize edildi)
+setInterval(loadConversations, 30000);
 
 // ─── SSE (Server-Sent Events) Listener ───────────────────────────────────────
 let sseSource = null;

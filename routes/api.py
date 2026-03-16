@@ -52,14 +52,20 @@ def login_required_api(f):
 @bp.route('/conversations', methods=['GET'])
 @login_required_api
 def get_conversations():
-    """Get list of conversations for current workspace"""
+    """Get list of conversations for current workspace - OPTIMIZED"""
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import func
+    
     workspace_id = session.get('workspace_id')
     status = request.args.get('status', '').strip()
     tag = request.args.get('tag', '').strip()
     search = request.args.get('search', '').strip()
     limit = int(request.args.get('limit', 50))
     
-    query = Conversation.query.join(Customer).filter(Conversation.workspace_id == workspace_id)
+    # OPTIMIZED: Eager load customer to avoid N+1
+    query = Conversation.query.options(joinedload(Conversation.customer)).filter(
+        Conversation.workspace_id == workspace_id
+    )
     
     if status:
         query = query.filter(Conversation.status == status)
@@ -68,7 +74,7 @@ def get_conversations():
         query = query.filter(Conversation.tags.ilike(f'%{tag}%'))
     
     if search:
-        query = query.filter(
+        query = query.join(Customer).filter(
             or_(
                 Customer.profile_name.ilike(f'%{search}%'),
                 Customer.phone_number.ilike(f'%{search}%')
@@ -77,36 +83,78 @@ def get_conversations():
     
     conversations = query.order_by(Conversation.last_message_at.desc()).limit(limit).all()
     
-    # Sayaçlar için ayrı sorgular (workspace izoleli)
-    total_count = Conversation.query.filter_by(workspace_id=workspace_id).count()
-    open_count = Conversation.query.filter_by(workspace_id=workspace_id, status='open').count()
-    pending_count = Conversation.query.filter_by(workspace_id=workspace_id, status='pending').count()
+    # OPTIMIZED: Tek sorguda tüm sayaçlar
+    counts = db.session.query(
+        func.count(Conversation.id).label('total'),
+        func.sum(db.case((Conversation.status == 'open', 1), else_=0)).label('open'),
+        func.sum(db.case((Conversation.status == 'pending', 1), else_=0)).label('pending')
+    ).filter(Conversation.workspace_id == workspace_id).first()
     
+    total_count = counts.total or 0
+    open_count = counts.open or 0
+    pending_count = counts.pending or 0
+    
+    # OPTIMIZED: Tüm conversation ID'leri için tek sorguda last messages
+    conv_ids = [c.id for c in conversations]
+    
+    # Son mesajları tek sorguda çek
+    last_messages = {}
+    if conv_ids:
+        subq = db.session.query(
+            Message.conversation_id,
+            func.max(Message.created_at).label('max_created')
+        ).filter(
+            Message.conversation_id.in_(conv_ids)
+        ).group_by(Message.conversation_id).subquery()
+        
+        last_msgs = db.session.query(Message).join(
+            subq,
+            db.and_(
+                Message.conversation_id == subq.c.conversation_id,
+                Message.created_at == subq.c.max_created
+            )
+        ).all()
+        
+        for msg in last_msgs:
+            last_messages[msg.conversation_id] = msg.message_body
+    
+    # OPTIMIZED: Tüm unread counts tek sorguda
+    unread_counts = {}
+    if conv_ids:
+        unread_data = db.session.query(
+            Message.conversation_id,
+            func.count(Message.id).label('unread')
+        ).filter(
+            Message.conversation_id.in_(conv_ids),
+            Message.sender_type == 'customer',
+            Message.is_read == False
+        ).group_by(Message.conversation_id).all()
+        
+        for row in unread_data:
+            unread_counts[row.conversation_id] = row.unread
+    
+    # OPTIMIZED: CRM contacts tek sorguda
+    customer_ids = [c.customer.id for c in conversations]
+    crm_contacts = {}
+    if customer_ids:
+        contacts = Contact.query.options(joinedload(Contact.company)).filter(
+            Contact.workspace_id == workspace_id,
+            Contact.customer_id.in_(customer_ids)
+        ).all()
+        
+        for contact in contacts:
+            crm_contacts[contact.customer_id] = {
+                'id': contact.id,
+                'full_name': contact.full_name,
+                'role': contact.role,
+                'job_title': contact.job_title,
+                'company_id': contact.company_id,
+                'company_name': contact.company.name if contact.company else None
+            }
+    
+    # Build result
     result = []
     for conv in conversations:
-        last_msg = Message.query.filter_by(conversation_id=conv.id).order_by(Message.created_at.desc()).first()
-        unread_count = Message.query.filter_by(
-            conversation_id=conv.id,
-            sender_type='customer',
-            is_read=False
-        ).count()
-
-        crm_contact = Contact.query.filter_by(
-            workspace_id=workspace_id,
-            customer_id=conv.customer.id
-        ).first()
-
-        crm_contact_data = None
-        if crm_contact:
-            crm_contact_data = {
-                'id': crm_contact.id,
-                'full_name': crm_contact.full_name,
-                'role': crm_contact.role,
-                'job_title': crm_contact.job_title,
-                'company_id': crm_contact.company_id,
-                'company_name': crm_contact.company.name if crm_contact.company else None
-            }
-        
         result.append({
             'id': conv.id,
             'customer': {
@@ -116,14 +164,14 @@ def get_conversations():
                 'email': conv.customer.email,
                 'notes': conv.customer.notes,
                 'private_notes': conv.customer.private_notes,
-                'crm_contact': crm_contact_data
+                'crm_contact': crm_contacts.get(conv.customer.id)
             },
             'status': conv.status,
             'tags': conv.tags,
             'notes': conv.notes,
-            'last_message': last_msg.message_body if last_msg else '',
+            'last_message': last_messages.get(conv.id, ''),
             'last_message_at': conv.last_message_at.isoformat(),
-            'unread_count': unread_count,
+            'unread_count': unread_counts.get(conv.id, 0),
             'message_count': len(conv.messages)
         })
     
