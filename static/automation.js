@@ -134,7 +134,124 @@ function openRuleModal() {
 }
 
 function openScheduledModal() {
-    showToast('Zamanlanmış mesaj oluşturma yakında eklenecek', 'info');
+    const modal = document.getElementById('scheduledModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    
+    // Reset form
+    document.getElementById('sm_id').value = '';
+    document.getElementById('sm_target_type').value = 'broadcast';
+    document.getElementById('sm_target_id').value = '';
+    document.getElementById('sm_target_segment').value = '';
+    document.getElementById('sm_message').value = '';
+    document.getElementById('sm_schedule_type').value = 'once';
+    document.getElementById('sm_scheduled_at').value = '';
+    document.getElementById('sm_recurrence_pattern').value = 'daily';
+    
+    // Hide conditional fields
+    document.getElementById('sm_target_id_container').classList.add('hidden');
+    document.getElementById('sm_target_segment_container').classList.add('hidden');
+    document.getElementById('sm_recurrence_container').classList.add('hidden');
+    
+    document.getElementById('scheduledModalTitle').textContent = 'Mesaj Zamanla';
+}
+
+function toggleRecurrence() {
+    const scheduleType = document.getElementById('sm_schedule_type').value;
+    const recurrenceContainer = document.getElementById('sm_recurrence_container');
+    
+    if (scheduleType === 'recurring') {
+        recurrenceContainer.classList.remove('hidden');
+    } else {
+        recurrenceContainer.classList.add('hidden');
+    }
+}
+
+// Target type change handler
+document.addEventListener('DOMContentLoaded', () => {
+    const targetTypeSelect = document.getElementById('sm_target_type');
+    if (targetTypeSelect) {
+        targetTypeSelect.addEventListener('change', (e) => {
+            const targetType = e.target.value;
+            const targetIdContainer = document.getElementById('sm_target_id_container');
+            const targetSegmentContainer = document.getElementById('sm_target_segment_container');
+            
+            targetIdContainer.classList.add('hidden');
+            targetSegmentContainer.classList.add('hidden');
+            
+            if (targetType === 'customer' || targetType === 'conversation') {
+                targetIdContainer.classList.remove('hidden');
+            } else if (targetType === 'segment') {
+                targetSegmentContainer.classList.remove('hidden');
+            }
+        });
+    }
+});
+
+async function saveScheduledMessage() {
+    const targetType = document.getElementById('sm_target_type').value;
+    const message = document.getElementById('sm_message').value.trim();
+    const scheduledAt = document.getElementById('sm_scheduled_at').value;
+    const scheduleType = document.getElementById('sm_schedule_type').value;
+    
+    if (!message) {
+        showToast('Mesaj içeriği gerekli', 'error');
+        return;
+    }
+    
+    if (!scheduledAt) {
+        showToast('Gönderim zamanı gerekli', 'error');
+        return;
+    }
+    
+    const payload = {
+        target_type: targetType,
+        message_body: message,
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        schedule_type: scheduleType
+    };
+    
+    // Add target-specific fields
+    if (targetType === 'customer' || targetType === 'conversation') {
+        const targetId = document.getElementById('sm_target_id').value;
+        if (!targetId) {
+            showToast('Hedef ID gerekli', 'error');
+            return;
+        }
+        payload.target_id = parseInt(targetId);
+    } else if (targetType === 'segment') {
+        const targetSegment = document.getElementById('sm_target_segment').value.trim();
+        if (!targetSegment) {
+            showToast('Segment gerekli', 'error');
+            return;
+        }
+        payload.target_segment = targetSegment;
+    }
+    
+    // Add recurrence if recurring
+    if (scheduleType === 'recurring') {
+        payload.recurrence_pattern = document.getElementById('sm_recurrence_pattern').value;
+    }
+    
+    try {
+        const response = await fetch('/api/v1/scheduled-messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Kaydetme başarısız');
+        }
+        
+        closeModal('scheduledModal');
+        showToast('Mesaj zamanlandı');
+        loadScheduledMessages();
+    } catch (error) {
+        console.error('Save scheduled message error:', error);
+        showToast(error.message || 'Mesaj zamanlanamadı', 'error');
+    }
 }
 
 // ═══ AUTO REPLIES ═══
@@ -433,10 +550,11 @@ function renderAutomationRules() {
 
 async function loadScheduledMessages() {
     try {
-        const response = await fetch(`${API_BASE}/scheduled-messages?status=pending`);
+        const response = await fetch('/api/v1/scheduled-messages?status=pending');
         if (!response.ok) throw new Error('Failed to load');
         
-        scheduledMessages = await response.json();
+        const data = await response.json();
+        scheduledMessages = data.messages || [];
         renderScheduledMessages();
     } catch (error) {
         console.error('Error loading scheduled messages:', error);
@@ -505,7 +623,7 @@ async function cancelScheduledMessage(msgId) {
     if (!confirm('Bu zamanlanmış mesajı iptal etmek istediğinizden emin misiniz?')) return;
     
     try {
-        const response = await fetch(`${API_BASE}/scheduled-messages/${msgId}`, {
+        const response = await fetch(`/api/v1/scheduled-messages/${msgId}`, {
             method: 'DELETE'
         });
         

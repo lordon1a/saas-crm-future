@@ -235,6 +235,69 @@
         </div>
     </div>
 
+    <!-- Scheduled Message Modal -->
+    <div id="scheduledModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 text-lg" id="scheduledModalTitle">Mesaj Zamanla</h3>
+                <button onclick="closeModal('scheduledModal')" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-8 space-y-5">
+                <input type="hidden" id="sm_id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hedef Tür</label>
+                    <select id="sm_target_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                        <option value="broadcast">Toplu Mesaj (Broadcast)</option>
+                        <option value="segment">Segment</option>
+                        <option value="customer">Tek Müşteri</option>
+                        <option value="conversation">Tek Konuşma</option>
+                    </select>
+                </div>
+                <div id="sm_target_id_container" class="hidden">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hedef ID</label>
+                    <input type="number" id="sm_target_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Müşteri veya Konuşma ID">
+                </div>
+                <div id="sm_target_segment_container" class="hidden">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Segment</label>
+                    <input type="text" id="sm_target_segment" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: vip_customers">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mesaj İçeriği</label>
+                    <textarea id="sm_message" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all resize-none" placeholder="Mesaj içeriğinizi yazın..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Zamanlama Türü</label>
+                        <select id="sm_schedule_type" onchange="toggleRecurrence()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                            <option value="once">Tek Seferlik</option>
+                            <option value="recurring">Tekrarlayan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Gönderim Zamanı</label>
+                        <input type="datetime-local" id="sm_scheduled_at" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                    </div>
+                </div>
+                <div id="sm_recurrence_container" class="hidden">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tekrarlama Deseni</label>
+                    <select id="sm_recurrence_pattern" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                        <option value="daily">Günlük</option>
+                        <option value="weekly">Haftalık</option>
+                        <option value="monthly">Aylık</option>
+                    </select>
+                </div>
+            </div>
+            <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                <button onclick="closeModal('scheduledModal')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                <button onclick="saveScheduledMessage()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Zamanla</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-[150%]"></div>
+
     <script src="/static/automation.js"></script>
 </body>
 </html>
