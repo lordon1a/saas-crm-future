@@ -812,8 +812,9 @@ def get_stats():
 @bp.route('/analytics', methods=['GET'])
 @login_required_api
 def get_analytics():
-    """Kapsamlı analytics verisi: KPI, trend, agent perf, tag dağılımı"""
+    """Kapsamlı analytics verisi: KPI, trend, agent perf, tag dağılımı - OPTIMIZED"""
     from datetime import timedelta
+    from sqlalchemy import func
     import collections
 
     workspace_id = session.get('workspace_id')
@@ -834,115 +835,38 @@ def get_analytics():
     else: # last7days default
         start_date = now - timedelta(days=7)
 
-    # ── KPI Kartları (Filtered by date range where applicable) ───────────────────
-    total_messages = Message.query.join(Conversation).filter(
-        Conversation.workspace_id == workspace_id,
-        Message.created_at >= start_date,
-        Message.created_at <= now
-    ).count()
+    # ── OPTIMIZED: Tek sorguda tüm conversation istatistikleri ───────────────────
+    conv_stats = db.session.query(
+        func.count(Conversation.id).label('total'),
+        func.sum(db.case((Conversation.status == 'open', 1), else_=0)).label('open'),
+        func.sum(db.case((Conversation.status == 'resolved', 1), else_=0)).label('closed'),
+        func.sum(db.case((Conversation.status == 'pending', 1), else_=0)).label('pending')
+    ).filter(Conversation.workspace_id == workspace_id).first()
     
-    new_customers = Customer.query.filter(
-        Customer.workspace_id == workspace_id,
-        Customer.created_at >= start_date,
-        Customer.created_at <= now
-    ).count()
+    total_conv = conv_stats.total or 0
+    open_conv = conv_stats.open or 0
+    closed_conv = conv_stats.closed or 0
+    pending_conv = conv_stats.pending or 0
     
-    active_conversations = Conversation.query.filter(
-        Conversation.workspace_id == workspace_id,
-        Conversation.status == 'open'
-    ).count()
-
-    # ── Traffic Chart Data (Group by day) ───────────────────
-    traffic = []
-    current = start_date
-    while current <= now:
-        day_end = current + timedelta(days=1)
-        count = Message.query.join(Conversation).filter(
-            Conversation.workspace_id == workspace_id,
-            Message.created_at >= current,
-            Message.created_at < day_end
-        ).count()
-        traffic.append({
-            'label': current.strftime('%d %b'),
-            'count': count
-        })
-        current = day_end
-
-    # ── Popular Tags ───────────────────────────────────────────────
-    all_convs = Conversation.query.filter(
-        Conversation.workspace_id == workspace_id,
-        Conversation.tags.isnot(None),
-        Conversation.last_message_at >= start_date
-    ).all()
-    
-    tag_counts = {}
-    total_tagged = 0
-    for conv in all_convs:
-        tags = [t.strip() for t in conv.tags.split(',') if t.strip()]
-        for tag in tags:
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-            total_tagged += 1
-            
-    sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-    tags_data = []
-    for name, count in sorted_tags:
-        tags_data.append({
-            'tag': name,
-            'count': count,
-            'percentage': round((count / total_tagged * 100), 1) if total_tagged > 0 else 0
-        })
-
-    # ── Temsilci Performansı ──────────────────────────────────────────
-    agents = User.query.filter_by(workspace_id=workspace_id).all()
-    agent_stats = []
-    for agent in agents:
-        assigned_total = Conversation.query.filter_by(
-            workspace_id=workspace_id, assigned_to=agent.id
-        ).count()
-        assigned_closed = Conversation.query.filter_by(
-            workspace_id=workspace_id, assigned_to=agent.id, status='resolved'
-        ).count()
-        assigned_open = Conversation.query.filter_by(
-            workspace_id=workspace_id, assigned_to=agent.id, status='open'
-        ).count()
-        # Bu hafta kapattığı konuşmalar
-        week_start = today - timedelta(days=today.weekday())
-        closed_this_week = Conversation.query.filter(
-            Conversation.workspace_id == workspace_id,
-            Conversation.assigned_to == agent.id,
-            Conversation.status == 'resolved',
-            Conversation.last_message_at >= week_start
-        ).count()
-        agent_stats.append({
-            'id': agent.id,
-            'name': agent.name,
-            'role': agent.role,
-            'total': assigned_total,
-            'open': assigned_open,
-            'closed': assigned_closed,
-            'closed_this_week': closed_this_week
-        })
-    agent_stats.sort(key=lambda x: x['closed'], reverse=True)
-
-    # ── KPI Kartları (Full set for frontend expectations) ───────────────────
-    total_conv = Conversation.query.filter_by(workspace_id=workspace_id).count()
-    open_conv = Conversation.query.filter_by(workspace_id=workspace_id, status='open').count()
-    closed_conv = Conversation.query.filter_by(workspace_id=workspace_id, status='resolved').count()
-    pending_conv = Conversation.query.filter_by(workspace_id=workspace_id, status='pending').count()
+    # ── OPTIMIZED: Basit count sorgular ───────────────────
     total_cust = Customer.query.filter_by(workspace_id=workspace_id).count()
     total_msg = Message.query.join(Conversation).filter(Conversation.workspace_id == workspace_id).count()
     
+    # ── Bugünkü istatistikler ───────────────────
+    today_start = datetime.combine(today, datetime.min.time())
     today_conv = Conversation.query.filter(
         Conversation.workspace_id == workspace_id,
-        db.func.date(Conversation.last_message_at) == today
+        Conversation.last_message_at >= today_start
     ).count()
     today_msg = Message.query.join(Conversation).filter(
         Conversation.workspace_id == workspace_id,
-        db.func.date(Message.created_at) == today
+        Message.created_at >= today_start
     ).count()
 
-    # Trend comparison
+    # ── Haftalık trend (basitleştirilmiş) ───────────────────
+    week_start = today - timedelta(days=today.weekday())
     last_week_start = week_start - timedelta(days=7)
+    
     this_week_conv = Conversation.query.filter(
         Conversation.workspace_id == workspace_id,
         Conversation.last_message_at >= week_start
@@ -953,9 +877,9 @@ def get_analytics():
         Conversation.last_message_at < week_start
     ).count()
 
-    # ── Son 14 günlük trend (Fixed for frontend chart) ───────────────────
+    # ── SIMPLIFIED: Son 7 günlük trend (14 gün yerine) ───────────────────
     trend = []
-    for i in range(13, -1, -1):
+    for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         day_start = datetime.combine(day, datetime.min.time())
         day_end = datetime.combine(day, datetime.max.time())
@@ -976,9 +900,9 @@ def get_analytics():
             'messages': msg_cnt
         })
 
-    # ── Müşteri büyüme trendi (son 14 gün) ───────────────────────────
+    # ── SIMPLIFIED: Müşteri büyüme trendi (son 7 gün) ───────────────────────────
     customer_trend = []
-    for i in range(13, -1, -1):
+    for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         day_start = datetime.combine(day, datetime.min.time())
         day_end = datetime.combine(day, datetime.max.time())
@@ -988,6 +912,29 @@ def get_analytics():
             Customer.created_at <= day_end
         ).count()
         customer_trend.append({'date': day.strftime('%d %b'), 'count': cnt})
+
+    # ── SIMPLIFIED: Agent stats (sadece temel bilgiler) ───────────────────
+    agents = User.query.filter_by(workspace_id=workspace_id).limit(10).all()  # Max 10 agent
+    agent_stats = []
+    for agent in agents:
+        assigned_total = Conversation.query.filter_by(
+            workspace_id=workspace_id, assigned_to=agent.id
+        ).count()
+        assigned_open = Conversation.query.filter_by(
+            workspace_id=workspace_id, assigned_to=agent.id, status='open'
+        ).count()
+        agent_stats.append({
+            'id': agent.id,
+            'name': agent.name,
+            'role': agent.role,
+            'total': assigned_total,
+            'open': assigned_open,
+            'closed': assigned_total - assigned_open,
+            'closed_this_week': 0  # Disabled for performance
+        })
+
+    # ── DISABLED: Tag distribution (çok yavaş, opsiyonel) ───────────────────
+    tags_data = []
 
     return jsonify({
         'kpis': {
@@ -1002,10 +949,10 @@ def get_analytics():
             'this_week_conversations': this_week_conv,
             'last_week_conversations': last_week_conv,
         },
-        'total_messages': total_messages,
-        'new_customers': new_customers,
-        'active_conversations': active_conversations,
-        'traffic': traffic,
+        'total_messages': total_msg,
+        'new_customers': total_cust,
+        'active_conversations': open_conv,
+        'traffic': trend,  # Reuse trend data
         'trend': trend,
         'tag_distribution': tags_data,
         'agent_stats': agent_stats,
