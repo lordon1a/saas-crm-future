@@ -397,31 +397,99 @@
                 const date = new Date(att.attachedAt).toLocaleDateString('tr-TR', {
                     day: '2-digit',
                     month: 'short',
-                    year: 'numeric'
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
                 
+                // Get file type icon
+                const fileIcon = getFileIcon(att.mimeType, att.fileName);
+                
                 return `
-                    <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:border-brand-300 transition-all group">
-                        <div class="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-slate-200 flex-shrink-0">
+                    <div class="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-brand-300 hover:shadow-sm transition-all group">
+                        <div class="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-200 flex-shrink-0">
                             ${att.thumbnailUrl ? 
-                                `<img src="${att.thumbnailUrl}" class="w-8 h-8 object-cover rounded" />` :
-                                `<i class="fas fa-file text-slate-400"></i>`
+                                `<img src="${att.thumbnailUrl}" class="w-10 h-10 object-cover rounded-lg" />` :
+                                `<i class="${fileIcon.icon} ${fileIcon.color} text-lg"></i>`
                             }
                         </div>
                         <div class="flex-1 min-w-0">
-                            <a href="${att.webViewLink}" target="_blank" class="text-sm font-semibold text-slate-800 hover:text-brand-600 truncate block">
+                            <a href="${att.webViewLink}" target="_blank" class="text-sm font-semibold text-slate-800 hover:text-brand-600 truncate block mb-1 flex items-center gap-2">
                                 ${att.fileName}
+                                <i class="fas fa-external-link-alt text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
                             </a>
-                            <p class="text-xs text-slate-400">
-                                ${att.fileSize ? formatFileSize(att.fileSize) : 'N/A'} • ${date}
-                            </p>
+                            <div class="flex items-center gap-3 text-xs text-slate-500">
+                                <span class="flex items-center gap-1">
+                                    <i class="fas fa-hdd text-[10px]"></i>
+                                    <span class="font-semibold">${att.fileSize ? formatFileSize(att.fileSize) : 'N/A'}</span>
+                                </span>
+                                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                <span class="flex items-center gap-1">
+                                    <i class="far fa-clock text-[10px]"></i>
+                                    ${date}
+                                </span>
+                            </div>
                         </div>
-                        <button onclick="removeDriveAttachment(${att.id})" class="px-3 py-1.5 bg-white border border-slate-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all opacity-0 group-hover:opacity-100">
-                            <i class="fas fa-unlink mr-1"></i> Kaldır
+                        <button onclick="removeDriveAttachment(${att.id})" class="px-3 py-2 bg-white border border-slate-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1.5">
+                            <i class="fas fa-unlink"></i>
+                            <span>Kaldır</span>
                         </button>
                     </div>
                 `;
             }).join('');
+        }
+
+        function getFileIcon(mimeType, fileName) {
+            if (!mimeType && fileName) {
+                const ext = fileName.split('.').pop().toLowerCase();
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    return { icon: 'fas fa-image', color: 'text-blue-500' };
+                }
+                if (['pdf'].includes(ext)) {
+                    return { icon: 'fas fa-file-pdf', color: 'text-red-500' };
+                }
+                if (['doc', 'docx'].includes(ext)) {
+                    return { icon: 'fas fa-file-word', color: 'text-blue-600' };
+                }
+                if (['xls', 'xlsx'].includes(ext)) {
+                    return { icon: 'fas fa-file-excel', color: 'text-green-600' };
+                }
+                if (['ppt', 'pptx'].includes(ext)) {
+                    return { icon: 'fas fa-file-powerpoint', color: 'text-orange-600' };
+                }
+                if (['zip', 'rar', '7z'].includes(ext)) {
+                    return { icon: 'fas fa-file-archive', color: 'text-yellow-600' };
+                }
+            }
+            
+            if (mimeType) {
+                if (mimeType.startsWith('image/')) {
+                    return { icon: 'fas fa-image', color: 'text-blue-500' };
+                }
+                if (mimeType.startsWith('video/')) {
+                    return { icon: 'fas fa-video', color: 'text-purple-500' };
+                }
+                if (mimeType.includes('pdf')) {
+                    return { icon: 'fas fa-file-pdf', color: 'text-red-500' };
+                }
+                if (mimeType.includes('word') || mimeType.includes('document')) {
+                    return { icon: 'fas fa-file-word', color: 'text-blue-600' };
+                }
+                if (mimeType.includes('sheet') || mimeType.includes('excel')) {
+                    return { icon: 'fas fa-file-excel', color: 'text-green-600' };
+                }
+                if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+                    return { icon: 'fas fa-file-powerpoint', color: 'text-orange-600' };
+                }
+                if (mimeType.includes('zip') || mimeType.includes('compressed')) {
+                    return { icon: 'fas fa-file-archive', color: 'text-yellow-600' };
+                }
+                if (mimeType.includes('text/')) {
+                    return { icon: 'fas fa-file-alt', color: 'text-slate-500' };
+                }
+            }
+            
+            return { icon: 'fas fa-file', color: 'text-slate-400' };
         }
 
         function formatFileSize(bytes) {
@@ -499,8 +567,11 @@
         async function selectDriveFile(file) {
             if (!currentDeal) return;
             
+            // Show loading toast with file info
+            const loadingToast = showLoadingToast(`"${file.name}" ekleniyor... (${formatFileSize(file.size)})`);
+            
             try {
-                await fetch('/api/settings/google/drive/attach', {
+                const response = await fetch('/api/settings/google/drive/attach', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -516,14 +587,23 @@
                     })
                 });
                 
+                if (!response.ok) {
+                    throw new Error('Failed to attach file');
+                }
+                
                 // Close picker and reload attachments
                 closeDrivePickerModal();
                 await loadDriveAttachments(currentDeal.id);
                 
-                showToast(`"${file.name}" başarıyla eklendi!`);
+                // Hide loading toast
+                hideLoadingToast(loadingToast);
+                
+                // Show success toast
+                showToast(`✓ "${file.name}" başarıyla eklendi! (${formatFileSize(file.size)})`, 'success');
             } catch (error) {
                 console.error('Error attaching file:', error);
-                alert('Dosya eklenemedi');
+                hideLoadingToast(loadingToast);
+                showToast('✗ Dosya eklenemedi', 'error');
             }
         }
 
@@ -543,14 +623,41 @@
             }
         }
 
-        function showToast(message) {
+        function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
-            toast.classList.remove('translate-x-[150%]');
-            toast.classList.add('bg-emerald-500', 'text-white');
+            toast.classList.remove('translate-x-[150%]', 'bg-emerald-500', 'bg-red-500', 'bg-blue-500');
+            
+            if (type === 'success') {
+                toast.classList.add('bg-emerald-500', 'text-white');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-500', 'text-white');
+            } else {
+                toast.classList.add('bg-blue-500', 'text-white');
+            }
+            
             setTimeout(() => {
                 toast.classList.add('translate-x-[150%]');
             }, 3000);
+        }
+
+        function showLoadingToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="animate-spin">
+                        <i class="fas fa-spinner"></i>
+                    </div>
+                    <span>${message}</span>
+                </div>
+            `;
+            toast.classList.remove('translate-x-[150%]', 'bg-emerald-500', 'bg-red-500');
+            toast.classList.add('bg-brand-600', 'text-white');
+            return toast;
+        }
+
+        function hideLoadingToast(toast) {
+            toast.classList.add('translate-x-[150%]');
         }
 
         // Drive picker search with debounce
