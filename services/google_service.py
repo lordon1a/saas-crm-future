@@ -205,3 +205,8 @@ class GoogleService:
             'refresh_token': GoogleService._decrypt_value(row.refresh_token),
             'token_expires_at': row.token_expires_at,
         }
+    
+    @staticmethod
+    def decrypt_token(encrypted_token: str | None) -> str | None:
+        """Decrypt a single token value"""
+        return GoogleService._decrypt_value(encrypted_token)

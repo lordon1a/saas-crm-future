@@ -103,17 +103,33 @@ def google_callback():
         return redirect('/settings?google_error=invalid_state')
 
     try:
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f'Google callback: exchanging code for tokens')
         token_payload = GoogleService.exchange_code_for_tokens(code=code, state=state)
+        
+        logger.info(f'Google callback: fetching user email')
         google_email = GoogleService.fetch_google_email(token_payload.get('access_token'))
+        
+        logger.info(f'Google callback: upserting integration for workspace={session.get("workspace_id")}, user={session.get("user_id")}')
         GoogleService.upsert_integration(
             workspace_id=session.get('workspace_id'),
             user_id=session.get('user_id'),
             token_payload=token_payload,
             google_email=google_email,
         )
+        
+        logger.info(f'Google callback: success')
     except Exception as exc:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f'Google callback error: {exc}')
+        logger.error(traceback.format_exc())
         _clear_oauth_session_state()
-        return redirect(f"/settings?{urlencode({'google_error': str(exc)[:120]})}")
+        error_msg = str(exc)[:120] if str(exc) else 'Unknown error'
+        return redirect(f"/settings?{urlencode({'google_error': error_msg})}")
 
     _clear_oauth_session_state()
     return redirect('/settings?google_connected=1')
