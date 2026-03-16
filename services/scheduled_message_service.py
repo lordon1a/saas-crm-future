@@ -6,6 +6,9 @@ from models import db
 from models_automation import ScheduledMessage
 from datetime import datetime
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ScheduledMessageService:
@@ -57,10 +60,14 @@ class ScheduledMessageService:
             created_by=created_by
         )
         
-        db.session.add(scheduled_message)
-        db.session.commit()
-        
-        return scheduled_message
+        try:
+            db.session.add(scheduled_message)
+            db.session.commit()
+            return scheduled_message
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to create scheduled message: {e}')
+            raise
     
     @staticmethod
     def list_scheduled_messages(workspace_id, status=None, target_type=None, 
@@ -114,9 +121,13 @@ class ScheduledMessageService:
                     value = json.dumps(value)
                 setattr(message, field, value)
         
-        db.session.commit()
-        
-        return message
+        try:
+            db.session.commit()
+            return message
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to update scheduled message: {e}')
+            raise
     
     @staticmethod
     def cancel_scheduled_message(message_id, workspace_id):
@@ -129,10 +140,14 @@ class ScheduledMessageService:
         if message.status != 'pending':
             raise ValueError('Can only cancel pending messages')
         
-        message.status = 'cancelled'
-        db.session.commit()
-        
-        return message
+        try:
+            message.status = 'cancelled'
+            db.session.commit()
+            return message
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to cancel scheduled message: {e}')
+            raise
     
     @staticmethod
     def delete_scheduled_message(message_id, workspace_id):
@@ -142,10 +157,14 @@ class ScheduledMessageService:
         if not message:
             raise ValueError('Scheduled message not found')
         
-        db.session.delete(message)
-        db.session.commit()
-        
-        return True
+        try:
+            db.session.delete(message)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to delete scheduled message: {e}')
+            raise
     
     @staticmethod
     def get_pending_messages(limit=100):
@@ -165,11 +184,15 @@ class ScheduledMessageService:
         if not message:
             return False
         
-        message.status = 'sent'
-        message.sent_at = datetime.utcnow()
-        db.session.commit()
-        
-        return True
+        try:
+            message.status = 'sent'
+            message.sent_at = datetime.utcnow()
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to mark message as sent: {e}')
+            return False
     
     @staticmethod
     def mark_as_failed(message_id, error_message):
@@ -179,11 +202,15 @@ class ScheduledMessageService:
         if not message:
             return False
         
-        message.status = 'failed'
-        message.error_message = error_message
-        db.session.commit()
-        
-        return True
+        try:
+            message.status = 'failed'
+            message.error_message = error_message
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to mark message as failed: {e}')
+            return False
     
     @staticmethod
     def serialize_message(message):

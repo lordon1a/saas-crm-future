@@ -68,11 +68,15 @@ class CustomFieldService:
             is_required=is_required
         )
         
-        db.session.add(custom_field)
-        db.session.commit()
-        
-        logger.info(f'Created custom field: {field_name} ({field_type}) for {entity_type}')
-        return custom_field
+        try:
+            db.session.add(custom_field)
+            db.session.commit()
+            logger.info(f'Created custom field: {field_name} ({field_type}) for {entity_type}')
+            return custom_field
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to create custom field: {e}')
+            raise
     
     @staticmethod
     def get_fields(workspace_id: int, entity_type: Optional[str] = None) -> List[CustomField]:
@@ -131,10 +135,14 @@ class CustomFieldService:
         if 'is_required' in kwargs:
             field.is_required = kwargs['is_required']
         
-        db.session.commit()
-        
-        logger.info(f'Updated custom field: {field.field_name}')
-        return field
+        try:
+            db.session.commit()
+            logger.info(f'Updated custom field: {field.field_name}')
+            return field
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to update custom field: {e}')
+            raise
     
     @staticmethod
     def delete_field(field_id: int, workspace_id: int) -> bool:
@@ -156,11 +164,15 @@ class CustomFieldService:
         if not field:
             return False
         
-        db.session.delete(field)
-        db.session.commit()
-        
-        logger.info(f'Deleted custom field: {field.field_name}')
-        return True
+        try:
+            db.session.delete(field)
+            db.session.commit()
+            logger.info(f'Deleted custom field: {field.field_name}')
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to delete custom field: {e}')
+            raise
     
     @staticmethod
     def set_value(custom_field_id: int, entity_id: int, value: Any) -> CustomFieldValue:
@@ -200,8 +212,13 @@ class CustomFieldService:
             )
             db.session.add(field_value)
         
-        db.session.commit()
-        return field_value
+        try:
+            db.session.commit()
+            return field_value
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to set custom field value: {e}')
+            raise
     
     @staticmethod
     def get_values(entity_type: str, entity_id: int, workspace_id: int) -> Dict[str, Any]:
@@ -259,9 +276,14 @@ class CustomFieldService:
         if not field_value:
             return False
         
-        db.session.delete(field_value)
-        db.session.commit()
-        return True
+        try:
+            db.session.delete(field_value)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to delete custom field value: {e}')
+            raise
     
     @staticmethod
     def _validate_value(field: CustomField, value: Any) -> str:

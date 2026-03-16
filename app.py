@@ -71,6 +71,7 @@ from routes import public_api as public_api_route
 from routes import api_docs as api_docs_route
 from routes import google_integration as google_integration_route
 from routes import email_tracking as email_tracking_route
+from routes import analytics as analytics_route
 from routes.contacts import contacts_bp
 from routes.tasks import tasks_bp
 from routes import custom_fields as custom_fields_route
@@ -89,6 +90,13 @@ app.register_blueprint(pipeline_route.bp)
 app.register_blueprint(portal_route.bp)
 app.register_blueprint(public_api_route.bp)
 app.register_blueprint(api_docs_route.bp)
+app.register_blueprint(google_integration_route.bp)
+app.register_blueprint(email_tracking_route.bp)
+app.register_blueprint(analytics_route.bp)
+app.register_blueprint(contacts_bp)
+app.register_blueprint(tasks_bp)
+app.register_blueprint(custom_fields_route.bp)
+app.register_blueprint(scheduled_messages_bp)
 app.register_blueprint(google_integration_route.bp)
 app.register_blueprint(email_tracking_route.bp)
 app.register_blueprint(contacts_bp)
@@ -220,6 +228,13 @@ def pipeline():
 @app.route('/tasks')
 @login_required
 def tasks_page():
+    return render_template('tasks.html')
+
+
+@app.route('/analytics-dashboard')
+@login_required
+def analytics_dashboard():
+    return render_template('analytics_dashboard.html')
     return render_template('tasks.html')
 
 

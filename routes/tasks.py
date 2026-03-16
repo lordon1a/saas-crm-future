@@ -468,57 +468,8 @@ def update_milestone(milestone_id):
 # ============================================================================
 # TASK COMMENTS
 # ============================================================================
-
-@tasks_bp.route('/api/v1/tasks/<int:task_id>/comments', methods=['POST'])
-@login_required
-def add_comment(task_id):
-    """
-    Add a comment to a task
-    
-    Request body:
-    {
-        "content": "Comment text"
-    }
-    """
-    data = request.get_json()
-    
-    if not data or 'content' not in data:
-        return jsonify({'error': 'Content is required'}), 400
-    
-    comment = TaskService.add_comment(
-        task_id=task_id,
-        user_id=get_current_user().id,
-        content=data['content'],
-        workspace_id=get_current_user().workspace_id
-    )
-    
-    if not comment:
-        return jsonify({'error': 'Task not found'}), 404
-    
-    return jsonify({
-        'id': comment.id,
-        'task_id': comment.task_id,
-        'user_id': comment.user_id,
-        'content': comment.content,
-        'created_at': comment.created_at.isoformat()
-    }), 201
-
-
-@tasks_bp.route('/api/v1/tasks/<int:task_id>/comments', methods=['GET'])
-@login_required
-def get_comments(task_id):
-    """Get all comments for a task"""
-    comments = TaskService.get_task_comments(task_id, get_current_user().workspace_id)
-    
-    return jsonify({
-        'comments': [{
-            'id': c.id,
-            'task_id': c.task_id,
-            'user_id': c.user_id,
-            'content': c.content,
-            'created_at': c.created_at.isoformat()
-        } for c in comments]
-    })
+# TASK COMMENTS (using TaskCommentService)
+# ============================================================================
 
 
 # ============================================================================
@@ -692,7 +643,7 @@ def create_from_template():
 
 
 # ============================================================================
-# TASK COMMENTS
+# TASK COMMENTS (using TaskCommentService)
 # ============================================================================
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/comments', methods=['POST'])

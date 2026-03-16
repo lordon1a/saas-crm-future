@@ -84,6 +84,8 @@ class Deal(db.Model):
     
     # Relationships
     stage = db.relationship('DealStage', foreign_keys=[stage_id], backref='deals')
+    tasks = db.relationship('Task', backref='deal', lazy=True, cascade='all, delete-orphan', foreign_keys='Task.deal_id')
+    activities = db.relationship('Activity', backref='deal', lazy=True, cascade='all, delete-orphan', foreign_keys='Activity.deal_id')
     
     def __repr__(self):
         return f'<Deal {self.name} (${self.value})>'
@@ -122,7 +124,7 @@ class Company(db.Model):
     # Relationships
     contacts = db.relationship('Contact', backref='company', lazy=True, 
                               foreign_keys='Contact.company_id')
-    deals = db.relationship('Deal', backref='company', lazy=True)
+    deals = db.relationship('Deal', backref='company', lazy=True, cascade='all, delete-orphan')
     subsidiaries = db.relationship('Company', backref=db.backref('parent_company', remote_side=[id]), 
                                   lazy=True)
     
@@ -153,6 +155,9 @@ class Contact(db.Model):
     
     # Link to existing Customer for WhatsApp conversations
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
+    
+    # Relationships
+    activities = db.relationship('Activity', backref='contact', lazy=True, cascade='all, delete-orphan', foreign_keys='Activity.contact_id')
     
     def __repr__(self):
         return f'<Contact {self.first_name} {self.last_name}>'
@@ -342,7 +347,7 @@ class Milestone(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
-    tasks = db.relationship('Task', backref='milestone', lazy=True)
+    tasks = db.relationship('Task', backref='milestone', lazy=True, cascade='all, delete-orphan', foreign_keys='Task.milestone_id')
     
     def __repr__(self):
         return f'<Milestone {self.name}>'

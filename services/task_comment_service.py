@@ -7,6 +7,9 @@ from models_crm import Task, TaskComment, TaskAttachment
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TaskCommentService:
@@ -26,10 +29,14 @@ class TaskCommentService:
             content=content
         )
         
-        db.session.add(comment)
-        db.session.commit()
-        
-        return comment
+        try:
+            db.session.add(comment)
+            db.session.commit()
+            return comment
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to create comment: {e}')
+            raise
     
     @staticmethod
     def get_task_comments(task_id):
@@ -46,10 +53,14 @@ class TaskCommentService:
         if comment.user_id != user_id:
             raise PermissionError('You can only delete your own comments')
         
-        db.session.delete(comment)
-        db.session.commit()
-        
-        return True
+        try:
+            db.session.delete(comment)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to delete comment: {e}')
+            raise
     
     @staticmethod
     def create_attachment(task_id, user_id, file, upload_folder='uploads/tasks'):
@@ -86,10 +97,17 @@ class TaskCommentService:
             uploaded_by=user_id
         )
         
-        db.session.add(attachment)
-        db.session.commit()
-        
-        return attachment
+        try:
+            db.session.add(attachment)
+            db.session.commit()
+            return attachment
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to create attachment: {e}')
+            # Clean up file if database operation failed
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            raise
     
     @staticmethod
     def get_task_attachments(task_id):
@@ -107,10 +125,18 @@ class TaskCommentService:
             raise PermissionError('You can only delete your own attachments')
         
         # Delete file from disk
-        if os.path.exists(attachment.file_path):
-            os.remove(attachment.file_path)
+        file_path = attachment.file_path
         
-        db.session.delete(attachment)
-        db.session.commit()
-        
-        return True
+        try:
+            db.session.delete(attachment)
+            db.session.commit()
+            
+            # Delete file after successful database commit
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Failed to delete attachment: {e}')
+            raise

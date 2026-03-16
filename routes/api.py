@@ -855,6 +855,43 @@ def get_stats():
         'today_messages': today_messages
     }), 200
 
+
+# ─── User & Team API ────────────────────────────────────────────────────────────
+
+@bp.route('/me', methods=['GET'])
+@login_required_api
+def get_current_user_info():
+    """Get current logged-in user information"""
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify({
+        'id': user.id,
+        'name': user.name,
+        'email': user.email,
+        'role': user.role,
+        'workspace_id': user.workspace_id
+    }), 200
+
+
+@bp.route('/team', methods=['GET'])
+@login_required_api
+def get_team_members():
+    """Get all team members in current workspace"""
+    workspace_id = session.get('workspace_id')
+    users = User.query.filter_by(workspace_id=workspace_id).all()
+    
+    return jsonify([{
+        'id': u.id,
+        'name': u.name,
+        'email': u.email,
+        'role': u.role
+    } for u in users]), 200
+
+
 # ─── Analytics Dashboard API ───────────────────────────────────────────────────
 
 @bp.route('/analytics', methods=['GET'])
