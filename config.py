@@ -96,7 +96,7 @@ class Config:
     GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:5000/integrations/google/callback').strip()
     _google_scopes_raw = os.getenv(
         'GOOGLE_OAUTH_SCOPES',
-        'openid,email,profile,https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar.readonly'
+        'openid,email,profile,https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar.readonly,https://www.googleapis.com/auth/drive.readonly'
     )
     GOOGLE_OAUTH_SCOPES = [scope.strip() for scope in _google_scopes_raw.split(',') if scope.strip()]
     GOOGLE_OAUTH_STATE_TTL_SECONDS = int(os.getenv('GOOGLE_OAUTH_STATE_TTL_SECONDS', '600'))
