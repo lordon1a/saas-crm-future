@@ -682,11 +682,14 @@ async function loadTeamForDropdown(currentId) {
 
 window.openConversation = (id) => selectConversation(id, '', '', '');
 
+// ─── Polling Interval Tracker ───────────────────────────────────────
+let conversationPollingInterval = null;
+
 loadConversations();
 loadQuickReplies();
 loadUserInfo();
 // Auto-refresh her 30 saniyede bir (production için optimize edildi)
-setInterval(loadConversations, 30000);
+conversationPollingInterval = setInterval(loadConversations, 30000);
 
 // ─── SSE (Server-Sent Events) Listener ───────────────────────────────────────
 let sseSource = null;
@@ -735,3 +738,35 @@ function initSSE() {
 
 // SSE devre dışı - manuel yenileme kullanılacak
 // initSSE();
+
+
+// ─── CRITICAL: Cleanup on Page Unload (Worker Starvation Fix) ───────────────
+function cleanupConnections() {
+    console.log('Cleaning up SSE and polling connections...');
+    
+    // Close SSE connection
+    if (sseSource) {
+        sseSource.close();
+        sseSource = null;
+        console.log('SSE connection closed');
+    }
+    
+    // Clear polling interval
+    if (conversationPollingInterval) {
+        clearInterval(conversationPollingInterval);
+        conversationPollingInterval = null;
+        console.log('Polling interval cleared');
+    }
+}
+
+// Cleanup when user navigates away (prevents worker starvation)
+window.addEventListener('beforeunload', cleanupConnections);
+
+// Cleanup when user clicks on navigation links
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.href && !link.href.includes('#') && link.href !== window.location.href) {
+        // User is navigating to a different page
+        cleanupConnections();
+    }
+});
