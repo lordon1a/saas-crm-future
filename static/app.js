@@ -689,36 +689,63 @@ setInterval(loadConversations, 5000);
 
 // ─── SSE (Server-Sent Events) Listener ───────────────────────────────────────
 let sseSource = null;
+let sseReconnectAttempts = 0;
+const MAX_SSE_RECONNECT_ATTEMPTS = 3;
+
 function initSSE() {
     if (sseSource) return;
-    sseSource = new EventSource('/api/notifications/stream');
     
-    sseSource.addEventListener('connected', () => {
-        console.log('SSE connected');
-    });
+    // Production'da SSE sorunlu olabilir, max 3 deneme sonrası devre dışı bırak
+    if (sseReconnectAttempts >= MAX_SSE_RECONNECT_ATTEMPTS) {
+        console.log('SSE disabled after max reconnection attempts');
+        return;
+    }
     
-    sseSource.addEventListener('new_message', (e) => {
-        try {
-            const data = JSON.parse(e.data);
-            // Eğer şu an açık olan konuşmaya mesaj geldiyse, otomatik yenile
-            if (data.conversation_id === window.currentConvId) {
-                selectConversation(data.conversation_id, '', '', '');
+    try {
+        sseSource = new EventSource('/api/notifications/stream');
+        
+        sseSource.addEventListener('connected', () => {
+            console.log('SSE connected');
+            sseReconnectAttempts = 0; // Başarılı bağlantıda sayacı sıfırla
+        });
+        
+        sseSource.addEventListener('new_message', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                // Eğer şu an açık olan konuşmaya mesaj geldiyse, otomatik yenile
+                if (data.conversation_id === window.currentConvId) {
+                    selectConversation(data.conversation_id, '', '', '');
+                }
+                // Konuşma listesini yenile
+                loadConversations();
+                // Toast göster
+                showToast('Yeni mesaj geldi: ' + (data.preview || ''), 'info');
+            } catch (err) {
+                console.error('SSE parse error:', err);
             }
-            // Konuşma listesini yenile
-            loadConversations();
-            // Toast göster
-            showToast('Yeni mesaj geldi: ' + (data.preview || ''), 'info');
-        } catch (err) {
-            console.error('SSE parse error:', err);
-        }
-    });
-    
-    sseSource.onerror = () => {
-        console.warn('SSE connection lost, reconnecting...');
-        sseSource.close();
-        sseSource = null;
-        setTimeout(initSSE, 3000);
-    };
+        });
+        
+        sseSource.onerror = () => {
+            sseReconnectAttempts++;
+            console.warn(`SSE connection lost (attempt ${sseReconnectAttempts}/${MAX_SSE_RECONNECT_ATTEMPTS})`);
+            
+            if (sseSource) {
+                sseSource.close();
+                sseSource = null;
+            }
+            
+            // Sadece max deneme sayısına ulaşmadıysak yeniden bağlan
+            if (sseReconnectAttempts < MAX_SSE_RECONNECT_ATTEMPTS) {
+                setTimeout(initSSE, 5000);
+            } else {
+                console.log('SSE permanently disabled. App will work without real-time updates.');
+            }
+        };
+    } catch (err) {
+        console.error('SSE initialization failed:', err);
+        sseReconnectAttempts = MAX_SSE_RECONNECT_ATTEMPTS; // Hata durumunda devre dışı bırak
+    }
 }
 
+// Sayfa yüklendiğinde SSE'yi başlat
 initSSE();
