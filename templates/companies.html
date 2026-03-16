@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Şirketler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg"></i>
+            </a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg"></i>
+            </a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Şirketler">
+                <i class="fas fa-building text-lg"></i>
+            </a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
+                <i class="fas fa-bullhorn text-lg"></i>
+            </a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
+                <i class="fas fa-robot text-lg"></i>
+            </a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg"></i>
+            </a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
+                <i class="fas fa-plug text-lg"></i>
+            </a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg"></i>
+            </a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/account" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Hesap">
+                <i class="fas fa-user text-lg"></i>
+            </a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap">
+                <i class="fas fa-sign-out-alt text-lg"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Bar -->
+        <header class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-bold text-slate-800">Şirketler</h1>
+                <div class="flex items-center gap-2 pl-4 border-l border-slate-200">
+                    <span class="text-sm text-slate-500"><span id="companyCount">0</span> şirket</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="exportCompanies()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-download mr-2"></i> CSV İndir
+                </button>
+                <button onclick="openNewCompanyModal()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-colors shadow-sm">
+                    <i class="fas fa-plus mr-2"></i> Yeni Şirket
+                </button>
+            </div>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="bg-white border-b border-slate-200 px-8 py-4 flex items-center gap-4 flex-shrink-0">
+            <div class="relative flex-1 max-w-md">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" placeholder="Şirket adı ile ara..." 
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+            </div>
+            <select id="industryFilter" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                <option value="">Tüm Sektörler</option>
+                <option value="Technology">Teknoloji</option>
+                <option value="Healthcare">Sağlık</option>
+                <option value="Finance">Finans</option>
+                <option value="Retail">Perakende</option>
+                <option value="Manufacturing">İmalat</option>
+            </select>
+            <select id="sizeFilter" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                <option value="">Tüm Boyutlar</option>
+                <option value="1-10">1-10</option>
+                <option value="11-50">11-50</option>
+                <option value="51-200">51-200</option>
+                <option value="201-500">201-500</option>
+                <option value="500+">500+</option>
+            </select>
+        </div>
+
+        <!-- Companies Grid -->
+        <div class="flex-1 overflow-auto p-8">
+            <div id="companiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- JS ile doldurulacak -->
+            </div>
+            <div id="loadingState" class="hidden p-12 text-center">
+                <i class="fas fa-spinner fa-spin text-2xl text-brand-600 mb-2"></i>
+                <p class="text-slate-500 text-sm">Yükleniyor...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Company Modal -->
+    <div id="newCompanyModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800">Yeni Şirket Ekle</h3>
+                <button onclick="closeNewCompanyModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="newCompanyForm" class="p-8 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Şirket Adı *</label>
+                    <input type="text" id="newName" required placeholder="Şirket Adı" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sektör</label>
+                        <select id="newIndustry" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                            <option value="">Seçiniz</option>
+                            <option value="Technology">Teknoloji</option>
+                            <option value="Healthcare">Sağlık</option>
+                            <option value="Finance">Finans</option>
+                            <option value="Retail">Perakende</option>
+                            <option value="Manufacturing">İmalat</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Çalışan Sayısı</label>
+                        <select id="newSize" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                            <option value="">Seçiniz</option>
+                            <option value="1-10">1-10</option>
+                            <option value="11-50">11-50</option>
+                            <option value="51-200">51-200</option>
+                            <option value="201-500">201-500</option>
+                            <option value="500+">500+</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Website</label>
+                    <input type="url" id="newWebsite" placeholder="https://example.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
+                    <input type="tel" id="newPhone" placeholder="+90 xxx xxx xxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Adres</label>
+                    <textarea id="newAddress" rows="2" placeholder="Şirket adresi" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeNewCompanyModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">İptal</button>
+                    <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">Şirketi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let allCompanies = [];
+
+        async function loadCompanies() {
+            const loading = document.getElementById('loadingState');
+            loading.classList.remove('hidden');
+            
+            try {
+                const search = document.getElementById('searchInput').value.trim();
+                const industry = document.getElementById('industryFilter').value;
+                const size = document.getElementById('sizeFilter').value;
+                
+                let url = '/api/v1/companies?';
+                if (search) url += `search=${encodeURIComponent(search)}&`;
+                if (industry) url += `industry=${encodeURIComponent(industry)}&`;
+                if (size) url += `size=${encodeURIComponent(size)}&`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                allCompanies = data.companies;
+                
+                renderCompanies(allCompanies);
+                document.getElementById('companyCount').textContent = allCompanies.length;
+            } catch (e) {
+                console.error(e);
+                showToast('Şirketler yüklenirken bir hata oluştu.', 'error');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function renderCompanies(companies) {
+            const grid = document.getElementById('companiesGrid');
+            grid.innerHTML = '';
+
+            companies.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-all cursor-pointer';
+                card.onclick = () => viewCompany(c.id);
+                
+                const initials = c.name.substring(0, 2).toUpperCase();
+                
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-sm">
+                                ${initials}
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800 line-clamp-1">${c.name}</h3>
+                                <p class="text-xs text-slate-400">${c.industry || 'Sektör belirtilmemiş'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        ${c.website ? `<div class="flex items-center gap-2 text-slate-600">
+                            <i class="fas fa-globe w-4"></i>
+                            <span class="truncate">${c.website}</span>
+                        </div>` : ''}
+                        ${c.phone ? `<div class="flex items-center gap-2 text-slate-600">
+                            <i class="fas fa-phone w-4"></i>
+                            <span>${c.phone}</span>
+                        </div>` : ''}
+                        ${c.size ? `<div class="flex items-center gap-2 text-slate-600">
+                            <i class="fas fa-users w-4"></i>
+                            <span>${c.size} çalışan</span>
+                        </div>` : ''}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function viewCompany(id) {
+            window.location.href = `/contacts?company_id=${id}`;
+        }
+
+        async function exportCompanies() {
+            try {
+                const search = document.getElementById('searchInput').value.trim();
+                const industry = document.getElementById('industryFilter').value;
+                const size = document.getElementById('sizeFilter').value;
+                
+                let url = '/api/v1/companies/export?';
+                if (search) url += `search=${encodeURIComponent(search)}&`;
+                if (industry) url += `industry=${encodeURIComponent(industry)}&`;
+                if (size) url += `size=${encodeURIComponent(size)}&`;
+                
+                window.location.href = url;
+            } catch (e) {
+                showToast('CSV indirme başarısız oldu.', 'error');
+            }
+        }
+
+        function openNewCompanyModal() {
+            document.getElementById('newCompanyModal').classList.remove('hidden');
+            document.getElementById('newCompanyModal').classList.add('flex');
+            document.getElementById('newName').focus();
+        }
+
+        function closeNewCompanyModal() {
+            document.getElementById('newCompanyModal').classList.add('hidden');
+            document.getElementById('newCompanyModal').classList.remove('flex');
+            document.getElementById('newCompanyForm').reset();
+        }
+
+        document.getElementById('newCompanyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('newName').value.trim(),
+                industry: document.getElementById('newIndustry').value,
+                size: document.getElementById('newSize').value,
+                website: document.getElementById('newWebsite').value.trim(),
+                phone: document.getElementById('newPhone').value.trim(),
+                address: document.getElementById('newAddress').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/v1/companies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showToast('Yeni şirket başarıyla eklendi.', 'success');
+                    closeNewCompanyModal();
+                    loadCompanies();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Hata oluştu.', 'error');
+                }
+            } catch (e) {
+                showToast('Bağlantı hatası.', 'error');
+            }
+        });
+
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} text-white px-6 py-3 rounded-xl shadow-lg z-[100]`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Arama için debounce
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadCompanies, 500);
+        });
+
+        document.getElementById('industryFilter').addEventListener('change', loadCompanies);
+        document.getElementById('sizeFilter').addEventListener('change', loadCompanies);
+
+        window.onclick = (e) => {
+            if (e.target.id === 'newCompanyModal') closeNewCompanyModal();
+        }
+
+        loadCompanies();
+    </script>
+</body>
+</html>

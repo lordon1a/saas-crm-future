@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6',
+                            600: '#7c3aed', 900: '#4c1d95'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .deal-card {
+            animation: fadeIn 0.2s ease-out;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-cog text-lg"></i></a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><i class="fas fa-sign-out-alt text-lg"></i></a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold text-slate-800">Sales Pipeline</h1>
+                <div class="flex items-center gap-2 ml-4">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="text-xs font-semibold text-slate-400" id="dealCount">0 Deals</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="loadPipeline()" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button onclick="alert('Deal creation modal - Coming soon!')" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                    <i class="fas fa-plus"></i> New Deal
+                </button>
+            </div>
+        </header>
+
+        <!-- Forecast Panel -->
+        <div class="bg-white border-b border-slate-200 px-8 py-4 flex-shrink-0">
+            <div class="flex items-center gap-8">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Weighted Forecast</p>
+                    <p class="text-3xl font-bold text-emerald-600" id="forecastValue">$0</p>
+                </div>
+                <div class="h-12 w-px bg-slate-200"></div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Open Deals</p>
+                    <p class="text-3xl font-bold text-slate-800" id="openDealsCount">0</p>
+                </div>
+                <div class="h-12 w-px bg-slate-200"></div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Value</p>
+                    <p class="text-3xl font-bold text-slate-800" id="totalValue">$0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipeline Kanban -->
+        <div class="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50">
+            <div class="flex gap-4 p-6 h-full" id="pipelineContainer">
+                <!-- Stages will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentPipeline = null;
+        let deals = [];
+
+        async function loadPipeline() {
+            try {
+                // Load pipelines
+                const pipelinesRes = await fetch('/api/v1/pipelines');
+                const pipelines = await pipelinesRes.json();
+                
+                if (pipelines.length === 0) {
+                    alert('No pipeline found. Please create a pipeline first.');
+                    return;
+                }
+                
+                // Use first (default) pipeline
+                currentPipeline = pipelines[0];
+                
+                // Load deals
+                const dealsRes = await fetch(`/api/v1/deals?pipeline_id=${currentPipeline.id}`);
+                deals = await dealsRes.json();
+                
+                // Load forecast
+                const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
+                const forecast = await forecastRes.json();
+                
+                renderForecast(forecast);
+                renderPipeline();
+            } catch (error) {
+                console.error('Error loading pipeline:', error);
+                alert('Error loading pipeline data');
+            }
+        }
+
+        function renderForecast(forecast) {
+            document.getElementById('forecastValue').textContent = 
+                `$${forecast.total_forecast.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            document.getElementById('openDealsCount').textContent = forecast.total_deals;
+            document.getElementById('dealCount').textContent = `${forecast.total_deals} Deal${forecast.total_deals !== 1 ? 's' : ''}`;
+            
+            // Calculate total value
+            const totalValue = forecast.by_stage.reduce((sum, stage) => sum + stage.total_value, 0);
+            document.getElementById('totalValue').textContent = 
+                `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+        }
+
+        function renderPipeline() {
+            const container = document.getElementById('pipelineContainer');
+            container.innerHTML = '';
+            
+            // Group deals by stage
+            const dealsByStage = {};
+            currentPipeline.stages.forEach(stage => {
+                dealsByStage[stage.id] = [];
+            });
+            
+            deals.forEach(deal => {
+                if (deal.status === 'open' && dealsByStage[deal.stage.id]) {
+                    dealsByStage[deal.stage.id].push(deal);
+                }
+            });
+            
+            // Render each stage
+            currentPipeline.stages.forEach(stage => {
+                const stageDeals = dealsByStage[stage.id] || [];
+                const stageEl = document.createElement('div');
+                stageEl.className = 'flex-shrink-0 w-80 flex flex-col';
+                stageEl.innerHTML = `
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+                        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-slate-700">${stage.name}</h3>
+                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">${stageDeals.length}</span>
+                            </div>
+                            <span class="text-xs text-slate-400">${Math.round(stage.probability * 100)}%</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-3 space-y-2" id="stage-${stage.id}">
+                            ${stageDeals.length > 0 ? stageDeals.map(deal => renderDealCard(deal)).join('') : '<p class="text-xs text-slate-400 text-center py-8">No deals in this stage</p>'}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(stageEl);
+            });
+        }
+
+        function renderDealCard(deal) {
+            const closeDate = deal.expected_close_date ? 
+                new Date(deal.expected_close_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : 
+                'No date';
+            
+            return `
+                <div class="deal-card bg-white border border-slate-200 rounded-lg p-3 cursor-pointer hover:shadow-md hover:border-brand-300 transition-all group" onclick="showDealDetails(${deal.id})">
+                    <div class="flex items-start justify-between mb-2">
+                        <h4 class="text-sm font-semibold text-slate-800 group-hover:text-brand-600 transition-colors line-clamp-2">${deal.name}</h4>
+                    </div>
+                    <div class="flex items-center gap-1.5 mb-2">
+                        <i class="fas fa-building text-xs text-slate-400"></i>
+                        <p class="text-xs text-slate-500">${deal.company ? deal.company.name : 'No company'}</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span class="text-sm font-bold text-emerald-600">$${deal.value.toLocaleString('en-US')}</span>
+                        <span class="text-xs text-slate-400 flex items-center gap-1">
+                            <i class="far fa-calendar"></i>
+                            ${closeDate}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showDealDetails(dealId) {
+            const deal = deals.find(d => d.id === dealId);
+            if (deal) {
+                alert(`Deal: ${deal.name}\nValue: $${deal.value.toLocaleString('en-US')}\nStage: ${deal.stage.name}\nCompany: ${deal.company ? deal.company.name : 'N/A'}\n\n(Full deal modal - Coming soon!)`);
+            }
+        }
+
+        // Load on page load
+        loadPipeline();
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+id,first_name,last_name,email,phone,whatsapp_phone,role,job_title,lead_score,company_id,company_name,created_at,updated_at
+3,Bob,Johnson,bob.johnson@acme.com,+90 532 777 8899,,User,Developer,65,2,Acme Corporation,2026-03-16T01:58:58.295495,2026-03-16T01:58:58.306516
+6,Bob,Johnson,bob.johnson@acme.com,+90 532 777 8899,,User,Developer,65,3,Acme Corporation,2026-03-16T02:15:06.306410,2026-03-16T02:15:06.318411
+2,Jane,Smith,jane.smith@acme.com,+90 532 444 5566,,Influencer,CTO,80,2,Acme Corporation,2026-03-16T01:58:56.230457,2026-03-16T01:58:56.238633
+5,Jane,Smith,jane.smith@acme.com,+90 532 444 5566,,Influencer,CTO,80,3,Acme Corporation,2026-03-16T02:15:04.260181,2026-03-16T02:15:04.269067
+1,John,Doe,john.doe@acme.com,+90 532 111 2233,+90 532 111 2233,Champion,Chief Executive Officer,100,2,Acme Corporation,2026-03-16T01:58:54.176920,2026-03-16T01:59:04.513501
+4,John,Doe,john.doe@acme.com,+90 532 111 2233,+90 532 111 2233,Champion,Chief Executive Officer,100,3,Acme Corporation,2026-03-16T02:15:02.190771,2026-03-16T02:15:12.445515

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Otomasyon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6',
+                            600: '#7c3aed', 900: '#4c1d95'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .tab-btn.active { @apply bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"><i class="fas fa-cog text-lg"></i></a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><i class="fas fa-sign-out-alt text-lg"></i></a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold text-slate-800">Otomasyon</h1>
+                <div class="flex items-center gap-2 ml-4">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="text-xs font-semibold text-slate-400" id="activeCount">0 Aktif Kural</span>
+                </div>
+            </div>
+            <button onclick="loadStats()" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Sub-Sidebar -->
+            <aside class="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-10 flex-shrink-0">
+                <div class="p-6">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 ml-2">Otomasyon Türleri</p>
+                    <nav class="space-y-1">
+                        <button onclick="switchTab('auto-replies')" id="tab-auto-replies" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-white/50 group">
+                            <i class="fas fa-bolt w-4 text-center group-hover:scale-110 transition-transform"></i> Otomatik Yanıtlar
+                        </button>
+                        <button onclick="switchTab('assignment')" id="tab-assignment" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                            <i class="fas fa-user-check w-4 text-center group-hover:scale-110 transition-transform"></i> Otomatik Atama
+                        </button>
+                        <button onclick="switchTab('rules')" id="tab-rules" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                            <i class="fas fa-diagram-project w-4 text-center group-hover:scale-110 transition-transform"></i> Otomasyon Kuralları
+                        </button>
+                        <button onclick="switchTab('scheduled')" id="tab-scheduled" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                            <i class="fas fa-clock w-4 text-center group-hover:scale-110 transition-transform"></i> Zamanlanmış Mesajlar
+                        </button>
+                    </nav>
+
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-8 mb-4 ml-2">İstatistikler</p>
+                    <div class="space-y-3">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-500">Toplam Çalıştırma</span>
+                                <i class="fas fa-play-circle text-brand-500"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-slate-800" id="statExecutions">0</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Son 30 gün</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-500">Başarı Oranı</span>
+                                <i class="fas fa-check-circle text-emerald-500"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-slate-800" id="statSuccessRate">0%</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-8">
+                <div class="max-w-6xl mx-auto">
+                    
+                    <!-- AUTO-REPLIES TAB -->
+                    <div id="panel-auto-replies" class="tab-panel active">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Otomatik Yanıtlar</h2>
+                                <p class="text-sm text-slate-500">Belirli anahtar kelimelere otomatik yanıt verin</p>
+                            </div>
+                            <button onclick="openAutoReplyModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Otomatik Yanıt
+                            </button>
+                        </div>
+
+                        <div id="autoRepliesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- ASSIGNMENT TAB -->
+                    <div id="panel-assignment" class="tab-panel">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Otomatik Atama Kuralları</h2>
+                                <p class="text-sm text-slate-500">Yeni konuşmaları otomatik olarak temsilcilere atayın</p>
+                            </div>
+                            <button onclick="openAssignmentModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Atama Kuralı
+                            </button>
+                        </div>
+
+                        <div id="assignmentGrid" class="space-y-4">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- RULES TAB -->
+                    <div id="panel-rules" class="tab-panel">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Otomasyon Kuralları</h2>
+                                <p class="text-sm text-slate-500">Karmaşık iş akışları oluşturun</p>
+                            </div>
+                            <button onclick="openRuleModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Kural
+                            </button>
+                        </div>
+
+                        <div id="rulesGrid" class="space-y-4">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- SCHEDULED TAB -->
+                    <div id="panel-scheduled" class="tab-panel">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Zamanlanmış Mesajlar</h2>
+                                <p class="text-sm text-slate-500">Belirli tarih/saatte mesaj gönderin</p>
+                            </div>
+                            <button onclick="openScheduledModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Mesaj Zamanla
+                            </button>
+                        </div>
+
+                        <div id="scheduledGrid" class="space-y-4">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Auto-Reply Modal -->
+    <div id="autoReplyModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 text-lg">Yeni Otomatik Yanıt</h3>
+                <button onclick="closeModal('autoReplyModal')" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-8 space-y-5">
+                <input type="hidden" id="ar_id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kural Adı</label>
+                    <input type="text" id="ar_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Merhaba Yanıtı">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Anahtar Kelimeler (virgülle ayırın)</label>
+                    <input type="text" id="ar_keywords" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="merhaba, selam, hello">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Yanıt Mesajı</label>
+                    <textarea id="ar_message" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all resize-none" placeholder="Merhaba! Size nasıl yardımcı olabilirim?"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Eşleşme Tipi</label>
+                        <select id="ar_match_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                            <option value="contains">İçerir</option>
+                            <option value="exact">Tam Eşleşme</option>
+                            <option value="starts_with">İle Başlar</option>
+                            <option value="ends_with">İle Biter</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Gecikme (saniye)</label>
+                        <input type="number" id="ar_delay" value="1" min="0" max="10" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                    </div>
+                </div>
+            </div>
+            <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                <button onclick="closeModal('autoReplyModal')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                <button onclick="saveAutoReply()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/automation.js"></script>
+</body>
+</html>

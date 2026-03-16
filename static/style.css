@@ -1,0 +1,33 @@
+/* 
+   Sleek CRM CSS
+   Note: 99% of UI is handled by TailwindCSS in index.html.
+   This file is kept for custom scrollbar styling, which is cleaner here than via complex Tailwind plugins.
+*/
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    /* slate-200 */
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+    /* slate-300 */
+}
+
+/* Chrome autofill styling fix to match Tailwind inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+}

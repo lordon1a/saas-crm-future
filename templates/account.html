@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hesabım – Sleek CRM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 900: '#4c1d95' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: #f8f7ff;
+        }
+
+        .tab-active {
+            color: #7c3aed;
+            border-bottom: 2px solid #7c3aed;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: .65rem 1rem;
+            border-radius: .75rem;
+            border: 1px solid #e2e8f0;
+            font-size: .925rem;
+            outline: none;
+            transition: all .15s;
+            background: #fff;
+        }
+
+        .input-field:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, .15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            padding: .65rem 1.75rem;
+            border-radius: .75rem;
+            font-weight: 600;
+            font-size: .9rem;
+            cursor: pointer;
+            border: none;
+            transition: all .2s;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, .3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(124, 58, 237, .38);
+        }
+
+        .btn-primary:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: #374151;
+            border: 1px solid #e2e8f0;
+            padding: .65rem 1.75rem;
+            border-radius: .75rem;
+            font-weight: 600;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f7ff;
+            border-color: #c4b5fd;
+        }
+
+        #toast {
+            transition: opacity .3s, transform .3s;
+        }
+    </style>
+</head>
+
+<body class="font-sans min-h-screen">
+
+    <!-- Toast -->
+    <div id="toast"
+        class="fixed top-5 right-5 z-[9999] flex items-center gap-3 bg-slate-800 text-white text-sm font-medium px-5 py-3.5 rounded-2xl shadow-xl opacity-0 -translate-y-2 pointer-events-none">
+        <i id="toastIcon" class="fas fa-check-circle text-emerald-400"></i>
+        <span id="toastMsg"></span>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar -->
+        <aside
+            class="w-16 bg-white border-r border-slate-100 flex flex-col items-center py-6 z-30 relative shadow-[2px_0_15px_rgba(0,0,0,0.02)] flex-shrink-0">
+            <a href="/"
+                class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center text-white text-xl shadow-[0_4px_12px_rgba(139,92,246,0.3)] mb-8 hover:scale-105 transition-transform duration-300"
+                title="Ana Sayfa">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+            <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+                <a href="/"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Gelen Kutusu">
+                    <i class="fas fa-inbox text-lg"></i>
+                </a>
+                <a href="/analytics"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Raporlar">
+                    <i class="fas fa-chart-line text-lg"></i>
+                </a>
+                <a href="/contacts"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Kişiler">
+                    <i class="fas fa-address-book text-lg"></i>
+                </a>
+                <a href="/companies"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Şirketler">
+                    <i class="fas fa-building text-lg"></i>
+                </a>
+                <a href="/broadcast"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Toplu Mesaj">
+                    <i class="fas fa-bullhorn text-lg"></i>
+                </a>
+                <a href="/automation"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Otomasyon">
+                    <i class="fas fa-robot text-lg"></i>
+                </a>
+                <a href="/pipeline"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Pipeline">
+                    <i class="fas fa-chart-line text-lg"></i>
+                </a>
+                <a href="/tasks"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Görevler">
+                    <i class="fas fa-list-check text-lg"></i>
+                </a>
+                <a href="/channels"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Kanallar">
+                    <i class="fas fa-plug text-lg"></i>
+                </a>
+                <a href="/settings"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Ayarlar">
+                    <i class="fas fa-cog text-lg"></i>
+                </a>
+            </nav>
+            <div class="flex flex-col gap-4 w-full px-3 pb-4">
+                <!-- Bildirim Bell -->
+                <button
+                    class="relative w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-300"
+                    title="Bildirimler">
+                    <i class="fas fa-bell text-xl"></i>
+                </button>
+                <a href="/account"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all duration-300"
+                    title="Profil">
+                    <i class="fas fa-user-circle text-xl"></i>
+                </a>
+                <a href="/logout"
+                    class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300"
+                    title="Çıkış Yap">
+                    <i class="fas fa-sign-out-alt text-lg"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <div class="flex-1 overflow-y-auto">
+            <!-- Topbar -->
+            <header class="sticky top-0 bg-white border-b border-slate-100 px-8 py-4 flex items-center gap-4 z-10">
+                <a href="/"
+                    class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800">Hesabım</h1>
+                    <p class="text-xs text-slate-400">Profil bilgileri ve güvenlik ayarları</p>
+                </div>
+            </header>
+
+            <div class="max-w-2xl mx-auto p-8">
+
+                <!-- Avatar Kartı -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6 flex items-center gap-5">
+                    <div class="relative group">
+                        <div id="bigAvatar"
+                            class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-3xl font-extrabold shadow-lg select-none">
+                            ?</div>
+                    </div>
+                    <div>
+                        <div id="avatarName" class="text-xl font-bold text-slate-800">—</div>
+                        <div id="avatarEmail" class="text-sm text-slate-400 mt-0.5">—</div>
+                        <div id="avatarRole"
+                            class="mt-1.5 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-50 text-brand-700 capitalize">
+                            —</div>
+                    </div>
+                </div>
+
+                <!-- Sekmeler -->
+                <div class="flex gap-6 border-b border-slate-100 mb-6 text-sm font-semibold text-slate-400">
+                    <button onclick="switchTab('profile')" id="tabProfile" class="pb-3 tab-active">Profil
+                        Bilgileri</button>
+                    <button onclick="switchTab('security')" id="tabSecurity"
+                        class="pb-3 hover:text-slate-600 transition-colors">Güvenlik</button>
+                </div>
+
+                <!-- ── Profil Sekmesi ── -->
+                <div id="panelProfile">
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Ad
+                                Soyad</label>
+                            <input id="profileName" type="text" class="input-field" placeholder="Adınız Soyadınız">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">E-posta</label>
+                            <input id="profileEmail" type="email" class="input-field" placeholder="e-posta@sirket.com">
+                            <p class="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
+                                <i class="fas fa-info-circle"></i>
+                                E-postanızı değiştirirseniz tekrar giriş yapmanız gerekebilir.
+                            </p>
+                        </div>
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button class="btn-secondary" onclick="loadProfile()">İptal</button>
+                            <button class="btn-primary" id="saveProfileBtn" onclick="saveProfile()">
+                                <i class="fas fa-save mr-1.5"></i>Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Güvenlik Sekmesi ── -->
+                <div id="panelSecurity" class="hidden">
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Mevcut
+                                Şifre</label>
+                            <div class="relative">
+                                <input id="currentPw" type="password" class="input-field pr-10" placeholder="••••••••">
+                                <button
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    onclick="togglePw('currentPw', this)">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Yeni
+                                Şifre</label>
+                            <div class="relative">
+                                <input id="newPw" type="password" class="input-field pr-10"
+                                    placeholder="En az 8 karakter" oninput="checkStrength()">
+                                <button
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    onclick="togglePw('newPw', this)">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                            </div>
+                            <!-- Strength bar -->
+                            <div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div id="strengthBar" class="h-full rounded-full transition-all duration-300 w-0"></div>
+                            </div>
+                            <p id="strengthLabel" class="text-[11px] text-slate-400 mt-1"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Yeni
+                                Şifre (Tekrar)</label>
+                            <div class="relative">
+                                <input id="confirmPw" type="password" class="input-field pr-10" placeholder="••••••••">
+                                <button
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    onclick="togglePw('confirmPw', this)">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button class="btn-secondary" onclick="clearPwForm()">Temizle</button>
+                            <button class="btn-primary" id="savePwBtn" onclick="savePassword()">
+                                <i class="fas fa-lock mr-1.5"></i>Şifreyi Değiştir
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Danger zone -->
+                    <div class="mt-6 bg-red-50 border border-red-100 rounded-2xl p-6">
+                        <h3 class="text-sm font-bold text-red-700 mb-1 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i> Tehlikeli Bölge
+                        </h3>
+                        <p class="text-xs text-red-600 mb-4">Bu işlemler geri alınamaz. Dikkatli kullanın.</p>
+                        <a href="/logout"
+                            class="inline-flex items-center gap-2 text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-100 rounded-xl px-4 py-2 transition-all">
+                            <i class="fas fa-sign-out-alt text-xs"></i>
+                            Oturumu Kapat
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+        let _userData = {};
+
+        // ── Toast ──────────────────────────────────────────────────────────────
+        function showToast(msg, ok = true) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            document.getElementById('toastIcon').className = ok
+                ? 'fas fa-check-circle text-emerald-400'
+                : 'fas fa-times-circle text-red-400';
+            t.style.opacity = '1';
+            t.style.transform = 'translateY(0)';
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-8px)'; }, 3000);
+        }
+
+        // ── Sekme ─────────────────────────────────────────────────────────────
+        function switchTab(tab) {
+            document.getElementById('panelProfile').classList.toggle('hidden', tab !== 'profile');
+            document.getElementById('panelSecurity').classList.toggle('hidden', tab !== 'security');
+            document.getElementById('tabProfile').className = 'pb-3 ' + (tab === 'profile' ? 'tab-active' : 'hover:text-slate-600 transition-colors');
+            document.getElementById('tabSecurity').className = 'pb-3 ' + (tab === 'security' ? 'tab-active' : 'hover:text-slate-600 transition-colors');
+        }
+
+        // ── Profili Yükle ─────────────────────────────────────────────────────
+        async function loadProfile() {
+            const r = await fetch(`${API}/me`);
+            if (r.status === 401) { window.location.href = '/login'; return; }
+            const d = await r.json();
+            _userData = d;
+
+            const initials = d.name ? d.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) : '?';
+            document.getElementById('bigAvatar').textContent = initials;
+            document.getElementById('avatarName').textContent = d.name || '—';
+            document.getElementById('avatarEmail').textContent = d.email || '—';
+            document.getElementById('avatarRole').textContent = d.role || '—';
+
+            document.getElementById('profileName').value = d.name || '';
+            document.getElementById('profileEmail').value = d.email || '';
+        }
+
+        // ── Profili Kaydet ────────────────────────────────────────────────────
+        async function saveProfile() {
+            const name = document.getElementById('profileName').value.trim();
+            const email = document.getElementById('profileEmail').value.trim();
+            if (!name || !email) { showToast('Ad ve e-posta zorunlu', false); return; }
+
+            const btn = document.getElementById('saveProfileBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>Kaydediliyor…';
+
+            try {
+                const r = await fetch(`${API}/account/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+                const d = await r.json();
+                if (r.ok) {
+                    showToast('Profil güncellendi ✓');
+                    await loadProfile();
+                } else {
+                    showToast(d.error || 'Hata oluştu', false);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-1.5"></i>Kaydet';
+            }
+        }
+
+        // ── Password ─────────────────────────────────────────────────────────
+        function togglePw(id, btn) {
+            const inp = document.getElementById(id);
+            const isHidden = inp.type === 'password';
+            inp.type = isHidden ? 'text' : 'password';
+            btn.querySelector('i').className = isHidden ? 'fas fa-eye-slash text-sm' : 'fas fa-eye text-sm';
+        }
+
+        function checkStrength() {
+            const pw = document.getElementById('newPw').value;
+            const bar = document.getElementById('strengthBar');
+            const lbl = document.getElementById('strengthLabel');
+            let score = 0;
+            if (pw.length >= 8) score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[0-9]/.test(pw)) score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+            const map = [
+                { w: '0%', color: '', text: '' },
+                { w: '25%', color: 'bg-red-400', text: 'Çok zayıf' },
+                { w: '50%', color: 'bg-amber-400', text: 'Zayıf' },
+                { w: '75%', color: 'bg-yellow-400', text: 'Orta' },
+                { w: '100%', color: 'bg-emerald-500', text: 'Güçlü ✓' },
+            ];
+            bar.style.width = map[score].w;
+            bar.className = 'h-full rounded-full transition-all duration-300 ' + map[score].color;
+            lbl.textContent = map[score].text;
+        }
+
+        function clearPwForm() {
+            ['currentPw', 'newPw', 'confirmPw'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('strengthBar').style.width = '0';
+            document.getElementById('strengthLabel').textContent = '';
+        }
+
+        async function savePassword() {
+            const current = document.getElementById('currentPw').value;
+            const newPw = document.getElementById('newPw').value;
+            const confirm = document.getElementById('confirmPw').value;
+
+            if (!current || !newPw || !confirm) { showToast('Tüm alanları doldurun', false); return; }
+            if (newPw !== confirm) { showToast('Yeni şifreler eşleşmiyor', false); return; }
+            if (newPw.length < 8) { showToast('Şifre en az 8 karakter olmalı', false); return; }
+
+            const btn = document.getElementById('savePwBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>Kaydediliyor…';
+
+            try {
+                const r = await fetch(`${API}/account/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: current, new_password: newPw })
+                });
+                const d = await r.json();
+                if (r.ok) {
+                    showToast('Şifre başarıyla güncellendi ✓');
+                    clearPwForm();
+                } else {
+                    showToast(d.error || 'Şifre değiştirilemedi', false);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock mr-1.5"></i>Şifreyi Değiştir';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Gelen Kutusu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .chat-bubble-me {
+            @apply bg-brand-600 text-white rounded-t-xl rounded-bl-xl rounded-br-sm px-4 py-2 shadow-sm;
+        }
+        .chat-bubble-other {
+            @apply bg-white text-slate-800 rounded-t-xl rounded-br-xl rounded-bl-sm px-4 py-2 shadow-sm border border-slate-100;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg"></i>
+            </a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg"></i>
+            </a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
+                <i class="fas fa-building text-lg"></i>
+            </a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
+                <i class="fas fa-bullhorn text-lg"></i>
+            </a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
+                <i class="fas fa-robot text-lg"></i>
+            </a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg"></i>
+            </a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
+                <i class="fas fa-plug text-lg"></i>
+            </a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg"></i>
+            </a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap">
+                <i class="fas fa-sign-out-alt text-lg"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Filters Column -->
+    <aside class="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-20 flex-shrink-0">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-slate-800">Gelen Kutusu</h2>
+        </div>
+        <nav class="flex-1 overflow-y-auto px-4 space-y-6">
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Görünümler</p>
+                <div class="space-y-1">
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab active bg-white shadow-sm text-brand-600" data-status="">
+                        <div class="flex items-center gap-2"><i class="fas fa-inbox w-4"></i> Tümü</div>
+                        <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold" id="allCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab text-slate-600 hover:bg-white/50" data-status="open">
+                        <div class="flex items-center gap-2"><i class="fas fa-envelope-open w-4"></i> Açıklar</div>
+                        <span class="bg-brand-50 text-brand-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="openCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab text-slate-600 hover:bg-white/50" data-status="pending">
+                        <div class="flex items-center gap-2"><i class="fas fa-clock w-4"></i> Bekleyenler</div>
+                        <span class="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="pendingCount">0</span>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Aşamalar</p>
+                <div class="space-y-1">
+                    <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="yeni_siparis">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Yeni Sipariş
+                    </button>
+                    <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="odeme_bekliyor">
+                        <span class="w-2 h-2 rounded-full bg-red-400"></span> Ödeme Bekliyor
+                    </button>
+                    <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="kargolandi">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Kargolandı
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div class="p-4 border-t border-slate-200 bg-white">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs" id="topbarAvatar">?</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 truncate" id="topbarName">...</p>
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider" id="userRole">...</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contacts Column -->
+    <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-10 flex-shrink-0">
+        <div class="p-4 border-b border-slate-100">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInput" placeholder="Ara..." class="w-full bg-slate-50 text-sm rounded-lg pl-9 pr-3 py-2 outline-none focus:bg-white border border-transparent focus:border-brand-200 transition-all">
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-2 space-y-1" id="conversationList">
+            <!-- Dynamicly loaded -->
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
+        <!-- Empty State -->
+        <div id="emptyChat" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 p-12">
+            <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-6 text-brand-500 text-2xl">
+                <i class="fas fa-comment-dots"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Hoş Geldiniz</h2>
+            <p class="text-slate-500 text-center mb-8 text-sm max-w-xs">Sohbetlerinizi yönetmek için sol listeden bir kişi seçin veya kanallarınızı bağlayın.</p>
+            
+            <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
+                <a href="/channels" class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-3 hover:border-brand-300 transition-all group">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><i class="fab fa-whatsapp"></i></div>
+                    <span class="font-bold text-xs text-slate-700">WhatsApp Bağla</span>
+                </a>
+                <a href="/contacts" class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-3 hover:border-brand-300 transition-all group">
+                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><i class="fas fa-user-plus"></i></div>
+                    <span class="font-bold text-xs text-slate-700">Kişi Ekle</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Chat Header -->
+        <div id="chatContent" class="flex-1 flex flex-col hidden">
+            <header class="h-16 px-6 border-b border-slate-200 flex items-center justify-between bg-white z-30">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold border border-brand-100" id="customerInitials">?</div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800 leading-none" id="customerName">...</h2>
+                        <span class="text-[10px] text-slate-400 font-medium mt-1 block" id="customerPhone">...</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="tagSelect" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium outline-none focus:border-brand-500" onchange="updateTag(this.value)">
+                        <option value="">Aşama Seç...</option>
+                        <option value="yeni_siparis">📦 Yeni Sipariş</option>
+                        <option value="odeme_bekliyor">💳 Ödeme Bekliyor</option>
+                        <option value="kargolandi">🚀 Kargolandı</option>
+                    </select>
+                    <button onclick="toggleCustomerInfo()" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-brand-600 transition-all flex items-center justify-center">
+                        <i class="fas fa-id-card text-xs"></i>
+                    </button>
+                    <button id="closeConvBtn" onclick="closeConversation()" class="px-3 py-1.5 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all flex items-center gap-1.5">
+                        <i class="fas fa-check-circle"></i> Kapat
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto px-6 py-6 space-y-4 no-scrollbar bg-slate-50" id="messagesContainer">
+                <!-- Messages dynamicly added -->
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-4 bg-white border-t border-slate-200">
+                <div class="max-w-4xl mx-auto relative">
+                    <div class="flex items-center gap-2 bg-slate-50 rounded-xl p-1.5 border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/10 focus-within:border-brand-500 transition-all">
+                        <button class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-colors rounded-lg hover:bg-brand-50" id="quickRepliesBtn" title="Hızlı Yanıtlar">
+                            <i class="fas fa-bolt"></i>
+                        </button>
+                        <input type="text" id="messageInput" placeholder="Mesajınızı yazın... (/ ile hızlı yanıtlar)" class="flex-1 bg-transparent border-0 outline-none px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400">
+                        <input type="file" id="mediaFileInput" accept="image/*,.pdf,.doc,.docx" class="hidden">
+                        <button type="button" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-colors rounded-lg hover:bg-brand-50" id="attachMediaBtn" title="Görsel veya belge gönder">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="w-9 h-9 flex items-center justify-center bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-all" id="sendBtn" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Replies Dropdown -->
+                    <div id="quickRepliesModal" class="hidden absolute bottom-full mb-4 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <h4 class="font-bold text-slate-700 text-xs">Hızlı Yanıtlar</h4>
+                            <input type="text" id="qrSearchInput" placeholder="Ara..." class="bg-white text-[10px] px-2 py-1 rounded border border-slate-200 outline-none">
+                        </div>
+                        <div id="quickRepliesList" class="max-h-48 overflow-y-auto p-1 space-y-0.5">
+                            <!-- Dynamicly added -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Customer Profile Drawer -->
+        <div id="customerInfoPanel" class="w-72 border-l border-slate-200 bg-white hidden flex-col absolute right-0 top-0 bottom-0 z-50 shadow-xl transition-transform duration-300 translate-x-full">
+            <div class="p-6 border-b border-slate-100">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Müşteri Profili</h3>
+                    <button onclick="closeCustomerInfo()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-xl bg-brand-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg mb-3" id="infoInitials">?</div>
+                    <h4 class="text-sm font-bold text-slate-800" id="infoCustomerName">...</h4>
+                    <p class="text-[10px] text-slate-400 font-medium mt-1" id="infoCustomerPhone">...</p>
+                </div>
+                <div class="flex gap-1 mt-6 bg-slate-100 rounded-lg p-1">
+                    <button onclick="switchProfileTab('summary')" id="ptab-summary" class="flex-1 py-1.5 text-[10px] font-bold rounded bg-white shadow-sm text-brand-600">ÖZET</button>
+                    <button onclick="switchProfileTab('history')" id="ptab-history" class="flex-1 py-1.5 text-[10px] font-bold rounded text-slate-500">GEÇMİŞ</button>
+                    <button onclick="switchProfileTab('notes')" id="ptab-notes" class="flex-1 py-1.5 text-[10px] font-bold rounded text-slate-500">NOTLAR</button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="ppanel-summary" class="space-y-6">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
+                            <p class="text-lg font-bold text-slate-800" id="statTotal">-</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Toplam</p>
+                        </div>
+                        <div class="bg-brand-50 p-3 rounded-lg text-center border border-brand-100">
+                            <p class="text-lg font-bold text-brand-600" id="statOpen">-</p>
+                            <p class="text-[9px] font-bold text-brand-500 uppercase tracking-wider">Açık</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">E-posta</p>
+                        <input id="customerEmailInput" type="email" placeholder="Ekle..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium outline-none focus:border-brand-500" onblur="saveCustomerEmail(this.value)" />
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Sık Kullanılan Etiketler</p>
+                        <div id="tagFrequency" class="flex flex-wrap gap-1"></div>
+                    </div>
+                </div>
+                
+                <div id="ppanel-history" class="hidden space-y-3">
+                    <div id="convHistoryList" class="space-y-2"></div>
+                </div>
+                
+                <div id="ppanel-notes" class="hidden">
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                        <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-3">Takım Notları</p>
+                        <textarea id="privateNotesInput" placeholder="Notunuzu buraya yazın..." class="w-full bg-white border border-amber-200 rounded-lg p-3 text-xs font-medium text-slate-700 outline-none focus:border-amber-400 h-32 mb-3 resize-none"></textarea>
+                        <button onclick="savePrivateNote()" class="w-full py-2 bg-amber-600 text-white font-bold rounded-lg text-xs hover:bg-amber-700 transition-all">Notu Kaydet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSE Toast Notification -->
+        <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        function initSSE() {
+            if (!window.EventSource) return;
+            const es = new EventSource('/api/notifications/stream');
+            let unread = 0;
+            es.addEventListener('new_message', (e) => {
+                const data = JSON.parse(e.data);
+                if (data.conversation_id && data.conversation_id !== window.currentConvId) {
+                    unread++;
+                    const badge = document.getElementById('notifBadge');
+                    if (badge) {
+                        badge.textContent = unread > 9 ? '9+' : unread;
+                        badge.classList.remove('hidden');
+                    }
+                    showSSEToast(data.customer_name || 'Müşteri', data.preview || 'Yeni mesaj', data.conversation_id);
+                    if (typeof loadConversations === 'function') loadConversations(false);
+                }
+            });
+            es.onerror = () => { setTimeout(initSSE, 5000); es.close(); };
+        }
+
+        function showSSEToast(name, preview, convId) {
+            const el = document.createElement('div');
+            el.className = 'bg-white border border-slate-200 rounded-xl shadow-lg p-4 flex items-start gap-3 cursor-pointer hover:border-brand-300 transition-all max-w-sm animate-bounce-in';
+            el.innerHTML = `
+                <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center font-bold flex-shrink-0">${name.charAt(0).toUpperCase()}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-slate-800">${name}</p>
+                    <p class="text-xs text-slate-500 truncate mt-0.5">${preview}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-slate-600 transition-colors"><i class="fas fa-times text-xs"></i></button>
+            `;
+            el.onclick = (e) => {
+                if (e.target.closest('button')) return;
+                if (typeof openConversation === 'function') openConversation(convId);
+                el.remove();
+            };
+            document.getElementById('toastContainer').appendChild(el);
+            setTimeout(() => el.remove(), 8000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSSE();
+            // Fetch profile for header
+            fetch('/api/settings/profile').then(r => r.json()).then(data => {
+                document.getElementById('topbarName').textContent = data.name;
+                document.getElementById('topbarAvatar').textContent = data.name.charAt(0).toUpperCase();
+                document.getElementById('userRole').textContent = data.role;
+            });
+        });
+    </script>
+    <style>
+        @keyframes bounce-in {
+            0% { transform: translateX(100%); opacity: 0; }
+            60% { transform: translateX(-5%); }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounce-in 0.4s ease-out forwards; }
+    </style>
+</body>
+
+</html>

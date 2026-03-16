@@ -1,0 +1,4 @@
+id,name,industry,size,website,phone,address,parent_company_id,parent_company_name,created_at,updated_at
+2,Acme Corporation,Technology,51-200,https://acme.com,+90 212 555 0001,"Istanbul, Turkey",,,2026-03-16T01:58:50.068198,2026-03-16T01:58:50.068205
+3,Acme Corporation,Technology,51-200,https://acme.com,+90 212 555 0001,"Istanbul, Turkey",,,2026-03-16T02:14:58.051366,2026-03-16T02:14:58.051371
+1,Acme Pharmaceuticals,Pharmaceutical,51-200,https://acmepharma.example.com,+1-555-0123,,,,2026-03-16T01:43:10.070730,2026-03-16T01:43:10.070735
