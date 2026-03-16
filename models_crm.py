@@ -777,3 +777,38 @@ class CalendarSync(db.Model):
     
     def __repr__(self):
         return f'<CalendarSync {self.google_event_id} summary={self.summary}>'
+
+
+# ============================================================================
+# GOOGLE DRIVE INTEGRATION
+# ============================================================================
+
+class DriveAttachment(db.Model):
+    """
+    Represents a Google Drive file attached to a deal or task.
+    Stores Drive file ID and metadata for quick access.
+    """
+    __tablename__ = 'drive_attachments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Google Drive file info
+    drive_file_id = db.Column(db.String(200), nullable=False, index=True)
+    file_name = db.Column(db.String(500), nullable=False)
+    mime_type = db.Column(db.String(100))
+    file_size = db.Column(db.BigInteger)  # bytes
+    thumbnail_url = db.Column(db.String(1000))
+    web_view_link = db.Column(db.String(1000))
+    
+    # Attachment context (what is this file attached to?)
+    entity_type = db.Column(db.String(50), nullable=False, index=True)  # 'deal', 'task', 'contact', 'company'
+    entity_id = db.Column(db.Integer, nullable=False, index=True)
+    
+    # Metadata
+    attached_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    attached_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    notes = db.Column(db.Text)
+    
+    def __repr__(self):
+        return f'<DriveAttachment {self.file_name} -> {self.entity_type}:{self.entity_id}>'

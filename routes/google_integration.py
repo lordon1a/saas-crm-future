@@ -215,3 +215,158 @@ def get_synced_events():
         ],
         'total': CalendarSync.query.filter_by(workspace_id=workspace_id).count()
     }), 200
+
+
+
+# ============================================================================
+# GOOGLE DRIVE ENDPOINTS
+# ============================================================================
+
+@bp.route('/api/settings/google/drive/files', methods=['GET'])
+@_agent_session_required
+def list_drive_files():
+    """List files from Google Drive"""
+    from services.google_drive_service import GoogleDriveService
+    from models_crm import GoogleIntegration
+    
+    workspace_id = session.get('workspace_id')
+    page_token = request.args.get('pageToken')
+    search = request.args.get('search', '').strip()
+    
+    # Get Google integration
+    integration = GoogleIntegration.query.filter_by(workspace_id=workspace_id).first()
+    if not integration or not integration.access_token:
+        return jsonify({'error': 'Google not connected'}), 400
+    
+    # Decrypt access token
+    access_token = GoogleService.decrypt_token(integration.access_token)
+    
+    # List or search files
+    if search:
+        files = GoogleDriveService.search_files(access_token, search)
+        return jsonify({'files': files, 'nextPageToken': None}), 200
+    else:
+        result = GoogleDriveService.list_files(access_token, page_token=page_token)
+        return jsonify(result), 200
+
+
+@bp.route('/api/settings/google/drive/attach', methods=['POST'])
+@_agent_session_required
+def attach_drive_file():
+    """Attach a Google Drive file to an entity (deal, task, etc.)"""
+    from models_crm import DriveAttachment
+    from models import db
+    
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    data = request.get_json()
+    
+    drive_file_id = data.get('driveFileId')
+    entity_type = data.get('entityType')  # 'deal', 'task', 'contact', 'company'
+    entity_id = data.get('entityId')
+    file_name = data.get('fileName')
+    mime_type = data.get('mimeType')
+    file_size = data.get('fileSize')
+    thumbnail_url = data.get('thumbnailUrl')
+    web_view_link = data.get('webViewLink')
+    notes = data.get('notes', '')
+    
+    if not all([drive_file_id, entity_type, entity_id, file_name]):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Check if already attached
+    existing = DriveAttachment.query.filter_by(
+        workspace_id=workspace_id,
+        drive_file_id=drive_file_id,
+        entity_type=entity_type,
+        entity_id=entity_id
+    ).first()
+    
+    if existing:
+        return jsonify({'error': 'File already attached'}), 409
+    
+    # Create attachment
+    attachment = DriveAttachment(
+        workspace_id=workspace_id,
+        drive_file_id=drive_file_id,
+        file_name=file_name,
+        mime_type=mime_type,
+        file_size=file_size,
+        thumbnail_url=thumbnail_url,
+        web_view_link=web_view_link,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        attached_by=user_id,
+        notes=notes
+    )
+    
+    db.session.add(attachment)
+    db.session.commit()
+    
+    return jsonify({
+        'status': 'success',
+        'attachment': {
+            'id': attachment.id,
+            'fileName': attachment.file_name,
+            'mimeType': attachment.mime_type,
+            'webViewLink': attachment.web_view_link,
+            'attachedAt': attachment.attached_at.isoformat()
+        }
+    }), 201
+
+
+@bp.route('/api/settings/google/drive/attachments', methods=['GET'])
+@_agent_session_required
+def get_drive_attachments():
+    """Get Drive attachments for an entity"""
+    from models_crm import DriveAttachment
+    
+    workspace_id = session.get('workspace_id')
+    entity_type = request.args.get('entityType')
+    entity_id = request.args.get('entityId', type=int)
+    
+    if not entity_type or not entity_id:
+        return jsonify({'error': 'Missing entityType or entityId'}), 400
+    
+    attachments = DriveAttachment.query.filter_by(
+        workspace_id=workspace_id,
+        entity_type=entity_type,
+        entity_id=entity_id
+    ).order_by(DriveAttachment.attached_at.desc()).all()
+    
+    return jsonify({
+        'attachments': [{
+            'id': a.id,
+            'driveFileId': a.drive_file_id,
+            'fileName': a.file_name,
+            'mimeType': a.mime_type,
+            'fileSize': a.file_size,
+            'thumbnailUrl': a.thumbnail_url,
+            'webViewLink': a.web_view_link,
+            'attachedAt': a.attached_at.isoformat(),
+            'notes': a.notes
+        } for a in attachments]
+    }), 200
+
+
+@bp.route('/api/settings/google/drive/attachments/<int:attachment_id>', methods=['DELETE'])
+@_agent_session_required
+def delete_drive_attachment(attachment_id):
+    """Delete a Drive attachment"""
+    from models_crm import DriveAttachment
+    from models import db
+    
+    workspace_id = session.get('workspace_id')
+    
+    attachment = DriveAttachment.query.filter_by(
+        id=attachment_id,
+        workspace_id=workspace_id
+    ).first()
+    
+    if not attachment:
+        return jsonify({'error': 'Attachment not found'}), 404
+    
+    db.session.delete(attachment)
+    db.session.commit()
+    
+    return jsonify({'status': 'deleted'}), 200
