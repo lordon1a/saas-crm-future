@@ -5,10 +5,13 @@ Flask-Limiter==3.5.0
 python-dotenv==1.0.0
 requests==2.31.0
 werkzeug==3.0.1
-google-auth==2.40.3
-google-auth-oauthlib==1.2.2
-google-api-python-client==2.170.0
-cryptography==45.0.3
+
+# Google OAuth & API
+google-auth==2.35.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.149.0
+cryptography==42.0.8
 
 # Production WSGI Server
 gunicorn==21.2.0
