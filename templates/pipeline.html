@@ -104,6 +104,110 @@
         </div>
     </main>
 
+    <!-- Deal Detail Modal -->
+    <div id="dealModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-slate-800 text-xl truncate" id="dealModalTitle">Deal Name</h3>
+                    <div class="flex items-center gap-4 mt-2">
+                        <span class="text-sm text-slate-500"><i class="fas fa-building mr-1"></i><span id="dealModalCompany">Company</span></span>
+                        <span class="text-sm font-bold text-emerald-600"><span id="dealModalValue">$0</span></span>
+                        <span class="px-2 py-1 bg-brand-100 text-brand-700 rounded-lg text-xs font-bold" id="dealModalStage">Stage</span>
+                    </div>
+                </div>
+                <button onclick="closeDealModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center ml-4">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="px-8 border-b border-slate-200 flex gap-6 flex-shrink-0">
+                <button data-deal-tab="overview" onclick="switchDealTab('overview')" class="py-3 text-sm font-semibold border-b-2 border-brand-600 text-brand-600 transition-colors">
+                    <i class="fas fa-info-circle mr-1"></i> Genel Bakış
+                </button>
+                <button data-deal-tab="drive" onclick="switchDealTab('drive')" class="py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                    <i class="fab fa-google-drive mr-1"></i> Ekli Dosyalar (Drive)
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- Overview Tab -->
+                <div data-deal-content="overview" class="p-8">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Tahmini Kapanış Tarihi</p>
+                            <p class="text-sm text-slate-700" id="dealModalCloseDate">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Durum</p>
+                            <p class="text-sm text-slate-700">Açık</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-600"><i class="fas fa-info-circle mr-1"></i> Daha fazla detay yakında eklenecek (notlar, aktiviteler, vb.)</p>
+                    </div>
+                </div>
+
+                <!-- Drive Files Tab -->
+                <div data-deal-content="drive" class="p-8 hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <h4 class="text-sm font-bold text-slate-700">Google Drive Dosyaları</h4>
+                        <button onclick="openDriveFilePicker()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                            <i class="fab fa-google-drive"></i> Drive'dan Dosya Seç
+                        </button>
+                    </div>
+
+                    <!-- Attachments List -->
+                    <div id="driveAttachmentsList" class="space-y-2"></div>
+
+                    <!-- Empty State -->
+                    <div id="driveAttachmentsEmpty" class="hidden text-center py-12">
+                        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fab fa-google-drive text-slate-400 text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">Henüz ekli dosya yok</p>
+                        <p class="text-xs text-slate-400 mt-1">Google Drive'dan dosya eklemek için yukarıdaki butona tıklayın</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drive File Picker Modal -->
+    <div id="drivePickerModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <!-- Picker Header -->
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg">Google Drive'dan Dosya Seç</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Eklemek istediğiniz dosyaya tıklayın</p>
+                </div>
+                <button onclick="closeDrivePickerModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Search -->
+            <div class="px-8 py-4 border-b border-slate-100 flex-shrink-0">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="drivePickerSearch" placeholder="Dosya ara..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                </div>
+            </div>
+
+            <!-- Files List -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="drivePickerFilesList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-[150%]"></div>
+
     <script>
         let currentPipeline = null;
         let deals = [];
@@ -214,12 +318,254 @@
             `;
         }
 
+        let currentDeal = null;
+        let driveAttachments = [];
+
         function showDealDetails(dealId) {
             const deal = deals.find(d => d.id === dealId);
-            if (deal) {
-                alert(`Deal: ${deal.name}\nValue: $${deal.value.toLocaleString('en-US')}\nStage: ${deal.stage.name}\nCompany: ${deal.company ? deal.company.name : 'N/A'}\n\n(Full deal modal - Coming soon!)`);
+            if (!deal) return;
+            
+            currentDeal = deal;
+            
+            // Show modal
+            const modal = document.getElementById('dealModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Populate deal info
+            document.getElementById('dealModalTitle').textContent = deal.name;
+            document.getElementById('dealModalCompany').textContent = deal.company ? deal.company.name : 'No company';
+            document.getElementById('dealModalValue').textContent = '$' + deal.value.toLocaleString('en-US');
+            document.getElementById('dealModalStage').textContent = deal.stage.name;
+            document.getElementById('dealModalCloseDate').textContent = deal.expected_close_date ? 
+                new Date(deal.expected_close_date).toLocaleDateString('tr-TR') : 'Belirtilmemiş';
+            
+            // Switch to overview tab
+            switchDealTab('overview');
+            
+            // Load drive attachments
+            loadDriveAttachments(dealId);
+        }
+
+        function closeDealModal() {
+            document.getElementById('dealModal').classList.add('hidden');
+            document.getElementById('dealModal').classList.remove('flex');
+            currentDeal = null;
+        }
+
+        function switchDealTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('[data-deal-tab]').forEach(btn => {
+                btn.classList.remove('border-brand-600', 'text-brand-600');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+            document.querySelector(`[data-deal-tab="${tabName}"]`).classList.remove('border-transparent', 'text-slate-500');
+            document.querySelector(`[data-deal-tab="${tabName}"]`).classList.add('border-brand-600', 'text-brand-600');
+            
+            // Update tab content
+            document.querySelectorAll('[data-deal-content]').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.querySelector(`[data-deal-content="${tabName}"]`).classList.remove('hidden');
+        }
+
+        async function loadDriveAttachments(dealId) {
+            try {
+                const res = await fetch(`/api/settings/google/drive/attachments?entityType=deal&entityId=${dealId}`);
+                const data = await res.json();
+                driveAttachments = data.attachments || [];
+                renderDriveAttachments();
+            } catch (error) {
+                console.error('Error loading drive attachments:', error);
             }
         }
+
+        function renderDriveAttachments() {
+            const container = document.getElementById('driveAttachmentsList');
+            const emptyState = document.getElementById('driveAttachmentsEmpty');
+            
+            if (driveAttachments.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            
+            container.innerHTML = driveAttachments.map(att => {
+                const date = new Date(att.attachedAt).toLocaleDateString('tr-TR', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+                
+                return `
+                    <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:border-brand-300 transition-all group">
+                        <div class="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-slate-200 flex-shrink-0">
+                            ${att.thumbnailUrl ? 
+                                `<img src="${att.thumbnailUrl}" class="w-8 h-8 object-cover rounded" />` :
+                                `<i class="fas fa-file text-slate-400"></i>`
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <a href="${att.webViewLink}" target="_blank" class="text-sm font-semibold text-slate-800 hover:text-brand-600 truncate block">
+                                ${att.fileName}
+                            </a>
+                            <p class="text-xs text-slate-400">
+                                ${att.fileSize ? formatFileSize(att.fileSize) : 'N/A'} • ${date}
+                            </p>
+                        </div>
+                        <button onclick="removeDriveAttachment(${att.id})" class="px-3 py-1.5 bg-white border border-slate-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all opacity-0 group-hover:opacity-100">
+                            <i class="fas fa-unlink mr-1"></i> Kaldır
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return 'N/A';
+            const kb = bytes / 1024;
+            if (kb < 1024) return kb.toFixed(1) + ' KB';
+            const mb = kb / 1024;
+            if (mb < 1024) return mb.toFixed(1) + ' MB';
+            const gb = mb / 1024;
+            return gb.toFixed(1) + ' GB';
+        }
+
+        async function openDriveFilePicker() {
+            if (!currentDeal) return;
+            
+            // Show drive picker modal
+            const modal = document.getElementById('drivePickerModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Load drive files
+            await loadDriveFilesForPicker();
+        }
+
+        function closeDrivePickerModal() {
+            document.getElementById('drivePickerModal').classList.add('hidden');
+            document.getElementById('drivePickerModal').classList.remove('flex');
+        }
+
+        async function loadDriveFilesForPicker() {
+            try {
+                const searchTerm = document.getElementById('drivePickerSearch').value.trim();
+                let url = '/api/settings/google/drive/files';
+                if (searchTerm) {
+                    url += `?search=${encodeURIComponent(searchTerm)}`;
+                }
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const list = document.getElementById('drivePickerFilesList');
+                
+                if (!data.files || data.files.length === 0) {
+                    list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">Dosya bulunamadı.</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.files.map(file => `
+                    <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:border-brand-300 transition-all group cursor-pointer" onclick='selectDriveFile(${JSON.stringify(file)})'>
+                        <div class="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-slate-200 flex-shrink-0">
+                            ${file.thumbnailLink ? 
+                                `<img src="${file.thumbnailLink}" class="w-8 h-8 object-cover rounded" />` :
+                                `<i class="fas fa-file text-slate-400"></i>`
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate">${file.name}</p>
+                            <p class="text-xs text-slate-400">
+                                ${file.size ? formatFileSize(file.size) : 'N/A'} • 
+                                ${file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString('tr-TR') : ''}
+                            </p>
+                        </div>
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="fas fa-plus-circle text-brand-600 text-xl"></i>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading drive files:', error);
+                alert('Drive dosyaları yüklenemedi');
+            }
+        }
+
+        async function selectDriveFile(file) {
+            if (!currentDeal) return;
+            
+            try {
+                await fetch('/api/settings/google/drive/attach', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        driveFileId: file.id,
+                        fileName: file.name,
+                        mimeType: file.mimeType,
+                        fileSize: file.size,
+                        thumbnailUrl: file.thumbnailLink,
+                        webViewLink: file.webViewLink,
+                        entityType: 'deal',
+                        entityId: currentDeal.id,
+                        notes: ''
+                    })
+                });
+                
+                // Close picker and reload attachments
+                closeDrivePickerModal();
+                await loadDriveAttachments(currentDeal.id);
+                
+                showToast(`"${file.name}" başarıyla eklendi!`);
+            } catch (error) {
+                console.error('Error attaching file:', error);
+                alert('Dosya eklenemedi');
+            }
+        }
+
+        async function removeDriveAttachment(attachmentId) {
+            if (!confirm('Bu dosyayı deal\'den kaldırmak istediğinizden emin misiniz?')) return;
+            
+            try {
+                await fetch(`/api/settings/google/drive/attachments/${attachmentId}`, {
+                    method: 'DELETE'
+                });
+                
+                await loadDriveAttachments(currentDeal.id);
+                showToast('Dosya kaldırıldı');
+            } catch (error) {
+                console.error('Error removing attachment:', error);
+                alert('Dosya kaldırılamadı');
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('translate-x-[150%]');
+            toast.classList.add('bg-emerald-500', 'text-white');
+            setTimeout(() => {
+                toast.classList.add('translate-x-[150%]');
+            }, 3000);
+        }
+
+        // Drive picker search with debounce
+        let drivePickerSearchTimeout = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('drivePickerSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(drivePickerSearchTimeout);
+                    drivePickerSearchTimeout = setTimeout(() => {
+                        loadDriveFilesForPicker();
+                    }, 500);
+                });
+            }
+        });
 
         // Load on page load
         loadPipeline();
