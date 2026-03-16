@@ -123,7 +123,10 @@ class GoogleService:
     def upsert_integration(workspace_id: int, user_id: int, token_payload: dict, google_email: str | None = None):
         row = GoogleIntegration.query.filter_by(workspace_id=workspace_id, user_id=user_id).first()
         if not row:
-            row = GoogleIntegration(workspace_id=workspace_id, user_id=user_id, access_token='')
+            row = GoogleIntegration()
+            row.workspace_id = workspace_id
+            row.user_id = user_id
+            row.access_token = ''
             db.session.add(row)
 
         access_token = token_payload.get('access_token')
