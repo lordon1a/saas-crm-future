@@ -416,6 +416,23 @@
                         </div>
                     </div>
 
+                    <!-- ═══ CUSTOM FIELDS TAB ═══ -->
+                    <div id="panel-custom-fields" class="tab-panel space-y-8">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Özel Alanlar</h2>
+                                <p class="text-sm text-slate-500">Kişiler, şirketler ve fırsatlar için özel alanlar oluşturun.</p>
+                            </div>
+                            <button onclick="openCustomFieldModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Özel Alan
+                            </button>
+                        </div>
+
+                        <div id="customFieldsList">
+                            <!-- Dynamic content from custom-fields.js -->
+                        </div>
+                    </div>
+
                     <!-- ═══ PROFILE TAB ═══ -->
                     <div id="panel-profile" class="tab-panel space-y-8">
                         <div>
@@ -793,6 +810,57 @@
             </div>
         </div>
 
+        <!-- Custom Field Modal -->
+        <div id="customFieldModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn">
+                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg" id="customFieldModalTitle">Yeni Özel Alan</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Kişiler, şirketler veya fırsatlar için özel alan oluşturun.</p>
+                    </div>
+                    <button onclick="closeCustomFieldModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+                <input type="hidden" id="customFieldId">
+                <div class="p-8 space-y-5">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Varlık Türü</label>
+                        <select id="cfEntityType" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                            <option value="contact">Kişiler</option>
+                            <option value="company">Şirketler</option>
+                            <option value="deal">Fırsatlar</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Alan Adı</label>
+                        <input type="text" id="cfFieldName" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Doğum Tarihi">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Alan Türü</label>
+                        <select id="cfFieldType" onchange="onFieldTypeChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                            <option value="text">Metin</option>
+                            <option value="number">Sayı</option>
+                            <option value="date">Tarih</option>
+                            <option value="dropdown">Açılır Liste</option>
+                            <option value="checkbox">Onay Kutusu</option>
+                            <option value="multi_select">Çoklu Seçim</option>
+                        </select>
+                    </div>
+                    <div id="cfOptionsContainer" class="space-y-1.5 hidden">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Seçenekler (virgülle ayırın)</label>
+                        <input type="text" id="cfOptions" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Seçenek 1, Seçenek 2, Seçenek 3">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="cfIsRequired" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <label for="cfIsRequired" class="text-sm text-slate-700 font-medium">Bu alan zorunlu</label>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                    <button onclick="closeCustomFieldModal()" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                    <button onclick="saveCustomField()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Kaydet</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast -->
         <div id="toast" class="fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-[150%]"></div>
 
@@ -865,6 +933,7 @@
                 if (name === 'team') loadTeam();
                 if (name === 'templates') loadTemplates();
                 if (name === 'replies') loadReplies();
+                if (name === 'custom-fields') loadCustomFields();
                 if (name === 'profile') loadProfile();
                 if (name === 'google') loadGoogleStatus();
             }
@@ -1845,7 +1914,7 @@
                     
                     // Auto-load if coming from a specific hash
                     const hash = window.location.hash.replace('#', '');
-                    if (['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'profile', 'google'].includes(hash)) {
+                    if (['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'google'].includes(hash)) {
                         switchTab(hash);
                     }
                 } catch (e) {
@@ -1855,6 +1924,7 @@
 
             init();
         </script>
+        <script src="/static/custom-fields.js"></script>
     </main>
 </body>
 
