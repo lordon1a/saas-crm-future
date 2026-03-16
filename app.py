@@ -97,16 +97,9 @@ app.register_blueprint(contacts_bp)
 app.register_blueprint(tasks_bp)
 app.register_blueprint(custom_fields_route.bp)
 app.register_blueprint(scheduled_messages_bp)
-app.register_blueprint(google_integration_route.bp)
-app.register_blueprint(email_tracking_route.bp)
-app.register_blueprint(contacts_bp)
-app.register_blueprint(tasks_bp)
-app.register_blueprint(custom_fields_route.bp)
-app.register_blueprint(scheduled_messages_bp)
 
 # Login endpoint'ine rate limit uygula
 app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
-
 
 def _parse_origin_host(origin_value):
     try:
