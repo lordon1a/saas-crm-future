@@ -12,6 +12,7 @@ cryptography==45.0.3
 
 # Production WSGI Server
 gunicorn==21.2.0
+gevent==24.2.1
 
 # PostgreSQL Database Driver
 psycopg2-binary==2.9.9
