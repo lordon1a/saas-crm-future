@@ -546,10 +546,15 @@ function renderComments(comments) {
     }
 
     list.innerHTML = comments.map(comment => `
-        <div class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+        <div class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl group">
             <div class="flex items-center justify-between gap-2 mb-1">
                 <span class="text-xs font-semibold text-slate-700">Kullanıcı #${comment.user_id}</span>
-                <span class="text-[11px] text-slate-500">${formatDateTime(comment.created_at)}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-slate-500">${formatDateTime(comment.created_at)}</span>
+                    <button onclick="deleteComment(${comment.id})" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 transition-opacity" title="Sil">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                </div>
             </div>
             <p class="text-xs text-slate-600">${escapeHtml(comment.content)}</p>
         </div>
@@ -613,12 +618,17 @@ function renderAttachments(attachments) {
 
     const taskId = document.getElementById('task-id').value;
     list.innerHTML = attachments.map(attachment => `
-        <div class="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-            <div class="min-w-0">
+        <div class="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs group">
+            <div class="min-w-0 flex-1">
                 <p class="font-semibold text-slate-700 truncate">${escapeHtml(attachment.file_name)}</p>
                 <p class="text-slate-500">${formatFileSize(attachment.file_size)} • ${formatDateTime(attachment.created_at)}</p>
             </div>
-            <a href="/api/v1/tasks/${taskId}/attachments/${attachment.id}/download" class="text-brand-600 hover:text-brand-700 font-semibold" target="_blank" rel="noopener noreferrer">İndir</a>
+            <div class="flex items-center gap-2">
+                <a href="/api/v1/tasks/attachments/${attachment.id}/download" class="text-brand-600 hover:text-brand-700 font-semibold" target="_blank" rel="noopener noreferrer">İndir</a>
+                <button onclick="deleteAttachment(${attachment.id})" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 transition-opacity" title="Sil">
+                    <i class="fas fa-trash text-xs"></i>
+                </button>
+            </div>
         </div>
     `).join('');
 }
@@ -793,5 +803,58 @@ async function safeJson(response) {
         return await response.json();
     } catch (error) {
         return null;
+    }
+}
+
+
+// Delete comment
+async function deleteComment(commentId) {
+    if (!confirm('Bu yorumu silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/tasks/comments/${commentId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorData = await safeJson(response);
+            showToast(errorData?.error || 'Yorum silinemedi', 'error');
+            return;
+        }
+
+        const taskId = document.getElementById('task-id').value;
+        showToast('Yorum silindi', 'success');
+        await loadComments(Number(taskId));
+    } catch (error) {
+        console.error('Delete comment error:', error);
+        showToast('Yorum silinirken hata oluştu', 'error');
+    }
+}
+
+// Delete attachment
+async function deleteAttachment(attachmentId) {
+    if (!confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/tasks/attachments/${attachmentId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const errorData = await safeJson(response);
+            showToast(errorData?.error || 'Dosya silinemedi', 'error');
+            return;
+        }
+
+        const taskId = document.getElementById('task-id').value;
+        showToast('Dosya silindi', 'success');
+        await loadAttachments(Number(taskId));
+    } catch (error) {
+        console.error('Delete attachment error:', error);
+        showToast('Dosya silinirken hata oluştu', 'error');
     }
 }
