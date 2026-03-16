@@ -576,6 +576,35 @@
                                 <div id="googleEventsList" class="space-y-3"></div>
                             </div>
                         </section>
+
+                        <!-- Google Drive File Picker -->
+                        <section id="googleDriveSection" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Google Drive Dosyaları</h3>
+                                <button onclick="refreshDriveFiles()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                    <i class="fas fa-sync-alt"></i> Yenile
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                <!-- Search -->
+                                <div class="mb-4">
+                                    <div class="relative">
+                                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                        <input type="text" id="driveSearchInput" placeholder="Dosya ara..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                </div>
+                                
+                                <!-- Files List -->
+                                <div id="driveFilesList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                                
+                                <!-- Load More -->
+                                <div id="driveLoadMore" class="hidden mt-4 text-center">
+                                    <button onclick="loadMoreDriveFiles()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all">
+                                        Daha Fazla Yükle
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                 </div>
@@ -1276,10 +1305,12 @@
                         // Show synced data sections
                         document.getElementById('googleEmailsSection').classList.remove('hidden');
                         document.getElementById('googleEventsSection').classList.remove('hidden');
+                        document.getElementById('googleDriveSection').classList.remove('hidden');
                         
                         // Load synced data
                         loadGoogleEmails();
                         loadGoogleEvents();
+                        loadDriveFiles();
                     } else {
                         document.getElementById('googleNotConnected').classList.remove('hidden');
                         document.getElementById('googleConnected').classList.add('hidden');
@@ -1423,6 +1454,149 @@
                     console.error('Load events error:', e);
                 }
             }
+
+            // ═══════════════════════════════════════════════════════════════
+            // GOOGLE DRIVE
+            // ═══════════════════════════════════════════════════════════════
+
+            let driveNextPageToken = null;
+            let driveSearchTimeout = null;
+
+            async function loadDriveFiles(pageToken = null) {
+                try {
+                    const searchTerm = document.getElementById('driveSearchInput').value.trim();
+                    let url = '/api/settings/google/drive/files';
+                    
+                    if (searchTerm) {
+                        url += `?search=${encodeURIComponent(searchTerm)}`;
+                    } else if (pageToken) {
+                        url += `?pageToken=${pageToken}`;
+                    }
+                    
+                    const data = await api(url);
+                    const list = document.getElementById('driveFilesList');
+                    
+                    if (!data.files || data.files.length === 0) {
+                        list.innerHTML = '<p class="text-sm text-slate-400">Dosya bulunamadı.</p>';
+                        document.getElementById('driveLoadMore').classList.add('hidden');
+                        return;
+                    }
+                    
+                    // If loading more, append; otherwise replace
+                    const html = data.files.map(file => `
+                        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:border-brand-300 transition-all group">
+                            <div class="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-slate-200 flex-shrink-0">
+                                ${file.thumbnailLink ? 
+                                    `<img src="${file.thumbnailLink}" class="w-8 h-8 object-cover rounded" />` :
+                                    `<i class="fas fa-file text-slate-400"></i>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-slate-800 truncate">${file.name}</p>
+                                <p class="text-xs text-slate-400">
+                                    ${file.size ? formatFileSize(file.size) : 'N/A'} • 
+                                    ${file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString('tr-TR') : ''}
+                                </p>
+                            </div>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href="${file.webViewLink}" target="_blank" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">
+                                    <i class="fas fa-external-link-alt"></i> Aç
+                                </a>
+                                <button onclick='attachDriveFile(${JSON.stringify(file)})' class="px-3 py-1.5 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">
+                                    <i class="fas fa-paperclip"></i> Ekle
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    if (pageToken) {
+                        list.innerHTML += html;
+                    } else {
+                        list.innerHTML = html;
+                    }
+                    
+                    // Show/hide load more button
+                    driveNextPageToken = data.nextPageToken;
+                    if (driveNextPageToken) {
+                        document.getElementById('driveLoadMore').classList.remove('hidden');
+                    } else {
+                        document.getElementById('driveLoadMore').classList.add('hidden');
+                    }
+                    
+                    // Show Drive section
+                    document.getElementById('googleDriveSection').classList.remove('hidden');
+                    
+                } catch (e) {
+                    console.error('Load Drive files error:', e);
+                    showToast('Drive dosyaları yüklenemedi', 'error');
+                }
+            }
+
+            function loadMoreDriveFiles() {
+                if (driveNextPageToken) {
+                    loadDriveFiles(driveNextPageToken);
+                }
+            }
+
+            function refreshDriveFiles() {
+                driveNextPageToken = null;
+                loadDriveFiles();
+            }
+
+            function formatFileSize(bytes) {
+                if (!bytes) return 'N/A';
+                const kb = bytes / 1024;
+                if (kb < 1024) return kb.toFixed(1) + ' KB';
+                const mb = kb / 1024;
+                if (mb < 1024) return mb.toFixed(1) + ' MB';
+                const gb = mb / 1024;
+                return gb.toFixed(1) + ' GB';
+            }
+
+            async function attachDriveFile(file) {
+                // For demo: attach to a deal (you can customize this)
+                const entityType = prompt('Eklemek istediğiniz varlık türü (deal/task/contact/company):', 'deal');
+                if (!entityType) return;
+                
+                const entityId = prompt('Varlık ID:', '1');
+                if (!entityId) return;
+                
+                try {
+                    await api('/api/settings/google/drive/attach', 'POST', {
+                        driveFileId: file.id,
+                        fileName: file.name,
+                        mimeType: file.mimeType,
+                        fileSize: file.size,
+                        thumbnailUrl: file.thumbnailLink,
+                        webViewLink: file.webViewLink,
+                        entityType: entityType,
+                        entityId: parseInt(entityId),
+                        notes: ''
+                    });
+                    
+                    showToast(`"${file.name}" başarıyla eklendi!`);
+                } catch (e) {
+                    showToast('Dosya eklenemedi', 'error');
+                }
+            }
+
+            // Drive search with debounce
+            document.addEventListener('DOMContentLoaded', () => {
+                const searchInput = document.getElementById('driveSearchInput');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        clearTimeout(driveSearchTimeout);
+                        driveSearchTimeout = setTimeout(() => {
+                            driveNextPageToken = null;
+                            loadDriveFiles();
+                        }, 500);
+                    });
+                }
+            });
+
+            // ═══════════════════════════════════════════════════════════════
+            // INIT
+            // ═══════════════════════════════════════════════════════════════
 
             // Init
             async function init() {
