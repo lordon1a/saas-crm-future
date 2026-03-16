@@ -689,3 +689,197 @@ def create_from_template():
             'created_at': task.created_at.isoformat()
         } for task in tasks]
     }), 201
+
+
+# ============================================================================
+# TASK COMMENTS
+# ============================================================================
+
+@tasks_bp.route('/api/v1/tasks/<int:task_id>/comments', methods=['POST'])
+@login_required
+def create_task_comment(task_id):
+    """Create a comment on a task"""
+    from services.task_comment_service import TaskCommentService
+    
+    data = request.get_json()
+    
+    if not data or not data.get('content'):
+        return jsonify({'error': 'content is required'}), 400
+    
+    try:
+        comment = TaskCommentService.create_comment(
+            task_id=task_id,
+            user_id=get_current_user().id,
+            content=data['content']
+        )
+        
+        return jsonify({
+            'id': comment.id,
+            'task_id': comment.task_id,
+            'user_id': comment.user_id,
+            'content': comment.content,
+            'created_at': comment.created_at.isoformat()
+        }), 201
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@tasks_bp.route('/api/v1/tasks/<int:task_id>/comments', methods=['GET'])
+@login_required
+def get_task_comments(task_id):
+    """Get all comments for a task"""
+    from services.task_comment_service import TaskCommentService
+    
+    comments = TaskCommentService.get_task_comments(task_id)
+    
+    return jsonify({
+        'comments': [{
+            'id': c.id,
+            'task_id': c.task_id,
+            'user_id': c.user_id,
+            'content': c.content,
+            'created_at': c.created_at.isoformat()
+        } for c in comments]
+    })
+
+
+@tasks_bp.route('/api/v1/tasks/comments/<int:comment_id>', methods=['DELETE'])
+@login_required
+def delete_task_comment(comment_id):
+    """Delete a comment"""
+    from services.task_comment_service import TaskCommentService
+    
+    try:
+        TaskCommentService.delete_comment(comment_id, get_current_user().id)
+        return jsonify({'message': 'Comment deleted'}), 200
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# TASK ATTACHMENTS
+# ============================================================================
+
+@tasks_bp.route('/api/v1/tasks/<int:task_id>/attachments', methods=['POST'])
+@login_required
+def create_task_attachment(task_id):
+    """Upload an attachment to a task"""
+    from services.task_comment_service import TaskCommentService
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'File type not allowed'}), 400
+    
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({'error': 'File too large (max 10MB)'}), 400
+    
+    try:
+        attachment = TaskCommentService.create_attachment(
+            task_id=task_id,
+            user_id=get_current_user().id,
+            file=file,
+            upload_folder=UPLOAD_FOLDER
+        )
+        
+        return jsonify({
+            'id': attachment.id,
+            'task_id': attachment.task_id,
+            'file_name': attachment.file_name,
+            'file_size': attachment.file_size,
+            'uploaded_by': attachment.uploaded_by,
+            'created_at': attachment.created_at.isoformat()
+        }), 201
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@tasks_bp.route('/api/v1/tasks/<int:task_id>/attachments', methods=['GET'])
+@login_required
+def get_task_attachments(task_id):
+    """Get all attachments for a task"""
+    from services.task_comment_service import TaskCommentService
+    
+    attachments = TaskCommentService.get_task_attachments(task_id)
+    
+    return jsonify({
+        'attachments': [{
+            'id': a.id,
+            'task_id': a.task_id,
+            'file_name': a.file_name,
+            'file_size': a.file_size,
+            'uploaded_by': a.uploaded_by,
+            'created_at': a.created_at.isoformat()
+        } for a in attachments]
+    })
+
+
+@tasks_bp.route('/api/v1/tasks/attachments/<int:attachment_id>', methods=['DELETE'])
+@login_required
+def delete_task_attachment(attachment_id):
+    """Delete an attachment"""
+    from services.task_comment_service import TaskCommentService
+    
+    try:
+        TaskCommentService.delete_attachment(attachment_id, get_current_user().id)
+        return jsonify({'message': 'Attachment deleted'}), 200
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@tasks_bp.route('/api/v1/tasks/attachments/<int:attachment_id>/download', methods=['GET'])
+@login_required
+def download_task_attachment(attachment_id):
+    """Download an attachment file"""
+    from models_crm import TaskAttachment
+    
+    attachment = TaskAttachment.query.get(attachment_id)
+    
+    if not attachment:
+        return jsonify({'error': 'Attachment not found'}), 404
+    
+    # Verify user has access to this task's workspace
+    from models_crm import Task
+    task = Task.query.get(attachment.task_id)
+    if not task or task.workspace_id != get_current_user().workspace_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if not os.path.exists(attachment.file_path):
+        return jsonify({'error': 'File not found on disk'}), 404
+    
+    return send_file(
+        attachment.file_path,
+        as_attachment=True,
+        download_name=attachment.file_name
+    )
