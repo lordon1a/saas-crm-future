@@ -33,14 +33,16 @@ feat: Custom Fields UI implementation complete
 
 ---
 
-### 2. Task Comments & Attachments - ✅ BACKEND TAMAMLANDI
+### 2. Task Comments & Attachments - ✅ TAM TAMAMLANDI
 **Backend**: ✅ Tamamlandı  
-**Frontend**: ⏳ Sırada
+**Frontend**: ✅ Tamamlandı
 
 #### Bileşenler:
 - ✅ `models_crm.py` - TaskComment, TaskAttachment modelleri
 - ✅ `services/task_comment_service.py` - Service layer
 - ✅ `routes/tasks.py` - API endpoints eklendi
+- ✅ `static/tasks.js` - Frontend logic
+- ✅ `templates/tasks.html` - UI (zaten vardı)
 
 #### API Endpoints:
 **Comments:**
@@ -60,20 +62,15 @@ feat: Custom Fields UI implementation complete
 - Workspace bazlı dosya depolama
 - Yetki kontrolü (kullanıcılar sadece kendi yorum/dosyalarını silebilir)
 - Timestamp'li benzersiz dosya adları
+- Hover efekti ile silme butonları
+- Toast bildirimleri
+- Tam UI entegrasyonu
 
-#### Commit:
+#### Commits:
 ```
-feat: Task Comments & Attachments backend complete
-- Created TaskCommentService for managing comments and attachments
-- Added comment CRUD endpoints
-- Added attachment CRUD endpoints with file upload
+9cdbdb8 - feat: Task Comments & Attachments backend complete
+ff0d83b - feat: Task Comments & Attachments frontend complete
 ```
-
-#### Sonraki Adım:
-- ⏳ Frontend UI oluştur (tasks.html'de yorum ve dosya bölümü)
-- ⏳ Yorum ekleme formu
-- ⏳ Dosya yükleme UI
-- ⏳ Yorum ve dosya listesi gösterimi
 
 ---
 
@@ -108,12 +105,9 @@ feat: Task Comments & Attachments backend complete
 
 ## Özet
 
-### Tamamlanan: 1.5 / 4
+### Tamamlanan: 2 / 4
 - ✅ Custom Fields (tam)
-- ✅ Task Comments & Attachments (backend)
-
-### Devam Eden: 0.5 / 4
-- ⏳ Task Comments & Attachments (frontend)
+- ✅ Task Comments & Attachments (tam)
 
 ### Bekleyen: 2 / 4
 - ⏳ Scheduled Messages
@@ -123,19 +117,13 @@ feat: Task Comments & Attachments backend complete
 
 ## Sonraki Adımlar
 
-1. **Task Comments & Attachments Frontend** (En yüksek öncelik)
-   - tasks.html'e yorum ve dosya bölümü ekle
-   - Yorum ekleme formu
-   - Dosya yükleme UI
-   - Liste gösterimi
-
-2. **Scheduled Messages**
+1. **Scheduled Messages** (En yüksek öncelik)
    - Service layer oluştur
    - API endpoints
    - Background job
    - Frontend UI
 
-3. **Custom Fields Entity Integration**
+2. **Custom Fields Entity Integration**
    - Contact/Company/Deal detay sayfalarına entegre et
    - Form inputları ekle
    - Değer kaydetme
@@ -150,9 +138,10 @@ ecca99b - feat: Custom Fields UI implementation complete
 
 # Task Comments & Attachments
 9cdbdb8 - feat: Task Comments & Attachments backend complete
+ff0d83b - feat: Task Comments & Attachments frontend complete
 ```
 
 ---
 
 **Son Güncelleme**: 2026-03-17  
-**Durum**: Custom Fields tamamlandı, Task Comments backend tamamlandı, frontend sırada
+**Durum**: Custom Fields ve Task Comments & Attachments tamamlandı, Scheduled Messages sırada
