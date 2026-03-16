@@ -1,3 +1,58 @@
+# CRITICAL: SSL Monkey Patch for Render's broken Python builds
+# Must be FIRST before any imports that use SSL/HTTPS
+import sys
+import ssl
+
+# Patch the broken SSLContext property setters
+_original_ssl_context = ssl.SSLContext
+
+class PatchedSSLContext(_original_ssl_context):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._options = 0
+        self._minimum_version = ssl.TLSVersion.MINIMUM_SUPPORTED
+        self._maximum_version = ssl.TLSVersion.MAXIMUM_SUPPORTED
+    
+    @property
+    def options(self):
+        return self._options
+    
+    @options.setter
+    def options(self, value):
+        self._options = value
+        # Call the C implementation directly, bypassing the broken Python property
+        try:
+            super(_original_ssl_context, self.__class__).options.__set__(self, value)
+        except (AttributeError, RecursionError):
+            pass
+    
+    @property
+    def minimum_version(self):
+        return self._minimum_version
+    
+    @minimum_version.setter
+    def minimum_version(self, value):
+        self._minimum_version = value
+        try:
+            super(_original_ssl_context, self.__class__).minimum_version.__set__(self, value)
+        except (AttributeError, RecursionError):
+            pass
+    
+    @property
+    def maximum_version(self):
+        return self._maximum_version
+    
+    @maximum_version.setter
+    def maximum_version(self, value):
+        self._maximum_version = value
+        try:
+            super(_original_ssl_context, self.__class__).maximum_version.__set__(self, value)
+        except (AttributeError, RecursionError):
+            pass
+
+# Replace ssl.SSLContext globally
+ssl.SSLContext = PatchedSSLContext
+
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -73,6 +128,7 @@ from routes import google_integration as google_integration_route
 from routes import email_tracking as email_tracking_route
 from routes.contacts import contacts_bp
 from routes.tasks import tasks_bp
+from routes import custom_fields as custom_fields_route
 from services import portal_notification_service  # noqa: F401
 
 db.init_app(app)
@@ -91,6 +147,7 @@ app.register_blueprint(google_integration_route.bp)
 app.register_blueprint(email_tracking_route.bp)
 app.register_blueprint(contacts_bp)
 app.register_blueprint(tasks_bp)
+app.register_blueprint(custom_fields_route.bp)
 
 # Login endpoint'ine rate limit uygula
 app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
