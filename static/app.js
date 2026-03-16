@@ -689,36 +689,31 @@ setInterval(loadConversations, 5000);
 
 // ─── SSE (Server-Sent Events) Listener ───────────────────────────────────────
 let sseSource = null;
-let sseReconnectAttempts = 0;
-const MAX_SSE_RECONNECT_ATTEMPTS = 3;
+let sseEnabled = false; // Production'da SSE devre dışı (Render free tier sorunu)
 
 function initSSE() {
-    if (sseSource) return;
-    
-    // Production'da SSE sorunlu olabilir, max 3 deneme sonrası devre dışı bırak
-    if (sseReconnectAttempts >= MAX_SSE_RECONNECT_ATTEMPTS) {
-        console.log('SSE disabled after max reconnection attempts');
+    // SSE devre dışı - production'da sorun yaratıyor
+    if (!sseEnabled) {
+        console.log('SSE disabled for production stability');
         return;
     }
+    
+    if (sseSource) return;
     
     try {
         sseSource = new EventSource('/api/notifications/stream');
         
         sseSource.addEventListener('connected', () => {
             console.log('SSE connected');
-            sseReconnectAttempts = 0; // Başarılı bağlantıda sayacı sıfırla
         });
         
         sseSource.addEventListener('new_message', (e) => {
             try {
                 const data = JSON.parse(e.data);
-                // Eğer şu an açık olan konuşmaya mesaj geldiyse, otomatik yenile
                 if (data.conversation_id === window.currentConvId) {
                     selectConversation(data.conversation_id, '', '', '');
                 }
-                // Konuşma listesini yenile
                 loadConversations();
-                // Toast göster
                 showToast('Yeni mesaj geldi: ' + (data.preview || ''), 'info');
             } catch (err) {
                 console.error('SSE parse error:', err);
@@ -726,26 +721,16 @@ function initSSE() {
         });
         
         sseSource.onerror = () => {
-            sseReconnectAttempts++;
-            console.warn(`SSE connection lost (attempt ${sseReconnectAttempts}/${MAX_SSE_RECONNECT_ATTEMPTS})`);
-            
+            console.warn('SSE connection error');
             if (sseSource) {
                 sseSource.close();
                 sseSource = null;
             }
-            
-            // Sadece max deneme sayısına ulaşmadıysak yeniden bağlan
-            if (sseReconnectAttempts < MAX_SSE_RECONNECT_ATTEMPTS) {
-                setTimeout(initSSE, 5000);
-            } else {
-                console.log('SSE permanently disabled. App will work without real-time updates.');
-            }
         };
     } catch (err) {
         console.error('SSE initialization failed:', err);
-        sseReconnectAttempts = MAX_SSE_RECONNECT_ATTEMPTS; // Hata durumunda devre dışı bırak
     }
 }
 
-// Sayfa yüklendiğinde SSE'yi başlat
-initSSE();
+// SSE devre dışı - manuel yenileme kullanılacak
+// initSSE();
