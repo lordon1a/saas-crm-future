@@ -16,10 +16,25 @@ class Config:
     
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,  # Bağlantı sağlığını kontrol et
-        'pool_recycle': 300,    # 5 dakikada bir bağlantıları yenile
-    }
+    
+    # Production için optimize edilmiş connection pool
+    if ENV == 'production' and 'postgresql://' in DATABASE_URL:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,      # Bağlantı sağlığını kontrol et
+            'pool_recycle': 280,        # 4.5 dakikada bir bağlantıları yenile (Render timeout: 5dk)
+            'pool_size': 5,             # Minimum connection pool size
+            'max_overflow': 10,         # Maksimum ekstra bağlantı
+            'pool_timeout': 30,         # Bağlantı bekleme timeout (saniye)
+            'connect_args': {
+                'connect_timeout': 10,  # PostgreSQL bağlantı timeout
+                'options': '-c statement_timeout=30000'  # Query timeout: 30 saniye
+            }
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 300,
+        }
 
     # Flask - Production'da SECRET_KEY zorunlu
     SECRET_KEY = os.getenv('SECRET_KEY')
@@ -27,12 +42,15 @@ class Config:
         if ENV == 'production':
             raise RuntimeError('SECRET_KEY environment variable must be set in production')
         SECRET_KEY = 'dev-secret-key-change-in-production'  # Sadece development için
+    
+    # Session ayarları
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = ENV == 'production'
     SESSION_COOKIE_SAMESITE = os.getenv(
         'SESSION_COOKIE_SAMESITE',
         'Strict' if ENV == 'production' else 'Lax'
     )
+    PERMANENT_SESSION_LIFETIME = int(os.getenv('SESSION_LIFETIME_HOURS', '24')) * 3600  # Varsayılan: 24 saat
 
     # CORS: production'da belirli origin'ler verin (örn. https://app.example.com)
     _cors_origins_raw = os.getenv('CORS_ORIGINS', '*')

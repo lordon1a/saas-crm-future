@@ -14,6 +14,7 @@ def login_page():
 
 @bp.route('/login', methods=['POST'])
 def login():
+    from flask import session as flask_session
     data = request.get_json(silent=True) or {}
     email = data.get('email', '').strip()
     password = data.get('password', '')
@@ -26,6 +27,8 @@ def login():
         logger.warning('Başarısız giriş denemesi: %s', email)
         return jsonify({'error': 'Email veya şifre hatalı'}), 401
 
+    # Session'ı permanent yap (config'deki PERMANENT_SESSION_LIFETIME kullanılır)
+    flask_session.permanent = True
     session['user_id'] = user.id
     session['workspace_id'] = user.workspace_id
     session['user_name'] = user.name
@@ -81,6 +84,8 @@ def register():
         db.session.commit()
 
         # 3. Otomatik session login
+        from flask import session as flask_session
+        flask_session.permanent = True  # Session'ı permanent yap
         session['user_id'] = user.id
         session['workspace_id'] = workspace.id
         session['user_name'] = user.name
