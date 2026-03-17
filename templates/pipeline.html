@@ -274,7 +274,8 @@
                 
                 // Load deals
                 const dealsRes = await fetch(`/api/v1/deals?pipeline_id=${currentPipeline.id}`);
-                deals = await dealsRes.json();
+                const dealsData = await dealsRes.json();
+                deals = Array.isArray(dealsData) ? dealsData : (dealsData.deals || dealsData.data || []);
                 
                 // Load forecast
                 const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
