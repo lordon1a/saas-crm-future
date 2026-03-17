@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -15,6 +18,21 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Eventlet-safe SQLAlchemy engine tuning for Render/runtime stability.
+db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+engine_options = dict(app.config.get('SQLALCHEMY_ENGINE_OPTIONS') or {})
+engine_options.setdefault('pool_pre_ping', True)
+engine_options.setdefault('pool_size', 5)
+engine_options.setdefault('max_overflow', 5)
+if not str(db_uri).startswith('sqlite'):
+    engine_options.setdefault('pool_recycle', 1800)
+else:
+    connect_args = dict(engine_options.get('connect_args') or {})
+    connect_args.setdefault('check_same_thread', False)
+    engine_options['connect_args'] = connect_args
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
+
 realtime.socketio = SocketIO(
     app,
     cors_allowed_origins='*',
