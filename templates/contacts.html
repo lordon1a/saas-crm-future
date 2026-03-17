@@ -458,6 +458,7 @@
         let allCompanies = [];
         let selectedContactIds = new Set();
         let visibleColumns = ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'];
+        let customFields = []; // Store custom fields
 
         // Get company_id from URL if present
         const urlParams = new URLSearchParams(window.location.search);
@@ -687,6 +688,28 @@
 
         async function loadColumnPreferences() {
             try {
+                // Load custom fields first
+                const fieldsRes = await fetch('/api/v1/custom-fields?entity_type=contact');
+                if (fieldsRes.ok) {
+                    customFields = await fieldsRes.json();
+                    
+                    // Add custom fields to available columns
+                    customFields.forEach(field => {
+                        const customCol = {
+                            id: `custom_${field.id}`,
+                            label: field.field_name,
+                            required: false,
+                            custom: true
+                        };
+                        
+                        // Only add if not already in list
+                        if (!availableColumns.find(c => c.id === customCol.id)) {
+                            availableColumns.push(customCol);
+                        }
+                    });
+                }
+                
+                // Load user preferences
                 const response = await fetch('/api/v1/user-preferences/contacts-columns');
                 if (response.ok) {
                     const data = await response.json();
@@ -938,6 +961,9 @@
                 const data = await res.json();
                 allContacts = data.contacts;
                 
+                // Load custom field values for all contacts
+                await loadCustomFieldValues();
+                
                 renderContacts(allContacts);
                 document.getElementById('contactCount').textContent = allContacts.length;
                 
@@ -950,6 +976,21 @@
                 showToast('Kişiler yüklenirken bir hata oluştu.', 'error');
             } finally {
                 loading.classList.add('hidden');
+            }
+        }
+
+        async function loadCustomFieldValues() {
+            // Load custom field values for all contacts
+            for (const contact of allContacts) {
+                try {
+                    const res = await fetch(`/api/v1/custom-fields/values/contact/${contact.id}`);
+                    if (res.ok) {
+                        const values = await res.json();
+                        contact.customFieldValues = values;
+                    }
+                } catch (e) {
+                    console.error(`Error loading custom fields for contact ${contact.id}:`, e);
+                }
             }
         }
 
@@ -967,21 +1008,42 @@
             emptyState.classList.add('hidden');
             
             // Update table header based on visible columns
-            thead.innerHTML = `
+            let headerHtml = `
                 <th scope="col" class="w-12 px-4 py-3">
                     <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
                 </th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Ad Soyad
                 </th>
-                ${isColumnVisible('company') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Kuruluş</th>' : ''}
-                ${isColumnVisible('email') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">E-posta</th>' : ''}
-                ${isColumnVisible('phone') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Telefon</th>' : ''}
-                ${isColumnVisible('role') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol</th>' : ''}
-                ${isColumnVisible('lead_score') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Score</th>' : ''}
-                ${isColumnVisible('deals') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Açık Anlaşmalar</th>' : ''}
-                <th scope="col" class="w-12 px-4 py-3"></th>
             `;
+            
+            visibleColumns.forEach(col => {
+                if (col === 'name') return; // Already added
+                
+                if (col === 'company') {
+                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Kuruluş</th>';
+                } else if (col === 'email') {
+                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">E-posta</th>';
+                } else if (col === 'phone') {
+                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Telefon</th>';
+                } else if (col === 'role') {
+                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol</th>';
+                } else if (col === 'lead_score') {
+                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Score</th>';
+                } else if (col === 'deals') {
+                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Açık Anlaşmalar</th>';
+                } else if (col.startsWith('custom_')) {
+                    // Custom field
+                    const fieldId = parseInt(col.replace('custom_', ''));
+                    const field = customFields.find(f => f.id === fieldId);
+                    if (field) {
+                        headerHtml += `<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">${field.field_name}</th>`;
+                    }
+                }
+            });
+            
+            headerHtml += '<th scope="col" class="w-12 px-4 py-3"></th>';
+            thead.innerHTML = headerHtml;
             
             tbody.innerHTML = '';
 
@@ -1108,6 +1170,29 @@
                         </td>
                     `;
                 }
+                
+                // Render custom fields
+                visibleColumns.forEach(col => {
+                    if (col.startsWith('custom_')) {
+                        const fieldId = parseInt(col.replace('custom_', ''));
+                        const field = customFields.find(f => f.id === fieldId);
+                        if (field && c.customFieldValues) {
+                            const value = c.customFieldValues[field.field_name] || '-';
+                            html += `
+                                <td class="px-4 py-3 whitespace-nowrap group/cell">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-sm text-gray-500">${value}</span>
+                                        <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                            onclick="viewContact(${c.id})" 
+                                            title="Düzenle">
+                                            <i class="fas fa-pen text-xs"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                        }
+                    }
+                });
                 
                 html += `
                     <td class="px-4 py-3 whitespace-nowrap text-right">
