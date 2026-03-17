@@ -391,6 +391,16 @@
         let currentPipeline = null;
         let deals = [];
 
+        // Analytics render function
+        function renderAnalytics(analytics) {
+            document.getElementById('forecastValue').textContent = 
+                `$${analytics.weighted_forecast.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            document.getElementById('openDealsCount').textContent = analytics.open_deals;
+            document.getElementById('dealCount').textContent = `${analytics.open_deals} Deal${analytics.open_deals !== 1 ? 's' : ''}`;
+            document.getElementById('totalValue').textContent = 
+                `$${analytics.total_value.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+        }
+
         async function loadPipeline() {
             try {
                 // Load pipelines
