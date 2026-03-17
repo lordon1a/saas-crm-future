@@ -303,7 +303,7 @@ class CollaborationService:
 
     @staticmethod
     def list_activity_feed(workspace_id, limit=50):
-        rows = Activity.query.filter_by(workspace_id=workspace_id).order_by(Activity.created_at.desc()).limit(max(1, min(limit, 200))).all()
+        rows = Activity.query.filter_by(workspace_id=workspace_id, is_deleted=False).order_by(Activity.created_at.desc()).limit(max(1, min(limit, 200))).all()
         return [
             {
                 'id': row.id,

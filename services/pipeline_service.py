@@ -48,7 +48,8 @@ class PipelineService:
         from models_crm import Company
         company = Company.query.filter_by(
             id=data['company_id'],
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not company:
@@ -132,7 +133,8 @@ class PipelineService:
         """
         deal = Deal.query.filter_by(
             id=deal_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not deal:
@@ -198,7 +200,8 @@ class PipelineService:
         """
         deal = Deal.query.filter_by(
             id=deal_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not deal:
@@ -270,7 +273,8 @@ class PipelineService:
         
         deal = Deal.query.filter_by(
             id=deal_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not deal:
@@ -320,7 +324,7 @@ class PipelineService:
         Returns:
             List[Deal]: List of deals
         """
-        query = Deal.query.filter_by(workspace_id=workspace_id)
+        query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
         if filters:
             if 'stage_id' in filters:
@@ -356,7 +360,8 @@ class PipelineService:
         """
         query = Deal.query.filter_by(
             workspace_id=workspace_id,
-            status='open'
+            status='open',
+            is_deleted=False,
         )
         
         if pipeline_id:

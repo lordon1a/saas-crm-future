@@ -589,6 +589,47 @@ with app.app_context():
                     conn.execute(text('CREATE INDEX IF NOT EXISTS idx_contacts_telegram_chat_id ON contacts(telegram_chat_id)'))
                     need_commit = True
                     logger.info('contacts.telegram_chat_id column added')
+                if 'is_deleted' not in contact_cols:
+                    conn.execute(text('ALTER TABLE contacts ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0'))
+                    need_commit = True
+                    logger.info('contacts.is_deleted column added')
+                if 'deleted_at' not in contact_cols:
+                    conn.execute(text('ALTER TABLE contacts ADD COLUMN deleted_at TIMESTAMP'))
+                    need_commit = True
+                    logger.info('contacts.deleted_at column added')
+
+                r_companies = conn.execute(text('PRAGMA table_info(companies)'))
+                company_cols = [row[1] for row in r_companies.fetchall()]
+                if 'is_deleted' not in company_cols:
+                    conn.execute(text('ALTER TABLE companies ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0'))
+                    need_commit = True
+                    logger.info('companies.is_deleted column added')
+                if 'deleted_at' not in company_cols:
+                    conn.execute(text('ALTER TABLE companies ADD COLUMN deleted_at TIMESTAMP'))
+                    need_commit = True
+                    logger.info('companies.deleted_at column added')
+
+                r_deals = conn.execute(text('PRAGMA table_info(deals)'))
+                deal_cols = [row[1] for row in r_deals.fetchall()]
+                if 'is_deleted' not in deal_cols:
+                    conn.execute(text('ALTER TABLE deals ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0'))
+                    need_commit = True
+                    logger.info('deals.is_deleted column added')
+                if 'deleted_at' not in deal_cols:
+                    conn.execute(text('ALTER TABLE deals ADD COLUMN deleted_at TIMESTAMP'))
+                    need_commit = True
+                    logger.info('deals.deleted_at column added')
+
+                r_activities = conn.execute(text('PRAGMA table_info(activities)'))
+                activity_cols = [row[1] for row in r_activities.fetchall()]
+                if 'is_deleted' not in activity_cols:
+                    conn.execute(text('ALTER TABLE activities ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0'))
+                    need_commit = True
+                    logger.info('activities.is_deleted column added')
+                if 'deleted_at' not in activity_cols:
+                    conn.execute(text('ALTER TABLE activities ADD COLUMN deleted_at TIMESTAMP'))
+                    need_commit = True
+                    logger.info('activities.deleted_at column added')
 
                 r_notes = conn.execute(text('PRAGMA table_info(notes)'))
                 notes_cols = [row[1] for row in r_notes.fetchall()]
@@ -632,6 +673,14 @@ with app.app_context():
                 conn.execute(text('ALTER TABLE customers ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
                 conn.execute(text('ALTER TABLE contacts ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
                 conn.execute(text('ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_internal BOOLEAN NOT NULL DEFAULT FALSE'))
+                conn.execute(text('ALTER TABLE contacts ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE'))
+                conn.execute(text('ALTER TABLE contacts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP'))
+                conn.execute(text('ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE'))
+                conn.execute(text('ALTER TABLE companies ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP'))
+                conn.execute(text('ALTER TABLE deals ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE'))
+                conn.execute(text('ALTER TABLE deals ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP'))
+                conn.execute(text('ALTER TABLE activities ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE'))
+                conn.execute(text('ALTER TABLE activities ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP'))
                 conn.execute(text('ALTER TABLE conversations ADD COLUMN IF NOT EXISTS public_id VARCHAR(36)'))
 
                 missing_public_ids = conn.execute(

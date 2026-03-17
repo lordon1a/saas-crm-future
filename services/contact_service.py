@@ -83,7 +83,8 @@ class ContactService:
         """Update a company."""
         company = Company.query.filter_by(
             id=company_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not company:
@@ -96,7 +97,8 @@ class ContactService:
             
             parent = Company.query.filter_by(
                 id=data['parent_company_id'],
-                workspace_id=workspace_id
+                workspace_id=workspace_id,
+                is_deleted=False,
             ).first()
             
             if not parent:
@@ -141,7 +143,7 @@ class ContactService:
     @staticmethod
     def get_companies(workspace_id: int, filters: Optional[Dict[str, Any]] = None) -> List[Company]:
         """Get companies with optional filters."""
-        query = Company.query.filter_by(workspace_id=workspace_id)
+        query = Company.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
         if filters:
             if 'industry' in filters:
@@ -187,7 +189,8 @@ class ContactService:
         if data.get('company_id'):
             company = Company.query.filter_by(
                 id=data['company_id'],
-                workspace_id=workspace_id
+                workspace_id=workspace_id,
+                is_deleted=False,
             ).first()
             
             if not company:
@@ -251,14 +254,15 @@ class ContactService:
         """Update a contact."""
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
             raise LookupError(f"Contact {contact_id} not found")
 
         if 'company_id' in data and data['company_id'] is not None:
-            target_company = Company.query.filter_by(id=data['company_id']).first()
+            target_company = Company.query.filter_by(id=data['company_id'], is_deleted=False).first()
             if not target_company or target_company.workspace_id != contact.workspace_id:
                 raise ValueError("Yetkisiz şirket ataması")
         
@@ -303,7 +307,7 @@ class ContactService:
     @staticmethod
     def get_contacts(workspace_id: int, filters: Optional[Dict[str, Any]] = None) -> List[Contact]:
         """Get contacts with optional filters."""
-        query = Contact.query.filter_by(workspace_id=workspace_id)
+        query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
         if filters:
             if 'company_id' in filters:
@@ -350,6 +354,7 @@ class ContactService:
         query = Contact.query.filter(
             and_(
                 Contact.workspace_id == workspace_id,
+                Contact.is_deleted == False,
                 or_(*conditions)
             )
         )
@@ -673,7 +678,8 @@ class ContactService:
                     if company_name:
                         company = Company.query.filter_by(
                             workspace_id=workspace_id,
-                            name=company_name
+                            name=company_name,
+                            is_deleted=False,
                         ).first()
                         if company:
                             company_id = company.id

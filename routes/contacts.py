@@ -67,7 +67,7 @@ def get_companies():
         from models_crm import Company
         from models import db
         
-        query = Company.query.filter_by(workspace_id=workspace_id)
+        query = Company.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
         # Apply filters
         if filters.get('industry'):
@@ -136,7 +136,8 @@ def get_company(company_id):
         from models_crm import Company
         company = Company.query.filter_by(
             id=company_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not company:
@@ -243,6 +244,70 @@ def update_company(company_id):
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+@contacts_bp.route('/api/v1/companies/<int:company_id>', methods=['DELETE'])
+@login_required
+def delete_company(company_id):
+    """Soft delete a company"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from models_crm import Company
+        from models import db
+
+        company = Company.query.filter_by(id=company_id, workspace_id=workspace_id, is_deleted=False).first()
+        if not company:
+            return jsonify({'error': 'Company not found'}), 404
+
+        try:
+            company.is_deleted = True
+            company.deleted_at = datetime.utcnow()
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error deleting company: {str(db_error)}")
+            return jsonify({'error': 'Internal Server Error'}), 500
+
+        return jsonify({'message': 'Kayıt başarıyla silindi (çöp kutusuna taşındı)'}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting company: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/companies/<int:company_id>/restore', methods=['POST'])
+@login_required
+def restore_company(company_id):
+    """Restore a soft deleted company"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from models_crm import Company
+        from models import db
+
+        company = Company.query.filter_by(id=company_id, workspace_id=workspace_id, is_deleted=True).first()
+        if not company:
+            return jsonify({'error': 'Company not found'}), 404
+
+        try:
+            company.is_deleted = False
+            company.deleted_at = None
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error restoring company: {str(db_error)}")
+            return jsonify({'error': 'Internal Server Error'}), 500
+
+        return jsonify({'message': 'Kayıt başarıyla geri yüklendi'}), 200
+
+    except Exception as e:
+        logger.error(f"Error restoring company: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
 # ============================================================================
 # CONTACT ENDPOINTS
 # ============================================================================
@@ -277,7 +342,7 @@ def get_contacts():
         from models_crm import Contact
         from models import db
         
-        query = Contact.query.filter_by(workspace_id=workspace_id)
+        query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
         # Apply filters
         if filters.get('company_id'):
@@ -350,7 +415,8 @@ def get_contact(contact_id):
         from models_crm import Contact
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -398,7 +464,8 @@ def view_contact_page(contact_id):
         
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -445,7 +512,8 @@ def get_contact_timeline(contact_id):
         # Verify contact exists and belongs to workspace
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -518,7 +586,8 @@ def create_contact_note(contact_id):
         # Verify contact exists
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -576,7 +645,8 @@ def create_contact_activity(contact_id):
         # Verify contact exists
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -630,7 +700,8 @@ def get_contact_files(contact_id):
         # Verify contact exists
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -693,7 +764,8 @@ def upload_contact_files():
         # Verify contact exists
         contact = Contact.query.filter_by(
             id=int(contact_id),
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
@@ -795,7 +867,8 @@ def delete_contact_file(contact_id):
 
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         if not contact:
             return jsonify({'error': 'Contact not found'}), 404
@@ -857,7 +930,7 @@ def download_contact_file(contact_id, stored_name):
             return jsonify({'error': 'Gecersiz dosya adi'}), 400
 
         from models_crm import Contact
-        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id).first()
+        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id, is_deleted=False).first()
         if not contact:
             return jsonify({'error': 'Contact not found'}), 404
 
@@ -904,7 +977,7 @@ def share_contact_file_to_chat(contact_id):
         from services.telegram_service import TelegramService
         from realtime import emit_chat_message_event
 
-        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id).first()
+        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id, is_deleted=False).first()
         if not contact:
             return jsonify({'error': 'Contact not found'}), 404
         if not contact.customer_id:
@@ -1130,7 +1203,7 @@ def update_contact(contact_id):
 @contacts_bp.route('/api/v1/contacts/<int:contact_id>', methods=['DELETE'])
 @login_required
 def delete_contact(contact_id):
-    """Delete a contact"""
+    """Soft delete a contact"""
     try:
         workspace_id = session.get('workspace_id')
         
@@ -1142,20 +1215,58 @@ def delete_contact(contact_id):
         
         contact = Contact.query.filter_by(
             id=contact_id,
-            workspace_id=workspace_id
+            workspace_id=workspace_id,
+            is_deleted=False,
         ).first()
         
         if not contact:
             return jsonify({'error': 'Contact not found'}), 404
         
-        # Delete the contact
-        db.session.delete(contact)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Contact deleted'}), 200
+        try:
+            contact.is_deleted = True
+            contact.deleted_at = datetime.utcnow()
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error deleting contact: {str(db_error)}")
+            return jsonify({'error': 'Internal Server Error'}), 500
+
+        return jsonify({'message': 'Kayıt başarıyla silindi (çöp kutusuna taşındı)'}), 200
         
     except Exception as e:
         logger.error(f"Error deleting contact: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/restore', methods=['POST'])
+@login_required
+def restore_contact(contact_id):
+    """Restore a soft deleted contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from models_crm import Contact
+        from models import db
+
+        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id, is_deleted=True).first()
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+
+        try:
+            contact.is_deleted = False
+            contact.deleted_at = None
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error restoring contact: {str(db_error)}")
+            return jsonify({'error': 'Internal Server Error'}), 500
+
+        return jsonify({'message': 'Kayıt başarıyla geri yüklendi'}), 200
+
+    except Exception as e:
+        logger.error(f"Error restoring contact: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
@@ -1304,7 +1415,8 @@ def bulk_update_contacts():
         
         contacts = Contact.query.filter(
             Contact.id.in_(contact_ids),
-            Contact.workspace_id == workspace_id
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
         ).all()
         
         if len(contacts) != len(contact_ids):
@@ -1360,18 +1472,20 @@ def bulk_delete_contacts():
         if not contact_ids:
             return jsonify({'error': 'No contact IDs provided'}), 400
         
-        # Validate and delete contacts
+        # Validate and soft delete contacts
         from models_crm import Contact
         from models import db
         
         contacts_to_delete = db.session.query(Contact).filter(
             Contact.id.in_(contact_ids),
-            Contact.workspace_id == workspace_id
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
         ).all()
 
         deleted_count = 0
         for contact in contacts_to_delete:
-            db.session.delete(contact)
+            contact.is_deleted = True
+            contact.deleted_at = datetime.utcnow()
             deleted_count += 1
 
         try:

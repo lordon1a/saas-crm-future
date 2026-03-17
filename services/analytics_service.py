@@ -35,23 +35,27 @@ class AnalyticsService:
                 func.coalesce(func.sum(Deal.value), 0)
             ).filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'won'
             ).scalar() or 0
             
             # Open opportunities count
             open_opportunities = Deal.query.filter_by(
                 workspace_id=workspace_id,
+                is_deleted=False,
                 status='open'
             ).count()
             
             # Total contacts
             total_contacts = Contact.query.filter_by(
-                workspace_id=workspace_id
+                workspace_id=workspace_id,
+                is_deleted=False,
             ).count()
             
             # Total companies
             total_companies = Company.query.filter_by(
-                workspace_id=workspace_id
+                workspace_id=workspace_id,
+                is_deleted=False,
             ).count()
             
             # Active tasks (not completed)
@@ -109,6 +113,7 @@ class AnalyticsService:
                 Deal, Deal.stage_id == DealStage.id
             ).filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'open'
             ).group_by(
                 DealStage.id,
@@ -155,6 +160,7 @@ class AnalyticsService:
                 func.coalesce(func.sum(Deal.value), 0).label('value')
             ).filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'won'
             ).first()
             
@@ -164,6 +170,7 @@ class AnalyticsService:
                 func.coalesce(func.sum(Deal.value), 0).label('value')
             ).filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'lost'
             ).first()
             
@@ -210,6 +217,7 @@ class AnalyticsService:
             # Get deals closed in the period
             deals = Deal.query.filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'won',
                 Deal.closed_at >= start_date
             ).order_by(Deal.closed_at).all()
@@ -270,6 +278,7 @@ class AnalyticsService:
                 Deal, Deal.owner_id == User.id
             ).filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'won'
             ).group_by(
                 User.id,
@@ -344,6 +353,7 @@ class AnalyticsService:
             start_date = datetime.utcnow() - timedelta(days=days)
             deals = Deal.query.filter(
                 Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
                 Deal.status == 'won',
                 Deal.closed_at.isnot(None),
                 Deal.created_at >= start_date
@@ -381,7 +391,7 @@ class AnalyticsService:
         Calculate stage conversion distribution based on current deal allocation.
         """
         try:
-            total_deals = Deal.query.filter_by(workspace_id=workspace_id).count()
+            total_deals = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False).count()
             if total_deals == 0:
                 return {'stages': [], 'total_deals': 0}
 
@@ -391,7 +401,8 @@ class AnalyticsService:
             ).join(
                 Deal, Deal.stage_id == DealStage.id
             ).filter(
-                Deal.workspace_id == workspace_id
+                Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
             ).group_by(
                 DealStage.id,
                 DealStage.name

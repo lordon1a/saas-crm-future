@@ -81,6 +81,8 @@ class Deal(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     closed_at = db.Column(db.DateTime)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     stage = db.relationship('DealStage', foreign_keys=[stage_id], backref='deals')
@@ -120,6 +122,8 @@ class Company(db.Model):
     address = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     contacts = db.relationship('Contact', backref='company', lazy=True, 
@@ -153,6 +157,8 @@ class Contact(db.Model):
     lead_score = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Link to existing Customer for WhatsApp conversations
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
@@ -425,6 +431,8 @@ class Activity(db.Model):
     body = db.Column(db.Text)
     extra_data = db.Column(db.Text)  # JSON: type-specific data
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):
         return f'<Activity {self.activity_type} at {self.created_at}>'

@@ -127,7 +127,7 @@ def get_deals():
             return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
     
     # Build query
-    query = Deal.query.filter_by(workspace_id=workspace_id)
+    query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
     
     # Apply filters
     if filters.get('stage_id'):
@@ -141,7 +141,8 @@ def get_deals():
     if filters.get('contact_id'):
         query = query.join(Contact, Contact.company_id == Deal.company_id).filter(
             Contact.id == filters['contact_id'],
-            Contact.workspace_id == workspace_id
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
         )
     if filters.get('pipeline_id'):
         query = query.filter_by(pipeline_id=filters['pipeline_id'])
@@ -204,7 +205,7 @@ def get_deals():
 def get_deal(deal_id):
     """Get a specific deal"""
     workspace_id = session.get('workspace_id')
-    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id).first()
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
     
     if not deal:
         return jsonify({'error': 'Deal not found'}), 404
@@ -426,20 +427,42 @@ def close_deal(deal_id):
 @bp.route('/deals/<int:deal_id>', methods=['DELETE'])
 @login_required_api
 def delete_deal(deal_id):
-    """Delete a deal"""
+    """Soft delete a deal"""
     workspace_id = session.get('workspace_id')
-    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id).first()
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
     
     if not deal:
         return jsonify({'error': 'Deal not found'}), 404
     
     try:
-        db.session.delete(deal)
+        deal.is_deleted = True
+        deal.deleted_at = datetime.utcnow()
         db.session.commit()
-        logger.info(f"Deleted deal {deal_id}")
-        return jsonify({'message': 'Deal deleted successfully'}), 200
+        logger.info(f"Soft deleted deal {deal_id}")
+        return jsonify({'message': 'Kayıt başarıyla silindi (çöp kutusuna taşındı)'}), 200
     except Exception as e:
         logger.error(f"Error deleting deal: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/restore', methods=['POST'])
+@login_required_api
+def restore_deal(deal_id):
+    """Restore a soft deleted deal"""
+    workspace_id = session.get('workspace_id')
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=True).first()
+
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+
+    try:
+        deal.is_deleted = False
+        deal.deleted_at = None
+        db.session.commit()
+        return jsonify({'message': 'Kayıt başarıyla geri yüklendi'}), 200
+    except Exception as e:
+        logger.error(f"Error restoring deal: {e}")
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 

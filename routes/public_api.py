@@ -382,7 +382,7 @@ def public_contacts():
     workspace_id = g.api_workspace_id
     limit, offset = _pagination_params()
 
-    query = Contact.query.filter_by(workspace_id=workspace_id)
+    query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
     total = query.count()
     rows = query.order_by(Contact.created_at.desc()).offset(offset).limit(limit).all()
 
@@ -410,7 +410,7 @@ def public_companies():
     workspace_id = g.api_workspace_id
     limit, offset = _pagination_params()
 
-    query = Company.query.filter_by(workspace_id=workspace_id)
+    query = Company.query.filter_by(workspace_id=workspace_id, is_deleted=False)
     total = query.count()
     rows = query.order_by(Company.created_at.desc()).offset(offset).limit(limit).all()
 
@@ -435,7 +435,7 @@ def public_deals():
     workspace_id = g.api_workspace_id
     limit, offset = _pagination_params()
 
-    query = Deal.query.filter_by(workspace_id=workspace_id)
+    query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
     total = query.count()
     rows = query.order_by(Deal.updated_at.desc()).offset(offset).limit(limit).all()
 
@@ -493,7 +493,7 @@ def public_activities():
     workspace_id = g.api_workspace_id
     limit, offset = _pagination_params()
 
-    query = Activity.query.filter_by(workspace_id=workspace_id)
+    query = Activity.query.filter_by(workspace_id=workspace_id, is_deleted=False)
     total = query.count()
     rows = query.order_by(Activity.created_at.desc()).offset(offset).limit(limit).all()
 
