@@ -52,7 +52,7 @@ function showEmptyConversationState() {
     window.currentConvId = null;
 
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
-        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
+        el.className = 'contact-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50 hover:shadow-sm';
     });
 
     document.getElementById('chatContent')?.classList.add('hidden');
@@ -296,12 +296,12 @@ async function loadConversations() {
             const isActive = resolvedId === currentConversationId;
             const hasUnread = conv.unread_count > 0;
 
-            // Modern SaaS item classes
-            let baseClasses = "flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 border border-transparent";
+            // Modern SaaS item classes with premium hover
+            let baseClasses = "contact-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer border border-transparent";
             if (isActive) {
                 baseClasses += " bg-white shadow-sm border-slate-100 ring-1 ring-brand-500/10";
             } else {
-                baseClasses += " hover:bg-white hover:shadow-sm";
+                baseClasses += " hover:bg-slate-50 hover:shadow-sm";
             }
 
             div.className = baseClasses;
@@ -450,11 +450,11 @@ async function selectConversation(
     const { updateHistory = true } = opts;
     const previousContactId = currentCustomerId;
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
-        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
+        el.className = 'contact-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50 hover:shadow-sm';
     });
     const activeItem = document.querySelector(`[data-id="${conversationId}"]`);
     if (activeItem) {
-        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-brand-100 bg-brand-50/50 shadow-sm ring-1 ring-brand-500/20';
+        activeItem.className = 'contact-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer border border-brand-100 bg-brand-50/50 shadow-sm ring-1 ring-brand-500/20';
     }
 
     currentConversationId = conversationId;
@@ -589,11 +589,11 @@ function selectEmailItem(item, initials) {
     setConversationUrl(null, 'push');
 
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
-        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
+        el.className = 'contact-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50 hover:shadow-sm';
     });
     const activeItem = document.querySelector(`[data-id="${item.item_id}"]`);
     if (activeItem) {
-        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-brand-100 bg-brand-50/50 shadow-sm ring-1 ring-brand-500/20';
+        activeItem.className = 'contact-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer border border-brand-100 bg-brand-50/50 shadow-sm ring-1 ring-brand-500/20';
     }
 
     document.getElementById('emptyChat').classList.add('hidden');
@@ -665,14 +665,15 @@ function getMessagesContainer() {
 
 function buildMessageHTML(msg) {
     const isAgent = msg.sender_type !== 'customer';
-    const rowClasses = `flex mb-4 animate-fade-in-up ${isAgent ? 'justify-end' : 'justify-start'}`;
+    const rowClasses = `flex mb-4 animate-slide-up-fade ${isAgent ? 'justify-end' : 'justify-start'}`;
     const rowMessageId = escapeHtml(msg.id || '');
 
-    let bubbleClasses = 'max-w-[70%] px-5 py-3.5 shadow-sm hover:shadow-md relative group transition-all ';
+    // Premium bubble classes with gradient and shadows
+    let bubbleClasses = 'max-w-[70%] px-5 py-3.5 relative group transition-all ';
     if (isAgent) {
-        bubbleClasses += 'bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl rounded-tr-md';
+        bubbleClasses += 'message-bubble-agent';
     } else {
-        bubbleClasses += 'bg-white text-slate-800 rounded-2xl rounded-tl-md border border-slate-200/80';
+        bubbleClasses += 'message-bubble-customer';
     }
 
     let mediaHtml = '';

@@ -27,6 +27,175 @@
         }
     </script>
     <style>
+        /* ═══════════════════════════════════════════════════════════════
+           PREMIUM UI/UX - ZENDESK/INTERCOM TIER ANIMATIONS & STYLES
+           ═══════════════════════════════════════════════════════════════ */
+        
+        /* 0. GLOBAL LAYOUT (3-Column Architecture) */
+        body {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        /* 1. CUSTOM SCROLLBAR (Premium Webkit) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        
+        /* 2. KEYFRAME ANIMATIONS */
+        
+        /* Mesaj Giriş Animasyonu (Slide Up & Fade In) */
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Yazıyor... (Typing Indicator) Bounce */
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-6px);
+            }
+        }
+        
+        /* Fade In (Genel) */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Slide In From Right (Sağ Panel) */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* 3. ANIMATION CLASSES */
+        .animate-slide-up-fade {
+            animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        
+        .animate-slide-in-right {
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        /* Typing Indicator Dots */
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+        
+        /* 4. MESSAGE BUBBLES (Premium Gradients & Shadows) */
+        .message-bubble-agent {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
+            border-radius: 16px 16px 4px 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .message-bubble-agent:hover {
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .message-bubble-customer {
+            background: #ffffff;
+            color: #1f2937;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            border: 1px solid #f3f4f6;
+            border-radius: 16px 16px 16px 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .message-bubble-customer:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transform: translateY(-1px);
+        }
+        
+        /* 5. CONTACT CARD HOVER (Mikro-etkileşim) */
+        .contact-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .contact-card:hover {
+            background-color: #f3f4f6;
+            transform: translateY(-1px);
+        }
+        
+        /* 6. CHAT BACKGROUND (Premium Dotted Pattern) */
+        .chat-background-premium {
+            background-color: #f9fafb;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        /* 7. FLOATING INPUT BOX */
+        .floating-input-container {
+            position: relative;
+            margin: 24px;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            padding: 12px 16px;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        
+        .floating-input-container:focus-within {
+            box-shadow: 0 8px 40px rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+        }
+        
+        /* 8. RIGHT PANEL SHADOW */
+        .right-panel-shadow {
+            box-shadow: -4px 0 15px rgba(0,0,0,0.02);
+        }
+        
+        /* 9. SMOOTH TRANSITIONS */
+        .smooth-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* 10. LEGACY SUPPORT */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -160,8 +329,8 @@
         </div>
     </aside>
 
-    <!-- Contacts Column -->
-    <aside class="w-80 bg-white border-r border-slate-100 flex flex-col z-10 flex-shrink-0">
+    <!-- Contacts Column (Premium 320px) -->
+    <aside class="w-80 bg-white border-r border-slate-100 flex flex-col z-10 flex-shrink-0" style="width: 320px;">
         <div class="p-4 border-b border-slate-100/80">
             <div class="relative">
                 <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
@@ -173,8 +342,8 @@
         </div>
     </aside>
 
-    <!-- Main Chat Area -->
-    <main class="flex-1 flex flex-col bg-slate-50/80 relative overflow-hidden">
+    <!-- Main Chat Area (Premium Background) -->
+    <main class="flex-1 flex flex-col bg-slate-50/80 relative overflow-hidden chat-background-premium">
         <!-- Empty State -->
         <div id="emptyChat" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 p-12">
             <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-6 text-brand-500 text-2xl">
@@ -237,8 +406,8 @@
                 </div>
             </header>
 
-            <!-- Messages Area -->
-            <div class="flex-1 overflow-y-auto px-4 md:px-6 py-5 md:py-6 no-scrollbar bg-white relative min-h-0" id="messagesContainer">
+            <!-- Messages Area (Premium Background) -->
+            <div class="flex-1 overflow-y-auto px-4 md:px-6 py-5 md:py-6 bg-white relative min-h-0" id="messagesContainer" style="background-color: #f9fafb; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px;">
                 <!-- Messages dynamicly added -->
                 
                 <!-- New Message Notification Button (Hidden by default) -->
@@ -248,15 +417,14 @@
                 </button>
             </div>
 
-            <!-- Chat Input Area -->
-            <div id="chatInputArea" class="sticky bottom-0 z-20 p-3 md:p-4 bg-white/98 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]">
-                <div class="max-w-5xl mx-auto relative">
-                    <div class="rounded-2xl border border-slate-200/80 bg-white p-2.5 md:p-3 shadow-sm hover:shadow-lg transition-all">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 text-[11px] font-bold tracking-wide uppercase">Canlı Sohbet</span>
-                            <div class="h-px flex-1 bg-slate-100"></div>
-                        </div>
-                        <div class="flex items-center gap-2 bg-slate-50 rounded-xl p-1.5 border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500 transition-all">
+            <!-- Chat Input Area (Floating Premium Design) -->
+            <div id="chatInputArea" class="sticky bottom-0 z-20 bg-transparent">
+                <div class="floating-input-container">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 text-[11px] font-bold tracking-wide uppercase">Canlı Sohbet</span>
+                        <div class="h-px flex-1 bg-slate-100"></div>
+                    </div>
+                    <div class="flex items-center gap-2">
                         <button class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-all rounded-lg hover:bg-brand-50 hover:scale-105" id="quickRepliesBtn" title="Hızlı Yanıtlar">
                             <i class="fas fa-bolt text-sm"></i>
                         </button>
@@ -270,10 +438,9 @@
                         <button type="button" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-all rounded-lg hover:bg-brand-50 hover:scale-105" id="attachMediaBtn" title="Görsel veya belge gönder">
                             <i class="fas fa-paperclip text-sm"></i>
                         </button>
-                        <button class="w-10 h-10 flex items-center justify-center bg-brand-600 text-white rounded-xl hover:bg-brand-700 hover:scale-105 transition-all shadow-md" id="sendBtn" onclick="sendMessage()">
+                        <button class="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-xl hover:scale-105 transition-all shadow-md hover:shadow-lg" id="sendBtn" onclick="sendMessage()">
                             <i class="fas fa-paper-plane text-xs"></i>
                         </button>
-                    </div>
                     </div>
                     
                     <!-- Quick Replies Dropdown -->
@@ -290,8 +457,8 @@
             </div>
         </div>
 
-        <!-- Right Customer Profile Drawer -->
-        <div id="customerInfoPanel" class="w-72 border-l border-slate-200 bg-white hidden flex-col absolute right-0 top-0 bottom-0 z-50 shadow-xl transition-transform duration-300 translate-x-full">
+        <!-- Right Customer Profile Drawer (Premium 380px) -->
+        <div id="customerInfoPanel" class="border-l border-slate-200 bg-white hidden flex-col absolute right-0 top-0 bottom-0 z-50 shadow-xl smooth-transition translate-x-full right-panel-shadow" style="width: 380px;">
             <div class="p-6 border-b border-slate-100">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Müşteri Profili</h3>
