@@ -1,9 +1,18 @@
 from flask import Blueprint, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import os
-import pandas as pd
-import openpyxl
-from openpyxl.styles import Font, PatternFill
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+try:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill
+except ImportError:
+    openpyxl = None
+    Font = None
+    PatternFill = None
 from io import BytesIO
 from datetime import datetime
 import csv
@@ -22,6 +31,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+def _ensure_import_dependencies(require_excel=False):
+    if pd is None:
+        return jsonify({'error': 'Import module dependency missing: pandas'}), 503
+    if require_excel and openpyxl is None:
+        return jsonify({'error': 'Import module dependency missing: openpyxl'}), 503
+    return None
+
 @import_bp.route('/import')
 def import_page():
     """Render the import wizard page"""
@@ -30,6 +47,9 @@ def import_page():
 @import_bp.route('/api/v1/import/template/<object_type>')
 def download_template(object_type):
     """Generate and download Excel template for selected object type"""
+    dep_error = _ensure_import_dependencies(require_excel=True)
+    if dep_error:
+        return dep_error
     
     templates = {
         'contacts': {
@@ -120,6 +140,9 @@ def download_template(object_type):
 @import_bp.route('/api/v1/import/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and extract headers"""
+    dep_error = _ensure_import_dependencies(require_excel=True)
+    if dep_error:
+        return dep_error
     
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -431,6 +454,9 @@ def suggest_mapping():
 @import_bp.route('/api/v1/import/validate', methods=['POST'])
 def validate_import():
     """Validate import data before processing"""
+    dep_error = _ensure_import_dependencies(require_excel=True)
+    if dep_error:
+        return dep_error
     from models_crm import Contact, Company
     from models import db
     from flask import session
@@ -616,6 +642,9 @@ def validate_import():
 @import_bp.route('/api/v1/import/execute', methods=['POST'])
 def execute_import():
     """Execute the import process"""
+    dep_error = _ensure_import_dependencies(require_excel=True)
+    if dep_error:
+        return dep_error
     from models_crm import Contact, Company, CustomField, CustomFieldValue
     from models import db
     from flask import session
