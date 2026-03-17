@@ -626,9 +626,14 @@
                 const data = await response.json();
                 
                 showToast(`${data.updated} kişi başarıyla güncellendi`, 'success');
+                
+                // Close modal and refresh page
                 closeBulkEditModal();
-                clearSelection();
-                loadContacts();
+                
+                // Refresh page after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
                 
             } catch (error) {
                 console.error('Bulk update error:', error);
@@ -661,8 +666,11 @@
                 const data = await response.json();
                 
                 showToast(`${data.deleted} kişi başarıyla silindi`, 'success');
-                clearSelection();
-                loadContacts();
+                
+                // Refresh page after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
                 
             } catch (error) {
                 console.error('Bulk delete error:', error);
