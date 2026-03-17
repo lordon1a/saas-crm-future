@@ -147,6 +147,7 @@ class Contact(db.Model):
     email = db.Column(db.String(255), index=True)
     phone = db.Column(db.String(50))
     whatsapp_phone = db.Column(db.String(50))
+    telegram_chat_id = db.Column(db.String(100), index=True)
     role = db.Column(db.String(100))  # Decision Maker, Influencer, Champion, Blocker, End User
     job_title = db.Column(db.String(100))
     lead_score = db.Column(db.Integer, default=0)
@@ -220,6 +221,21 @@ class PortalBranding(db.Model):
 
     def __repr__(self):
         return f'<PortalBranding workspace={self.workspace_id}>'
+
+
+class WorkspacePreference(db.Model):
+    """
+    Workspace-level UI preferences used by settings-driven feature toggles.
+    """
+    __tablename__ = 'workspace_preferences'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, unique=True, index=True)
+    show_dashboard_insights = db.Column(db.Boolean, default=False, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<WorkspacePreference workspace={self.workspace_id} dashboard={self.show_dashboard_insights}>'
 
 
 class CustomField(db.Model):
@@ -415,6 +431,74 @@ class Activity(db.Model):
 
 
 # ============================================================================
+# COLLABORATION TOOLS
+# ============================================================================
+
+class Mention(db.Model):
+    """
+    Mention records parsed from notes/comments.
+    """
+    __tablename__ = 'mentions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey('activities.id'), nullable=True, index=True)
+    note_id = db.Column(db.Integer, db.ForeignKey('notes.id'), nullable=True, index=True)
+    mentioned_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('note_id', 'mentioned_user_id', name='uix_mention_note_user'),
+    )
+
+    def __repr__(self):
+        return f'<Mention note={self.note_id} user={self.mentioned_user_id}>'
+
+
+class Notification(db.Model):
+    """
+    In-app user notifications for collaboration events.
+    """
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    notification_type = db.Column(db.String(50), nullable=False, index=True)  # mention, task_assigned, entity_updated
+    entity_type = db.Column(db.String(50), index=True)
+    entity_id = db.Column(db.Integer, index=True)
+    message = db.Column(db.String(500), nullable=False)
+    is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    read_at = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f'<Notification user={self.user_id} type={self.notification_type}>'
+
+
+class Follow(db.Model):
+    """
+    User subscriptions for entity update notifications.
+    """
+    __tablename__ = 'follows'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    entity_type = db.Column(db.String(50), nullable=False, index=True)  # contact, company, deal
+    entity_id = db.Column(db.Integer, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', 'entity_type', 'entity_id', name='uix_follow_unique'),
+    )
+
+    def __repr__(self):
+        return f'<Follow user={self.user_id} {self.entity_type}:{self.entity_id}>'
+
+
+# ============================================================================
 # DOCUMENT MANAGEMENT
 # ============================================================================
 
@@ -484,6 +568,243 @@ class DocumentTemplate(db.Model):
     
     def __repr__(self):
         return f'<DocumentTemplate {self.name}>'
+
+
+# ============================================================================
+# ADVANCED REPORTING & ANALYTICS
+# ============================================================================
+
+class Report(db.Model):
+    """
+    Saved analytics report definition.
+    Supports both system report types and custom builder configurations.
+    """
+    __tablename__ = 'reports'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    report_type = db.Column(db.String(50), nullable=False, index=True)  # pipeline, forecast, win_loss, cycle, stage_conversion, custom
+    config_json = db.Column(db.Text)  # JSON config for filters and custom builder
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    schedules = db.relationship('ReportSchedule', backref='report', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Report {self.name} type={self.report_type}>'
+
+
+class ReportSchedule(db.Model):
+    """
+    Report delivery schedule metadata.
+    """
+    __tablename__ = 'report_schedules'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    report_id = db.Column(db.Integer, db.ForeignKey('reports.id'), nullable=False, index=True)
+    frequency = db.Column(db.String(20), nullable=False)  # daily, weekly, monthly
+    delivery_channel = db.Column(db.String(20), nullable=False, default='email')  # email
+    delivery_target = db.Column(db.String(255), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    last_run_at = db.Column(db.DateTime)
+    next_run_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<ReportSchedule report={self.report_id} freq={self.frequency}>'
+
+
+# ============================================================================
+# SECURITY & COMPLIANCE (SOC 2)
+# ============================================================================
+
+class AuditLog(db.Model):
+    """
+    Immutable-style security audit events.
+    """
+    __tablename__ = 'audit_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    action = db.Column(db.String(120), nullable=False, index=True)
+    entity_type = db.Column(db.String(80), nullable=False, index=True)
+    entity_id = db.Column(db.String(80), index=True)
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(500))
+    before_data = db.Column(db.Text)
+    after_data = db.Column(db.Text)
+    metadata_json = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def __repr__(self):
+        return f'<AuditLog action={self.action} entity={self.entity_type}:{self.entity_id}>'
+
+
+class Role(db.Model):
+    """
+    Role catalog for RBAC.
+    """
+    __tablename__ = 'roles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    name = db.Column(db.String(50), nullable=False, index=True)
+    description = db.Column(db.String(255))
+    is_system = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='uix_role_workspace_name'),
+    )
+
+    def __repr__(self):
+        return f'<Role {self.name} workspace={self.workspace_id}>'
+
+
+class Permission(db.Model):
+    """
+    Permission catalog shared across workspaces.
+    """
+    __tablename__ = 'permissions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    description = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<Permission {self.key}>'
+
+
+class RolePermission(db.Model):
+    """
+    Many-to-many mapping between roles and permissions.
+    """
+    __tablename__ = 'role_permissions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False, index=True)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permissions.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    role = db.relationship('Role', backref=db.backref('role_permissions', lazy=True, cascade='all, delete-orphan'))
+    permission = db.relationship('Permission', backref=db.backref('role_permissions', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('role_id', 'permission_id', name='uix_role_permission'),
+    )
+
+    def __repr__(self):
+        return f'<RolePermission role={self.role_id} permission={self.permission_id}>'
+
+
+class UserRole(db.Model):
+    """
+    User to role assignment table.
+    """
+    __tablename__ = 'user_roles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    role = db.relationship('Role', backref=db.backref('user_roles', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', 'role_id', name='uix_workspace_user_role'),
+    )
+
+    def __repr__(self):
+        return f'<UserRole user={self.user_id} role={self.role_id}>'
+
+
+class TwoFactorAuth(db.Model):
+    """
+    User-level 2FA configuration.
+    """
+    __tablename__ = 'two_factor_auth'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
+    secret_key = db.Column(db.String(64), nullable=False)
+    backup_codes_json = db.Column(db.Text)
+    is_enabled = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<TwoFactorAuth user={self.user_id} enabled={self.is_enabled}>'
+
+
+class IPWhitelist(db.Model):
+    """
+    Workspace-level login IP whitelist.
+    """
+    __tablename__ = 'ip_whitelists'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    ip_address = db.Column(db.String(64), nullable=False, index=True)
+    label = db.Column(db.String(120))
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'ip_address', name='uix_workspace_ip_whitelist'),
+    )
+
+    def __repr__(self):
+        return f'<IPWhitelist workspace={self.workspace_id} ip={self.ip_address}>'
+
+
+class SessionActivity(db.Model):
+    """
+    Session metadata for activity tracking and timeout management.
+    """
+    __tablename__ = 'session_activities'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    session_token = db.Column(db.String(128), nullable=False, unique=True, index=True)
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(500))
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<SessionActivity user={self.user_id} active={self.is_active}>'
+
+
+class GDPRRequest(db.Model):
+    """
+    Tracks GDPR data export and delete requests.
+    """
+    __tablename__ = 'gdpr_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    requested_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    request_type = db.Column(db.String(20), nullable=False, index=True)  # export, delete
+    status = db.Column(db.String(20), nullable=False, default='pending', index=True)  # pending, completed, failed
+    target_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    result_json = db.Column(db.Text)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f'<GDPRRequest type={self.request_type} status={self.status}>'
 
 
 # ============================================================================
@@ -669,6 +990,106 @@ class GoogleIntegration(db.Model):
 
 
 # ============================================================================
+# QUICKBOOKS INTEGRATION
+# ============================================================================
+
+class QuickBooksIntegration(db.Model):
+    """
+    QuickBooks OAuth credentials per workspace and user.
+    Token fields are stored encrypted at rest by service layer.
+    """
+    __tablename__ = 'quickbooks_integrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    realm_id = db.Column(db.String(100), index=True)
+    company_name = db.Column(db.String(255))
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text)
+    token_expires_at = db.Column(db.DateTime, index=True)
+    refresh_expires_at = db.Column(db.DateTime, index=True)
+    scopes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    last_sync_at = db.Column(db.DateTime)
+    last_error = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', name='uix_quickbooks_integration_workspace_user'),
+    )
+
+    def __repr__(self):
+        return f'<QuickBooksIntegration workspace={self.workspace_id} user={self.user_id} active={self.is_active}>'
+
+
+class QuickBooksInvoice(db.Model):
+    """
+    QuickBooks invoice sync ledger linked to CRM deals.
+    """
+    __tablename__ = 'quickbooks_invoices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    integration_id = db.Column(db.Integer, db.ForeignKey('quickbooks_integrations.id'), nullable=True, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=True, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    quickbooks_invoice_id = db.Column(db.String(100), index=True)
+    doc_number = db.Column(db.String(100), index=True)
+    sync_status = db.Column(db.String(20), default='pending', nullable=False, index=True)  # pending, synced, failed
+    payment_status = db.Column(db.String(20), default='unpaid', nullable=False, index=True)  # unpaid, partial, paid
+    amount = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    currency = db.Column(db.String(10), default='USD')
+    due_date = db.Column(db.Date)
+    issued_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    paid_at = db.Column(db.DateTime)
+    last_synced_at = db.Column(db.DateTime)
+    error_message = db.Column(db.Text)
+    retry_count = db.Column(db.Integer, default=0, nullable=False)
+    next_retry_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    integration = db.relationship('QuickBooksIntegration', backref=db.backref('invoices', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'deal_id', name='uix_quickbooks_invoice_workspace_deal'),
+    )
+
+    def __repr__(self):
+        return f'<QuickBooksInvoice deal={self.deal_id} status={self.sync_status} payment={self.payment_status}>'
+
+
+class QuickBooksSyncError(db.Model):
+    """
+    Error log for QuickBooks sync failures with retry metadata.
+    """
+    __tablename__ = 'quickbooks_sync_errors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    integration_id = db.Column(db.Integer, db.ForeignKey('quickbooks_integrations.id'), nullable=True, index=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('quickbooks_invoices.id'), nullable=True, index=True)
+    correlation_id = db.Column(db.String(64), nullable=False, index=True)
+    operation = db.Column(db.String(50), nullable=False, index=True)
+    error_message = db.Column(db.Text, nullable=False)
+    http_status = db.Column(db.Integer)
+    retry_count = db.Column(db.Integer, default=0, nullable=False)
+    will_retry = db.Column(db.Boolean, default=False, nullable=False)
+    next_retry_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    resolved_at = db.Column(db.DateTime)
+
+    integration = db.relationship('QuickBooksIntegration', backref=db.backref('sync_errors', lazy=True))
+    invoice = db.relationship('QuickBooksInvoice', backref=db.backref('sync_errors', lazy=True))
+
+    def __repr__(self):
+        return f'<QuickBooksSyncError op={self.operation} correlation={self.correlation_id}>'
+
+
+# ============================================================================
 # GOOGLE WORKSPACE INTEGRATION - EMAIL & CALENDAR SYNC
 # ============================================================================
 
@@ -747,6 +1168,130 @@ class EmailTrackingClick(db.Model):
     
     def __repr__(self):
         return f'<EmailTrackingClick tracking={self.email_tracking_id} at={self.clicked_at}>'
+
+
+class EmailTemplate(db.Model):
+    """
+    Workspace-scoped email templates with merge variables.
+    """
+    __tablename__ = 'email_templates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    subject_template = db.Column(db.String(500), nullable=False)
+    body_template = db.Column(db.Text, nullable=False)
+    variables_json = db.Column(db.Text)  # JSON array of variable names
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='uix_email_template_workspace_name'),
+    )
+
+    def __repr__(self):
+        return f'<EmailTemplate {self.name} workspace={self.workspace_id}>'
+
+
+class EmailSequence(db.Model):
+    """
+    Ordered set of delayed email steps.
+    """
+    __tablename__ = 'email_sequences'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(500))
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    steps = db.relationship('EmailSequenceStep', backref='sequence', lazy=True, cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='uix_email_sequence_workspace_name'),
+    )
+
+    def __repr__(self):
+        return f'<EmailSequence {self.name} workspace={self.workspace_id}>'
+
+
+class EmailSequenceStep(db.Model):
+    """
+    Individual step in an email sequence.
+    """
+    __tablename__ = 'email_sequence_steps'
+
+    id = db.Column(db.Integer, primary_key=True)
+    sequence_id = db.Column(db.Integer, db.ForeignKey('email_sequences.id'), nullable=False, index=True)
+    step_order = db.Column(db.Integer, nullable=False)
+    delay_hours = db.Column(db.Integer, default=0, nullable=False)
+    template_id = db.Column(db.Integer, db.ForeignKey('email_templates.id'), nullable=True, index=True)
+    subject_override = db.Column(db.String(500))
+    body_override = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('sequence_id', 'step_order', name='uix_email_sequence_step_order'),
+    )
+
+    def __repr__(self):
+        return f'<EmailSequenceStep sequence={self.sequence_id} order={self.step_order}>'
+
+
+class EmailSendQueue(db.Model):
+    """
+    Durable queue contract for outbound email delivery workers.
+    """
+    __tablename__ = 'email_send_queue'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    outbound_email_id = db.Column(db.Integer, db.ForeignKey('outbound_emails.id'), nullable=False, index=True)
+    provider = db.Column(db.String(50), nullable=False, default='smtp')
+    status = db.Column(db.String(20), nullable=False, default='queued', index=True)  # queued, processing, sent, failed
+    payload_json = db.Column(db.Text, nullable=False)
+    attempt_count = db.Column(db.Integer, default=0, nullable=False)
+    next_attempt_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    last_error = db.Column(db.Text)
+    processed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<EmailSendQueue outbound={self.outbound_email_id} status={self.status}>'
+
+
+class OutboundEmail(db.Model):
+    """
+    Outbound email delivery ledger with provider and tracking metadata.
+    """
+    __tablename__ = 'outbound_emails'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=True, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=True, index=True)
+    to_email = db.Column(db.String(255), nullable=False, index=True)
+    subject = db.Column(db.String(500), nullable=False)
+    body_text = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    provider = db.Column(db.String(50), nullable=False, default='smtp')
+    provider_message_id = db.Column(db.String(255), index=True)
+    status = db.Column(db.String(20), nullable=False, default='queued', index=True)  # queued, sent, failed
+    tracking_id = db.Column(db.String(64), index=True)
+    sent_at = db.Column(db.DateTime)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    queue_items = db.relationship('EmailSendQueue', backref='outbound_email', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<OutboundEmail to={self.to_email} status={self.status}>'
 
 
 class CalendarSync(db.Model):

@@ -5,6 +5,7 @@ API endpoints for companies and contacts
 from flask import Blueprint, request, jsonify, session, make_response
 from functools import wraps
 from services.contact_service import ContactService
+from services.collaboration_service import CollaborationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -364,6 +365,13 @@ def update_contact(contact_id):
         contact.lead_score = lead_score
         from models import db
         db.session.commit()
+
+        CollaborationService.notify_followers_on_entity_change(
+            workspace_id=workspace_id,
+            entity_type='contact',
+            entity_id=contact.id,
+            message=f'Takip ettiginiz kisi guncellendi: {contact.full_name}',
+        )
         
         return jsonify({
             'id': contact.id,

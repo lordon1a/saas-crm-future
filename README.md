@@ -100,6 +100,16 @@ python app.py
 
 Tarayıcıda `http://localhost:5000` adresini açın.
 
+### 8. Google Background Sync Worker (Opsiyonel ama önerilir)
+
+Gmail ve Calendar verilerini periyodik senkronize etmek için ayrı worker çalıştırın:
+
+```bash
+python google_sync_worker.py
+```
+
+Varsayılan senkron aralığı 5 dakikadır (`GOOGLE_SYNC_INTERVAL_SECONDS=300`).
+
 ## Meta WhatsApp Cloud API Kurulumu
 
 ### 1. Meta Developer Console

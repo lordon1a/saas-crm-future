@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from functools import wraps
 import logging
 import os
+from datetime import datetime
 from urllib.parse import urlparse
 
 load_dotenv()
@@ -60,6 +61,7 @@ limiter = Limiter(
 )
 
 from models import db
+from models_crm import SessionActivity
 from routes import webhook, api
 from routes import auth as auth_route
 from routes import settings as settings_route
@@ -70,13 +72,20 @@ from routes import portal as portal_route
 from routes import public_api as public_api_route
 from routes import api_docs as api_docs_route
 from routes import google_integration as google_integration_route
+from routes import quickbooks_integration as quickbooks_integration_route
+from routes import collaboration as collaboration_route
+from routes import system_health as system_health_route
 from routes import email_tracking as email_tracking_route
 from routes import analytics as analytics_route
+from routes.telegram import telegram_bp
 from routes.contacts import contacts_bp
 from routes.tasks import tasks_bp
 from routes import custom_fields as custom_fields_route
 from routes.scheduled_messages import scheduled_messages_bp
+from routes.documents import documents_bp
+from routes.email_hub import email_hub_bp
 from services import portal_notification_service  # noqa: F401
+from services.security_service import SecurityService
 
 db.init_app(app)
 
@@ -91,12 +100,18 @@ app.register_blueprint(portal_route.bp)
 app.register_blueprint(public_api_route.bp)
 app.register_blueprint(api_docs_route.bp)
 app.register_blueprint(google_integration_route.bp)
+app.register_blueprint(quickbooks_integration_route.bp)
+app.register_blueprint(collaboration_route.bp)
+app.register_blueprint(system_health_route.bp)
 app.register_blueprint(email_tracking_route.bp)
 app.register_blueprint(analytics_route.bp)
+app.register_blueprint(telegram_bp)
 app.register_blueprint(contacts_bp)
 app.register_blueprint(tasks_bp)
 app.register_blueprint(custom_fields_route.bp)
 app.register_blueprint(scheduled_messages_bp)
+app.register_blueprint(documents_bp)
+app.register_blueprint(email_hub_bp)
 
 # Login endpoint'ine rate limit uygula
 app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
@@ -146,6 +161,48 @@ def enforce_csrf_origin_check():
     if candidate_host not in allowed_hosts:
         return jsonify({'error': 'CSRF validation failed'}), 403
 
+    return None
+
+
+@app.before_request
+def enforce_active_session_timeout():
+    if not session.get('user_id'):
+        return None
+
+    if request.endpoint in {'auth.logout'}:
+        return None
+
+    session_token = session.get('session_token')
+    if not session_token:
+        session.clear()
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Session expired'}), 401
+        return redirect(url_for('auth.login_page'))
+
+    row = SessionActivity.query.filter_by(session_token=session_token, is_active=True).first()
+    if not row:
+        session.clear()
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Session expired'}), 401
+        return redirect(url_for('auth.login_page'))
+
+    if row.expires_at and row.expires_at < datetime.utcnow():
+        row.is_active = False
+        db.session.commit()
+        session.clear()
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Session expired'}), 401
+        return redirect(url_for('auth.login_page'))
+
+    timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
+    SecurityService.record_session_activity(
+        workspace_id=session.get('workspace_id'),
+        user_id=session.get('user_id'),
+        session_token=session_token,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', ''),
+        timeout_minutes=timeout_minutes,
+    )
     return None
 
 
@@ -224,11 +281,16 @@ def tasks_page():
     return render_template('tasks.html')
 
 
+@app.route('/documents')
+@login_required
+def documents_page():
+    return render_template('documents.html')
+
+
 @app.route('/analytics-dashboard')
 @login_required
 def analytics_dashboard():
-    return render_template('analytics_dashboard.html')
-    return render_template('tasks.html')
+    return render_template('analytics.html')
 
 
 with app.app_context():
@@ -251,10 +313,53 @@ with app.app_context():
                     conn.execute(text('ALTER TABLE messages ADD COLUMN media_url VARCHAR(500)'))
                     need_commit = True
                     logger.info('messages.media_url column added')
+                if 'channel' not in cols:
+                    conn.execute(text("ALTER TABLE messages ADD COLUMN channel VARCHAR(20) NOT NULL DEFAULT 'whatsapp'"))
+                    need_commit = True
+                    logger.info('messages.channel column added')
+
+                r_ws = conn.execute(text('PRAGMA table_info(workspaces)'))
+                ws_cols = [row[1] for row in r_ws.fetchall()]
+                if 'telegram_bot_token' not in ws_cols:
+                    conn.execute(text('ALTER TABLE workspaces ADD COLUMN telegram_bot_token TEXT'))
+                    need_commit = True
+                    logger.info('workspaces.telegram_bot_token column added')
+
+                r_cust = conn.execute(text('PRAGMA table_info(customers)'))
+                customer_cols = [row[1] for row in r_cust.fetchall()]
+                if 'telegram_chat_id' not in customer_cols:
+                    conn.execute(text('ALTER TABLE customers ADD COLUMN telegram_chat_id VARCHAR(100)'))
+                    conn.execute(text('CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON customers(telegram_chat_id)'))
+                    need_commit = True
+                    logger.info('customers.telegram_chat_id column added')
+
+                r_contacts = conn.execute(text('PRAGMA table_info(contacts)'))
+                contact_cols = [row[1] for row in r_contacts.fetchall()]
+                if 'telegram_chat_id' not in contact_cols:
+                    conn.execute(text('ALTER TABLE contacts ADD COLUMN telegram_chat_id VARCHAR(100)'))
+                    conn.execute(text('CREATE INDEX IF NOT EXISTS idx_contacts_telegram_chat_id ON contacts(telegram_chat_id)'))
+                    need_commit = True
+                    logger.info('contacts.telegram_chat_id column added')
                 if need_commit:
                     conn.commit()
     except Exception as e:
-        logger.warning('Media columns migration skip: %s', e)
+        logger.warning('Media/telegram columns migration skip: %s', e)
+
+    # PostgreSQL auto-migration for telegram/channel columns
+    try:
+        uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        if uri.startswith('postgres'):
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel VARCHAR(20) NOT NULL DEFAULT 'whatsapp'"))
+                conn.execute(text('ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS telegram_bot_token TEXT'))
+                conn.execute(text('ALTER TABLE customers ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
+                conn.execute(text('ALTER TABLE contacts ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
+                conn.execute(text('CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON customers(telegram_chat_id)'))
+                conn.execute(text('CREATE INDEX IF NOT EXISTS idx_contacts_telegram_chat_id ON contacts(telegram_chat_id)'))
+                conn.commit()
+    except Exception as e:
+        logger.warning('PostgreSQL telegram migration skip: %s', e)
     
     # Auto-migration: Google Drive attachments table
     try:

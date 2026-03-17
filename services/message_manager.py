@@ -3,13 +3,14 @@ from datetime import datetime
 
 class MessageManager:
     @staticmethod
-    def save_incoming_message(conversation_id, message_body, meta_message_id, media_type=None, media_url=None):
+    def save_incoming_message(conversation_id, message_body, meta_message_id, media_type=None, media_url=None, channel='whatsapp'):
         """Save incoming message from customer (optional media)."""
         message = Message(
             conversation_id=conversation_id,
             sender_type='customer',
             sender_id=None,
             message_body=message_body,
+            channel=channel or 'whatsapp',
             meta_message_id=meta_message_id,
             media_type=media_type,
             media_url=media_url
@@ -19,13 +20,14 @@ class MessageManager:
         return message
 
     @staticmethod
-    def save_outgoing_message(conversation_id, message_body, sender_id, meta_message_id, media_type=None, media_url=None):
+    def save_outgoing_message(conversation_id, message_body, sender_id, meta_message_id, media_type=None, media_url=None, channel='whatsapp'):
         """Save outgoing message from agent (optional media)."""
         message = Message(
             conversation_id=conversation_id,
             sender_type='agent',
             sender_id=sender_id,
             message_body=message_body,
+            channel=channel or 'whatsapp',
             meta_message_id=meta_message_id,
             media_type=media_type,
             media_url=media_url

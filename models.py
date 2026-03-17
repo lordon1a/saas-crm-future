@@ -13,6 +13,7 @@ class Workspace(db.Model):
     whatsapp_phone_number_id = db.Column(db.String(100), unique=True, index=True)
     whatsapp_access_token = db.Column(db.Text)
     waba_id = db.Column(db.String(100))
+    telegram_bot_token = db.Column(db.Text)
 
     users = db.relationship('User', backref='workspace', lazy=True)
     customers = db.relationship('Customer', backref='workspace', lazy=True)
@@ -41,6 +42,7 @@ class Customer(db.Model):
     labels = db.Column(db.String(255)) # comma separated tags
     notes = db.Column(db.Text)
     private_notes = db.Column(db.Text)
+    telegram_chat_id = db.Column(db.String(100), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     conversations = db.relationship('Conversation', backref='customer', lazy=True, cascade="all, delete-orphan")
     
@@ -68,6 +70,7 @@ class Message(db.Model):
     sender_type = db.Column(db.String(20), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     message_body = db.Column(db.Text, nullable=False)
+    channel = db.Column(db.String(20), default='whatsapp', nullable=False, index=True)
     meta_message_id = db.Column(db.String(100), unique=True, index=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
@@ -86,10 +89,11 @@ class QuickReply(db.Model):
 class Note(db.Model):
     __tablename__ = 'notes'
     id = db.Column(db.Integer, primary_key=True)
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    is_internal = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 class MessageTemplate(db.Model):
     __tablename__ = 'message_templates'

@@ -1,7 +1,11 @@
 from flask import Blueprint, request, jsonify, session, redirect, url_for, render_template
 import logging
+import secrets
 from models import db, User, Workspace
+from config import Config
 from services.auth_manager import AuthManager
+from services.audit_service import AuditService
+from services.security_service import SecurityService
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('auth', __name__)
@@ -18,6 +22,7 @@ def login():
     data = request.get_json(silent=True) or {}
     email = data.get('email', '').strip()
     password = data.get('password', '')
+    two_factor_token = str(data.get('two_factor_token', '')).strip()
 
     if not email or not password:
         return jsonify({'error': 'Email ve şifre gereklidir'}), 400
@@ -27,17 +32,41 @@ def login():
         logger.warning('Başarısız giriş denemesi: %s', email)
         return jsonify({'error': 'Email veya şifre hatalı'}), 401
 
+    if not SecurityService.is_ip_allowed(user.workspace_id, request.remote_addr):
+        return jsonify({'error': 'IP erişimi engellendi'}), 403
+
+    if SecurityService.get_2fa_status(user.id):
+        if not two_factor_token:
+            return jsonify({'error': '2FA kodu gerekli', 'needs_2fa': True}), 401
+        if not SecurityService.verify_login_2fa(user.id, two_factor_token):
+            return jsonify({'error': '2FA kodu geçersiz', 'needs_2fa': True}), 401
+
     # Session'ı permanent yap (config'deki PERMANENT_SESSION_LIFETIME kullanılır)
     flask_session.permanent = True
+    session_token = secrets.token_urlsafe(32)
     session['user_id'] = user.id
     session['workspace_id'] = user.workspace_id
     session['user_name'] = user.name
     session['user_email'] = user.email
     session['user_role'] = user.role
+    session['session_token'] = session_token
+
+    timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
+    SecurityService.record_session_activity(
+        workspace_id=user.workspace_id,
+        user_id=user.id,
+        session_token=session_token,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', ''),
+        timeout_minutes=timeout_minutes,
+    )
+    AuditService.log_event(user.workspace_id, user.id, 'auth.login', 'user', entity_id=user.id)
     return jsonify({'status': 'ok', 'name': user.name, 'role': user.role}), 200
 
 @bp.route('/logout')
 def logout():
+    if session.get('workspace_id') and session.get('user_id'):
+        AuditService.log_event(session.get('workspace_id'), session.get('user_id'), 'auth.logout', 'user', entity_id=session.get('user_id'))
     session.clear()
     return redirect(url_for('auth.login_page'))
 
@@ -83,6 +112,12 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        try:
+            SecurityService.ensure_rbac_seed(workspace.id)
+            SecurityService.assign_role(workspace.id, user.id, 'Admin')
+        except Exception as exc:
+            logger.warning('RBAC seed during register failed: %s', exc)
+
         # 3. Otomatik session login
         from flask import session as flask_session
         flask_session.permanent = True  # Session'ı permanent yap
@@ -91,6 +126,17 @@ def register():
         session['user_name'] = user.name
         session['user_email'] = user.email
         session['user_role'] = user.role
+        session['session_token'] = secrets.token_urlsafe(32)
+
+        timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
+        SecurityService.record_session_activity(
+            workspace_id=workspace.id,
+            user_id=user.id,
+            session_token=session['session_token'],
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', ''),
+            timeout_minutes=timeout_minutes,
+        )
 
         return jsonify({'status': 'ok', 'redirect': '/'}), 201
 

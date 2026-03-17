@@ -5,6 +5,7 @@ API endpoints for tasks, milestones, dependencies, comments, and attachments
 from flask import Blueprint, request, jsonify, send_file, session, redirect, url_for
 from functools import wraps
 from services.task_service import TaskService
+from services.collaboration_service import CollaborationService
 from models import db, User
 from datetime import datetime
 import os
@@ -93,6 +94,14 @@ def create_task():
         due_date=due_date,
         is_customer_facing=data.get('is_customer_facing', False)
     )
+
+    if task and task.assignee_id:
+        CollaborationService.create_task_assignment_notification(
+            workspace_id=current_user.workspace_id,
+            task_id=task.id,
+            assignee_id=task.assignee_id,
+            actor_user_id=current_user.id,
+        )
     
     return jsonify({
         'id': task.id,
@@ -242,10 +251,22 @@ def update_task(task_id):
         except ValueError:
             return jsonify({'error': 'Invalid due_date format'}), 400
     
-    task = TaskService.update_task(task_id, get_current_user().workspace_id, **data)
+    current_user = get_current_user()
+    existing_task = TaskService.get_task(task_id, current_user.workspace_id)
+    old_assignee_id = existing_task.assignee_id if existing_task else None
+
+    task = TaskService.update_task(task_id, current_user.workspace_id, **data)
     
     if not task:
         return jsonify({'error': 'Task not found'}), 404
+
+    if task.assignee_id and task.assignee_id != old_assignee_id:
+        CollaborationService.create_task_assignment_notification(
+            workspace_id=current_user.workspace_id,
+            task_id=task.id,
+            assignee_id=task.assignee_id,
+            actor_user_id=current_user.id,
+        )
     
     return jsonify({
         'id': task.id,

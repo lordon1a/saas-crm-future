@@ -5,6 +5,9 @@ from services.meta_api_client import MetaAPIClient
 from services.conversation_manager import ConversationManager
 from services.message_manager import MessageManager
 from services.quick_reply_manager import QuickReplyManager
+from services.collaboration_service import CollaborationService
+from services.email_hub_service import EmailHubService
+from services.telegram_service import TelegramService
 from datetime import datetime
 from sqlalchemy import or_
 from config import Config
@@ -25,6 +28,7 @@ def _message_to_json(msg, include_sender_name=False, user_cache=None):
         'conversation_id': msg.conversation_id,
         'sender_type': msg.sender_type,
         'message_body': msg.message_body,
+        'channel': getattr(msg, 'channel', 'whatsapp') or 'whatsapp',
         'is_read': msg.is_read,
         'created_at': msg.created_at.isoformat(),
         'media_type': media_type,
@@ -248,7 +252,12 @@ def get_conversation_detail(conversation_id):
     if not conversation:
         return jsonify({'error': 'Conversation not found in this workspace'}), 404
     
-    notes = Note.query.filter_by(conversation_id=conversation_id).order_by(Note.created_at.desc()).all()
+    include_internal = (session.get('user_role') or '').lower() != 'customer'
+    try:
+        notes = CollaborationService.list_notes_for_conversation(conversation_id, include_internal)
+    except Exception as exc:
+        logger.warning('Conversation detail note load fallback for %s: %s', conversation_id, exc)
+        notes = []
     
     return jsonify({
         'id': conversation.id,
@@ -269,6 +278,7 @@ def get_conversation_detail(conversation_id):
             {
                 'id': note.id,
                 'content': note.content,
+                'is_internal': bool(getattr(note, 'is_internal', False)),
                 'created_at': note.created_at.isoformat()
             } for note in notes
         ],
@@ -306,8 +316,12 @@ def get_conversation_full(conversation_id):
     ).update({'is_read': True})
     db.session.commit()
 
-    notes = Note.query.filter_by(conversation_id=conversation_id)\
-        .order_by(Note.created_at.desc()).all()
+    include_internal = (session.get('user_role') or '').lower() != 'customer'
+    try:
+        notes = CollaborationService.list_notes_for_conversation(conversation_id, include_internal)
+    except Exception as exc:
+        logger.warning('Conversation full note load fallback for %s: %s', conversation_id, exc)
+        notes = []
 
     return jsonify({
         'conversation': {
@@ -327,7 +341,12 @@ def get_conversation_full(conversation_id):
                 'created_at': conversation.customer.created_at.isoformat()
             },
             'conversation_notes': [
-                {'id': n.id, 'content': n.content, 'created_at': n.created_at.isoformat()}
+                {
+                    'id': n.id,
+                    'content': n.content,
+                    'is_internal': bool(getattr(n, 'is_internal', False)),
+                    'created_at': n.created_at.isoformat(),
+                }
                 for n in notes
             ]
         },
@@ -450,6 +469,7 @@ def get_messages(conversation_id):
             'sender_type': msg.sender_type,
             'sender_name': sender_name,
             'message_body': msg.message_body,
+            'channel': getattr(msg, 'channel', 'whatsapp') or 'whatsapp',
             'is_read': msg.is_read,
             'created_at': msg.created_at.isoformat(),
             'media_type': getattr(msg, 'media_type', None),
@@ -482,6 +502,7 @@ def send_message():
     data = request.get_json()
     conversation_id = data.get('conversation_id')
     message_body = data.get('message_body', '').strip()
+    channel = (data.get('channel') or 'whatsapp').strip().lower()
     workspace_id = session.get('workspace_id')
     
     if not message_body:
@@ -494,11 +515,38 @@ def send_message():
     customer = conversation.customer
     workspace = Workspace.query.get(workspace_id)
 
-    # Send via Meta API (workspace credentials for multi-tenant, else env fallback)
-    token = (workspace and workspace.whatsapp_access_token) or None
-    phone_id = (workspace and workspace.whatsapp_phone_number_id) or None
-    meta_client = MetaAPIClient(access_token=token, phone_number_id=phone_id)
-    result = meta_client.send_text_message(customer.phone_number, message_body)
+    if channel not in {'whatsapp', 'telegram', 'email'}:
+        return jsonify({'error': 'Geçersiz kanal'}), 400
+
+    result = {'success': False, 'error': 'Gönderilemedi', 'message_id': None}
+
+    if channel == 'whatsapp':
+        token = (workspace and workspace.whatsapp_access_token) or None
+        phone_id = (workspace and workspace.whatsapp_phone_number_id) or None
+        meta_client = MetaAPIClient(access_token=token, phone_number_id=phone_id)
+        result = meta_client.send_text_message(customer.phone_number, message_body)
+    elif channel == 'telegram':
+        if not workspace or not workspace.telegram_bot_token:
+            return jsonify({'error': 'Telegram bot token yapılandırılmamış'}), 400
+        if not customer.telegram_chat_id:
+            return jsonify({'error': 'Bu müşteri için telegram_chat_id yok'}), 400
+        telegram_service = TelegramService(workspace.telegram_bot_token)
+        result = telegram_service.send_message(customer.telegram_chat_id, message_body)
+    else:
+        if not customer.email:
+            return jsonify({'error': 'Müşterinin email adresi yok'}), 400
+        try:
+            EmailHubService.queue_outbound_email(
+                workspace_id=workspace_id,
+                user_id=session.get('user_id', 1),
+                to_email=customer.email,
+                subject='CRM Mesajı',
+                body_text=message_body,
+                body_html='',
+            )
+            result = {'success': True, 'message_id': f'email-{time.time_ns()}', 'error': None}
+        except Exception as exc:
+            result = {'success': False, 'message_id': None, 'error': str(exc)}
     
     if result['success']:
         # Save to database
@@ -507,7 +555,8 @@ def send_message():
             conversation_id=conversation_id,
             message_body=message_body,
             sender_id=sender_id,
-            meta_message_id=result['message_id']
+            meta_message_id=result['message_id'],
+            channel=channel,
         )
         
         # Giden mesajları otomatik okundu işaretle
@@ -607,6 +656,7 @@ def send_media():
         message_body=body_label,
         sender_id=session.get('user_id'),
         meta_message_id=result['message_id'],
+        channel='whatsapp',
         media_type=media_type,
         media_url=relative_path
     )
@@ -661,6 +711,7 @@ def add_note(conversation_id):
     workspace_id = session.get('workspace_id')
     data = request.get_json()
     content = data.get('content')
+    is_internal = bool(data.get('is_internal', False))
     
     if not content:
         return jsonify({'error': 'Content required'}), 400
@@ -672,14 +723,22 @@ def add_note(conversation_id):
     note = Note(
         conversation_id=conversation_id,
         user_id=session.get('user_id', 1),
-        content=content
+        content=content,
+        is_internal=is_internal,
     )
     db.session.add(note)
     db.session.commit()
+
+    CollaborationService.process_note_mentions(
+        workspace_id=workspace_id,
+        note_id=note.id,
+        actor_user_id=session.get('user_id'),
+    )
     
     return jsonify({
         'id': note.id,
         'content': note.content,
+        'is_internal': bool(note.is_internal),
         'created_at': note.created_at.isoformat()
     }), 201
 

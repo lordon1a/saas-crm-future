@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify, session
 from models import db, Workspace, User, MessageTemplate
-from models_crm import PortalBranding
+from models_crm import PortalBranding, AuditLog, WorkspacePreference
 from services.auth_manager import AuthManager
+from services.audit_service import AuditService
+from services.security_service import SecurityService
+from services.telegram_service import TelegramService
 import re
 
 bp = Blueprint('settings', __name__, url_prefix='/api/settings')
@@ -52,6 +55,27 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
+def security_manage_required(f):
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        if session.get('user_role') == 'admin':
+            return f(*args, **kwargs)
+
+        permissions = SecurityService.get_user_permissions(workspace_id, user_id)
+        if 'security.manage' not in permissions:
+            return jsonify({'error': 'Security yetkisi gereklidir'}), 403
+        return f(*args, **kwargs)
+
+    return decorated
+
 # ─── Workspace Genel Bilgi ──────────────────────────────────────────────────
 
 @bp.route('/workspace', methods=['GET'])
@@ -65,6 +89,7 @@ def get_workspace():
         'company_name': ws.company_name,
         'whatsapp_phone_number_id': ws.whatsapp_phone_number_id or '',
         'whatsapp_access_token': '***' if ws.whatsapp_access_token else '',
+        'telegram_bot_token': '***' if ws.telegram_bot_token else '',
         'waba_id': ws.waba_id or '',
         'created_at': ws.created_at.isoformat()
     }), 200
@@ -87,11 +112,63 @@ def update_workspace():
     if 'whatsapp_access_token' in data and data['whatsapp_access_token'] != '***':
         ws.whatsapp_access_token = data['whatsapp_access_token'].strip() or None
 
+    if 'telegram_bot_token' in data and data['telegram_bot_token'] != '***':
+        ws.telegram_bot_token = data['telegram_bot_token'].strip() or None
+
     if 'waba_id' in data:
         ws.waba_id = data['waba_id'].strip() or None
 
     db.session.commit()
     return jsonify({'status': 'updated', 'company_name': ws.company_name}), 200
+
+
+@bp.route('/telegram/status', methods=['GET'])
+@login_required_api
+def get_telegram_status():
+    workspace_id = session.get('workspace_id')
+    ws = Workspace.query.get_or_404(workspace_id)
+    return jsonify({
+        'connected': bool(ws.telegram_bot_token),
+        'has_token': bool(ws.telegram_bot_token),
+    }), 200
+
+
+@bp.route('/telegram/config', methods=['PUT'])
+@login_required_api
+@admin_required
+def save_telegram_config():
+    workspace_id = session.get('workspace_id')
+    ws = Workspace.query.get_or_404(workspace_id)
+    data = request.get_json(silent=True) or {}
+    token = (data.get('telegram_bot_token') or '').strip()
+    ws.telegram_bot_token = token or None
+    db.session.commit()
+    return jsonify({'status': 'updated', 'connected': bool(ws.telegram_bot_token)}), 200
+
+
+@bp.route('/telegram/set-webhook', methods=['POST'])
+@login_required_api
+@admin_required
+def set_telegram_webhook():
+    workspace_id = session.get('workspace_id')
+    ws = Workspace.query.get_or_404(workspace_id)
+    if not ws.telegram_bot_token:
+        return jsonify({'error': 'Telegram Bot Token gerekli'}), 400
+
+    payload = request.get_json(silent=True) or {}
+    base_url = (payload.get('base_url') or request.url_root.rstrip('/')).rstrip('/')
+    webhook_url = f"{base_url}/api/v1/webhooks/telegram?workspace_id={workspace_id}"
+    secret_token = f'tg_ws_{workspace_id}'
+
+    service = TelegramService(ws.telegram_bot_token)
+    result = service.set_webhook(webhook_url, secret_token=secret_token)
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'Webhook kurulamadı')}), 500
+
+    return jsonify({
+        'status': 'ok',
+        'webhook_url': webhook_url,
+    }), 200
 
 @bp.route('/workspace/test-whatsapp', methods=['POST'])
 @login_required_api
@@ -130,6 +207,41 @@ def test_whatsapp_connection():
             }), response.status_code
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/workspace/preferences', methods=['GET'])
+@login_required_api
+def get_workspace_preferences():
+    """Workspace UI preference values used by frontend feature toggles."""
+    workspace_id = session.get('workspace_id')
+    pref = WorkspacePreference.query.filter_by(workspace_id=workspace_id).first()
+
+    return jsonify({
+        'show_dashboard_insights': bool(pref.show_dashboard_insights) if pref else False,
+    }), 200
+
+
+@bp.route('/workspace/preferences', methods=['PUT'])
+@login_required_api
+@admin_required
+def update_workspace_preferences():
+    """Update workspace-level UI preferences."""
+    workspace_id = session.get('workspace_id')
+    data = request.get_json(silent=True) or {}
+
+    pref = WorkspacePreference.query.filter_by(workspace_id=workspace_id).first()
+    if not pref:
+        pref = WorkspacePreference(workspace_id=workspace_id)
+        db.session.add(pref)
+
+    if 'show_dashboard_insights' in data:
+        pref.show_dashboard_insights = bool(data.get('show_dashboard_insights'))
+
+    db.session.commit()
+    return jsonify({
+        'status': 'updated',
+        'show_dashboard_insights': bool(pref.show_dashboard_insights),
+    }), 200
 
 
 @bp.route('/portal-branding', methods=['GET'])
@@ -401,3 +513,193 @@ def change_password():
     db.session.commit()
 
     return jsonify({'status': 'updated'}), 200
+
+
+# ─── Security & Compliance (Phase 9) ───────────────────────────────────────
+
+@bp.route('/security/overview', methods=['GET'])
+@login_required_api
+def get_security_overview():
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    SecurityService.ensure_rbac_seed(workspace_id)
+    return jsonify({
+        'permissions': list(SecurityService.get_user_permissions(workspace_id, user_id)),
+        'two_factor_enabled': SecurityService.get_2fa_status(user_id),
+        'ip_whitelist_count': len(SecurityService.list_ip_whitelist(workspace_id)),
+    }), 200
+
+
+@bp.route('/security/roles', methods=['GET'])
+@login_required_api
+@security_manage_required
+def get_security_roles():
+    workspace_id = session.get('workspace_id')
+    SecurityService.ensure_rbac_seed(workspace_id)
+    return jsonify({'roles': SecurityService.list_roles(workspace_id)}), 200
+
+
+@bp.route('/security/users/<int:user_id>/role', methods=['PUT'])
+@login_required_api
+@security_manage_required
+@AuditService.audited('security.role.assign', 'user')
+def assign_security_role(user_id):
+    workspace_id = session.get('workspace_id')
+    data = request.get_json(silent=True) or {}
+    role_name = (data.get('role_name') or '').strip()
+    if not role_name:
+        return jsonify({'error': 'role_name zorunludur'}), 400
+
+    user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+    if not user:
+        return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
+
+    try:
+        SecurityService.ensure_rbac_seed(workspace_id)
+        SecurityService.assign_role(workspace_id, user_id, role_name)
+        return jsonify({'status': 'updated'}), 200
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 404
+    except Exception:
+        return jsonify({'error': 'Rol atama başarısız'}), 500
+
+
+@bp.route('/security/2fa/status', methods=['GET'])
+@login_required_api
+def get_two_factor_status():
+    return jsonify({'enabled': SecurityService.get_2fa_status(session.get('user_id'))}), 200
+
+
+@bp.route('/security/2fa/setup', methods=['POST'])
+@login_required_api
+@AuditService.audited('security.2fa.setup', 'user')
+def setup_two_factor():
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    email = session.get('user_email')
+    data = SecurityService.setup_2fa(workspace_id, user_id, email)
+    return jsonify(data), 200
+
+
+@bp.route('/security/2fa/enable', methods=['POST'])
+@login_required_api
+@AuditService.audited('security.2fa.enable', 'user')
+def enable_two_factor():
+    data = request.get_json(silent=True) or {}
+    token = (data.get('token') or '').strip()
+    if not token:
+        return jsonify({'error': 'token zorunludur'}), 400
+
+    ok = SecurityService.verify_and_enable_2fa(session.get('user_id'), token)
+    if not ok:
+        return jsonify({'error': 'Kod doğrulanamadı'}), 400
+    return jsonify({'status': 'enabled'}), 200
+
+
+@bp.route('/security/2fa/disable', methods=['POST'])
+@login_required_api
+@AuditService.audited('security.2fa.disable', 'user')
+def disable_two_factor():
+    SecurityService.disable_2fa(session.get('user_id'))
+    return jsonify({'status': 'disabled'}), 200
+
+
+@bp.route('/security/ip-whitelist', methods=['GET'])
+@login_required_api
+@security_manage_required
+def get_ip_whitelist():
+    workspace_id = session.get('workspace_id')
+    return jsonify({'items': SecurityService.list_ip_whitelist(workspace_id)}), 200
+
+
+@bp.route('/security/ip-whitelist', methods=['POST'])
+@login_required_api
+@security_manage_required
+@AuditService.audited('security.ip_whitelist.add', 'workspace')
+def add_ip_whitelist():
+    workspace_id = session.get('workspace_id')
+    data = request.get_json(silent=True) or {}
+    ip_address = (data.get('ip_address') or '').strip()
+    label = (data.get('label') or '').strip()
+    if not ip_address:
+        return jsonify({'error': 'ip_address zorunludur'}), 400
+    try:
+        row = SecurityService.add_ip_whitelist(workspace_id, ip_address, label, session.get('user_id'))
+        return jsonify({'id': row.id}), 201
+    except Exception:
+        return jsonify({'error': 'IP kaydedilemedi'}), 400
+
+
+@bp.route('/security/ip-whitelist/<int:row_id>', methods=['DELETE'])
+@login_required_api
+@security_manage_required
+@AuditService.audited('security.ip_whitelist.delete', 'workspace')
+def delete_ip_whitelist(row_id):
+    workspace_id = session.get('workspace_id')
+    if not SecurityService.delete_ip_whitelist(workspace_id, row_id):
+        return jsonify({'error': 'Kayıt bulunamadı'}), 404
+    return jsonify({'status': 'deleted'}), 200
+
+
+@bp.route('/security/compliance-report', methods=['GET'])
+@login_required_api
+@security_manage_required
+def get_compliance_report():
+    workspace_id = session.get('workspace_id')
+    days = request.args.get('days', default=30, type=int)
+    days = max(1, min(days, 365))
+    return jsonify(SecurityService.get_compliance_report(workspace_id, days=days)), 200
+
+
+@bp.route('/security/gdpr/export', methods=['POST'])
+@login_required_api
+@security_manage_required
+@AuditService.audited('security.gdpr.export', 'user')
+def gdpr_export():
+    workspace_id = session.get('workspace_id')
+    data = request.get_json(silent=True) or {}
+    target_user_id = data.get('target_user_id') or session.get('user_id')
+    req = SecurityService.create_gdpr_export(workspace_id, session.get('user_id'), target_user_id)
+    return jsonify({
+        'id': req.id,
+        'status': req.status,
+        'result_json': req.result_json,
+    }), 200
+
+
+@bp.route('/security/gdpr/delete', methods=['POST'])
+@login_required_api
+@security_manage_required
+@AuditService.audited('security.gdpr.delete', 'user')
+def gdpr_delete():
+    workspace_id = session.get('workspace_id')
+    data = request.get_json(silent=True) or {}
+    target_user_id = data.get('target_user_id')
+    if not target_user_id:
+        return jsonify({'error': 'target_user_id zorunludur'}), 400
+    req = SecurityService.create_gdpr_delete(workspace_id, session.get('user_id'), target_user_id)
+    return jsonify({'id': req.id, 'status': req.status}), 200
+
+
+@bp.route('/security/audit-logs', methods=['GET'])
+@login_required_api
+@security_manage_required
+def get_audit_logs():
+    workspace_id = session.get('workspace_id')
+    limit = request.args.get('limit', default=100, type=int)
+    limit = max(1, min(limit, 500))
+    logs = AuditLog.query.filter_by(workspace_id=workspace_id).order_by(AuditLog.created_at.desc()).limit(limit).all()
+    return jsonify({
+        'items': [
+            {
+                'id': row.id,
+                'user_id': row.user_id,
+                'action': row.action,
+                'entity_type': row.entity_type,
+                'entity_id': row.entity_id,
+                'ip_address': row.ip_address,
+                'created_at': row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in logs
+        ]
+    }), 200

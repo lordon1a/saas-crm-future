@@ -2,14 +2,20 @@
 Analytics Routes
 API endpoints for advanced reporting and analytics
 """
-from flask import Blueprint, request, jsonify, session
+import io
+import time
+
+from flask import Blueprint, request, jsonify, session, send_file
 from services.analytics_service import AnalyticsService
+from services.report_service import ReportService
 from functools import wraps
 import logging
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
+_DASHBOARD_CACHE = {}
+_DASHBOARD_CACHE_TTL_SECONDS = 30
 
 
 def login_required(f):
@@ -214,6 +220,12 @@ def get_dashboard_data():
     """
     try:
         workspace_id = session.get('workspace_id')
+
+        cache_key = f'dashboard:{workspace_id}'
+        now = time.time()
+        cached = _DASHBOARD_CACHE.get(cache_key)
+        if cached and (now - cached['ts']) <= _DASHBOARD_CACHE_TTL_SECONDS:
+            return jsonify(cached['payload']), 200
         
         # Fetch all data
         dashboard_data = {
@@ -222,9 +234,156 @@ def get_dashboard_data():
             'win_loss_ratio': AnalyticsService.get_win_loss_ratio(workspace_id),
             'task_completion': AnalyticsService.get_task_completion_rate(workspace_id)
         }
+
+        _DASHBOARD_CACHE[cache_key] = {
+            'ts': now,
+            'payload': dashboard_data,
+        }
         
         return jsonify(dashboard_data), 200
         
     except Exception as e:
         logger.error(f'Failed to get dashboard data: {e}')
         return jsonify({'error': 'Failed to fetch dashboard data'}), 500
+
+
+@bp.route('/reports', methods=['GET'])
+@login_required
+def list_reports():
+    """List saved reports and report schedules."""
+    try:
+        workspace_id = session.get('workspace_id')
+        return jsonify({
+            'reports': ReportService.list_reports(workspace_id),
+            'schedules': ReportService.list_schedules(workspace_id),
+        }), 200
+    except Exception as e:
+        logger.error(f'Failed to list reports: {e}')
+        return jsonify({'error': 'Failed to list reports'}), 500
+
+
+@bp.route('/reports', methods=['POST'])
+@login_required
+def create_report():
+    """Create a saved report definition."""
+    try:
+        data = request.get_json() or {}
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+
+        report = ReportService.create_report(
+            workspace_id=workspace_id,
+            created_by=user_id,
+            name=data.get('name'),
+            report_type=data.get('report_type'),
+            config=data.get('config') or {},
+        )
+        return jsonify({'report': ReportService.serialize_report(report)}), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Failed to create report: {e}')
+        return jsonify({'error': 'Failed to create report'}), 500
+
+
+@bp.route('/reports/custom-query', methods=['POST'])
+@login_required
+def run_custom_query():
+    """Run custom report builder query preview."""
+    try:
+        workspace_id = session.get('workspace_id')
+        data = request.get_json() or {}
+        result = ReportService.run_custom_report(workspace_id, data)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Failed to run custom report: {e}')
+        return jsonify({'error': 'Failed to run custom report'}), 500
+
+
+@bp.route('/reports/<int:report_id>/run', methods=['GET'])
+@login_required
+def run_saved_report(report_id):
+    """Run a saved report and return output."""
+    try:
+        workspace_id = session.get('workspace_id')
+        report = ReportService.get_report(report_id, workspace_id)
+        if not report:
+            return jsonify({'error': 'Report not found'}), 404
+
+        output = ReportService.run_report(report, workspace_id)
+        return jsonify(output), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Failed to run report {report_id}: {e}')
+        return jsonify({'error': 'Failed to run report'}), 500
+
+
+@bp.route('/reports/<int:report_id>/export', methods=['GET'])
+@login_required
+def export_report(report_id):
+    """Export a saved report as Excel or PDF."""
+    try:
+        workspace_id = session.get('workspace_id')
+        export_format = (request.args.get('format', 'excel') or 'excel').lower()
+
+        report = ReportService.get_report(report_id, workspace_id)
+        if not report:
+            return jsonify({'error': 'Report not found'}), 404
+
+        output = ReportService.run_report(report, workspace_id)
+
+        if export_format == 'pdf':
+            payload = ReportService.export_pdf(report.name, output)
+            return send_file(
+                io.BytesIO(payload),
+                as_attachment=True,
+                download_name=f'report_{report.id}.pdf',
+                mimetype='application/pdf',
+            )
+
+        payload = ReportService.export_excel(report.name, output)
+        return send_file(
+            io.BytesIO(payload),
+            as_attachment=True,
+            download_name=f'report_{report.id}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Failed to export report {report_id}: {e}')
+        return jsonify({'error': 'Failed to export report'}), 500
+
+
+@bp.route('/report-schedules', methods=['POST'])
+@login_required
+def create_report_schedule():
+    """Create report schedule metadata."""
+    try:
+        workspace_id = session.get('workspace_id')
+        data = request.get_json() or {}
+
+        schedule = ReportService.create_schedule(
+            workspace_id=workspace_id,
+            report_id=data.get('report_id'),
+            frequency=data.get('frequency'),
+            delivery_channel=data.get('delivery_channel', 'email'),
+            delivery_target=data.get('delivery_target'),
+        )
+        return jsonify({'schedule': {
+            'id': schedule.id,
+            'report_id': schedule.report_id,
+            'frequency': schedule.frequency,
+            'delivery_channel': schedule.delivery_channel,
+            'delivery_target': schedule.delivery_target,
+            'is_active': schedule.is_active,
+        }}), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Failed to create report schedule: {e}')
+        return jsonify({'error': 'Failed to create report schedule'}), 500

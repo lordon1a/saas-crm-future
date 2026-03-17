@@ -81,6 +81,7 @@ class Config:
     PORTAL_JWT_SECRET = os.getenv('PORTAL_JWT_SECRET', SECRET_KEY)
     PORTAL_JWT_EXP_HOURS = int(os.getenv('PORTAL_JWT_EXP_HOURS', '24'))
     PORTAL_BASE_URL = os.getenv('PORTAL_BASE_URL', 'http://localhost:5000/portal')
+    APP_BASE_URL = os.getenv('APP_BASE_URL', 'http://localhost:5000').rstrip('/')
 
     # Portal Email Notifications (optional SMTP)
     SMTP_HOST = os.getenv('SMTP_HOST')
@@ -89,6 +90,7 @@ class Config:
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
     SMTP_TLS = os.getenv('SMTP_TLS', '1').lower() in ('1', 'true', 'yes')
     SMTP_FROM_EMAIL = os.getenv('SMTP_FROM_EMAIL')
+    EMAIL_PROVIDER = os.getenv('EMAIL_PROVIDER', 'smtp').strip().lower()
 
     # Google Workspace Integration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '').strip()
@@ -101,6 +103,31 @@ class Config:
     GOOGLE_OAUTH_SCOPES = [scope.strip() for scope in _google_scopes_raw.split(',') if scope.strip()]
     GOOGLE_OAUTH_STATE_TTL_SECONDS = int(os.getenv('GOOGLE_OAUTH_STATE_TTL_SECONDS', '600'))
     GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '').strip()
+
+    # QuickBooks Integration
+    QUICKBOOKS_CLIENT_ID = os.getenv('QUICKBOOKS_CLIENT_ID', '').strip()
+    QUICKBOOKS_CLIENT_SECRET = os.getenv('QUICKBOOKS_CLIENT_SECRET', '').strip()
+    QUICKBOOKS_REDIRECT_URI = os.getenv('QUICKBOOKS_REDIRECT_URI', 'http://127.0.0.1:5000/integrations/quickbooks/callback').strip()
+    QUICKBOOKS_SCOPES = [s.strip() for s in os.getenv('QUICKBOOKS_SCOPES', 'com.intuit.quickbooks.accounting').split(',') if s.strip()]
+    QUICKBOOKS_ENVIRONMENT = os.getenv('QUICKBOOKS_ENVIRONMENT', 'sandbox').strip().lower()
+    QUICKBOOKS_MAX_RETRIES = int(os.getenv('QUICKBOOKS_MAX_RETRIES', '3'))
+
+    # Google background sync worker
+    GOOGLE_SYNC_ENABLED = os.getenv('GOOGLE_SYNC_ENABLED', '1').lower() in ('1', 'true', 'yes')
+    GOOGLE_SYNC_INTERVAL_SECONDS = int(os.getenv('GOOGLE_SYNC_INTERVAL_SECONDS', '300'))
+    GOOGLE_SYNC_GMAIL_MAX_RESULTS = int(os.getenv('GOOGLE_SYNC_GMAIL_MAX_RESULTS', '50'))
+    GOOGLE_SYNC_CALENDAR_DAYS_BACK = int(os.getenv('GOOGLE_SYNC_CALENDAR_DAYS_BACK', '7'))
+    GOOGLE_SYNC_CALENDAR_DAYS_FORWARD = int(os.getenv('GOOGLE_SYNC_CALENDAR_DAYS_FORWARD', '30'))
+
+    # Document management storage
+    DOCUMENT_MAX_SIZE_MB = int(os.getenv('DOCUMENT_MAX_SIZE_MB', '50'))
+    DOCUMENT_STORAGE_BACKEND = os.getenv('DOCUMENT_STORAGE_BACKEND', 'local').strip().lower()
+    DOCUMENT_LOCAL_BASE_DIR = os.getenv('DOCUMENT_LOCAL_BASE_DIR', os.path.join('uploads', 'documents'))
+    DOCUMENT_S3_ENDPOINT_URL = os.getenv('DOCUMENT_S3_ENDPOINT_URL', '').strip()
+    DOCUMENT_S3_REGION = os.getenv('DOCUMENT_S3_REGION', 'us-east-1').strip()
+    DOCUMENT_S3_BUCKET = os.getenv('DOCUMENT_S3_BUCKET', '').strip()
+    DOCUMENT_S3_ACCESS_KEY = os.getenv('DOCUMENT_S3_ACCESS_KEY', '').strip()
+    DOCUMENT_S3_SECRET_KEY = os.getenv('DOCUMENT_S3_SECRET_KEY', '').strip()
 
     # Medya: indirilen/gönderilen dosyaların saklanacağı klasör
     MEDIA_UPLOAD_FOLDER = os.getenv('MEDIA_UPLOAD_FOLDER', 'uploads')

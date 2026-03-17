@@ -8,7 +8,12 @@ let currentCustomerId = null;
 let currentFilter = '';
 let currentTag = '';
 let currentSearch = '';
+let currentChannel = 'all';
+let currentInboxItemType = 'whatsapp';
+let currentSendChannel = 'whatsapp';
 let quickReplies = [];
+let emailTemplates = [];
+let notifications = [];
 let searchDebounceTimer = null;
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
@@ -24,12 +29,18 @@ function escapeHtml(str) {
 }
 
 function formatTime(timestamp) {
-    const date = new Date(timestamp + (timestamp.endsWith('Z') ? '' : 'Z'));
+    if (!timestamp) return '--:--';
+    const raw = String(timestamp);
+    const date = new Date(raw + (raw.endsWith('Z') ? '' : 'Z'));
+    if (Number.isNaN(date.getTime())) return '--:--';
     return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatTimeAgo(timestamp) {
-    const date = new Date(timestamp + (timestamp.endsWith('Z') ? '' : 'Z'));
+    if (!timestamp) return 'Şimdi';
+    const raw = String(timestamp);
+    const date = new Date(raw + (raw.endsWith('Z') ? '' : 'Z'));
+    if (Number.isNaN(date.getTime())) return 'Şimdi';
     const now = new Date();
     const diff = now - date;
     const minutes = Math.floor(diff / 60000);
@@ -96,23 +107,48 @@ function showToast(message, type = 'info') {
 
 async function loadConversations() {
     try {
-        let url = `${API_BASE}/conversations`;
         const params = new URLSearchParams();
-        if (currentFilter) params.set('status', currentFilter);
-        if (currentTag) params.set('tag', currentTag);
-        if (currentSearch) params.set('search', currentSearch);
-        if (params.toString()) url += '?' + params.toString();
+        if (currentChannel) params.set('channel', currentChannel);
+        params.set('limit', '200');
 
-        const response = await fetch(url);
+        const response = await fetch(`/api/v1/email/unified-inbox?${params.toString()}`);
         if (response.status === 401) { window.location.href = '/login'; return; }
-        const data = await response.json();
+        const json = await response.json();
+        const data = json.data || {};
+        let conversations = data.items || [];
+        const counts = data.counts || { total: 0, open: 0, pending: 0, whatsapp: 0, telegram: 0, email: 0 };
 
-        const conversations = data.conversations || [];
-        const counts = data.counts || { total: 0, open: 0, pending: 0 };
+        if (currentFilter) {
+            conversations = conversations.filter(c => c.item_type !== 'email' && c.status === currentFilter);
+        }
+        if (currentTag) {
+            conversations = conversations.filter(c => c.item_type !== 'email' && (c.tags || '').includes(currentTag));
+        }
+        if (currentSearch) {
+            const q = currentSearch.toLowerCase();
+            conversations = conversations.filter(c => {
+                const hay = [
+                    c.counterparty_name,
+                    c.counterparty_email,
+                    c.counterparty_phone,
+                    c.preview,
+                    c.subject,
+                ].join(' ').toLowerCase();
+                return hay.includes(q);
+            });
+        }
 
         document.getElementById('allCount').textContent = counts.total;
         document.getElementById('openCount').textContent = counts.open;
         document.getElementById('pendingCount').textContent = counts.pending;
+        const allEl = document.getElementById('channelAllCount');
+        const waEl = document.getElementById('channelWhatsappCount');
+        const tgEl = document.getElementById('channelTelegramCount');
+        const emEl = document.getElementById('channelEmailCount');
+        if (allEl) allEl.textContent = counts.total;
+        if (waEl) waEl.textContent = counts.whatsapp;
+        if (tgEl) tgEl.textContent = counts.telegram || 0;
+        if (emEl) emEl.textContent = counts.email;
 
         const listEl = document.getElementById('conversationList');
         listEl.innerHTML = '';
@@ -130,7 +166,8 @@ async function loadConversations() {
 
         conversations.forEach(conv => {
             const div = document.createElement('div');
-            const isActive = conv.id === currentConversationId;
+            const resolvedId = conv.item_type === 'email' ? conv.item_id : conv.conversation_id;
+            const isActive = resolvedId === currentConversationId;
             const hasUnread = conv.unread_count > 0;
 
             // Modern SaaS item classes
@@ -142,16 +179,16 @@ async function loadConversations() {
             }
 
             div.className = baseClasses;
-            div.dataset.id = conv.id;
+            div.dataset.id = resolvedId;
+            div.dataset.itemType = conv.item_type;
 
-            const name = conv.customer.profile_name || conv.customer.phone_number || 'Bilinmeyen';
+            const name = conv.counterparty_name || conv.counterparty_email || conv.counterparty_phone || 'Bilinmeyen';
             const initials = getInitials(name);
-            const timeAgo = formatTimeAgo(conv.last_message_at);
-            const preview = escapeHtml(conv.last_message || 'Mesaj yok');
+            const preview = escapeHtml(conv.preview || conv.subject || 'Mesaj yok');
 
             // CRM Contact info
             let crmBadge = '';
-            if (conv.customer && conv.customer.crm_contact) {
+            if (conv.item_type === 'whatsapp' && conv.customer && conv.customer.crm_contact) {
                 const crmContact = conv.customer.crm_contact;
                 const roleEmoji = {
                     'Decision Maker': '👑',
@@ -177,6 +214,12 @@ async function loadConversations() {
             // Unread styling
             const nameClass = hasUnread ? "font-bold text-slate-900" : "font-semibold text-slate-700";
             const previewClass = hasUnread ? "text-slate-800 font-medium" : "text-slate-500";
+            let channelBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200/50">WA</span>';
+            if (conv.item_type === 'email') {
+                channelBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-blue-50 text-blue-700 border-blue-200/50">EMAIL</span>';
+            } else if (conv.item_type === 'telegram') {
+                channelBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-sky-50 text-sky-700 border-sky-200/50"><i class="fab fa-telegram-plane mr-1"></i>TELEGRAM</span>';
+            }
 
             div.innerHTML = `
                 <div class="relative flex-shrink-0 mt-0.5">
@@ -188,9 +231,10 @@ async function loadConversations() {
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center gap-2 min-w-0">
                             <h4 class="text-sm truncate ${nameClass}">${escapeHtml(name)}</h4>
+                            ${channelBadge}
                             ${crmBadge}
                         </div>
-                        <span class="text-[11px] text-slate-400 whitespace-nowrap ml-2">${timeAgo}</span>
+                        <span class="text-[11px] text-slate-400 whitespace-nowrap ml-2">${formatTimeAgo(conv.created_at || conv.last_message_at || new Date().toISOString())}</span>
                     </div>
                     <p class="text-[13px] truncate ${previewClass}">${preview}</p>
                     <div class="flex items-center gap-1.5 mt-2">
@@ -200,7 +244,11 @@ async function loadConversations() {
                 </div>
             `;
 
-            div.onclick = () => selectConversation(conv.id, name, conv.customer.phone_number, initials);
+            if (conv.item_type === 'email') {
+                div.onclick = () => selectEmailItem(conv, initials);
+            } else {
+                div.onclick = () => selectConversation(conv.conversation_id, name, conv.counterparty_phone, initials, conv.item_type);
+            }
             listEl.appendChild(div);
         });
     } catch (error) {
@@ -227,7 +275,7 @@ function showMessagesSkeleton() {
     `;
 }
 
-async function selectConversation(conversationId, customerName, customerPhone, initials) {
+async function selectConversation(conversationId, customerName, customerPhone, initials, preferredChannel = 'whatsapp') {
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
         el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-white hover:shadow-sm';
     });
@@ -237,10 +285,31 @@ async function selectConversation(conversationId, customerName, customerPhone, i
     }
 
     currentConversationId = conversationId;
+    currentInboxItemType = 'whatsapp';
+    currentSendChannel = preferredChannel === 'telegram' ? 'telegram' : 'whatsapp';
     window.currentConvId = conversationId;
 
     document.getElementById('emptyChat').classList.add('hidden');
     document.getElementById('chatContent').classList.remove('hidden');
+    const closeBtn = document.getElementById('closeConvBtn');
+    if (closeBtn) closeBtn.classList.remove('hidden');
+    const tagSelect = document.getElementById('tagSelect');
+    if (tagSelect) {
+        tagSelect.disabled = false;
+        tagSelect.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    if (messageInput) {
+        messageInput.disabled = false;
+        messageInput.placeholder = 'Mesajınızı yazın... (/ ile hızlı yanıtlar)';
+    }
+    if (sendBtn) sendBtn.disabled = false;
+    const sendChannelSelect = document.getElementById('sendChannelSelect');
+    if (sendChannelSelect) {
+        sendChannelSelect.disabled = false;
+        sendChannelSelect.value = currentSendChannel;
+    }
     closeCustomerInfo();
 
     if (customerName) document.getElementById('customerName').textContent = customerName;
@@ -262,12 +331,33 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         try {
             const res = await fetch(`${API_BASE}/conversations/${conversationId}/full`);
             if (res.status === 401) { window.location.href = '/login'; return; }
-            if (!res.ok) { fullData = null; }
+            if (!res.ok) {
+                // Fallback: keep chat usable by loading messages-only endpoint.
+                const msgRes = await fetch(`${API_BASE}/conversations/${conversationId}/messages`);
+                if (msgRes.ok) {
+                    const messagesOnly = await msgRes.json();
+                    fullData = { messages: messagesOnly, conversation: null };
+                } else {
+                    fullData = null;
+                }
+            }
             else {
                 fullData = await res.json();
                 _convCache.set(conversationId, { data: fullData, ts: Date.now() });
             }
-        } catch { fullData = null; }
+        } catch {
+            try {
+                const msgRes = await fetch(`${API_BASE}/conversations/${conversationId}/messages`);
+                if (msgRes.ok) {
+                    const messagesOnly = await msgRes.json();
+                    fullData = { messages: messagesOnly, conversation: null };
+                } else {
+                    fullData = null;
+                }
+            } catch {
+                fullData = null;
+            }
+        }
     }
 
     const container = document.getElementById('messagesContainer');
@@ -301,6 +391,67 @@ async function selectConversation(conversationId, customerName, customerPhone, i
     }
 }
 
+function selectEmailItem(item, initials) {
+    currentConversationId = item.item_id;
+    currentInboxItemType = 'email';
+    window.currentConvId = null;
+
+    document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
+        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-white hover:shadow-sm';
+    });
+    const activeItem = document.querySelector(`[data-id="${item.item_id}"]`);
+    if (activeItem) {
+        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-slate-100 bg-white shadow-sm ring-1 ring-brand-500/10';
+    }
+
+    document.getElementById('emptyChat').classList.add('hidden');
+    document.getElementById('chatContent').classList.remove('hidden');
+    closeCustomerInfo();
+
+    document.getElementById('customerName').textContent = item.counterparty_name || item.counterparty_email || 'Email';
+    document.getElementById('customerPhone').textContent = item.counterparty_email || 'Email';
+    if (initials) {
+        document.getElementById('customerInitials').textContent = initials;
+        document.getElementById('infoInitials').textContent = initials;
+    }
+
+    const closeBtn = document.getElementById('closeConvBtn');
+    if (closeBtn) closeBtn.classList.add('hidden');
+    const tagSelect = document.getElementById('tagSelect');
+    if (tagSelect) {
+        tagSelect.disabled = true;
+        tagSelect.classList.add('opacity-60', 'cursor-not-allowed');
+        tagSelect.value = '';
+    }
+
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    if (messageInput) {
+        messageInput.disabled = true;
+        messageInput.value = '';
+        messageInput.placeholder = 'Email kayıtları salt okunurdur';
+    }
+    if (sendBtn) sendBtn.disabled = true;
+    const sendChannelSelect = document.getElementById('sendChannelSelect');
+    if (sendChannelSelect) {
+        sendChannelSelect.disabled = true;
+        sendChannelSelect.value = 'email';
+    }
+
+    const body = item.preview || item.subject || '';
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = `
+        <div class="flex mb-4 justify-start">
+            <div class="max-w-[75%] px-5 py-3.5 bg-white text-slate-800 rounded-2xl rounded-tl-sm border border-slate-200/60 shadow-sm">
+                <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Email ${escapeHtml((item.direction || 'received').toUpperCase())}</div>
+                <div class="text-[13px] font-semibold text-slate-700 mb-1">${escapeHtml(item.subject || '(Konu yok)')}</div>
+                <div class="text-[14px] leading-relaxed break-words">${escapeHtml(body)}</div>
+                <div class="text-[10px] text-slate-500 text-right mt-1.5 font-medium">${formatTime(item.created_at || new Date().toISOString())}</div>
+            </div>
+        </div>
+    `;
+}
+
 function buildMessageElement(msg) {
     const div = document.createElement('div');
     const isAgent = msg.sender_type !== 'customer';
@@ -327,6 +478,7 @@ function buildMessageElement(msg) {
     div.innerHTML = `
         <div class="${bubbleClasses}">
             ${msg.sender_name && isAgent ? `<div class="text-[10px] font-bold text-white/70 uppercase tracking-wider mb-1">${escapeHtml(msg.sender_name)}</div>` : ''}
+            ${msg.channel === 'telegram' ? `<div class="text-[10px] font-bold uppercase tracking-wider mb-1 ${isAgent ? 'text-white/80' : 'text-sky-600'}"><i class="fab fa-telegram-plane mr-1"></i>Telegram</div>` : ''}
             ${mediaHtml}
             <div class="text-[14.5px] leading-relaxed break-words">${escapeHtml(msg.message_body)}</div>
             <div class="text-[10px] text-opacity-60 text-right mt-1.5 ${isAgent ? 'text-white' : 'text-slate-500'} font-medium">${formatTime(msg.created_at)}</div>
@@ -355,9 +507,11 @@ function removeTempMessage(tempId) {
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
+    const sendChannelSelect = document.getElementById('sendChannelSelect');
     const messageBody = input.value.trim();
+    const selectedChannel = (sendChannelSelect?.value || currentSendChannel || 'whatsapp').toLowerCase();
 
-    if (!messageBody || !currentConversationId) return;
+    if (!messageBody || !currentConversationId || currentInboxItemType !== 'whatsapp') return;
 
     input.disabled = true;
     sendBtn.disabled = true;
@@ -367,6 +521,7 @@ async function sendMessage() {
         id: tempId,
         sender_type: 'agent',
         message_body: messageBody,
+        channel: selectedChannel,
         created_at: new Date().toISOString()
     };
     appendMessageToDOM(tempMsg, tempId);
@@ -376,7 +531,11 @@ async function sendMessage() {
         const response = await fetch(`${API_BASE}/messages/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversation_id: currentConversationId, message_body: messageBody })
+            body: JSON.stringify({
+                conversation_id: currentConversationId,
+                message_body: messageBody,
+                channel: selectedChannel,
+            })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -400,7 +559,7 @@ async function sendMessage() {
 }
 
 async function updateTag(tagValue) {
-    if (!currentConversationId) return;
+    if (!currentConversationId || currentInboxItemType !== 'whatsapp') return;
     const tagSelect = document.getElementById('tagSelect');
     if (!tagSelect) return;
     const previousValue = tagSelect.dataset.previousTag || '';
@@ -470,6 +629,76 @@ function closeCustomerInfo() {
     const panel = document.getElementById('customerInfoPanel');
     panel.classList.add('hidden');
     panel.classList.add('translate-x-full');
+}
+
+async function loadNotifications() {
+    try {
+        const res = await fetch('/api/collaboration/notifications?limit=20');
+        if (!res.ok) return;
+        const json = await res.json();
+        notifications = json.items || [];
+        renderNotifications();
+        updateNotificationBadge(json.unread_count || 0);
+    } catch (e) {
+        console.error('Notification load failed', e);
+    }
+}
+
+function updateNotificationBadge(unreadCount) {
+    const badge = document.getElementById('notificationBellCount');
+    if (!badge) return;
+    if (!unreadCount) {
+        badge.classList.add('hidden');
+        return;
+    }
+    badge.classList.remove('hidden');
+    badge.textContent = String(unreadCount > 99 ? '99+' : unreadCount);
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notificationList');
+    if (!list) return;
+
+    if (!notifications.length) {
+        list.innerHTML = '<div class="p-4 text-xs text-slate-500">Henüz bildiriminiz yok.</div>';
+        return;
+    }
+
+    list.innerHTML = notifications.map(n => `
+        <button class="w-full text-left p-3 hover:bg-slate-50 transition-all ${n.is_read ? '' : 'bg-brand-50/30'}" data-notification-id="${n.id}">
+            <div class="flex items-start gap-2">
+                <div class="w-2 h-2 rounded-full mt-1.5 ${n.is_read ? 'bg-slate-300' : 'bg-brand-500'}"></div>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-slate-700 break-words">${escapeHtml(n.message || '')}</p>
+                    <p class="text-[10px] text-slate-400 mt-1">${formatTimeAgo(n.created_at || new Date().toISOString())}</p>
+                </div>
+            </div>
+        </button>
+    `).join('');
+
+    list.querySelectorAll('[data-notification-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-notification-id');
+            try {
+                await fetch(`/api/collaboration/notifications/${id}/read`, { method: 'POST' });
+                loadNotifications();
+            } catch (_) {
+                // no-op
+            }
+        });
+    });
+}
+
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notificationDropdown');
+    if (!dropdown) return;
+    const isHidden = dropdown.classList.contains('hidden');
+    if (isHidden) {
+        dropdown.classList.remove('hidden');
+        loadNotifications();
+        return;
+    }
+    dropdown.classList.add('hidden');
 }
 
 async function savePrivateNote() {
@@ -658,6 +887,128 @@ document.querySelectorAll('.filter-tab').forEach(tab => {
     });
 });
 
+document.querySelectorAll('.channel-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.channel-tab').forEach(t => t.classList.remove('active', 'bg-white', 'shadow-sm', 'text-brand-600'));
+        tab.classList.add('active', 'bg-white', 'shadow-sm', 'text-brand-600');
+        currentChannel = tab.dataset.channel || 'all';
+        loadConversations();
+    });
+});
+
+document.getElementById('sendChannelSelect')?.addEventListener('change', (e) => {
+    currentSendChannel = (e.target.value || 'whatsapp').toLowerCase();
+});
+
+async function loadEmailTemplates() {
+    try {
+        const res = await fetch('/api/v1/email/templates');
+        const json = await res.json();
+        emailTemplates = (json.data || []);
+        const select = document.getElementById('emailTemplateSelect');
+        if (!select) return;
+        select.innerHTML = '<option value="">Template seç (opsiyonel)</option>';
+        emailTemplates.forEach(t => {
+            select.innerHTML += `<option value="${t.id}">${escapeHtml(t.name)}</option>`;
+        });
+    } catch (e) {
+        console.error('Template load failed', e);
+    }
+}
+
+function openEmailComposer() {
+    const modal = document.getElementById('emailComposerModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    loadEmailTemplates();
+}
+
+function closeEmailComposer() {
+    const modal = document.getElementById('emailComposerModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function previewSelectedTemplate() {
+    const templateId = Number(document.getElementById('emailTemplateSelect')?.value || 0);
+    if (!templateId) return;
+
+    const variables = {
+        customer_name: document.getElementById('customerName')?.textContent || '',
+        customer_email: document.getElementById('customerPhone')?.textContent || '',
+        today_date: new Date().toISOString().slice(0, 10),
+    };
+
+    try {
+        const res = await fetch(`/api/v1/email/templates/${templateId}/render`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ variables }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            showToast(json.error || 'Template önizlenemedi', 'error');
+            return;
+        }
+        document.getElementById('emailSubjectInput').value = json.data.subject || '';
+        document.getElementById('emailBodyInput').value = json.data.body || '';
+    } catch (e) {
+        showToast('Template önizlenemedi', 'error');
+    }
+}
+
+async function sendComposedEmail() {
+    const toEmail = (document.getElementById('emailToInput')?.value || '').trim();
+    const subject = (document.getElementById('emailSubjectInput')?.value || '').trim();
+    const body = (document.getElementById('emailBodyInput')?.value || '').trim();
+    if (!toEmail || !subject || !body) {
+        showToast('Alıcı, konu ve içerik zorunlu', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/v1/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                to_email: toEmail,
+                subject,
+                body_text: body,
+                body_html: `<p>${escapeHtml(body).split('\n').join('<br>')}</p>`,
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            showToast(json.error || 'Email gönderilemedi', 'error');
+            return;
+        }
+        showToast('Email gönderildi');
+        closeEmailComposer();
+        loadConversations();
+    } catch (e) {
+        showToast('Email gönderilemedi', 'error');
+    }
+}
+
+document.getElementById('openEmailComposerBtn')?.addEventListener('click', openEmailComposer);
+document.getElementById('closeEmailComposerBtn')?.addEventListener('click', closeEmailComposer);
+document.getElementById('previewEmailTemplateBtn')?.addEventListener('click', previewSelectedTemplate);
+document.getElementById('sendEmailBtn')?.addEventListener('click', sendComposedEmail);
+document.getElementById('notificationBellBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNotificationDropdown();
+});
+document.getElementById('markAllNotificationsReadBtn')?.addEventListener('click', async () => {
+    try {
+        await fetch('/api/collaboration/notifications/read-all', { method: 'POST' });
+        loadNotifications();
+    } catch (_) {
+        // no-op
+    }
+});
+
 async function loadUserInfo() {
     try {
         const r = await fetch(`/api/me`);
@@ -688,8 +1039,10 @@ let conversationPollingInterval = null;
 loadConversations();
 loadQuickReplies();
 loadUserInfo();
+loadNotifications();
 // Auto-refresh her 30 saniyede bir (production için optimize edildi)
 conversationPollingInterval = setInterval(loadConversations, 30000);
+setInterval(loadNotifications, 45000);
 
 // ─── SSE (Server-Sent Events) Listener ───────────────────────────────────────
 let sseSource = null;
@@ -764,6 +1117,12 @@ window.addEventListener('beforeunload', cleanupConnections);
 
 // Cleanup when user clicks on navigation links
 document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('notificationDropdown');
+    const bell = document.getElementById('notificationBellBtn');
+    if (dropdown && bell && !dropdown.contains(e.target) && !bell.contains(e.target)) {
+        dropdown.classList.add('hidden');
+    }
+
     const link = e.target.closest('a');
     if (link && link.href && !link.href.includes('#') && link.href !== window.location.href) {
         // User is navigating to a different page

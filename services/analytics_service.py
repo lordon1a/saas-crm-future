@@ -333,3 +333,83 @@ class AnalyticsService:
         except Exception as e:
             logger.error(f'Failed to get task completion rate: {e}')
             raise
+
+    @staticmethod
+    def get_sales_cycle_duration(workspace_id, days=90):
+        """
+        Calculate sales cycle duration metrics for won deals.
+        Duration is measured as closed_at - created_at in days.
+        """
+        try:
+            start_date = datetime.utcnow() - timedelta(days=days)
+            deals = Deal.query.filter(
+                Deal.workspace_id == workspace_id,
+                Deal.status == 'won',
+                Deal.closed_at.isnot(None),
+                Deal.created_at >= start_date
+            ).all()
+
+            durations = []
+            for deal in deals:
+                if deal.closed_at and deal.created_at and deal.closed_at >= deal.created_at:
+                    durations.append((deal.closed_at - deal.created_at).days)
+
+            if not durations:
+                return {
+                    'days_window': days,
+                    'total_won_deals': 0,
+                    'average_days': 0,
+                    'min_days': 0,
+                    'max_days': 0,
+                }
+
+            return {
+                'days_window': days,
+                'total_won_deals': len(durations),
+                'average_days': round(sum(durations) / len(durations), 2),
+                'min_days': min(durations),
+                'max_days': max(durations),
+            }
+
+        except Exception as e:
+            logger.error(f'Failed to calculate sales cycle duration: {e}')
+            raise
+
+    @staticmethod
+    def get_stage_conversion_rate(workspace_id):
+        """
+        Calculate stage conversion distribution based on current deal allocation.
+        """
+        try:
+            total_deals = Deal.query.filter_by(workspace_id=workspace_id).count()
+            if total_deals == 0:
+                return {'stages': [], 'total_deals': 0}
+
+            rows = db.session.query(
+                DealStage.name,
+                func.count(Deal.id).label('deal_count')
+            ).join(
+                Deal, Deal.stage_id == DealStage.id
+            ).filter(
+                Deal.workspace_id == workspace_id
+            ).group_by(
+                DealStage.id,
+                DealStage.name
+            ).order_by(
+                DealStage.order
+            ).all()
+
+            stages = []
+            for stage_name, deal_count in rows:
+                rate = (deal_count / total_deals) * 100 if total_deals else 0
+                stages.append({
+                    'stage_name': stage_name,
+                    'deal_count': int(deal_count),
+                    'conversion_rate': round(rate, 2),
+                })
+
+            return {'stages': stages, 'total_deals': total_deals}
+
+        except Exception as e:
+            logger.error(f'Failed to calculate stage conversion rates: {e}')
+            raise

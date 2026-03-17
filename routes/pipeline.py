@@ -6,6 +6,8 @@ from flask import Blueprint, request, jsonify, session
 from models import db
 from models_crm import Pipeline, DealStage, Deal, Company
 from services.pipeline_service import PipelineService
+from services.quickbooks_service import QuickBooksService
+from services.collaboration_service import CollaborationService
 from functools import wraps
 from datetime import datetime, date
 import logging
@@ -232,6 +234,13 @@ def update_deal(deal_id):
             data['expected_close_date'] = datetime.fromisoformat(data['expected_close_date']).date()
         
         deal = PipelineService.update_deal(workspace_id, deal_id, data, user_id)
+
+        CollaborationService.notify_followers_on_entity_change(
+            workspace_id=workspace_id,
+            entity_type='deal',
+            entity_id=deal.id,
+            message=f'Takip ettiginiz deal guncellendi: {deal.name}',
+        )
         
         return jsonify({
             'id': deal.id,
@@ -271,6 +280,13 @@ def move_deal_stage(deal_id):
             deal_id, 
             data['stage_id'], 
             user_id
+        )
+
+        CollaborationService.notify_followers_on_entity_change(
+            workspace_id=workspace_id,
+            entity_type='deal',
+            entity_id=deal.id,
+            message=f'Deal asamasi degisti: {deal.name} -> {deal.stage.name}',
         )
         
         return jsonify({
@@ -312,6 +328,19 @@ def close_deal(deal_id):
             data['status'],
             data['win_loss_reason'],
             user_id
+        )
+
+        if deal.status == 'won':
+            try:
+                QuickBooksService.create_invoice_for_deal(workspace_id, user_id, deal.id)
+            except Exception as exc:
+                logger.warning('QuickBooks invoice create failed for deal %s: %s', deal.id, exc)
+
+        CollaborationService.notify_followers_on_entity_change(
+            workspace_id=workspace_id,
+            entity_type='deal',
+            entity_id=deal.id,
+            message=f'Deal kapatildi: {deal.name} ({deal.status})',
         )
         
         return jsonify({

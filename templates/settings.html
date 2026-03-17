@@ -88,6 +88,9 @@
             <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
                 <i class="fas fa-list-check text-lg"></i>
             </a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokumanlar">
+                <i class="fas fa-file-lines text-lg"></i>
+            </a>
             <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
                 <i class="fas fa-plug text-lg"></i>
             </a>
@@ -149,6 +152,9 @@
                         <button onclick="switchTab('google')" id="tab-google" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
                             <i class="fab fa-google w-4 text-center group-hover:scale-110 transition-transform"></i> Google Workspace
                         </button>
+                        <button onclick="switchTab('security')" id="tab-security" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group overflow-hidden" title="Security & Compliance">
+                            <i class="fas fa-shield w-4 text-center group-hover:scale-110 transition-transform"></i><span class="truncate">Security</span>
+                        </button>
                     </nav>
 
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-8 mb-4 ml-2">Hesap</p>
@@ -209,6 +215,13 @@
                                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Access Token</label>
                                     <input type="password" id="ws_token" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Süresiz sistem token'ı kullanılması önerilir">
                                 </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Telegram Bot Token</label>
+                                    <div class="flex gap-2">
+                                        <input type="password" id="ws_telegram_token" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Telegram bot token girin">
+                                        <button onclick="setupTelegramWebhook()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all whitespace-nowrap">Bağla/Webhook Kur</button>
+                                    </div>
+                                </div>
                                 <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center justify-between gap-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -224,6 +237,33 @@
                                 <div class="flex justify-end gap-3 pt-2">
                                     <button onclick="testWhatsApp()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">Bağlantıyı Test Et</button>
                                     <button onclick="saveAPI()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">API Bilgilerini Kaydet</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Analytics Görünüm Tercihi</h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">Dashboard Insights bölümü</p>
+                                        <p class="text-xs text-slate-500 mt-1">
+                                            Bu ayar açıksa, <span class="font-semibold text-slate-600">Analytics</span> sayfasında
+                                            gelişmiş dashboard kartları, pipeline/win-loss grafikleri ve task completion bölümü görünür.
+                                            Kapalıysa bu bölüm tamamen gizlenir.
+                                        </p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer select-none mt-1">
+                                        <input id="pref_dashboard_insights" type="checkbox" class="sr-only peer">
+                                        <div class="relative w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-brand-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                                    </label>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button onclick="saveWorkspacePreferences()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
+                                        Tercihi Kaydet
+                                    </button>
                                 </div>
                             </div>
                         </section>
@@ -433,6 +473,76 @@
                         </div>
                     </div>
 
+                    <!-- ═══ SECURITY TAB ═══ -->
+                    <div id="panel-security" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Security & Compliance</h2>
+                            <p class="text-sm text-slate-500">RBAC, 2FA, IP whitelist, audit ve GDPR operasyonları.</p>
+                        </div>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">2FA</h3>
+                                <span id="sec2faStatus" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">Bilinmiyor</span>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="flex flex-wrap gap-3">
+                                    <button onclick="setup2FA()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">Kurulum Oluştur</button>
+                                    <button onclick="enable2FA()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">2FA Aktifleştir</button>
+                                    <button onclick="disable2FA()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">2FA Kapat</button>
+                                </div>
+                                <p id="sec2faInfo" class="text-xs text-slate-500"></p>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">RBAC</h3>
+                                <button onclick="loadSecurityRoles()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Yenile</button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <select id="secUserSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"></select>
+                                    <select id="secRoleSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"></select>
+                                    <button onclick="assignSecurityRole()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">Rol Ata</button>
+                                </div>
+                                <div id="secRoleList" class="space-y-2"></div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">IP Whitelist</h3>
+                                <button onclick="loadIPWhitelist()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Yenile</button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <input id="secIpAddress" type="text" placeholder="IP Address" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                                    <input id="secIpLabel" type="text" placeholder="Label" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                                    <button onclick="addIPWhitelist()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">IP Ekle</button>
+                                </div>
+                                <div id="secIpList" class="space-y-2"></div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Compliance & Audit</h3>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="loadComplianceReport()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Compliance</button>
+                                    <button onclick="loadAuditLogs()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Audit</button>
+                                </div>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div id="secCompliance" class="text-xs text-slate-600 bg-slate-50 rounded-xl border border-slate-200 p-3">Rapor bekleniyor...</div>
+                                <div id="secAuditList" class="space-y-2"></div>
+                                <div class="flex flex-wrap gap-3 pt-2">
+                                    <button onclick="runGDPRExport()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">GDPR Export</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
                     <!-- ═══ PROFILE TAB ═══ -->
                     <div id="panel-profile" class="tab-panel space-y-8">
                         <div>
@@ -573,6 +683,72 @@
                                             <p class="text-xs text-slate-500" id="calendarSyncStatus">Henüz senkronize edilmedi</p>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- QuickBooks Integration -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">QuickBooks Entegrasyonu</h3>
+                                <div id="quickbooksConnectionStatus" class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-white px-2.5 py-1 rounded-full border border-slate-200">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                    <span>Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div id="quickbooksNotConnected" class="hidden">
+                                    <div class="flex items-center gap-4 p-4 bg-green-50 border border-green-100 rounded-xl mb-4">
+                                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
+                                            <i class="fas fa-receipt text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-green-900">QuickBooks hesabınızı bağlayın</p>
+                                            <p class="text-xs text-green-700 mt-0.5">Kazanan deal'ler için otomatik fatura oluşturun ve ödeme durumunu CRM'e yansıtın.</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="connectQuickBooks()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                        <i class="fas fa-link"></i> QuickBooks'a Bağlan
+                                    </button>
+                                </div>
+
+                                <div id="quickbooksConnected" class="hidden space-y-4">
+                                    <div class="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                        <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                                            <i class="fas fa-check-circle text-xl"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-emerald-900">QuickBooks bağlantısı aktif</p>
+                                            <p class="text-xs text-emerald-700 mt-0.5 truncate" id="quickbooksCompanyName">Bağlı</p>
+                                        </div>
+                                        <button onclick="disconnectQuickBooks()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">
+                                            Bağlantıyı Kes
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-bold text-slate-600">Fatura Sync</span>
+                                                <button onclick="syncQuickBooksInvoices()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                                    <i class="fas fa-sync-alt"></i> Senkronize Et
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-slate-500" id="quickbooksSyncStatus">Henüz senkronize edilmedi</p>
+                                        </div>
+                                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-bold text-slate-600">Son Hatalar</span>
+                                                <button onclick="loadQuickBooksErrors()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                                    <i class="fas fa-triangle-exclamation"></i> Yenile
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-slate-500" id="quickbooksErrorSummary">Hata yok</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="quickbooksInvoicesList" class="space-y-2"></div>
+                                    <div id="quickbooksErrorsList" class="space-y-2"></div>
                                 </div>
                             </div>
                         </section>
@@ -870,6 +1046,7 @@
             let team = [];
             let templates = [];
             let webhookSubscriptions = [];
+            let securityRoles = [];
 
             // Utils
             function showToast(msg, type = 'success') {
@@ -936,6 +1113,7 @@
                 if (name === 'custom-fields') loadCustomFields();
                 if (name === 'profile') loadProfile();
                 if (name === 'google') loadGoogleStatus();
+                if (name === 'security') loadSecurityTab();
             }
 
             // ═══ WORKSPACE ═══
@@ -944,12 +1122,32 @@
                 document.getElementById('ws_company_name').value = data.company_name;
                 document.getElementById('ws_phone_id').value = data.whatsapp_phone_number_id || '';
                 document.getElementById('ws_token').value = data.whatsapp_access_token === '***' ? '' : data.whatsapp_access_token;
+                document.getElementById('ws_telegram_token').value = data.telegram_bot_token === '***' ? '' : data.telegram_bot_token;
                 document.getElementById('ws_waba_id').value = data.waba_id || '';
                 document.getElementById('webhookUrl').textContent = window.location.origin + '/webhook';
+
+                await loadWorkspacePreferences();
                 
                 if (data.whatsapp_phone_number_id) {
                     updateAPIStatus(true, 'Bağlı');
                 }
+            }
+
+            async function loadWorkspacePreferences() {
+                try {
+                    const prefs = await api('/api/settings/workspace/preferences');
+                    document.getElementById('pref_dashboard_insights').checked = !!prefs.show_dashboard_insights;
+                } catch (e) {
+                    console.error('Workspace preferences load error:', e);
+                }
+            }
+
+            async function saveWorkspacePreferences() {
+                const showDashboardInsights = document.getElementById('pref_dashboard_insights').checked;
+                await api('/api/settings/workspace/preferences', 'PUT', {
+                    show_dashboard_insights: showDashboardInsights,
+                });
+                showToast('Analytics görünüm tercihi kaydedildi');
             }
 
             function updateAPIStatus(ok, text) {
@@ -969,11 +1167,28 @@
                 const body = {
                     whatsapp_phone_number_id: document.getElementById('ws_phone_id').value.trim(),
                     whatsapp_access_token: document.getElementById('ws_token').value.trim() || '***',
+                    telegram_bot_token: document.getElementById('ws_telegram_token').value.trim() || '***',
                     waba_id: document.getElementById('ws_waba_id').value.trim()
                 };
                 await api('/api/settings/workspace', 'PUT', body);
                 showToast('API bilgileri kaydedildi');
                 updateAPIStatus(true, 'Bağlı');
+            }
+
+            async function setupTelegramWebhook() {
+                try {
+                    const token = document.getElementById('ws_telegram_token').value.trim();
+                    if (!token) {
+                        showToast('Önce Telegram Bot Token girin', 'error');
+                        return;
+                    }
+                    await api('/api/settings/telegram/config', 'PUT', { telegram_bot_token: token });
+                    const res = await api('/api/settings/telegram/set-webhook', 'POST', { base_url: window.location.origin });
+                    showToast('Telegram webhook kuruldu');
+                    console.log('Telegram webhook:', res.webhook_url);
+                } catch (e) {
+                    showToast('Telegram webhook kurulamadı', 'error');
+                }
             }
 
             async function testWhatsApp() {
@@ -1424,11 +1639,146 @@
                 document.getElementById('pass_confirm').value = '';
             }
 
+            // ═══ SECURITY ═══
+            async function loadSecurityTab() {
+                await loadSecurityOverview();
+                await loadSecurityRoles();
+                await loadIPWhitelist();
+                await loadComplianceReport();
+                await loadAuditLogs();
+            }
+
+            async function loadSecurityOverview() {
+                const data = await api('/api/settings/security/overview');
+                const badge = document.getElementById('sec2faStatus');
+                badge.textContent = data.two_factor_enabled ? 'Aktif' : 'Kapalı';
+                badge.className = `px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${data.two_factor_enabled ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`;
+                document.getElementById('sec2faInfo').textContent = `Yetkiler: ${(data.permissions || []).join(', ') || 'yok'} • IP whitelist: ${data.ip_whitelist_count || 0}`;
+            }
+
+            async function loadSecurityRoles() {
+                const rolesData = await api('/api/settings/security/roles');
+                securityRoles = rolesData.roles || [];
+
+                if (!team.length) {
+                    team = await api('/api/settings/team');
+                }
+
+                const userSelect = document.getElementById('secUserSelect');
+                userSelect.innerHTML = team.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+
+                const roleSelect = document.getElementById('secRoleSelect');
+                roleSelect.innerHTML = securityRoles.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+
+                const list = document.getElementById('secRoleList');
+                list.innerHTML = securityRoles.map(role => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p class="text-xs font-bold text-slate-700">${role.name}</p>
+                        <p class="text-[11px] text-slate-500 mt-1">${role.description || ''}</p>
+                        <p class="text-[11px] text-slate-500 mt-2">Üyeler: ${(role.members || []).map(m => m.name).join(', ') || 'Yok'}</p>
+                    </div>
+                `).join('');
+            }
+
+            async function assignSecurityRole() {
+                const userId = document.getElementById('secUserSelect').value;
+                const roleName = document.getElementById('secRoleSelect').value;
+                if (!userId || !roleName) return showToast('Kullanıcı ve rol seçin', 'error');
+                await api(`/api/settings/security/users/${userId}/role`, 'PUT', { role_name: roleName });
+                showToast('Rol atandı');
+                await loadSecurityRoles();
+            }
+
+            async function setup2FA() {
+                const data = await api('/api/settings/security/2fa/setup', 'POST');
+                document.getElementById('sec2faInfo').textContent = `Secret: ${data.secret} | Backup: ${(data.backup_codes || []).join(', ')}`;
+                showToast('2FA secret oluşturuldu');
+            }
+
+            async function enable2FA() {
+                const token = prompt('Authenticator kodunu girin:');
+                if (!token) return;
+                await api('/api/settings/security/2fa/enable', 'POST', { token });
+                showToast('2FA aktifleştirildi');
+                await loadSecurityOverview();
+            }
+
+            async function disable2FA() {
+                await api('/api/settings/security/2fa/disable', 'POST');
+                showToast('2FA kapatıldı');
+                await loadSecurityOverview();
+            }
+
+            async function loadIPWhitelist() {
+                const data = await api('/api/settings/security/ip-whitelist');
+                const list = document.getElementById('secIpList');
+                const items = data.items || [];
+                if (!items.length) {
+                    list.innerHTML = '<p class="text-xs text-slate-500">Whitelist kaydı bulunamadı.</p>';
+                    return;
+                }
+
+                list.innerHTML = items.map(row => `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-700">${row.ip_address}</p>
+                            <p class="text-[11px] text-slate-500">${row.label || '-'}</p>
+                        </div>
+                        <button onclick="deleteIPWhitelist(${row.id})" class="px-3 py-1 bg-white border border-slate-200 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-50 transition-all">Sil</button>
+                    </div>
+                `).join('');
+            }
+
+            async function addIPWhitelist() {
+                const ipAddress = document.getElementById('secIpAddress').value.trim();
+                const label = document.getElementById('secIpLabel').value.trim();
+                if (!ipAddress) return showToast('IP adresi gerekli', 'error');
+                await api('/api/settings/security/ip-whitelist', 'POST', { ip_address: ipAddress, label });
+                document.getElementById('secIpAddress').value = '';
+                document.getElementById('secIpLabel').value = '';
+                showToast('IP whitelist kaydedildi');
+                await loadIPWhitelist();
+            }
+
+            async function deleteIPWhitelist(rowId) {
+                await api(`/api/settings/security/ip-whitelist/${rowId}`, 'DELETE');
+                showToast('IP kaydı silindi');
+                await loadIPWhitelist();
+            }
+
+            async function loadComplianceReport() {
+                const data = await api('/api/settings/security/compliance-report?days=30');
+                document.getElementById('secCompliance').textContent = `Toplam event: ${data.total_events || 0} | Son ${data.days} gün | Aksiyonlar: ${Object.keys(data.by_action || {}).length}`;
+            }
+
+            async function loadAuditLogs() {
+                const data = await api('/api/settings/security/audit-logs?limit=30');
+                const list = document.getElementById('secAuditList');
+                const items = data.items || [];
+                if (!items.length) {
+                    list.innerHTML = '<p class="text-xs text-slate-500">Audit log bulunamadı.</p>';
+                    return;
+                }
+
+                list.innerHTML = items.map(row => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p class="text-xs font-semibold text-slate-700">${row.action} • ${row.entity_type}</p>
+                        <p class="text-[11px] text-slate-500 mt-1">User: ${row.user_id || '-'} | IP: ${row.ip_address || '-'} | ${row.created_at || ''}</p>
+                    </div>
+                `).join('');
+            }
+
+            async function runGDPRExport() {
+                const data = await api('/api/settings/security/gdpr/export', 'POST', {});
+                showToast(`GDPR export hazır (request #${data.id})`);
+            }
+
             // ═══════════════════════════════════════════════════════════════
             // GOOGLE WORKSPACE
             // ═══════════════════════════════════════════════════════════════
 
             async function loadGoogleStatus() {
+                await loadQuickBooksStatus();
                 try {
                     const data = await api('/api/settings/google/status');
                     
@@ -1485,6 +1835,113 @@
                     loadGoogleStatus();
                 } catch (e) {
                     showToast('Bağlantı kesilemedi', 'error');
+                }
+            }
+
+            async function loadQuickBooksStatus() {
+                try {
+                    const data = await api('/api/settings/quickbooks/status');
+                    const connected = !!data.connected;
+
+                    document.getElementById('quickbooksNotConnected').classList.toggle('hidden', connected);
+                    document.getElementById('quickbooksConnected').classList.toggle('hidden', !connected);
+
+                    if (connected) {
+                        document.getElementById('quickbooksCompanyName').textContent = data.company_name || data.realm_id || 'QuickBooks';
+                        document.getElementById('quickbooksConnectionStatus').innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span class="text-emerald-600">Bağlı</span>';
+                        await loadQuickBooksInvoices();
+                        await loadQuickBooksErrors();
+                    } else {
+                        document.getElementById('quickbooksConnectionStatus').innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div><span class="text-slate-400">Bağlı Değil</span>';
+                    }
+                } catch (e) {
+                    console.error('QuickBooks status error:', e);
+                }
+            }
+
+            async function connectQuickBooks() {
+                try {
+                    const data = await api('/api/settings/quickbooks/connect', 'POST');
+                    if (data.authorization_url) {
+                        window.location.href = data.authorization_url;
+                    }
+                } catch (e) {
+                    showToast('QuickBooks bağlantısı başlatılamadı', 'error');
+                }
+            }
+
+            async function disconnectQuickBooks() {
+                if (!confirm('QuickBooks bağlantısını kesmek istediğinizden emin misiniz?')) return;
+                try {
+                    await api('/api/settings/quickbooks/disconnect', 'DELETE');
+                    showToast('QuickBooks bağlantısı kesildi');
+                    await loadQuickBooksStatus();
+                } catch (e) {
+                    showToast('QuickBooks bağlantısı kesilemedi', 'error');
+                }
+            }
+
+            async function syncQuickBooksInvoices() {
+                try {
+                    const data = await api('/api/settings/quickbooks/sync/invoices', 'POST', {});
+                    const paid = (data.payments && data.payments.paid) || 0;
+                    const pushed = data.pushed || 0;
+                    document.getElementById('quickbooksSyncStatus').textContent = `Son sync: ${new Date().toLocaleString('tr-TR')} - ${pushed} invoice push, ${paid} paid update`;
+                    showToast('QuickBooks senkronizasyonu tamamlandı');
+                    await loadQuickBooksInvoices();
+                    await loadQuickBooksErrors();
+                } catch (e) {
+                    showToast('QuickBooks senkronizasyonu başarısız', 'error');
+                }
+            }
+
+            async function loadQuickBooksInvoices() {
+                try {
+                    const data = await api('/api/settings/quickbooks/invoices?limit=8');
+                    const rows = data.invoices || [];
+                    const container = document.getElementById('quickbooksInvoicesList');
+
+                    if (!rows.length) {
+                        container.innerHTML = '<p class="text-xs text-slate-500">Henüz QuickBooks invoice kaydı yok.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = rows.map(row => `
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-xs font-bold text-slate-700">Deal #${row.deal_id} • ${row.doc_number || row.quickbooks_invoice_id || 'Pending'}</p>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${row.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${row.payment_status}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1">Sync: ${row.sync_status} • $${Number(row.amount || 0).toLocaleString('en-US')}</p>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    console.error('QuickBooks invoices load error:', e);
+                }
+            }
+
+            async function loadQuickBooksErrors() {
+                try {
+                    const data = await api('/api/settings/quickbooks/errors?limit=5');
+                    const rows = data.errors || [];
+                    const summary = document.getElementById('quickbooksErrorSummary');
+                    const container = document.getElementById('quickbooksErrorsList');
+
+                    if (!rows.length) {
+                        summary.textContent = 'Hata yok';
+                        container.innerHTML = '';
+                        return;
+                    }
+
+                    summary.textContent = `${rows.length} hata kaydı`;
+                    container.innerHTML = rows.map(row => `
+                        <div class="p-3 bg-red-50 rounded-xl border border-red-100">
+                            <p class="text-xs font-bold text-red-700">${row.operation} • ${row.correlation_id}</p>
+                            <p class="text-[11px] text-red-600 mt-1">${row.error_message}</p>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    console.error('QuickBooks errors load error:', e);
                 }
             }
 
@@ -1914,7 +2371,7 @@
                     
                     // Auto-load if coming from a specific hash
                     const hash = window.location.hash.replace('#', '');
-                    if (['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'google'].includes(hash)) {
+                    if (['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'google', 'security'].includes(hash)) {
                         switchTab(hash);
                     }
                 } catch (e) {
