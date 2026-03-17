@@ -991,6 +991,7 @@ def share_contact_file_to_chat(contact_id):
             'status': 'sent',
             'channel': 'telegram',
             'conversation_id': conversation.id,
+            'conversation_public_id': conversation.public_id,
             'message_id': message.id,
             'message': {
                 'id': message.id,

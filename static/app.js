@@ -25,7 +25,72 @@ let conversationsRefreshTimer = null;
 let isUserScrolling = false;
 let lastScrollPosition = 0;
 const initialUrlParams = new URLSearchParams(window.location.search);
-let pendingOpenConversationId = Number(initialUrlParams.get('open_conversation') || 0) || null;
+let pendingConversationPublicId = (initialUrlParams.get('conversationId') || '').trim() || null;
+let currentConversationPublicId = null;
+
+function setConversationUrl(conversationPublicId, mode = 'push') {
+    const url = new URL(window.location.href);
+    if (conversationPublicId) {
+        url.searchParams.set('conversationId', conversationPublicId);
+    } else {
+        url.searchParams.delete('conversationId');
+    }
+    url.searchParams.delete('open_conversation');
+    const nextUrl = `${url.pathname}${url.search}`;
+    if (mode === 'replace') {
+        window.history.replaceState({}, '', nextUrl);
+        return;
+    }
+    window.history.pushState({}, '', nextUrl);
+}
+
+function showEmptyConversationState() {
+    currentConversationId = null;
+    currentConversationPublicId = null;
+    currentCustomerId = null;
+    currentInboxItemType = 'whatsapp';
+    window.currentConvId = null;
+
+    document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
+        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
+    });
+
+    document.getElementById('chatContent')?.classList.add('hidden');
+    document.getElementById('emptyChat')?.classList.remove('hidden');
+}
+
+async function openConversationByPublicId(conversationPublicId, opts = {}) {
+    const { updateHistory = false } = opts;
+    if (!conversationPublicId) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/conversations/public/${encodeURIComponent(conversationPublicId)}/full`);
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (!res.ok) return;
+
+        const payload = await res.json();
+        const conv = payload?.conversation;
+        const customer = conv?.customer;
+        if (!conv || !customer) return;
+
+        const customerName = customer.profile_name || customer.phone_number || 'Bilinmeyen';
+        const customerPhone = customer.phone_number || '';
+        const initials = getInitials(customerName);
+        const selectedPublicId = conv.public_id || conversationPublicId;
+
+        await selectConversation(
+            conv.id,
+            customerName,
+            customerPhone,
+            initials,
+            'whatsapp',
+            selectedPublicId,
+            { updateHistory }
+        );
+    } catch (error) {
+        console.error('Error opening conversation by public id:', error);
+    }
+}
 
 // ─── Scroll Management ──────────────────────────────────────────
 
@@ -242,6 +307,9 @@ async function loadConversations() {
             div.className = baseClasses;
             div.dataset.id = resolvedId;
             div.dataset.itemType = conv.item_type;
+            if (conv.conversation_public_id) {
+                div.dataset.conversationPublicId = conv.conversation_public_id;
+            }
 
             const name = conv.counterparty_name || conv.counterparty_email || conv.counterparty_phone || 'Bilinmeyen';
             const initials = getInitials(name);
@@ -308,14 +376,22 @@ async function loadConversations() {
             if (conv.item_type === 'email') {
                 div.onclick = () => selectEmailItem(conv, initials);
             } else {
-                div.onclick = () => selectConversation(conv.conversation_id, name, conv.counterparty_phone, initials, conv.item_type);
+                div.onclick = () => selectConversation(
+                    conv.conversation_id,
+                    name,
+                    conv.counterparty_phone,
+                    initials,
+                    conv.item_type,
+                    conv.conversation_public_id,
+                    { updateHistory: true }
+                );
             }
             listEl.appendChild(div);
         });
 
-        if (pendingOpenConversationId) {
+        if (pendingConversationPublicId) {
             const targetConversation = conversations.find((conv) => (
-                conv.item_type !== 'email' && Number(conv.conversation_id) === Number(pendingOpenConversationId)
+                conv.item_type !== 'email' && conv.conversation_public_id === pendingConversationPublicId
             ));
 
             if (targetConversation) {
@@ -323,19 +399,19 @@ async function loadConversations() {
                 const targetInitials = getInitials(targetName);
                 const preferredChannel = targetConversation.item_type === 'telegram' ? 'telegram' : 'whatsapp';
 
-                pendingOpenConversationId = null;
+                pendingConversationPublicId = null;
                 await selectConversation(
                     targetConversation.conversation_id,
                     targetName,
                     targetConversation.counterparty_phone,
                     targetInitials,
-                    preferredChannel
+                    preferredChannel,
+                    targetConversation.conversation_public_id,
+                    { updateHistory: false }
                 );
-
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.delete('open_conversation');
-                const nextUrl = `${currentUrl.pathname}${currentUrl.search ? currentUrl.search : ''}`;
-                window.history.replaceState({}, '', nextUrl);
+            } else {
+                await openConversationByPublicId(pendingConversationPublicId, { updateHistory: false });
+                pendingConversationPublicId = null;
             }
         }
     } catch (error) {
@@ -362,7 +438,16 @@ function showMessagesSkeleton() {
     `;
 }
 
-async function selectConversation(conversationId, customerName, customerPhone, initials, preferredChannel = 'whatsapp') {
+async function selectConversation(
+    conversationId,
+    customerName,
+    customerPhone,
+    initials,
+    preferredChannel = 'whatsapp',
+    conversationPublicId = null,
+    opts = {}
+) {
+    const { updateHistory = true } = opts;
     const previousContactId = currentCustomerId;
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
         el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
@@ -373,9 +458,14 @@ async function selectConversation(conversationId, customerName, customerPhone, i
     }
 
     currentConversationId = conversationId;
+    currentConversationPublicId = conversationPublicId || null;
     currentInboxItemType = 'whatsapp';
     currentSendChannel = preferredChannel === 'telegram' ? 'telegram' : 'whatsapp';
     window.currentConvId = conversationId;
+
+    if (updateHistory && currentConversationPublicId) {
+        setConversationUrl(currentConversationPublicId, 'push');
+    }
 
     document.getElementById('emptyChat').classList.add('hidden');
     document.getElementById('chatContent').classList.remove('hidden');
@@ -492,9 +582,11 @@ function selectEmailItem(item, initials) {
     updateSocketContactSubscription(currentCustomerId, null);
     currentCustomerId = null;
     currentConversationId = item.item_id;
+    currentConversationPublicId = null;
     currentInboxItemType = 'email';
     currentLastMessageId = 0;
     window.currentConvId = null;
+    setConversationUrl(null, 'push');
 
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
         el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
@@ -1533,6 +1625,19 @@ async function loadTeamForDropdown(currentId) {
 }
 
 window.openConversation = (id) => selectConversation(id, '', '', '');
+
+window.addEventListener('popstate', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetPublicId = (urlParams.get('conversationId') || '').trim();
+    if (!targetPublicId) {
+        showEmptyConversationState();
+        return;
+    }
+    if (targetPublicId === (currentConversationPublicId || '')) {
+        return;
+    }
+    openConversationByPublicId(targetPublicId, { updateHistory: false });
+});
 
 // DEBUG: Test function for manual WebSocket message injection
 window.testMessageInjection = function(testMessage) {

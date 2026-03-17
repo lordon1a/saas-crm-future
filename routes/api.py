@@ -14,10 +14,25 @@ from sqlalchemy import or_, func, and_
 from config import Config
 import json, time, queue, threading, os
 import logging
+import uuid
 from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 MAX_MEDIA_UPLOAD_SIZE = 15 * 1024 * 1024  # 15MB
+
+
+def _normalize_uuid(value):
+    try:
+        return str(uuid.UUID(str(value)))
+    except Exception:
+        return None
+
+
+def _find_conversation_by_public_id(workspace_id, conversation_public_id):
+    normalized = _normalize_uuid(conversation_public_id)
+    if not normalized:
+        return None
+    return Conversation.query.filter_by(public_id=normalized, workspace_id=workspace_id).first()
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -169,6 +184,7 @@ def get_conversations():
     for conv in conversations:
         result.append({
             'id': conv.id,
+            'public_id': conv.public_id,
             'customer': {
                 'id': conv.customer.id,
                 'phone_number': conv.customer.phone_number,
@@ -269,6 +285,7 @@ def get_conversation_detail(conversation_id):
     
     return jsonify({
         'id': conversation.id,
+        'public_id': conversation.public_id,
         'customer': {
             'id': conversation.customer.id,
             'phone_number': conversation.customer.phone_number,
@@ -334,6 +351,116 @@ def get_conversation_full(conversation_id):
     return jsonify({
         'conversation': {
             'id': conversation.id,
+            'public_id': conversation.public_id,
+            'status': conversation.status,
+            'tags': conversation.tags,
+            'notes': conversation.notes,
+            'assigned_to': conversation.assigned_to,
+            'created_at': conversation.last_message_at.isoformat(),
+            'customer': {
+                'id': conversation.customer.id,
+                'phone_number': conversation.customer.phone_number,
+                'profile_name': conversation.customer.profile_name,
+                'email': conversation.customer.email,
+                'notes': conversation.customer.notes,
+                'private_notes': conversation.customer.private_notes,
+                'created_at': conversation.customer.created_at.isoformat()
+            },
+            'conversation_notes': [
+                {
+                    'id': n.id,
+                    'content': n.content,
+                    'is_internal': bool(getattr(n, 'is_internal', False)),
+                    'created_at': n.created_at.isoformat(),
+                }
+                for n in notes
+            ]
+        },
+        'messages': messages_data
+    }), 200
+
+
+@bp.route('/conversations/public/<string:conversation_public_id>', methods=['GET'])
+@login_required_api
+def get_conversation_detail_by_public_id(conversation_public_id):
+    """Get conversation details by public UUID verifying workspace ownership"""
+    workspace_id = session.get('workspace_id')
+    conversation = _find_conversation_by_public_id(workspace_id, conversation_public_id)
+    if not conversation:
+        return jsonify({'error': 'Conversation not found in this workspace'}), 404
+
+    include_internal = (session.get('user_role') or '').lower() != 'customer'
+    try:
+        notes = CollaborationService.list_notes_for_conversation(conversation.id, include_internal)
+    except Exception as exc:
+        logger.warning('Conversation detail note load fallback for public_id %s: %s', conversation_public_id, exc)
+        notes = []
+
+    return jsonify({
+        'id': conversation.id,
+        'public_id': conversation.public_id,
+        'customer': {
+            'id': conversation.customer.id,
+            'phone_number': conversation.customer.phone_number,
+            'profile_name': conversation.customer.profile_name,
+            'email': conversation.customer.email,
+            'notes': conversation.customer.notes,
+            'private_notes': conversation.customer.private_notes,
+            'created_at': conversation.customer.created_at.isoformat()
+        },
+        'status': conversation.status,
+        'tags': conversation.tags,
+        'notes': conversation.notes,
+        'assigned_to': conversation.assigned_to,
+        'conversation_notes': [
+            {
+                'id': note.id,
+                'content': note.content,
+                'is_internal': bool(getattr(note, 'is_internal', False)),
+                'created_at': note.created_at.isoformat()
+            } for note in notes
+        ],
+        'message_count': len(conversation.messages),
+        'created_at': conversation.last_message_at.isoformat()
+    }), 200
+
+
+@bp.route('/conversations/public/<string:conversation_public_id>/full', methods=['GET'])
+@login_required_api
+def get_conversation_full_by_public_id(conversation_public_id):
+    """Get conversation full payload by public UUID verifying workspace ownership"""
+    workspace_id = session.get('workspace_id')
+    conversation = _find_conversation_by_public_id(workspace_id, conversation_public_id)
+    if not conversation:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    msgs = Message.query.filter_by(conversation_id=conversation.id).order_by(Message.created_at.asc()).all()
+
+    sender_ids = {msg.sender_id for msg in msgs if msg.sender_id}
+    user_cache = {}
+    if sender_ids:
+        users = User.query.filter(User.id.in_(sender_ids)).all()
+        user_cache = {u.id: u.name for u in users}
+    messages_data = [_message_to_json(msg, include_sender_name=True, user_cache=user_cache) for msg in msgs]
+
+    Message.query.filter_by(
+        conversation_id=conversation.id,
+        sender_type='customer',
+        is_read=False
+    ).update({'is_read': True})
+    db.session.commit()
+
+    include_internal = (session.get('user_role') or '').lower() != 'customer'
+    try:
+        notes = CollaborationService.list_notes_for_conversation(conversation.id, include_internal)
+    except Exception as exc:
+        logger.warning('Conversation full note load fallback for public_id %s: %s', conversation_public_id, exc)
+        notes = []
+
+    return jsonify({
+        'conversation': {
+            'id': conversation.id,
+            'public_id': conversation.public_id,
             'status': conversation.status,
             'tags': conversation.tags,
             'notes': conversation.notes,

@@ -378,6 +378,7 @@ class EmailHubService:
                     'item_id': f'wa-{conv.id}',
                     'item_type': 'telegram' if latest_channel == 'telegram' else 'whatsapp',
                     'conversation_id': conv.id,
+                    'conversation_public_id': conv.public_id,
                     'status': conv.status,
                     'tags': conv.tags,
                     'counterparty_name': (customer.profile_name if customer else None) or (customer.phone_number if customer else 'Unknown'),

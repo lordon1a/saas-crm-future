@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import uuid
 
 db = SQLAlchemy()
 
@@ -53,6 +54,7 @@ class Customer(db.Model):
 class Conversation(db.Model):
     __tablename__ = 'conversations'
     id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False, index=True)
     status = db.Column(db.String(20), default='open', nullable=False, index=True)

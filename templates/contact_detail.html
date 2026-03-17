@@ -2359,7 +2359,8 @@
                 if (data.conversation_id) {
                     const shouldOpenInbox = confirm('Sohbeti Gelen Kutusu ekraninda acmak ister misiniz?');
                     if (shouldOpenInbox) {
-                        window.open(`/?open_conversation=${data.conversation_id}`, '_blank');
+                        const openValue = data.conversation_public_id || data.conversation_id;
+                        window.open(`/?conversationId=${encodeURIComponent(openValue)}`, '_blank');
                     }
                 }
             } catch (error) {

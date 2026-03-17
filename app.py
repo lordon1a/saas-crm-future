@@ -8,6 +8,7 @@ from functools import wraps
 import logging
 import os
 import ipaddress
+import uuid
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -596,6 +597,25 @@ with app.app_context():
                     conn.execute(text('CREATE INDEX IF NOT EXISTS idx_notes_is_internal ON notes(is_internal)'))
                     need_commit = True
                     logger.info('notes.is_internal column added')
+
+                r_conv = conn.execute(text('PRAGMA table_info(conversations)'))
+                conv_cols = [row[1] for row in r_conv.fetchall()]
+                if 'public_id' not in conv_cols:
+                    conn.execute(text('ALTER TABLE conversations ADD COLUMN public_id VARCHAR(36)'))
+                    need_commit = True
+                    logger.info('conversations.public_id column added')
+
+                missing_public_ids = conn.execute(
+                    text("SELECT id FROM conversations WHERE public_id IS NULL OR TRIM(public_id) = ''")
+                ).fetchall()
+                for row in missing_public_ids:
+                    conn.execute(
+                        text('UPDATE conversations SET public_id = :public_id WHERE id = :id'),
+                        {'public_id': str(uuid.uuid4()), 'id': row[0]}
+                    )
+                    need_commit = True
+
+                conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_public_id ON conversations(public_id)'))
                 if need_commit:
                     conn.commit()
     except Exception as e:
@@ -612,6 +632,18 @@ with app.app_context():
                 conn.execute(text('ALTER TABLE customers ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
                 conn.execute(text('ALTER TABLE contacts ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
                 conn.execute(text('ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_internal BOOLEAN NOT NULL DEFAULT FALSE'))
+                conn.execute(text('ALTER TABLE conversations ADD COLUMN IF NOT EXISTS public_id VARCHAR(36)'))
+
+                missing_public_ids = conn.execute(
+                    text("SELECT id FROM conversations WHERE public_id IS NULL OR TRIM(public_id) = ''")
+                ).fetchall()
+                for row in missing_public_ids:
+                    conn.execute(
+                        text('UPDATE conversations SET public_id = :public_id WHERE id = :id'),
+                        {'public_id': str(uuid.uuid4()), 'id': row[0]}
+                    )
+
+                conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_public_id ON conversations(public_id)'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON customers(telegram_chat_id)'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS idx_contacts_telegram_chat_id ON contacts(telegram_chat_id)'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS idx_notes_is_internal ON notes(is_internal)'))
