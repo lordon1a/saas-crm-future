@@ -558,7 +558,7 @@ function buildMessageHTML(msg) {
     let mediaHtml = '';
     if (msg.media_url) {
         if (msg.media_type === 'image') {
-            mediaHtml = `<div class="mb-2 rounded-xl overflow-hidden max-w-full"><img src="${escapeHtml(msg.media_url)}" alt="Görsel" class="max-h-64 w-auto object-cover" loading="lazy" onerror="this.style.display=\'none\'"></div>`;
+            mediaHtml = `<div class="mb-2 rounded-xl overflow-hidden max-w-full"><img src="${escapeHtml(msg.media_url)}" alt="Görsel" class="max-h-64 w-auto object-cover" loading="lazy" onerror="this.style.display='none'"></div>`;
         } else if (msg.media_type === 'document' || msg.media_type === 'audio' || msg.media_type === 'video') {
             const label = msg.media_type === 'document' ? '📄 Belge' : msg.media_type === 'audio' ? '🎵 Ses' : '🎥 Video';
             mediaHtml = `<a href="${escapeHtml(msg.media_url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm underline font-medium mb-2 ${isAgent ? 'text-white/90' : 'text-brand-600'}">${label} – İndir</a>`;
@@ -566,7 +566,7 @@ function buildMessageHTML(msg) {
     }
 
     return `
-        <div class="${rowClasses}" data-message-id="${rowMessageId}">
+        <div class="${rowClasses}" data-message-id="${rowMessageId}" style="margin-bottom: 1rem;">
         <div class="${bubbleClasses}">
             ${msg.sender_name && isAgent ? `<div class="text-[10px] font-bold text-white/70 uppercase tracking-wider mb-1">${escapeHtml(msg.sender_name)}</div>` : ''}
             ${msg.channel === 'telegram' ? `<div class="text-[10px] font-bold uppercase tracking-wider mb-1 ${isAgent ? 'text-white/80' : 'text-sky-600'}"><i class="fab fa-telegram-plane mr-1"></i>Telegram</div>` : ''}
@@ -580,16 +580,23 @@ function buildMessageHTML(msg) {
 
 function appendMessageToDOM(msg, tempId) {
     const container = getMessagesContainer();
-    if (!container) return null;
+    if (!container) {
+        console.error('❌ Container not found!');
+        return null;
+    }
 
     const messageId = msg?.id;
     if (messageId !== undefined && messageId !== null && String(messageId).trim() !== '') {
         const existing = container.querySelector(`[data-message-id="${String(messageId)}"]`);
-        if (existing) return existing;
+        if (existing) {
+            console.log('⚠️ Message already exists:', messageId);
+            return existing;
+        }
     }
 
     // Check if user is near bottom before adding message
     const wasNearBottom = isUserNearBottom(container, 150);
+    console.log('📊 Before append - wasNearBottom:', wasNearBottom, 'scrollTop:', container.scrollTop, 'scrollHeight:', container.scrollHeight);
 
     container.insertAdjacentHTML('beforeend', buildMessageHTML(msg));
     const insertedItems = container.querySelectorAll('[data-message-id]');
@@ -611,22 +618,34 @@ function appendMessageToDOM(msg, tempId) {
         console.log(`🗑️ Removed ${toRemove} old messages from DOM (memory optimization)`);
     }
 
+    console.log('📊 After append - scrollTop:', container.scrollTop, 'scrollHeight:', container.scrollHeight);
+
     // Smart Auto-Scroll: Only scroll if user was near bottom or if it's our own message
     const isOwnMessage = msg.sender_type === 'agent';
     if (wasNearBottom || isOwnMessage) {
-        requestAnimationFrame(() => {
+        console.log('✅ Auto-scrolling (wasNearBottom:', wasNearBottom, 'isOwnMessage:', isOwnMessage, ')');
+        
+        // IMMEDIATE SCROLL - No delays
+        container.scrollTop = container.scrollHeight;
+        
+        // Double-check with multiple attempts
+        setTimeout(() => {
             container.scrollTop = container.scrollHeight;
-            requestAnimationFrame(() => {
-                try {
-                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-                } catch {
-                    container.scrollTop = container.scrollHeight;
-                }
-            });
-        });
+        }, 0);
+        
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 50);
+        
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+            console.log('📍 Final position after append:', container.scrollTop, '/', container.scrollHeight);
+        }, 100);
+        
         hideNewMessageNotification();
     } else {
         // User is reading old messages - show notification instead of forcing scroll
+        console.log('📢 Showing notification (user not at bottom)');
         showNewMessageNotification();
     }
 
@@ -635,7 +654,12 @@ function appendMessageToDOM(msg, tempId) {
 
 function smoothScrollMessagesToBottom(force = false) {
     const container = getMessagesContainer();
-    if (!container) return;
+    if (!container) {
+        console.error('❌ Container not found for scroll');
+        return;
+    }
+    
+    console.log('📜 Scrolling to bottom, force:', force, 'scrollHeight:', container.scrollHeight);
     
     // If user is scrolling and not forced, don't interrupt
     if (isUserScrolling && !force) {
@@ -643,19 +667,34 @@ function smoothScrollMessagesToBottom(force = false) {
         return;
     }
     
-    // Force immediate scroll first, then smooth scroll
+    // AGGRESSIVE SCROLL: Multiple attempts to ensure scroll happens
+    // Attempt 1: Immediate scroll
     container.scrollTop = container.scrollHeight;
     
+    // Attempt 2: After a tiny delay
+    setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+    }, 10);
+    
+    // Attempt 3: Smooth scroll with requestAnimationFrame
     requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
         try {
             container.scrollTo({ 
                 top: container.scrollHeight, 
                 behavior: 'smooth' 
             });
-        } catch {
+        } catch (e) {
+            console.warn('Smooth scroll failed, using direct:', e);
             container.scrollTop = container.scrollHeight;
         }
     });
+    
+    // Attempt 4: Final check after animation
+    setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+        console.log('✅ Final scroll position:', container.scrollTop, '/', container.scrollHeight);
+    }, 100);
     
     hideNewMessageNotification();
 }
