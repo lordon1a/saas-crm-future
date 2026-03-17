@@ -469,9 +469,22 @@ function selectEmailItem(item, initials) {
 }
 
 function getMessagesContainer() {
-    return document.getElementById('messagesContainer')
+    const container = document.getElementById('messagesContainer')
         || document.getElementById('chat-messages')
         || document.querySelector('.messages-container');
+    
+    if (!container) {
+        console.error('❌ CRITICAL: Messages container not found in DOM!');
+        console.log('Available elements:', {
+            byId: document.getElementById('messagesContainer'),
+            byChatId: document.getElementById('chat-messages'),
+            byClass: document.querySelector('.messages-container')
+        });
+    } else {
+        console.log('✅ Messages container found:', container.id || container.className);
+    }
+    
+    return container;
 }
 
 function buildMessageHTML(msg) {
@@ -602,7 +615,11 @@ function normalizeRealtimeMessage(payload) {
 }
 
 function renderMessage(payload) {
-    appendMessageToDOM(normalizeRealtimeMessage(payload));
+    console.log('🎨 renderMessage called with:', payload);
+    const normalized = normalizeRealtimeMessage(payload);
+    console.log('🔄 Normalized message:', normalized);
+    const result = appendMessageToDOM(normalized);
+    console.log('📌 appendMessageToDOM result:', result);
 }
 
 function scheduleConversationsRefresh(delayMs = 1000) {
@@ -638,9 +655,10 @@ function triggerUnreadSignal() {
 }
 
 function handleIncomingSocketMessage(payload) {
-    console.log('WebSocket event received:', payload);
+    console.log('🔔 WebSocket event received:', payload);
 
     if (!payload || currentInboxItemType === 'email') {
+        console.log('⚠️ Skipping: No payload or email type');
         scheduleConversationsRefresh(800);
         return;
     }
@@ -651,6 +669,15 @@ function handleIncomingSocketMessage(payload) {
     const payloadContactId = Number(payload.contact_id || payload.customer_id || 0);
     const activeContactId = Number(currentCustomerId || 0);
 
+    console.log('🔍 ID Comparison:', {
+        payloadConversationId,
+        activeConversationId,
+        payloadContactId,
+        activeContactId,
+        match: (payloadConversationId && payloadConversationId === activeConversationId) ||
+               (payloadContactId && payloadContactId === activeContactId)
+    });
+
     // Check if message belongs to currently active conversation
     const isActiveConversation = (
         (payloadConversationId && payloadConversationId === activeConversationId) ||
@@ -659,26 +686,37 @@ function handleIncomingSocketMessage(payload) {
 
     if (!isActiveConversation) {
         // Message is for a different conversation - just update sidebar
+        console.log('📋 Message for different conversation - updating sidebar only');
         triggerUnreadSignal();
         scheduleConversationsRefresh(800);
         return;
     }
 
+    console.log('✅ Message for ACTIVE conversation - injecting into chat window');
+
     // Message belongs to active conversation - inject it into chat window
     const container = getMessagesContainer();
     if (!container) {
+        console.error('❌ ERROR: Messages container not found!');
         scheduleConversationsRefresh(800);
         return;
     }
 
+    console.log('📦 Container found:', container.id || container.className);
+
     // Remove empty state if present
     const emptyState = container.querySelector('.text-slate-400');
-    if (emptyState) container.innerHTML = '';
+    if (emptyState) {
+        console.log('🗑️ Removing empty state');
+        container.innerHTML = '';
+    }
 
     // Inject message into active chat window
+    console.log('💬 Rendering message...');
     renderMessage(payload);
     smoothScrollMessagesToBottom();
     scheduleConversationsRefresh(1200);
+    console.log('✅ Message rendered successfully');
 }
 
 function initRealtimeSocket() {
@@ -1324,6 +1362,35 @@ async function loadTeamForDropdown(currentId) {
 }
 
 window.openConversation = (id) => selectConversation(id, '', '', '');
+
+// DEBUG: Test function for manual WebSocket message injection
+window.testMessageInjection = function(testMessage) {
+    console.log('🧪 TEST: Manual message injection');
+    const payload = testMessage || {
+        id: 999999,
+        message_id: 999999,
+        conversation_id: currentConversationId,
+        contact_id: currentCustomerId,
+        customer_id: currentCustomerId,
+        text: 'TEST MESSAGE - Bu bir test mesajıdır',
+        message_body: 'TEST MESSAGE - Bu bir test mesajıdır',
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        channel: 'whatsapp',
+        sender_type: 'customer',
+        message_side: 'inbound',
+        sender_name: 'Test User',
+    };
+    
+    console.log('Current state:', {
+        currentConversationId,
+        currentCustomerId,
+        currentInboxItemType,
+        payload
+    });
+    
+    handleIncomingSocketMessage(payload);
+};
 
 loadConversations();
 loadQuickReplies();
