@@ -229,8 +229,26 @@ class PipelineService:
             body=f'Stage changed from "{old_stage.name}" to "{new_stage.name}"'
         )
         
-        db.session.commit()
-        logger.info(f"Moved deal {deal.id} from stage {old_stage.id} to {stage_id}")
+        # Commit with retry mechanism for SQLite lock handling
+        max_retries = 3
+        retry_delay = 0.1  # Start with 100ms
+        
+        for attempt in range(max_retries):
+            try:
+                db.session.commit()
+                logger.info(f"Moved deal {deal.id} from stage {old_stage.id} to {stage_id}")
+                break  # Success, exit retry loop
+            except Exception as e:
+                if attempt < max_retries - 1 and 'database is locked' in str(e).lower():
+                    logger.warning(f"Database locked, retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    # Final attempt failed or different error
+                    db.session.rollback()
+                    logger.error(f"Failed to commit deal move after {attempt + 1} attempts: {e}")
+                    raise
 
         PipelineService._emit_webhook_event(workspace_id, 'deal.updated', {
             'deal_id': deal.id,
