@@ -367,7 +367,8 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         }
     }
 
-    const container = document.getElementById('messagesContainer');
+    const container = getMessagesContainer();
+    if (!container) return;
     container.innerHTML = '';
     const messages = fullData?.messages || [];
 
@@ -375,11 +376,10 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center py-16 text-slate-400"><p class="text-sm">Henüz mesaj yok</p></div>`;
         currentLastMessageId = 0;
     } else {
-        const fragment = document.createDocumentFragment();
-        messages.forEach(msg => fragment.appendChild(buildMessageElement(msg)));
-        container.appendChild(fragment);
+        const html = messages.map((msg) => buildMessageHTML(msg)).join('');
+        container.innerHTML = html;
         updateLastMessageCursorFromDOM();
-        requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+        requestAnimationFrame(() => { smoothScrollMessagesToBottom(); });
     }
 
     const detail = fullData?.conversation;
@@ -467,11 +467,16 @@ function selectEmailItem(item, initials) {
     `;
 }
 
-function buildMessageElement(msg) {
-    const div = document.createElement('div');
+function getMessagesContainer() {
+    return document.getElementById('messagesContainer')
+        || document.getElementById('chat-messages')
+        || document.querySelector('.messages-container');
+}
+
+function buildMessageHTML(msg) {
     const isAgent = msg.sender_type !== 'customer';
-    div.className = `flex mb-4 animate-fade-in-up ${isAgent ? 'justify-end' : 'justify-start'}`;
-    div.dataset.messageId = msg.id;
+    const rowClasses = `flex mb-4 animate-fade-in-up ${isAgent ? 'justify-end' : 'justify-start'}`;
+    const rowMessageId = escapeHtml(msg.id || '');
 
     let bubbleClasses = 'max-w-[70%] px-5 py-3.5 shadow-sm relative group ';
     if (isAgent) {
@@ -490,7 +495,8 @@ function buildMessageElement(msg) {
         }
     }
 
-    div.innerHTML = `
+    return `
+        <div class="${rowClasses}" data-message-id="${rowMessageId}">
         <div class="${bubbleClasses}">
             ${msg.sender_name && isAgent ? `<div class="text-[10px] font-bold text-white/70 uppercase tracking-wider mb-1">${escapeHtml(msg.sender_name)}</div>` : ''}
             ${msg.channel === 'telegram' ? `<div class="text-[10px] font-bold uppercase tracking-wider mb-1 ${isAgent ? 'text-white/80' : 'text-sky-600'}"><i class="fab fa-telegram-plane mr-1"></i>Telegram</div>` : ''}
@@ -498,32 +504,41 @@ function buildMessageElement(msg) {
             <div class="text-[14.5px] leading-relaxed break-words">${escapeHtml(msg.message_body)}</div>
             <div class="text-[10px] text-opacity-60 text-right mt-1.5 ${isAgent ? 'text-white' : 'text-slate-500'} font-medium">${formatTime(msg.created_at)}</div>
         </div>
+        </div>
     `;
-    return div;
 }
 
 function appendMessageToDOM(msg, tempId) {
-    const container = document.getElementById('messagesContainer');
+    const container = getMessagesContainer();
     if (!container) return null;
 
-    const numericMessageId = Number(msg?.id);
-    if (!Number.isNaN(numericMessageId) && numericMessageId > 0) {
-        const existing = container.querySelector(`[data-message-id="${numericMessageId}"]`);
+    const messageId = msg?.id;
+    if (messageId !== undefined && messageId !== null && String(messageId).trim() !== '') {
+        const existing = container.querySelector(`[data-message-id="${String(messageId)}"]`);
         if (existing) return existing;
     }
 
-    const el = buildMessageElement(msg);
-    if (tempId) el.dataset.tempId = tempId;
-    container.appendChild(el);
+    container.insertAdjacentHTML('beforeend', buildMessageHTML(msg));
+    const insertedItems = container.querySelectorAll('[data-message-id]');
+    const el = insertedItems.length > 0 ? insertedItems[insertedItems.length - 1] : null;
+    if (tempId && el) el.dataset.tempId = tempId;
+
+    const numericMessageId = Number(messageId);
     if (!Number.isNaN(numericMessageId) && numericMessageId > currentLastMessageId) {
         currentLastMessageId = numericMessageId;
     }
-    requestAnimationFrame(() => smoothScrollMessagesToBottom());
+    requestAnimationFrame(() => {
+        try {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        } catch {
+            container.scrollTop = container.scrollHeight;
+        }
+    });
     return el;
 }
 
 function smoothScrollMessagesToBottom() {
-    const container = document.getElementById('messagesContainer');
+    const container = getMessagesContainer();
     if (!container) return;
     try {
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
@@ -534,13 +549,13 @@ function smoothScrollMessagesToBottom() {
 
 function removeTempMessage(tempId) {
     if (!tempId) return;
-    const container = document.getElementById('messagesContainer');
+    const container = getMessagesContainer();
     const el = container && container.querySelector(`[data-temp-id="${tempId}"]`);
     if (el) el.remove();
 }
 
 function updateLastMessageCursorFromDOM() {
-    const container = document.getElementById('messagesContainer');
+    const container = getMessagesContainer();
     if (!container) {
         currentLastMessageId = 0;
         return;
@@ -577,12 +592,17 @@ function normalizeRealtimeMessage(payload) {
         id: payload.id || payload.message_id,
         sender_type: payload.sender_type || (payload.message_side === 'outbound' ? 'agent' : 'customer'),
         sender_name: payload.sender_name || null,
-        message_body: payload.message_body || payload.text || '',
+        message_body: payload.message_body || payload.text || payload.message || payload.body || '',
         channel: payload.channel || currentSendChannel || 'whatsapp',
         created_at: payload.created_at || payload.timestamp || new Date().toISOString(),
         media_type: payload.media_type || null,
         media_url: payload.media_url || null,
     };
+}
+
+function isSameId(left, right) {
+    if (left === undefined || left === null || right === undefined || right === null) return false;
+    return String(left) === String(right);
 }
 
 function renderMessage(payload) {
@@ -616,26 +636,26 @@ function triggerUnreadSignal() {
 function handleIncomingSocketMessage(payload) {
     console.log('WebSocket event received:', payload);
 
-    if (!payload || currentInboxItemType !== 'whatsapp') {
+    if (!payload || currentInboxItemType === 'email') {
         loadConversations();
         return;
     }
 
-    const payloadConversationId = Number(payload.conversation_id || 0);
-    const activeConversationId = Number(currentConversationId || 0);
-    const payloadContactId = Number(payload.contact_id || 0);
-    const activeContactId = Number(currentCustomerId || 0);
+    const payloadConversationId = payload.conversation_id;
+    const activeConversationId = currentConversationId;
+    const payloadContactId = payload.contact_id || payload.customer_id;
+    const activeContactId = currentCustomerId;
 
     if (
-        payloadConversationId !== activeConversationId &&
-        payloadContactId !== activeContactId
+        !isSameId(payloadConversationId, activeConversationId) &&
+        !isSameId(payloadContactId, activeContactId)
     ) {
         triggerUnreadSignal();
         loadConversations();
         return;
     }
 
-    const container = document.getElementById('messagesContainer');
+    const container = getMessagesContainer();
     if (!container) return;
 
     const emptyState = container.querySelector('.text-slate-400');
@@ -691,7 +711,7 @@ function initRealtimeSocket() {
 }
 
 async function refreshActiveConversationMessages() {
-    if (isRefreshingActiveMessages || !currentConversationId || currentInboxItemType !== 'whatsapp') return;
+    if (isRefreshingActiveMessages || !currentConversationId || currentInboxItemType === 'email') return;
 
     isRefreshingActiveMessages = true;
     try {
@@ -702,7 +722,7 @@ async function refreshActiveConversationMessages() {
         const newMessages = await res.json();
         if (!Array.isArray(newMessages) || newMessages.length === 0) return;
 
-        const container = document.getElementById('messagesContainer');
+        const container = getMessagesContainer();
         if (!container) return;
 
         const emptyState = container.querySelector('.text-slate-400');
@@ -722,16 +742,16 @@ function handleInboxUpdatedEvent(payload) {
 
     loadConversations();
 
-    if (!payload || currentInboxItemType !== 'whatsapp') return;
+    if (!payload || currentInboxItemType === 'email') return;
 
-    const incomingConversationId = Number(payload.conversation_id || 0);
-    const activeConversationId = Number(currentConversationId || 0);
-    const incomingContactId = Number(payload.contact_id || 0);
-    const activeContactId = Number(currentCustomerId || 0);
+    const incomingConversationId = payload.conversation_id;
+    const activeConversationId = currentConversationId;
+    const incomingContactId = payload.contact_id || payload.customer_id;
+    const activeContactId = currentCustomerId;
 
     if (
-        incomingConversationId === activeConversationId ||
-        (incomingContactId > 0 && incomingContactId === activeContactId)
+        isSameId(incomingConversationId, activeConversationId) ||
+        isSameId(incomingContactId, activeContactId)
     ) {
         refreshActiveConversationMessages().then(() => {
             smoothScrollMessagesToBottom();
