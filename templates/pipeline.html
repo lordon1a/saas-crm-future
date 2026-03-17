@@ -1348,8 +1348,15 @@
                 // FAZ 4: UI ROLLBACK - Revert DOM changes
                 console.log('🔄 Rolling back UI changes...');
 
+                // Safety check: ensure elements still exist
+                if (!draggedDealElement || !originalParentElement) {
+                    console.warn('⚠️ Cannot rollback: elements no longer exist');
+                    showToast(`✗ Taşıma işlemi başarısız`, 'error');
+                    return;
+                }
+
                 // Restore deal to original position
-                if (originalNextSibling) {
+                if (originalNextSibling && originalNextSibling.parentNode) {
                     originalParentElement.insertBefore(draggedDealElement, originalNextSibling);
                 } else {
                     originalParentElement.appendChild(draggedDealElement);

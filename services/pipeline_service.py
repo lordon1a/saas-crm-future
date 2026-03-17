@@ -219,15 +219,18 @@ class PipelineService:
         deal.stage_id = stage_id
         deal.updated_at = datetime.utcnow()
         
-        # Create activity
-        PipelineService._create_activity(
-            workspace_id=workspace_id,
-            deal_id=deal.id,
-            user_id=user_id,
-            activity_type='system',
-            subject=f'Deal moved: {deal.name}',
-            body=f'Stage changed from "{old_stage.name}" to "{new_stage.name}"'
-        )
+        # Create activity (wrapped in try-catch to prevent blocking)
+        try:
+            PipelineService._create_activity(
+                workspace_id=workspace_id,
+                deal_id=deal.id,
+                user_id=user_id,
+                activity_type='system',
+                subject=f'Deal moved: {deal.name}',
+                body=f'Stage changed from "{old_stage.name}" to "{new_stage.name}"'
+            )
+        except Exception as activity_error:
+            logger.warning(f"Activity creation failed (non-blocking): {activity_error}")
         
         # Commit with retry mechanism for SQLite lock handling
         max_retries = 3
