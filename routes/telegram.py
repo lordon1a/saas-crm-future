@@ -2,9 +2,9 @@ import logging
 
 from flask import Blueprint, jsonify, request
 
-from models import Message, Workspace
+from models import Workspace
 from routes.api import push_notification
-from realtime import socketio
+from realtime import emit_chat_message_event, socketio
 from services.telegram_service import TelegramService
 
 logger = logging.getLogger(__name__)
@@ -33,21 +33,13 @@ def telegram_webhook():
 
     if result.get('success') and result.get('conversation_id'):
         try:
-            msg = Message.query.get(result.get('message_id'))
-            realtime_payload = {
-                'message_id': result.get('message_id'),
-                'conversation_id': result.get('conversation_id'),
-                'contact_id': result.get('customer_id'),
-                'text': msg.message_body if msg else '',
-                'sender_type': msg.sender_type if msg else 'customer',
-                'channel': getattr(msg, 'channel', 'telegram') if msg else 'telegram',
-                'timestamp': msg.created_at.isoformat() if msg and msg.created_at else None,
-            }
+            if not result.get('emitted_realtime'):
+                emit_chat_message_event(result.get('message_id'), workspace_id=workspace_id)
 
-            socketio.emit('new_incoming_message', realtime_payload, room=f"contact_{result.get('customer_id')}")
             socketio.emit(
-                'inbox_updated',
+                'telegram_webhook_processed',
                 {
+                    'workspace_id': workspace_id,
                     'conversation_id': result.get('conversation_id'),
                     'contact_id': result.get('customer_id'),
                     'message_id': result.get('message_id'),
@@ -65,6 +57,6 @@ def telegram_webhook():
                 },
             )
         except Exception as exc:
-            logger.warning('Telegram SSE push failed: %s', exc)
+            logger.warning('Telegram realtime push failed: %s', exc)
 
     return jsonify(result), 200

@@ -20,6 +20,7 @@ let emailTemplates = [];
 let notifications = [];
 let searchDebounceTimer = null;
 let isRefreshingActiveMessages = false;
+let lastUnreadSignalAt = 0;
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
 
@@ -517,8 +518,18 @@ function appendMessageToDOM(msg, tempId) {
     if (!Number.isNaN(numericMessageId) && numericMessageId > currentLastMessageId) {
         currentLastMessageId = numericMessageId;
     }
-    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+    requestAnimationFrame(() => smoothScrollMessagesToBottom());
     return el;
+}
+
+function smoothScrollMessagesToBottom() {
+    const container = document.getElementById('messagesContainer');
+    if (!container) return;
+    try {
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    } catch {
+        container.scrollTop = container.scrollHeight;
+    }
 }
 
 function removeTempMessage(tempId) {
@@ -561,6 +572,47 @@ function updateSocketContactSubscription(previousContactId, nextContactId) {
     currentSocketContactId = nextContactId || null;
 }
 
+function normalizeRealtimeMessage(payload) {
+    return {
+        id: payload.id || payload.message_id,
+        sender_type: payload.sender_type || (payload.message_side === 'outbound' ? 'agent' : 'customer'),
+        sender_name: payload.sender_name || null,
+        message_body: payload.message_body || payload.text || '',
+        channel: payload.channel || currentSendChannel || 'whatsapp',
+        created_at: payload.created_at || payload.timestamp || new Date().toISOString(),
+        media_type: payload.media_type || null,
+        media_url: payload.media_url || null,
+    };
+}
+
+function renderMessage(payload) {
+    appendMessageToDOM(normalizeRealtimeMessage(payload));
+}
+
+function triggerUnreadSignal() {
+    const now = Date.now();
+    if ((now - lastUnreadSignalAt) < 800) return;
+    lastUnreadSignalAt = now;
+
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 880;
+        gainNode.gain.value = 0.03;
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.08);
+    } catch {
+        // Ignore autoplay policy restrictions.
+    }
+}
+
 function handleIncomingSocketMessage(payload) {
     if (!payload || currentInboxItemType !== 'whatsapp') {
         loadConversations();
@@ -576,6 +628,7 @@ function handleIncomingSocketMessage(payload) {
         payloadConversationId !== activeConversationId &&
         payloadContactId !== activeContactId
     ) {
+        triggerUnreadSignal();
         loadConversations();
         return;
     }
@@ -586,13 +639,7 @@ function handleIncomingSocketMessage(payload) {
     const emptyState = container.querySelector('.text-slate-400');
     if (emptyState) container.innerHTML = '';
 
-    appendMessageToDOM({
-        id: payload.message_id,
-        sender_type: payload.sender_type || 'customer',
-        message_body: payload.text || '',
-        channel: payload.channel || currentSendChannel || 'whatsapp',
-        created_at: payload.timestamp || new Date().toISOString()
-    });
+    renderMessage(payload);
 
     loadConversations();
 }
@@ -600,9 +647,10 @@ function handleIncomingSocketMessage(payload) {
 function initRealtimeSocket() {
     if (socketClient || typeof io === 'undefined') return;
 
-    socketClient = io({ withCredentials: true, transports: ['websocket', 'polling'] });
+    socketClient = io({ transports: ['websocket', 'polling'], withCredentials: true });
 
     socketClient.on('connect', () => {
+        console.log('Connected to WebSocket');
         if (currentWorkspaceId) {
             socketClient.emit('join_workspace', { workspace_id: currentWorkspaceId });
         }
@@ -611,9 +659,11 @@ function initRealtimeSocket() {
         }
     });
 
+    socketClient.on('new_message', handleIncomingSocketMessage);
     socketClient.on('new_incoming_message', handleIncomingSocketMessage);
     socketClient.on('inbox_updated', handleInboxUpdatedEvent);
     socketClient.on('disconnect', () => {
+        console.warn('WebSocket disconnected');
         // Socket.IO will auto-reconnect, so no manual retry timer is needed.
     });
 }
@@ -660,6 +710,8 @@ function handleInboxUpdatedEvent(payload) {
         (incomingContactId > 0 && incomingContactId === activeContactId)
     ) {
         refreshActiveConversationMessages();
+    } else {
+        triggerUnreadSignal();
     }
 }
 

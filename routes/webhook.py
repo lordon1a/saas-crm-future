@@ -4,7 +4,7 @@ import logging
 import hmac
 import hashlib
 from models import db, Customer, Conversation, Message
-from realtime import socketio
+from realtime import emit_chat_message_event
 from services.webhook_handler import WebhookHandler
 from datetime import datetime
 
@@ -52,29 +52,7 @@ def handle_webhook():
         result = WebhookHandler.process_incoming_message(data)
         if result.get('status') == 'success' and result.get('workspace_id'):
             try:
-                message = Message.query.get(result.get('message_id'))
-                socketio.emit(
-                    'new_incoming_message',
-                    {
-                        'message_id': result.get('message_id'),
-                        'conversation_id': result.get('conversation_id'),
-                        'contact_id': result.get('customer_id'),
-                        'text': message.message_body if message else '',
-                        'sender_type': message.sender_type if message else 'customer',
-                        'channel': getattr(message, 'channel', 'whatsapp') if message else 'whatsapp',
-                        'timestamp': message.created_at.isoformat() if message and message.created_at else None,
-                    },
-                    room=f"contact_{result.get('customer_id')}"
-                )
-                socketio.emit(
-                    'inbox_updated',
-                    {
-                        'conversation_id': result.get('conversation_id'),
-                        'contact_id': result.get('customer_id'),
-                        'message_id': result.get('message_id'),
-                    },
-                    room=f"ws_{result.get('workspace_id')}"
-                )
+                emit_chat_message_event(result.get('message_id'), workspace_id=result.get('workspace_id'))
             except Exception as emit_exc:
                 logger.warning('Socket emit failed in webhook: %s', emit_exc)
 

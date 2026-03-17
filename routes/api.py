@@ -8,7 +8,7 @@ from services.quick_reply_manager import QuickReplyManager
 from services.collaboration_service import CollaborationService
 from services.email_hub_service import EmailHubService
 from services.telegram_service import TelegramService
-from realtime import socketio
+from realtime import emit_chat_message_event
 from datetime import datetime
 from sqlalchemy import or_
 from config import Config
@@ -46,28 +46,7 @@ def _message_to_json(msg, include_sender_name=False, user_cache=None):
 
 def _emit_realtime_message(workspace_id, conversation, message):
     try:
-        socketio.emit(
-            'new_incoming_message',
-            {
-                'message_id': message.id,
-                'conversation_id': conversation.id,
-                'contact_id': conversation.customer_id,
-                'text': message.message_body,
-                'sender_type': message.sender_type,
-                'channel': getattr(message, 'channel', 'whatsapp') or 'whatsapp',
-                'timestamp': message.created_at.isoformat() if message.created_at else None,
-            },
-            room=f'contact_{conversation.customer_id}',
-        )
-        socketio.emit(
-            'inbox_updated',
-            {
-                'conversation_id': conversation.id,
-                'contact_id': conversation.customer_id,
-                'message_id': message.id,
-            },
-            room=f'ws_{workspace_id}',
-        )
+        emit_chat_message_event(message.id, workspace_id=workspace_id)
     except Exception as exc:
         logger.warning('Socket emit failed for outgoing message: %s', exc)
 

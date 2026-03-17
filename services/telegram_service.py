@@ -7,6 +7,7 @@ from models import Conversation, Customer, Message, Workspace, db
 from models_crm import Activity, Contact
 from services.conversation_manager import ConversationManager
 from services.message_manager import MessageManager
+from realtime import emit_chat_message_event, socketio
 
 logger = logging.getLogger(__name__)
 
@@ -142,12 +143,29 @@ class TelegramService:
             db.session.add(activity)
             db.session.commit()
 
+            emitted = False
+            try:
+                emitted = emit_chat_message_event(message.id, workspace_id=workspace_id)
+                socketio.emit(
+                    'telegram_message_saved',
+                    {
+                        'workspace_id': workspace_id,
+                        'conversation_id': conversation.id,
+                        'contact_id': customer.id,
+                        'message_id': message.id,
+                    },
+                    room=f'ws_{workspace_id}',
+                )
+            except Exception as emit_exc:
+                logger.warning('Telegram realtime emit failed: %s', emit_exc)
+
             return {
                 'success': True,
                 'status': 'processed',
                 'conversation_id': conversation.id,
                 'customer_id': customer.id,
                 'message_id': message.id,
+                'emitted_realtime': emitted,
             }
         except Exception as exc:
             db.session.rollback()
