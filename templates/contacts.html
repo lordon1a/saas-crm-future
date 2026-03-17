@@ -759,16 +759,21 @@
 
         function createColumnItem(col, isVisible) {
             const div = document.createElement('div');
-            div.className = 'column-item flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-move';
+            div.className = 'column-item flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all';
             div.draggable = !col.required;
             div.dataset.columnId = col.id;
             
+            // Add cursor style based on draggability
+            if (!col.required) {
+                div.style.cursor = 'grab';
+            }
+            
             div.innerHTML = `
-                <i class="fas fa-grip-vertical text-gray-400 ${col.required ? 'invisible' : ''}"></i>
+                <i class="fas fa-grip-vertical text-gray-400 ${col.required ? 'invisible' : ''}" style="pointer-events: none;"></i>
                 <input type="checkbox" value="${col.id}" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" 
-                    ${isVisible ? 'checked' : ''} ${col.required ? 'disabled' : ''}>
-                <span class="text-sm font-medium text-gray-700 flex-1">${col.label}</span>
-                ${col.required ? '<span class="text-xs text-gray-400">(Zorunlu)</span>' : ''}
+                    ${isVisible ? 'checked' : ''} ${col.required ? 'disabled' : ''} style="pointer-events: auto;">
+                <span class="text-sm font-medium text-gray-700 flex-1" style="pointer-events: none;">${col.label}</span>
+                ${col.required ? '<span class="text-xs text-gray-400" style="pointer-events: none;">(Zorunlu)</span>' : ''}
             `;
             
             // Drag and drop events
@@ -777,14 +782,32 @@
                 div.addEventListener('dragover', handleDragOver);
                 div.addEventListener('drop', handleDrop);
                 div.addEventListener('dragend', handleDragEnd);
+                
+                // Change cursor on drag
+                div.addEventListener('mousedown', function(e) {
+                    // Only if not clicking on checkbox
+                    if (!e.target.classList.contains('column-checkbox')) {
+                        this.style.cursor = 'grabbing';
+                    }
+                });
+                div.addEventListener('mouseup', function() {
+                    this.style.cursor = 'grab';
+                });
             }
             
             return div;
         }
 
         function handleDragStart(e) {
+            // Don't drag if clicking on checkbox
+            if (e.target.classList.contains('column-checkbox')) {
+                e.preventDefault();
+                return;
+            }
+            
             draggedElement = this;
             this.style.opacity = '0.4';
+            this.style.cursor = 'grabbing';
             e.dataTransfer.effectAllowed = 'move';
         }
 
@@ -838,6 +861,7 @@
 
         function handleDragEnd(e) {
             this.style.opacity = '1';
+            this.style.cursor = 'grab';
             draggedElement = null;
         }
 
@@ -1105,6 +1129,9 @@
             contacts.forEach(c => {
                 const tr = document.createElement('tr');
                 tr.className = 'h-12 hover:bg-blue-50/40 transition-colors group';
+                tr.draggable = true;
+                tr.dataset.contactId = c.id;
+                tr.style.cursor = 'grab';
                 
                 const initials = (c.first_name.substring(0, 1) + (c.last_name ? c.last_name.substring(0, 1) : '')).toUpperCase();
                 
@@ -1252,6 +1279,59 @@
                 
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
+                
+                // Add drag-drop events for rows
+                tr.addEventListener('dragstart', function(e) {
+                    this.style.opacity = '0.4';
+                    this.style.cursor = 'grabbing';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', this.innerHTML);
+                });
+                
+                tr.addEventListener('dragover', function(e) {
+                    if (e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    e.dataTransfer.dropEffect = 'move';
+                    
+                    const draggingRow = document.querySelector('tr[draggable="true"][style*="opacity: 0.4"]');
+                    if (draggingRow && draggingRow !== this) {
+                        const rect = this.getBoundingClientRect();
+                        const midpoint = rect.top + rect.height / 2;
+                        
+                        if (e.clientY < midpoint) {
+                            this.parentNode.insertBefore(draggingRow, this);
+                        } else {
+                            this.parentNode.insertBefore(draggingRow, this.nextSibling);
+                        }
+                    }
+                    
+                    return false;
+                });
+                
+                tr.addEventListener('dragend', function(e) {
+                    this.style.opacity = '1';
+                    this.style.cursor = 'grab';
+                    
+                    // Update contacts array order based on DOM order
+                    const newOrder = [];
+                    tbody.querySelectorAll('tr').forEach(row => {
+                        const contactId = parseInt(row.dataset.contactId);
+                        const contact = allContacts.find(c => c.id === contactId);
+                        if (contact) {
+                            newOrder.push(contact);
+                        }
+                    });
+                    allContacts = newOrder;
+                });
+                
+                tr.addEventListener('mousedown', function() {
+                    this.style.cursor = 'grabbing';
+                });
+                
+                tr.addEventListener('mouseup', function() {
+                    this.style.cursor = 'grab';
+                });
             });
         }
         
