@@ -1074,13 +1074,15 @@
                     const width = columnWidths['name'] || 200;
                     headerHtml += `
                         <th scope="col" data-column="name" 
-                            class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none"
+                            class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none border-r border-gray-200"
                             style="min-width: ${width}px; width: ${width}px;">
                             <div class="flex items-center justify-between">
                                 <span>Ad Soyad</span>
                                 <span class="text-xs text-gray-400 ml-2">(Zorunlu)</span>
                             </div>
-                            <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-500 resize-handle" data-column="name"></div>
+                            <div class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-brand-400 active:bg-brand-500 resize-handle group/resize" data-column="name">
+                                <div class="absolute inset-y-0 left-1/2 w-0.5 bg-gray-300 group-hover/resize:bg-brand-500 transition-colors"></div>
+                            </div>
                         </th>
                     `;
                     return;
@@ -1108,12 +1110,14 @@
                 const width = columnWidths[colId] || 150;
                 headerHtml += `
                     <th scope="col" data-column="${colId}" 
-                        class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none hover:bg-gray-50 transition-colors"
+                        class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none hover:bg-gray-50 transition-colors border-r border-gray-200"
                         style="min-width: ${width}px; width: ${width}px;">
                         <div class="flex items-center gap-2">
                             <span>${label}</span>
                         </div>
-                        <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-500 resize-handle" data-column="${colId}"></div>
+                        <div class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-brand-400 active:bg-brand-500 resize-handle group/resize" data-column="${colId}">
+                            <div class="absolute inset-y-0 left-1/2 w-0.5 bg-gray-300 group-hover/resize:bg-brand-500 transition-colors"></div>
+                        </div>
                     </th>
                 `;
             });
@@ -1162,7 +1166,7 @@
                     
                     if (col === 'name') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap border-r border-gray-200" ${style}>
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
                                         ${initials}
@@ -1173,7 +1177,7 @@
                         `;
                     } else if (col === 'company') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap group/cell border-r border-gray-200" ${style}>
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-sm text-gray-500 truncate">${c.company_name || '-'}</span>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
@@ -1186,7 +1190,7 @@
                         `;
                     } else if (col === 'email') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap group/cell border-r border-gray-200" ${style}>
                                 <div class="flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2 min-w-0">
                                         <span class="text-sm text-gray-500 truncate">${c.email || '-'}</span>
@@ -1202,7 +1206,7 @@
                         `;
                     } else if (col === 'phone') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap group/cell border-r border-gray-200" ${style}>
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-sm text-gray-500 truncate">${c.phone || '-'}</span>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
@@ -1215,7 +1219,7 @@
                         `;
                     } else if (col === 'role') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap group/cell border-r border-gray-200" ${style}>
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor} truncate">${c.role || '-'}</span>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
@@ -1228,7 +1232,7 @@
                         `;
                     } else if (col === 'lead_score') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap group/cell border-r border-gray-200" ${style}>
                                 <div class="flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2">
                                         <span class="w-2 h-2 rounded-full ${scoreColor} flex-shrink-0"></span>
@@ -1244,7 +1248,7 @@
                         `;
                     } else if (col === 'deals') {
                         html += `
-                            <td class="px-4 py-3 whitespace-nowrap" ${style}>
+                            <td class="px-4 py-3 whitespace-nowrap border-r border-gray-200" ${style}>
                                 <span class="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs font-semibold">0 açık</span>
                             </td>
                         `;
@@ -1254,7 +1258,7 @@
                         if (field && c.customFieldValues) {
                             const value = c.customFieldValues[field.field_name] || '-';
                             html += `
-                                <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                <td class="px-4 py-3 whitespace-nowrap group/cell border-r border-gray-200" ${style}>
                                     <div class="flex items-center justify-between gap-2">
                                         <span class="text-sm text-gray-500 truncate">${value}</span>
                                         <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
