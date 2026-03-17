@@ -235,8 +235,14 @@
             </header>
 
             <!-- Messages Area -->
-            <div class="flex-1 overflow-y-auto px-4 md:px-6 py-5 md:py-6 space-y-4 no-scrollbar bg-gradient-to-b from-slate-50 via-slate-50 to-white" id="messagesContainer">
+            <div class="flex-1 overflow-y-auto px-4 md:px-6 py-5 md:py-6 space-y-4 no-scrollbar bg-gradient-to-b from-slate-50 via-slate-50 to-white relative" id="messagesContainer">
                 <!-- Messages dynamicly added -->
+                
+                <!-- New Message Notification Button (Hidden by default) -->
+                <button id="newMessageNotification" class="hidden fixed bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-brand-600 text-white rounded-full shadow-lg hover:bg-brand-700 transition-all z-30 flex items-center gap-2 animate-bounce" onclick="scrollToBottomAndHideNotification()">
+                    <i class="fas fa-arrow-down"></i>
+                    <span class="text-sm font-semibold">Yeni Mesaj</span>
+                </button>
             </div>
 
             <!-- Chat Input Area -->

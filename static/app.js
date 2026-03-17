@@ -22,6 +22,58 @@ let searchDebounceTimer = null;
 let isRefreshingActiveMessages = false;
 let lastUnreadSignalAt = 0;
 let conversationsRefreshTimer = null;
+let isUserScrolling = false;
+let lastScrollPosition = 0;
+
+// ─── Scroll Management ──────────────────────────────────────────
+
+function isUserNearBottom(container, threshold = 150) {
+    if (!container) return true;
+    const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    return scrollBottom <= threshold;
+}
+
+function showNewMessageNotification() {
+    const btn = document.getElementById('newMessageNotification');
+    if (btn) {
+        btn.classList.remove('hidden');
+    }
+}
+
+function hideNewMessageNotification() {
+    const btn = document.getElementById('newMessageNotification');
+    if (btn) {
+        btn.classList.add('hidden');
+    }
+}
+
+window.scrollToBottomAndHideNotification = function() {
+    const container = getMessagesContainer();
+    if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+    hideNewMessageNotification();
+};
+
+function setupScrollListener() {
+    const container = getMessagesContainer();
+    if (!container) return;
+
+    let scrollTimeout;
+    container.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        isUserScrolling = true;
+        
+        // Hide notification if user scrolls to bottom
+        if (isUserNearBottom(container, 100)) {
+            hideNewMessageNotification();
+        }
+
+        scrollTimeout = setTimeout(() => {
+            isUserScrolling = false;
+        }, 150);
+    });
+}
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
 
@@ -319,6 +371,7 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         sendChannelSelect.value = currentSendChannel;
     }
     closeCustomerInfo();
+    hideNewMessageNotification();
 
     if (customerName) document.getElementById('customerName').textContent = customerName;
     if (customerPhone) document.getElementById('customerPhone').textContent = customerPhone;
@@ -380,8 +433,11 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         const html = messages.map((msg) => buildMessageHTML(msg)).join('');
         container.innerHTML = html;
         updateLastMessageCursorFromDOM();
-        requestAnimationFrame(() => { smoothScrollMessagesToBottom(); });
+        requestAnimationFrame(() => { smoothScrollMessagesToBottom(true); });
     }
+
+    // Setup scroll listener for this conversation
+    setupScrollListener();
 
     const detail = fullData?.conversation;
     if (detail) {
@@ -532,6 +588,9 @@ function appendMessageToDOM(msg, tempId) {
         if (existing) return existing;
     }
 
+    // Check if user is near bottom before adding message
+    const wasNearBottom = isUserNearBottom(container, 150);
+
     container.insertAdjacentHTML('beforeend', buildMessageHTML(msg));
     const insertedItems = container.querySelectorAll('[data-message-id]');
     const el = insertedItems.length > 0 ? insertedItems[insertedItems.length - 1] : null;
@@ -541,24 +600,64 @@ function appendMessageToDOM(msg, tempId) {
     if (!Number.isNaN(numericMessageId) && numericMessageId > currentLastMessageId) {
         currentLastMessageId = numericMessageId;
     }
+
+    // Memory Management: Limit messages in DOM to prevent memory issues (keep last 100 messages)
+    const allMessages = container.querySelectorAll('[data-message-id]');
+    if (allMessages.length > 100) {
+        const toRemove = allMessages.length - 100;
+        for (let i = 0; i < toRemove; i++) {
+            allMessages[i].remove();
+        }
+        console.log(`🗑️ Removed ${toRemove} old messages from DOM (memory optimization)`);
+    }
+
+    // Smart Auto-Scroll: Only scroll if user was near bottom or if it's our own message
+    const isOwnMessage = msg.sender_type === 'agent';
+    if (wasNearBottom || isOwnMessage) {
+        requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+            requestAnimationFrame(() => {
+                try {
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                } catch {
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        });
+        hideNewMessageNotification();
+    } else {
+        // User is reading old messages - show notification instead of forcing scroll
+        showNewMessageNotification();
+    }
+
+    return el;
+}
+
+function smoothScrollMessagesToBottom(force = false) {
+    const container = getMessagesContainer();
+    if (!container) return;
+    
+    // If user is scrolling and not forced, don't interrupt
+    if (isUserScrolling && !force) {
+        showNewMessageNotification();
+        return;
+    }
+    
+    // Force immediate scroll first, then smooth scroll
+    container.scrollTop = container.scrollHeight;
+    
     requestAnimationFrame(() => {
         try {
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            container.scrollTo({ 
+                top: container.scrollHeight, 
+                behavior: 'smooth' 
+            });
         } catch {
             container.scrollTop = container.scrollHeight;
         }
     });
-    return el;
-}
-
-function smoothScrollMessagesToBottom() {
-    const container = getMessagesContainer();
-    if (!container) return;
-    try {
-        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-    } catch {
-        container.scrollTop = container.scrollHeight;
-    }
+    
+    hideNewMessageNotification();
 }
 
 function removeTempMessage(tempId) {
@@ -823,7 +922,12 @@ function handleInboxUpdatedEvent(payload) {
                 renderMessage(payload);
             }
         }
-        smoothScrollMessagesToBottom();
+        
+        // Smart scroll: only if user is near bottom
+        const container = getMessagesContainer();
+        if (container && isUserNearBottom(container, 150)) {
+            smoothScrollMessagesToBottom(true);
+        }
     } else {
         triggerUnreadSignal();
     }
