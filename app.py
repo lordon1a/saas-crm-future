@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from functools import wraps
 import logging
 import os
+import ipaddress
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -82,10 +83,25 @@ if Config.LOG_FILE:
 # Rate limiting (login brute-force koruması)
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+
+
+def _is_internal_or_socket_request():
+    if request.path.startswith('/socket.io'):
+        return True
+
+    remote = request.remote_addr or ''
+    try:
+        addr = ipaddress.ip_address(remote)
+        return addr.is_private or addr.is_loopback
+    except ValueError:
+        return False
+
+
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=['200 per day'],
+    default_limits=[],
+    default_limits_exempt_when=_is_internal_or_socket_request,
     storage_uri=os.getenv('RATELIMIT_STORAGE_URI', 'memory://'),  # production'da redis kullanılabilir
 )
 

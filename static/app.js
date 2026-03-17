@@ -21,6 +21,7 @@ let notifications = [];
 let searchDebounceTimer = null;
 let isRefreshingActiveMessages = false;
 let lastUnreadSignalAt = 0;
+let conversationsRefreshTimer = null;
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
 
@@ -609,6 +610,14 @@ function renderMessage(payload) {
     appendMessageToDOM(normalizeRealtimeMessage(payload));
 }
 
+function scheduleConversationsRefresh(delayMs = 1000) {
+    if (conversationsRefreshTimer) clearTimeout(conversationsRefreshTimer);
+    conversationsRefreshTimer = setTimeout(() => {
+        conversationsRefreshTimer = null;
+        loadConversations();
+    }, delayMs);
+}
+
 function triggerUnreadSignal() {
     const now = Date.now();
     if ((now - lastUnreadSignalAt) < 800) return;
@@ -637,7 +646,7 @@ function handleIncomingSocketMessage(payload) {
     console.log('WebSocket event received:', payload);
 
     if (!payload || currentInboxItemType === 'email') {
-        loadConversations();
+        scheduleConversationsRefresh(800);
         return;
     }
 
@@ -651,7 +660,7 @@ function handleIncomingSocketMessage(payload) {
         !isSameId(payloadContactId, activeContactId)
     ) {
         triggerUnreadSignal();
-        loadConversations();
+        scheduleConversationsRefresh(800);
         return;
     }
 
@@ -662,8 +671,8 @@ function handleIncomingSocketMessage(payload) {
     if (emptyState) container.innerHTML = '';
 
     renderMessage(payload);
-
-    loadConversations();
+    smoothScrollMessagesToBottom();
+    scheduleConversationsRefresh(1200);
 }
 
 function initRealtimeSocket() {
@@ -691,6 +700,10 @@ function initRealtimeSocket() {
     socketClient.on('connect_error', (error) => {
         console.error('❌ Connection Error:', error);
     });
+
+    socketClient.off('new_message');
+    socketClient.off('new_incoming_message');
+    socketClient.off('inbox_updated');
 
     socketClient.on('new_message', (data) => {
         console.log('WebSocket event received:', data);
@@ -739,8 +752,7 @@ async function refreshActiveConversationMessages() {
 
 function handleInboxUpdatedEvent(payload) {
     console.log('WebSocket event received:', payload);
-
-    loadConversations();
+    scheduleConversationsRefresh(1000);
 
     if (!payload || currentInboxItemType === 'email') return;
 
@@ -753,9 +765,7 @@ function handleInboxUpdatedEvent(payload) {
         isSameId(incomingConversationId, activeConversationId) ||
         isSameId(incomingContactId, activeContactId)
     ) {
-        refreshActiveConversationMessages().then(() => {
-            smoothScrollMessagesToBottom();
-        });
+        smoothScrollMessagesToBottom();
     } else {
         triggerUnreadSignal();
     }
@@ -1295,20 +1305,14 @@ async function loadTeamForDropdown(currentId) {
 
 window.openConversation = (id) => selectConversation(id, '', '', '');
 
-// ─── Background Refresh Tracker ───────────────────────────────────────
-let conversationPollingInterval = null;
-
 loadConversations();
 loadQuickReplies();
 loadUserInfo();
 loadNotifications();
-// Auto-refresh her 30 saniyede bir (production için optimize edildi)
-conversationPollingInterval = setInterval(loadConversations, 30000);
-setInterval(loadNotifications, 45000);
 
 // ─── CRITICAL: Cleanup on Page Unload (Worker Starvation Fix) ───────────────
 function cleanupConnections() {
-    console.log('Cleaning up socket and background refresh connections...');
+    console.log('Cleaning up socket and refresh timers...');
     
     if (socketClient) {
         socketClient.disconnect();
@@ -1316,10 +1320,10 @@ function cleanupConnections() {
         console.log('Socket connection closed');
     }
     
-    if (conversationPollingInterval) {
-        clearInterval(conversationPollingInterval);
-        conversationPollingInterval = null;
-        console.log('Background refresh interval cleared');
+    if (conversationsRefreshTimer) {
+        clearTimeout(conversationsRefreshTimer);
+        conversationsRefreshTimer = null;
+        console.log('Conversations refresh timer cleared');
     }
 }
 
