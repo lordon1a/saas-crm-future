@@ -250,18 +250,23 @@ class PipelineService:
                     logger.error(f"Failed to commit deal move after {attempt + 1} attempts: {e}")
                     raise
 
-        PipelineService._emit_webhook_event(workspace_id, 'deal.updated', {
-            'deal_id': deal.id,
-            'name': deal.name,
-            'company_id': deal.company_id,
-            'pipeline_id': deal.pipeline_id,
-            'stage_id': deal.stage_id,
-            'status': deal.status,
-            'change_type': 'stage_move',
-            'previous_stage_id': old_stage.id,
-            'new_stage_id': stage_id,
-            'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
-        })
+        # Emit webhook event asynchronously (non-blocking)
+        # Note: This may fail silently if webhook URL is unreachable
+        try:
+            PipelineService._emit_webhook_event(workspace_id, 'deal.updated', {
+                'deal_id': deal.id,
+                'name': deal.name,
+                'company_id': deal.company_id,
+                'pipeline_id': deal.pipeline_id,
+                'stage_id': deal.stage_id,
+                'status': deal.status,
+                'change_type': 'stage_move',
+                'previous_stage_id': old_stage.id,
+                'new_stage_id': stage_id,
+                'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
+            })
+        except Exception as webhook_error:
+            logger.warning(f"Webhook dispatch failed (non-blocking): {webhook_error}")
         
         return deal
     
