@@ -16,6 +16,178 @@
             }
         }
     </script>
+    <style>
+        .activity-card-container {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0 16px;
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+        }
+
+        .tab-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4b5563;
+            background-color: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-item.active {
+            color: #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+            margin-bottom: -1px;
+        }
+
+        .input-section {
+            padding: 16px;
+            background-color: #ffffff;
+        }
+
+        .activity-input {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #374151;
+            outline: none;
+            background-color: #ffffff;
+        }
+
+        .activity-input:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 1px #1a73e8;
+        }
+
+        .history-filters {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 8px;
+            overflow-x: auto;
+        }
+
+        .filter-btn {
+            background-color: transparent;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .filter-btn.active {
+            background-color: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .timeline-wrapper {
+            position: relative;
+            padding-left: 32px;
+        }
+
+        .timeline-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 15px;
+            border-left: 2px dashed #d1d5db;
+            z-index: 1;
+        }
+
+        .timeline-item {
+            position: relative;
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            align-items: flex-start;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -32px;
+            z-index: 2;
+            background-color: #f4f5f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .small-marker {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            background-color: #ffffff;
+            left: -21px;
+            margin-top: 6px;
+        }
+
+        .large-marker {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #d1d5db;
+            background-color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .timeline-content {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .transparent-content {
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .card-content {
+            border-radius: 6px;
+            padding: 12px 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .white-card {
+            background-color: #ffffff;
+        }
+
+        .yellow-card {
+            background-color: #fef3c7;
+            border-color: #fde047;
+        }
+
+        .meta-text {
+            font-size: 12px;
+            color: #6b7280;
+            display: block;
+            margin-top: 4px;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased flex h-screen overflow-hidden">
     <!-- App Sidebar -->
@@ -28,15 +200,20 @@
             <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
             <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-purple-600 bg-purple-50 rounded-xl shadow-sm transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
             <a href="/companies" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
             <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
         </nav>
         <div class="flex flex-col gap-4 w-full px-3 pb-4">
-            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
         </div>
     </aside>
     
     <!-- Main Grid Container: detached layout -->
-    <div class="flex-1 overflow-hidden bg-slate-100 px-3 md:px-4 pb-3 md:pb-4 pt-[72px]">
+    <div class="flex-1 overflow-hidden bg-[#f4f5f7] px-3 md:px-4 pb-3 md:pb-4 pt-[72px]">
     <div class="grid grid-cols-12 grid-rows-[auto_1fr] gap-3 h-full overflow-hidden">
 
         <!-- Global Topbar (Sticky, full-width over both panels) -->
@@ -314,29 +491,44 @@
         </aside>
         
         <!-- RIGHT MAIN CONTENT: col-span-9 (75%) -->
-        <main class="col-span-9 row-start-2 flex flex-col overflow-hidden bg-white border border-gray-200 rounded-b-xl shadow-sm">
+        <main class="col-span-9 row-start-2 flex flex-col overflow-hidden bg-transparent border-0 rounded-none shadow-none">
 
             <!-- Top Navigation Tabs -->
-            <div class="border-b border-gray-200 px-4">
-                <div class="flex items-center gap-4">
-                    <button data-tab="activity" class="tab-button py-3 text-xs font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors">
-                        <i class="fas fa-list mr-1"></i> Etkinlik
-                    </button>
-                    <button data-tab="notes" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
-                        <i class="fas fa-sticky-note mr-1"></i> Notlar
-                    </button>
-                    <button data-tab="call" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
-                        <i class="fas fa-phone mr-1"></i> Arama
-                    </button>
-                    <button data-tab="email" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
-                        <i class="fas fa-envelope mr-1"></i> E-posta
-                    </button>
-                    <button data-tab="meeting" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
-                        <i class="fas fa-calendar mr-1"></i> Toplantı Planlayıcı
-                    </button>
-                    <button data-tab="files" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
-                        <i class="fas fa-file mr-1"></i> Dosyalar
-                    </button>
+            <div class="px-4 pt-4">
+                <div class="activity-card-container">
+                    <div class="tabs-header no-scrollbar">
+                        <button data-tab="activity" class="tab-button tab-item active" aria-selected="true">
+                            <i class="fas fa-calendar-check text-sm"></i> Etkinlik
+                        </button>
+                        <button data-tab="notes" class="tab-button tab-item" aria-selected="false">
+                            <i class="far fa-sticky-note text-sm"></i> Notlar
+                        </button>
+                        <button data-tab="meeting" class="tab-button tab-item" aria-selected="false">
+                            <i class="far fa-calendar text-sm"></i> Toplantı planlayıcı
+                        </button>
+                        <button data-tab="call" class="tab-button tab-item" aria-selected="false">
+                            <i class="fas fa-phone text-sm"></i> Arama
+                        </button>
+                        <button data-tab="email" class="tab-button tab-item" aria-selected="false">
+                            <i class="far fa-envelope text-sm"></i> E-posta
+                        </button>
+                        <button data-tab="files" class="tab-button tab-item" aria-selected="false">
+                            <i class="fas fa-paperclip text-sm"></i> Dosyalar
+                        </button>
+                        <button data-tab="documents" class="tab-button tab-item" aria-selected="false">
+                            <i class="far fa-file-lines text-sm"></i> Belgeler
+                        </button>
+                    </div>
+                    <div class="input-section">
+                        <input
+                            type="text"
+                            class="activity-input"
+                            value="Bir etkinlik eklemek için buraya tıklayın..."
+                            readonly
+                            onclick="openActivityModal()"
+                            onfocus="openActivityModal()"
+                        >
+                    </div>
                 </div>
             </div>
             
@@ -345,30 +537,39 @@
                 
                 <!-- ACTIVITY TAB -->
                 <div id="activity-tab" class="tab-content h-full flex flex-col">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">Etkinlikler</p>
-                                <p class="text-xs text-gray-600">Bu bölümde sadece etkinlik kayıtları gösterilir.</p>
-                            </div>
-                            <button onclick="openActivityModal()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-                                <i class="fas fa-plus mr-2"></i> Etkinlik Oluştur
-                            </button>
-                        </div>
-                    </div>
-                    
                     <!-- Timeline -->
                     <div class="flex-1 overflow-y-auto">
-                        <div class="p-4">
-                            <div class="mb-3">
-                                <button onclick="toggleContactDetailHistory()" class="flex items-center gap-2 text-sm font-semibold text-gray-800 hover:text-blue-600 transition-colors">
-                                    <i id="contactDetailHistoryChevron" class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        <div class="px-4 pt-8 pb-4 space-y-8">
+                            <div class="flex items-center justify-between">
+                                <button type="button" class="inline-flex items-center gap-2 text-[22px] font-semibold text-gray-900">
+                                    <span>Odak</span>
+                                    <i class="fas fa-chevron-right text-xs text-gray-500"></i>
+                                </button>
+                                <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+                                    <span class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200">
+                                        <input type="checkbox" class="peer sr-only">
+                                        <span class="absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5"></span>
+                                    </span>
+                                    <span class="text-sm text-gray-800">Tüm ögeleri genişlet</span>
+                                </label>
+                            </div>
+
+                            <div>
+                                <button onclick="toggleContactDetailHistory()" class="inline-flex items-center gap-2 text-[22px] font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                                     <span>Geçmiş</span>
+                                    <i id="contactDetailHistoryChevron" class="fas fa-chevron-right text-xs text-gray-500"></i>
                                 </button>
                             </div>
-                            <div id="contactDetailHistoryContent">
-                                <div class="relative pl-6 border-l-2 border-gray-200 ml-4 space-y-4" id="activity-items">
-                                    <div class="text-sm text-gray-500 text-center py-8">Yükleniyor...</div>
+                            <div id="contactDetailHistoryContent" class="hidden p-0">
+                                <div class="history-container">
+                                    <div class="history-filters no-scrollbar">
+                                        <button class="filter-btn active" data-history-filter="all" onclick="setHistoryFilter('all')">Tümü</button>
+                                        <button class="filter-btn" data-history-filter="activities" onclick="setHistoryFilter('activities')">Etkinlikler (0)</button>
+                                        <button class="filter-btn" data-history-filter="notes" onclick="setHistoryFilter('notes')">Notlar (0)</button>
+                                    </div>
+                                    <div class="timeline-wrapper" id="activity-items">
+                                        <div class="text-sm text-gray-500 text-center py-8">Yükleniyor...</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -699,6 +900,14 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- DOCUMENTS TAB -->
+                <div id="documents-tab" class="tab-content hidden h-full overflow-y-auto p-6">
+                    <div class="max-w-3xl border border-gray-200 rounded-xl bg-white p-6">
+                        <div class="text-base font-semibold text-gray-900 mb-2">Belgeler</div>
+                        <div class="text-sm text-gray-600">Bu bölümde kişiyle ilgili belgeler gösterilecektir.</div>
+                    </div>
+                </div>
                 
             </div>
         </main>
@@ -851,6 +1060,7 @@
         const STATE = {
             contactId: {{ contact.id }},
             currentTab: 'activity',
+            historyFilter: 'all',
             timeline: [],
             deals: [],
             firstName: {{ (contact.first_name or '')|tojson }},
@@ -1433,12 +1643,12 @@
                     
                     // Update active state
                     tabButtons.forEach(btn => {
-                        btn.classList.remove('text-blue-600', 'border-blue-600');
-                        btn.classList.add('text-gray-500', 'border-transparent');
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-selected', 'false');
                     });
                     
-                    button.classList.remove('text-gray-500', 'border-transparent');
-                    button.classList.add('text-blue-600', 'border-blue-600');
+                    button.classList.add('active');
+                    button.setAttribute('aria-selected', 'true');
                     
                     STATE.currentTab = tab;
                     
@@ -1556,27 +1766,53 @@
                 return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
             });
 
-            if (historyItems.length === 0) {
+            const notesCount = historyItems.filter(item => item.type === 'note').length;
+            const activitiesCount = historyItems.filter(item => item.type !== 'note').length;
+            const allCount = historyItems.length;
+
+            const allBtn = document.querySelector('[data-history-filter="all"]');
+            const activitiesBtn = document.querySelector('[data-history-filter="activities"]');
+            const notesBtn = document.querySelector('[data-history-filter="notes"]');
+            if (allBtn) allBtn.textContent = `Tümü (${allCount})`;
+            if (activitiesBtn) activitiesBtn.textContent = `Etkinlikler (${activitiesCount})`;
+            if (notesBtn) notesBtn.textContent = `Notlar (${notesCount})`;
+
+            const filteredItems = historyItems.filter(item => {
+                if (STATE.historyFilter === 'notes') return item.type === 'note';
+                if (STATE.historyFilter === 'activities') return item.type !== 'note';
+                return true;
+            });
+
+            if (filteredItems.length === 0) {
                 container.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Henüz kayıt yok</div>';
                 return;
             }
             
-            container.innerHTML = historyItems.map(item => {
+            container.innerHTML = filteredItems.map(item => {
+                const createdText = formatDate(item.created_at);
+                const userText = `${item.user_name || 'Sistem'} (Web Uygulaması)`;
+
+                if (item.type === 'system' || item.action_type === 'field_update') {
+                    return `
+                        <div class="timeline-item">
+                            <div class="timeline-marker small-marker"></div>
+                            <div class="timeline-content transparent-content">
+                                <p class="content-text text-sm text-gray-700">${item.description || 'Sistem güncellemesi'}</p>
+                                <span class="meta-text">${createdText} - ${userText}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 if (item.type === 'note') {
                     return `
-                        <div class="relative">
-                            <div class="absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <div class="timeline-item">
+                            <div class="timeline-marker large-marker">
                                 <i class="fas fa-sticky-note text-yellow-600 text-xs"></i>
                             </div>
-                            <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg shadow-sm">
-                                <div class="flex items-start justify-between mb-2">
-                                    <div class="text-xs text-gray-500">
-                                        <span class="font-semibold text-gray-700">${item.user_name || 'Kullanıcı'}</span>
-                                        <span class="mx-1">•</span>
-                                        <span>${formatDate(item.created_at)}</span>
-                                    </div>
-                                </div>
+                            <div class="timeline-content card-content yellow-card">
                                 <div class="text-sm text-gray-800 whitespace-pre-wrap">${item.content || ''}</div>
+                                <span class="meta-text">${createdText} - ${userText}</span>
                             </div>
                         </div>
                     `;
@@ -1590,22 +1826,30 @@
                 if (actionType === 'meeting') iconClass = 'fa-calendar text-purple-500';
 
                 return `
-                    <div class="relative">
-                        <div class="absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
+                    <div class="timeline-item">
+                        <div class="timeline-marker large-marker">
                             <i class="fas ${iconClass} text-xs"></i>
                         </div>
-                        <div class="bg-white border border-gray-200 p-3 rounded-lg shadow-sm">
-                            <div class="text-xs text-gray-500 mb-1">
-                                <span class="font-semibold text-gray-700">${item.user_name || 'Sistem'}</span>
-                                <span class="mx-1">•</span>
-                                <span>${formatDate(item.created_at)}</span>
-                            </div>
+                        <div class="timeline-content card-content white-card">
                             <div class="text-sm text-gray-700 font-semibold">${item.description || 'Etkinlik'}</div>
                             ${item.metadata && item.metadata.amount ? `<span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">${item.metadata.amount}</span>` : ''}
+                            <span class="meta-text">${createdText} - ${userText}</span>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        function setHistoryFilter(filter) {
+            STATE.historyFilter = filter;
+            document.querySelectorAll('[data-history-filter]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.querySelector(`[data-history-filter="${filter}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+            renderActivityTimeline();
         }
 
         function renderNotesList() {
