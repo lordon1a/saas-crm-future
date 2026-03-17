@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VentaCRM - Satış Ekiplerinin Aşık Olacağı, WhatsApp Odaklı İlk CRM</title>
+    <meta name="description" content="WhatsApp, Telegram ve Email kanallarınızı tek bir merkezden yönetin. Müşteri ilişkilerinizi otomatikleştirin, satışlarınızı katlayın. Kurulum 2 dakika, kredi kartı gerekmez.">
+    <meta name="keywords" content="WhatsApp CRM, Telegram CRM, satış yönetimi, pipeline, omnichannel, müşteri ilişkileri">
+
+    <meta property="og:title" content="VentaCRM - WhatsApp Odaklı İlk CRM">
+    <meta property="og:description" content="Dağınık sekmeleri kapatın. Müşterileriniz nerede olursa olsun tek bir merkezden yönetin.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ventacrm.com">
+    <meta property="og:image" content="/static/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+                            400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+                            800: '#5b21b6', 900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <style>
+        .glow-btn {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.4), 0 0 60px rgba(139, 92, 246, 0.15);
+            transition: all 0.3s ease;
+        }
+        .glow-btn:hover {
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.55), 0 0 80px rgba(139, 92, 246, 0.25);
+            transform: translateY(-2px);
+        }
+        .glow-card {
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.12), 0 0 80px rgba(139, 92, 246, 0.06);
+            border: 2px solid rgba(139, 92, 246, 0.3);
+        }
+        .mockup-shadow {
+            box-shadow: 0 32px 64px -15px rgba(0, 0, 0, 0.1), 0 16px 32px -10px rgba(0, 0, 0, 0.06);
+        }
+        @keyframes slide {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .logo-slider { animation: slide 25s linear infinite; }
+        .logo-slider:hover { animation-play-state: paused; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
+        }
+        .float-anim { animation: float 4s ease-in-out infinite; }
+        .gradient-text {
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 50%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .nav-blur {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .check-icon { color: #22c55e; }
+        .cross-icon { color: #ef4444; }
+        .hero-gradient {
+            background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(139,92,246,0.12) 0%, transparent 70%),
+                        radial-gradient(ellipse 60% 40% at 80% 0%, rgba(59,130,246,0.08) 0%, transparent 60%);
+        }
+    </style>
+</head>
+<body class="bg-white text-slate-800 font-sans antialiased overflow-x-hidden">
+
+    <!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="/" class="flex items-center gap-3 group">
+                    <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg group-hover:scale-105 transition-transform">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <span class="text-xl font-extrabold tracking-tight text-slate-900">Venta<span class="text-brand-600">CRM</span></span>
+                </a>
+                <div class="hidden md:flex items-center gap-10">
+                    <a href="#features" class="text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors">Özellikler</a>
+                    <a href="#comparison" class="text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors">Neden Biz?</a>
+                    <a href="#pricing" class="text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors">Fiyatlar</a>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/login" class="hidden md:inline-flex text-sm font-bold text-slate-700 hover:text-brand-600 transition-colors">Giriş Yap</a>
+                    <a href="/register" class="px-6 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-xl hover:bg-brand-700 transition-all shadow-md hover:shadow-lg">
+                        Ücretsiz Dene
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══════════════════════ HERO SECTION ═══════════════════════ -->
+    <header class="relative pt-32 pb-24 lg:pt-44 lg:pb-32 hero-gradient">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto text-center">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 border border-brand-200 mb-8" data-aos="fade-down" data-aos-duration="600">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span class="text-sm font-semibold text-brand-700">1.000+ aktif işletme tarafından kullanılıyor</span>
+                </div>
+
+                <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.08]" data-aos="fade-up" data-aos-duration="800">
+                    Satış Ekiplerinin<br>
+                    <span class="gradient-text">Aşık Olacağı,</span><br>
+                    WhatsApp Odaklı İlk CRM.
+                </h1>
+
+                <p class="mt-8 text-lg lg:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed font-medium" data-aos="fade-up" data-aos-delay="200" data-aos-duration="800">
+                    Dağınık sekmeleri kapatın. Müşterileriniz nerede olursa olsun — WA, Telegram, Email — siz tek bir merkezden yönetin. <strong class="text-slate-700">Kurulum 2 dakika, kredi kartı gerekmez.</strong>
+                </p>
+
+                <div class="mt-12 flex flex-col sm:flex-row items-center justify-center gap-5" data-aos="fade-up" data-aos-delay="400" data-aos-duration="800">
+                    <a href="/register" class="glow-btn px-10 py-5 bg-brand-600 text-white text-lg font-bold rounded-2xl hover:bg-brand-700 transition-all inline-flex items-center gap-3">
+                        Ücretsiz Başlayın
+                        <i class="fas fa-arrow-right text-sm"></i>
+                    </a>
+                    <a href="#features" class="px-8 py-5 bg-white text-slate-700 text-lg font-bold rounded-2xl border-2 border-slate-200 hover:border-brand-300 hover:text-brand-600 transition-all inline-flex items-center gap-3 shadow-sm">
+                        <i class="fas fa-play-circle text-brand-500"></i>
+                        Demo İzle
+                    </a>
+                </div>
+
+                <div class="mt-8 flex items-center justify-center gap-6 text-sm text-slate-400 font-medium" data-aos="fade-up" data-aos-delay="500">
+                    <span class="flex items-center gap-1.5"><i class="fas fa-check text-green-500"></i> Kredi kartı gerekmez</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-check text-green-500"></i> 14 gün ücretsiz</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-check text-green-500"></i> İstediğiniz zaman iptal</span>
+                </div>
+            </div>
+
+            <!-- Hero Mockup -->
+            <div class="mt-20 max-w-6xl mx-auto relative" data-aos="fade-up" data-aos-delay="300" data-aos-duration="1000">
+                <div class="mockup-shadow rounded-3xl border border-slate-200/80 overflow-hidden bg-white">
+                    <div class="bg-slate-100 px-4 py-3 flex items-center gap-2 border-b border-slate-200">
+                        <div class="flex gap-1.5">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                        </div>
+                        <div class="flex-1 mx-4">
+                            <div class="bg-white rounded-lg px-4 py-1.5 text-xs text-slate-400 text-center max-w-xs mx-auto border border-slate-200">ventacrm.com/dashboard</div>
+                        </div>
+                    </div>
+                    <div class="relative bg-gradient-to-br from-slate-50 to-white p-1">
+                        <div class="flex h-[480px]">
+                            <!-- Sidebar -->
+                            <div class="w-16 bg-white border-r border-slate-100 flex flex-col items-center py-4 gap-3 flex-shrink-0">
+                                <div class="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center text-white text-sm"><i class="fab fa-whatsapp"></i></div>
+                                <div class="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center text-brand-500 text-sm"><i class="fas fa-inbox"></i></div>
+                                <div class="w-9 h-9 hover:bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 text-sm"><i class="fas fa-chart-line"></i></div>
+                                <div class="w-9 h-9 hover:bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 text-sm"><i class="fas fa-users"></i></div>
+                                <div class="w-9 h-9 hover:bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 text-sm"><i class="fas fa-robot"></i></div>
+                            </div>
+                            <!-- Contacts -->
+                            <div class="w-64 bg-white border-r border-slate-100 flex-shrink-0 overflow-hidden">
+                                <div class="p-3 border-b border-slate-100">
+                                    <div class="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-400 flex items-center gap-2"><i class="fas fa-search"></i> Kişi ara...</div>
+                                </div>
+                                <div class="p-2 space-y-1">
+                                    <div class="flex items-center gap-3 p-2.5 bg-brand-50 rounded-xl border border-brand-100">
+                                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">AY</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-bold text-slate-800 truncate">Ahmet Yılmaz</div>
+                                            <div class="text-[11px] text-slate-500 truncate">Teklifi onayladım, devam...</div>
+                                        </div>
+                                        <div class="text-[10px] text-brand-500 font-bold">2dk</div>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-xl">
+                                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold">MK</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-bold text-slate-800 truncate">Mehmet Kaya</div>
+                                            <div class="text-[11px] text-slate-500 truncate">Fiyat listesini gönderir m...</div>
+                                        </div>
+                                        <div class="text-[10px] text-slate-400">14dk</div>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-xl">
+                                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold">ZD</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-bold text-slate-800 truncate">Zeynep Demir</div>
+                                            <div class="text-[11px] text-slate-500 truncate flex items-center gap-1"><i class="fab fa-telegram-plane text-sky-500"></i> Harika, teşekkürler!</div>
+                                        </div>
+                                        <div class="text-[10px] text-slate-400">1s</div>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-xl">
+                                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">EÖ</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-bold text-slate-800 truncate">Elif Özkan</div>
+                                            <div class="text-[11px] text-slate-500 truncate">Sipariş numaramı ala...</div>
+                                        </div>
+                                        <div class="text-[10px] text-slate-400">3s</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Chat -->
+                            <div class="flex-1 flex flex-col bg-slate-50/50">
+                                <div class="px-5 py-3 bg-white border-b border-slate-100 flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">AY</div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-800">Ahmet Yılmaz</div>
+                                            <div class="text-[10px] text-green-500 font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Çevrimiçi</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold">Teklif Aşaması</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 p-5 space-y-3 overflow-hidden">
+                                    <div class="flex justify-start">
+                                        <div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm border border-slate-100 max-w-[280px]">
+                                            <div class="text-[10px] font-bold text-green-600 mb-1"><i class="fab fa-whatsapp mr-1"></i>WhatsApp</div>
+                                            <div class="text-sm text-slate-700">Merhaba, ürünlerinizle ilgileniyorum. Fiyat bilgisi alabilir miyim?</div>
+                                            <div class="text-[10px] text-slate-400 text-right mt-1">14:32</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end">
+                                        <div class="bg-brand-600 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[280px]">
+                                            <div class="text-sm text-white">Tabii ki! Size özel bir teklif hazırlıyorum. Birkaç dakika içinde paylaşacağım.</div>
+                                            <div class="text-[10px] text-white/60 text-right mt-1">14:33 <i class="fas fa-check-double"></i></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-start">
+                                        <div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm border border-slate-100 max-w-[280px]">
+                                            <div class="text-[10px] font-bold text-green-600 mb-1"><i class="fab fa-whatsapp mr-1"></i>WhatsApp</div>
+                                            <div class="text-sm text-slate-700">Teklifi onayladım, devam edelim! 🎉</div>
+                                            <div class="text-[10px] text-slate-400 text-right mt-1">14:58</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute -bottom-6 left-1/2 -translate-x-1/2 h-12 w-[80%] bg-brand-600/5 rounded-full blur-3xl"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════ SOCIAL PROOF BAR ═══════════════════════ -->
+    <section class="py-20 border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <p class="text-center text-sm font-bold text-slate-400 uppercase tracking-wider mb-10" data-aos="fade-up">
+                Dünya çapında 1.000+ işletme süreçlerini otonomlaştırdı
+            </p>
+            <div class="relative overflow-hidden" data-aos="fade-up" data-aos-delay="200">
+                <div class="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10"></div>
+                <div class="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10"></div>
+                <div class="flex logo-slider" style="width: max-content;">
+                    <div class="flex items-center gap-16 px-8">
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-shopping-cart text-2xl"></i><span class="font-bold text-lg">ShopBase</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-building text-2xl"></i><span class="font-bold text-lg">TeknoSoft</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-truck text-2xl"></i><span class="font-bold text-lg">KargoNet</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-graduation-cap text-2xl"></i><span class="font-bold text-lg">EduPlatform</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-heartbeat text-2xl"></i><span class="font-bold text-lg">MediCare</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-utensils text-2xl"></i><span class="font-bold text-lg">FoodFlow</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-gem text-2xl"></i><span class="font-bold text-lg">LuxBrand</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-bolt text-2xl"></i><span class="font-bold text-lg">PowerGrid</span></div>
+                    </div>
+                    <div class="flex items-center gap-16 px-8">
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-shopping-cart text-2xl"></i><span class="font-bold text-lg">ShopBase</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-building text-2xl"></i><span class="font-bold text-lg">TeknoSoft</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-truck text-2xl"></i><span class="font-bold text-lg">KargoNet</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-graduation-cap text-2xl"></i><span class="font-bold text-lg">EduPlatform</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-heartbeat text-2xl"></i><span class="font-bold text-lg">MediCare</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-utensils text-2xl"></i><span class="font-bold text-lg">FoodFlow</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-gem text-2xl"></i><span class="font-bold text-lg">LuxBrand</span></div>
+                        <div class="flex items-center gap-2 text-slate-300 hover:text-slate-500 transition-colors"><i class="fas fa-bolt text-2xl"></i><span class="font-bold text-lg">PowerGrid</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ FEATURE 1: PIPELINE ═══════════════════════ -->
+    <section id="features" class="py-24 lg:py-32">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                <div data-aos="fade-right" data-aos-duration="800">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 mb-6">
+                        <i class="fas fa-columns text-amber-500 text-xs"></i>
+                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Pipeline Yönetimi</span>
+                    </div>
+                    <h2 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                        Satış Sürecinizi<br><span class="gradient-text">Görsel Olarak Yönetin.</span>
+                    </h2>
+                    <p class="mt-6 text-lg text-slate-500 leading-relaxed">
+                        Sürükle-bırak Kanban tahtasıyla her anlaşmayı takip edin. Hangi aşamada kaç müşteri var, bir bakışta görün. Satış ekibiniz hiçbir fırsatı kaçırmasın.
+                    </p>
+                    <ul class="mt-8 space-y-4">
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Sürükle-bırak ile kolay aşama geçişi</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Özelleştirilebilir pipeline aşamaları</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Otomatik görev ve hatırlatıcılar</span></li>
+                    </ul>
+                </div>
+                <!-- Pipeline Mockup -->
+                <div class="relative" data-aos="fade-left" data-aos-duration="800">
+                    <div class="mockup-shadow rounded-3xl border border-slate-200/80 overflow-hidden bg-white">
+                        <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                            <span class="text-sm font-bold text-slate-700"><i class="fas fa-chart-line text-brand-500 mr-2"></i>Satış Pipeline</span>
+                            <span class="text-[10px] font-bold text-slate-400">12 Anlaşma - ₺485.000</span>
+                        </div>
+                        <div class="p-4 flex gap-3 overflow-hidden">
+                            <!-- Column: Yeni -->
+                            <div class="flex-1 min-w-[140px]">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                    <span>Yeni</span><span class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">4</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab">
+                                        <div class="text-xs font-bold text-slate-800">Web Sitesi Projesi</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">TeknoSoft A.Ş.</div>
+                                        <div class="text-[10px] font-bold text-brand-600 mt-2">₺45.000</div>
+                                    </div>
+                                    <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                                        <div class="text-xs font-bold text-slate-800">E-Ticaret Entegrasyonu</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">ShopBase Ltd.</div>
+                                        <div class="text-[10px] font-bold text-brand-600 mt-2">₺78.000</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Column: Teklif -->
+                            <div class="flex-1 min-w-[140px]">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                    <span>Teklif</span><span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">3</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="bg-white border-2 border-brand-300 rounded-xl p-3 shadow-sm relative">
+                                        <div class="absolute -top-1 -right-1 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-hand-pointer text-white text-[8px]"></i>
+                                        </div>
+                                        <div class="text-xs font-bold text-slate-800">CRM Kurulumu</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">MediCare Group</div>
+                                        <div class="text-[10px] font-bold text-brand-600 mt-2">₺120.000</div>
+                                    </div>
+                                    <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                                        <div class="text-xs font-bold text-slate-800">Otomasyon Paketi</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">FoodFlow Inc.</div>
+                                        <div class="text-[10px] font-bold text-brand-600 mt-2">₺65.000</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Column: Kazanıldı -->
+                            <div class="flex-1 min-w-[140px]">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                    <span>Kazanildi</span><span class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">5</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="bg-green-50 border border-green-200 rounded-xl p-3">
+                                        <div class="text-xs font-bold text-slate-800">API Entegrasyonu</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">KargoNet</div>
+                                        <div class="text-[10px] font-bold text-green-600 mt-2">₺92.000 <i class="fas fa-check-circle"></i></div>
+                                    </div>
+                                    <div class="bg-green-50 border border-green-200 rounded-xl p-3">
+                                        <div class="text-xs font-bold text-slate-800">Destek Paketi</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">EduPlatform</div>
+                                        <div class="text-[10px] font-bold text-green-600 mt-2">₺35.000 <i class="fas fa-check-circle"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ FEATURE 2: OMNICHANNEL ═══════════════════════ -->
+    <section class="py-24 lg:py-32 bg-slate-50/50">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                <!-- Omnichannel Mockup -->
+                <div class="relative order-2 lg:order-1" data-aos="fade-right" data-aos-duration="800">
+                    <div class="relative max-w-md mx-auto">
+                        <!-- Central Inbox -->
+                        <div class="mockup-shadow rounded-3xl border border-slate-200/80 overflow-hidden bg-white relative z-10">
+                            <div class="bg-slate-50 px-5 py-3 border-b border-slate-200">
+                                <span class="text-sm font-bold text-slate-700"><i class="fas fa-inbox text-brand-500 mr-2"></i>Birleşik Gelen Kutusu</span>
+                            </div>
+                            <div class="p-3 space-y-2">
+                                <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
+                                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm"><i class="fab fa-whatsapp"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-bold text-slate-800">Ahmet Y. <span class="text-green-600 font-semibold">WhatsApp</span></div>
+                                        <div class="text-[11px] text-slate-500 truncate">Siparişim ne zaman gelir?</div>
+                                    </div>
+                                    <div class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white text-[9px] font-bold">3</div>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-sky-50 rounded-xl border border-sky-100">
+                                    <div class="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-sm"><i class="fab fa-telegram-plane"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-bold text-slate-800">Zeynep D. <span class="text-sky-600 font-semibold">Telegram</span></div>
+                                        <div class="text-[11px] text-slate-500 truncate">Teklifi inceledim, harika!</div>
+                                    </div>
+                                    <div class="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center text-white text-[9px] font-bold">1</div>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm"><i class="fas fa-envelope"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-bold text-slate-800">Mehmet K. <span class="text-blue-600 font-semibold">Email</span></div>
+                                        <div class="text-[11px] text-slate-500 truncate">Sözleşme detayları hakkında</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Floating icons -->
+                        <div class="absolute -left-8 top-8 w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg float-anim z-0">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div class="absolute -right-6 top-4 w-12 h-12 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-lg shadow-lg float-anim z-0" style="animation-delay: 1s;">
+                            <i class="fab fa-telegram-plane"></i>
+                        </div>
+                        <div class="absolute -right-4 bottom-8 w-11 h-11 bg-blue-500 rounded-2xl flex items-center justify-center text-white text-base shadow-lg float-anim z-0" style="animation-delay: 2s;">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="order-1 lg:order-2" data-aos="fade-left" data-aos-duration="800">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-50 border border-sky-200 mb-6">
+                        <i class="fas fa-layer-group text-sky-500 text-xs"></i>
+                        <span class="text-xs font-bold text-sky-700 uppercase tracking-wider">Omnichannel</span>
+                    </div>
+                    <h2 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                        Tüm Kanallarınız,<br><span class="gradient-text">Tek Gelen Kutusu.</span>
+                    </h2>
+                    <p class="mt-6 text-lg text-slate-500 leading-relaxed">
+                        WhatsApp, Telegram ve Email mesajlarınız tek bir yerde. Müşterileriniz hangi kanaldan yazarsa yazsın, siz aynı pencereden yanıt verin. Hiçbir mesaj kaybolmasın.
+                    </p>
+                    <ul class="mt-8 space-y-4">
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">WhatsApp Business API entegrasyonu</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Telegram Bot desteği</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Otomatik kanal tanıma ve yönlendirme</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ FEATURE 3: AI & ANALYTICS ═══════════════════════ -->
+    <section class="py-24 lg:py-32 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                <div data-aos="fade-right" data-aos-duration="800">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 mb-6">
+                        <i class="fas fa-brain text-violet-500 text-xs"></i>
+                        <span class="text-xs font-bold text-violet-700 uppercase tracking-wider">AI & Analytics</span>
+                    </div>
+                    <h2 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                        Veriye Dayalı<br><span class="gradient-text">Akıllı Kararlar.</span>
+                    </h2>
+                    <p class="mt-6 text-lg text-slate-500 leading-relaxed">
+                        Gelişmiş analitik paneliyle satış performansınızı takip edin. Otomasyon kurallarıyla tekrarlayan görevleri yapay zekaya bırakın, ekibiniz satışa odaklansın.
+                    </p>
+                    <ul class="mt-8 space-y-4">
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Gerçek zamanlı satış dashboard'u</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Akıllı otomasyon kuralları</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><i class="fas fa-check text-green-600 text-[10px]"></i></div><span class="text-sm font-semibold text-slate-700">Ekip performans raporları</span></li>
+                    </ul>
+                </div>
+                <!-- Analytics Mockup -->
+                <div class="relative" data-aos="fade-left" data-aos-duration="800">
+                    <div class="mockup-shadow rounded-3xl border border-slate-200/80 overflow-hidden bg-white">
+                        <div class="bg-slate-50 px-5 py-3 border-b border-slate-200">
+                            <span class="text-sm font-bold text-slate-700"><i class="fas fa-chart-bar text-brand-500 mr-2"></i>Analitik Dashboard</span>
+                        </div>
+                        <div class="p-5">
+                            <!-- Stats Row -->
+                            <div class="grid grid-cols-3 gap-3 mb-5">
+                                <div class="bg-brand-50 rounded-xl p-3 text-center">
+                                    <div class="text-2xl font-extrabold text-brand-600">₺485K</div>
+                                    <div class="text-[10px] font-semibold text-brand-500 mt-1">Toplam Satış</div>
+                                </div>
+                                <div class="bg-green-50 rounded-xl p-3 text-center">
+                                    <div class="text-2xl font-extrabold text-green-600">89%</div>
+                                    <div class="text-[10px] font-semibold text-green-500 mt-1">Dönüşüm</div>
+                                </div>
+                                <div class="bg-amber-50 rounded-xl p-3 text-center">
+                                    <div class="text-2xl font-extrabold text-amber-600">1.2K</div>
+                                    <div class="text-[10px] font-semibold text-amber-500 mt-1">Mesaj/Gün</div>
+                                </div>
+                            </div>
+                            <!-- Chart -->
+                            <div class="bg-slate-50 rounded-xl p-4 mb-4">
+                                <div class="flex items-end justify-between h-32 gap-2">
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-200 rounded-t-lg" style="height: 40%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Pzt</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-300 rounded-t-lg" style="height: 65%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Sal</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-400 rounded-t-lg" style="height: 50%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Car</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-500 rounded-t-lg" style="height: 80%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Per</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-600 rounded-t-lg" style="height: 95%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Cum</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-300 rounded-t-lg" style="height: 55%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Cmt</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col items-center gap-1">
+                                        <div class="w-full bg-brand-200 rounded-t-lg" style="height: 30%"></div>
+                                        <span class="text-[9px] text-slate-400 font-semibold">Paz</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Activity -->
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-3 p-2 bg-green-50 rounded-lg">
+                                    <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-[9px]"><i class="fas fa-check"></i></div>
+                                    <span class="text-[11px] font-semibold text-slate-700">Ahmet Y. anlaşması kazanıldı</span>
+                                    <span class="text-[10px] text-slate-400 ml-auto">₺120K</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
+                                    <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-[9px]"><i class="fas fa-robot"></i></div>
+                                    <span class="text-[11px] font-semibold text-slate-700">Otomasyon: 24 mesaj otomatik yanıtlandı</span>
+                                    <span class="text-[10px] text-slate-400 ml-auto">bugün</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ COMPARISON TABLE ═══════════════════════ -->
+    <section id="comparison" class="py-24 lg:py-32">
+        <div class="max-w-5xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">
+                    Neden <span class="gradient-text">VentaCRM?</span>
+                </h2>
+                <p class="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
+                    Eski yöntemlerle karşılaştırın, farkı kendiniz görün.
+                </p>
+            </div>
+            <div class="overflow-hidden rounded-3xl border border-slate-200 shadow-sm" data-aos="fade-up" data-aos-delay="200">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-slate-50">
+                            <th class="text-left px-6 py-5 text-sm font-bold text-slate-500">Özellik</th>
+                            <th class="px-6 py-5 text-sm font-bold text-slate-500 text-center">Excel / Tablo</th>
+                            <th class="px-6 py-5 text-sm font-bold text-slate-500 text-center">Eski CRM'ler</th>
+                            <th class="px-6 py-5 text-sm font-bold text-center">
+                                <span class="px-3 py-1.5 bg-brand-600 text-white rounded-lg">VentaCRM</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">WhatsApp Entegrasyonu</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Telegram Entegrasyonu</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Gerçek Zamanlı Mesajlaşma</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-400 font-semibold">Sınırlı</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Sürükle-Bırak Pipeline</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Otomasyon Kuralları</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-400 font-semibold">Ek Ücret</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Kurulum Süresi</td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-400 font-semibold">Saatler</td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-400 font-semibold">Günler</td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-brand-600">2 Dakika</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Toplu Mesaj Gönderimi</td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-times cross-icon"></i></td>
+                            <td class="px-6 py-4 text-center"><i class="fas fa-check-circle check-icon text-lg"></i></td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-700">Fiyat</td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-400 font-semibold">Ücretsiz</td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-400 font-semibold">$50-200/ay</td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-brand-600">$29'dan başlayan</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ PRICING ═══════════════════════ -->
+    <section id="pricing" class="py-24 lg:py-32 bg-slate-50/50">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">
+                    Basit ve Şeffaf <span class="gradient-text">Fiyatlandırma</span>
+                </h2>
+                <p class="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
+                    Gizli ücret yok. İhtiyacınıza uygun planı seçin, hemen başlayın.
+                </p>
+                <!-- Toggle -->
+                <div class="mt-8 inline-flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-1.5 shadow-sm">
+                    <button id="monthlyBtn" onclick="setPricing('monthly')" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-brand-600 text-white shadow-md">Aylık</button>
+                    <button id="yearlyBtn" onclick="setPricing('yearly')" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-700">
+                        Yıllık <span class="text-green-600 text-xs font-bold ml-1">%20 Tasarruf</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto" data-aos="fade-up" data-aos-delay="200">
+                <!-- Starter -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300 flex flex-col">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Starter</div>
+                    <h3 class="text-xl font-extrabold text-slate-900">Yeni Başlayanlar İçin</h3>
+                    <div class="mt-6 flex items-baseline gap-1">
+                        <span class="text-5xl font-extrabold text-slate-900 price-value" data-monthly="29" data-yearly="23">$29</span>
+                        <span class="text-slate-400 font-semibold">/ay</span>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-2">Küçük ekipler için temel özellikler</p>
+                    <ul class="mt-8 space-y-3 flex-1">
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> 1 WhatsApp Numarası</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> 500 Kişi</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> Temel Pipeline</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> 2 Kullanıcı</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-400"><i class="fas fa-times text-slate-300 text-xs"></i> Otomasyon</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-400"><i class="fas fa-times text-slate-300 text-xs"></i> API Erişimi</li>
+                    </ul>
+                    <a href="/register" class="mt-8 block w-full py-4 text-center bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all text-sm">
+                        Ücretsiz Deneyin
+                    </a>
+                </div>
+
+                <!-- Professional (Popular) -->
+                <div class="relative bg-white rounded-3xl p-8 glow-card hover:shadow-2xl transition-all duration-300 flex flex-col scale-[1.03]">
+                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-bold rounded-full shadow-lg">
+                        En Popüler
+                    </div>
+                    <div class="text-xs font-bold text-brand-500 uppercase tracking-wider mb-2">Professional</div>
+                    <h3 class="text-xl font-extrabold text-slate-900">Büyüyen Ekipler</h3>
+                    <div class="mt-6 flex items-baseline gap-1">
+                        <span class="text-5xl font-extrabold text-slate-900 price-value" data-monthly="79" data-yearly="63">$79</span>
+                        <span class="text-slate-400 font-semibold">/ay</span>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-2">Otomasyon ve gelişmiş özellikler</p>
+                    <ul class="mt-8 space-y-3 flex-1">
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-brand-500 text-xs"></i> 3 WhatsApp Numarası</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-brand-500 text-xs"></i> Sınırsız Kişi</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-brand-500 text-xs"></i> Gelişmiş Pipeline</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-brand-500 text-xs"></i> 10 Kullanıcı</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-brand-500 text-xs"></i> Otomasyon Kuralları</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-brand-500 text-xs"></i> Telegram + Email</li>
+                    </ul>
+                    <a href="/register" class="mt-8 block w-full py-4 text-center bg-brand-600 text-white font-bold rounded-2xl hover:bg-brand-700 transition-all text-sm glow-btn">
+                        Hemen Başlayın
+                    </a>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300 flex flex-col">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Enterprise</div>
+                    <h3 class="text-xl font-extrabold text-slate-900">Büyük Ekipler İçin</h3>
+                    <div class="mt-6 flex items-baseline gap-1">
+                        <span class="text-5xl font-extrabold text-slate-900 price-value" data-monthly="199" data-yearly="159">$199</span>
+                        <span class="text-slate-400 font-semibold">/ay</span>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-2">Tam kontrol ve özel entegrasyonlar</p>
+                    <ul class="mt-8 space-y-3 flex-1">
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> Sınırsız Numara</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> Sınırsız Kişi</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> Özel Pipeline'lar</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> Sınırsız Kullanıcı</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> API Erişimi</li>
+                        <li class="flex items-center gap-2.5 text-sm text-slate-700"><i class="fas fa-check text-green-500 text-xs"></i> Öncelikli Destek</li>
+                    </ul>
+                    <a href="/register" class="mt-8 block w-full py-4 text-center bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all text-sm">
+                        İletişime Geçin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ FINAL CTA ═══════════════════════ -->
+    <section class="py-24 lg:py-32">
+        <div class="max-w-5xl mx-auto px-6 lg:px-8" data-aos="fade-up">
+            <div class="relative rounded-3xl overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-brand-600 via-violet-600 to-blue-600"></div>
+                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.15),transparent_60%)]"></div>
+                <div class="relative px-8 py-16 lg:px-16 lg:py-20 text-center">
+                    <h2 class="text-3xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                        Satışlarınızı Dönüştürmeye<br>Bugün Başlayın.
+                    </h2>
+                    <p class="mt-6 text-lg text-white/80 max-w-xl mx-auto">
+                        14 gün ücretsiz deneyin. Kredi kartı gerekmez. 2 dakikada kurulumu tamamlayın.
+                    </p>
+                    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <a href="/register" class="px-10 py-5 bg-white text-brand-700 text-lg font-bold rounded-2xl hover:bg-slate-50 transition-all shadow-xl inline-flex items-center gap-3">
+                            Hemen Başlayın
+                            <i class="fas fa-arrow-right text-sm"></i>
+                        </a>
+                        <a href="#features" class="px-8 py-5 bg-white/10 text-white text-lg font-bold rounded-2xl hover:bg-white/20 transition-all border border-white/20 inline-flex items-center gap-3">
+                            <i class="fas fa-play-circle"></i>
+                            Demo İzle
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+    <footer class="bg-slate-900 text-white pt-20 pb-10">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-12 mb-16">
+                <!-- Brand -->
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-lg">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <span class="text-xl font-extrabold">Venta<span class="text-brand-400">CRM</span></span>
+                    </div>
+                    <p class="text-sm text-slate-400 leading-relaxed">
+                        WhatsApp odaklı, modern CRM platformu. Satış ekiplerinin ihtiyacı olan her şey tek bir yerde.
+                    </p>
+                    <div class="flex gap-3 mt-6">
+                        <a href="#" class="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-brand-600 transition-all"><i class="fab fa-twitter text-sm"></i></a>
+                        <a href="#" class="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-brand-600 transition-all"><i class="fab fa-linkedin-in text-sm"></i></a>
+                        <a href="#" class="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-brand-600 transition-all"><i class="fab fa-instagram text-sm"></i></a>
+                        <a href="#" class="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-brand-600 transition-all"><i class="fab fa-youtube text-sm"></i></a>
+                    </div>
+                </div>
+                <!-- Ürün -->
+                <div>
+                    <h4 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-5">Ürün</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#features" class="text-sm text-slate-400 hover:text-white transition-colors">Özellikler</a></li>
+                        <li><a href="#pricing" class="text-sm text-slate-400 hover:text-white transition-colors">Fiyatlandırma</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Entegrasyonlar</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">API Dokümantasyon</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Güncelleme Notları</a></li>
+                    </ul>
+                </div>
+                <!-- Şirket -->
+                <div>
+                    <h4 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-5">Şirket</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Hakkımızda</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Blog</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Kariyer</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">İletişim</a></li>
+                    </ul>
+                </div>
+                <!-- Destek -->
+                <div>
+                    <h4 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-5">Destek</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Yardım Merkezi</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Başlangıç Rehberi</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Gizlilik Politikası</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">Kullanım Koşulları</a></li>
+                        <li><a href="#" class="text-sm text-slate-400 hover:text-white transition-colors">KVKK</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-sm text-slate-500">&copy; 2024 VentaCRM. Tüm hakları saklıdır.</p>
+                <div class="flex items-center gap-6">
+                    <span class="text-xs text-slate-500 flex items-center gap-2"><i class="fas fa-lock text-green-500"></i> 256-bit SSL Şifreleme</span>
+                    <span class="text-xs text-slate-500 flex items-center gap-2"><i class="fas fa-shield-halved text-blue-500"></i> KVKK Uyumlu</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ═══════════════════════ SCRIPTS ═══════════════════════ -->
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script>
+        AOS.init({ once: true, duration: 700, offset: 80 });
+
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 40) {
+                navbar.classList.add('bg-white/90', 'nav-blur', 'shadow-sm', 'border-b', 'border-slate-100');
+            } else {
+                navbar.classList.remove('bg-white/90', 'nav-blur', 'shadow-sm', 'border-b', 'border-slate-100');
+            }
+        });
+
+        let currentPlan = 'monthly';
+        function setPricing(plan) {
+            currentPlan = plan;
+            const monthlyBtn = document.getElementById('monthlyBtn');
+            const yearlyBtn = document.getElementById('yearlyBtn');
+            const prices = document.querySelectorAll('.price-value');
+
+            if (plan === 'monthly') {
+                monthlyBtn.classList.add('bg-brand-600', 'text-white', 'shadow-md');
+                monthlyBtn.classList.remove('text-slate-500');
+                yearlyBtn.classList.remove('bg-brand-600', 'text-white', 'shadow-md');
+                yearlyBtn.classList.add('text-slate-500');
+            } else {
+                yearlyBtn.classList.add('bg-brand-600', 'text-white', 'shadow-md');
+                yearlyBtn.classList.remove('text-slate-500');
+                monthlyBtn.classList.remove('bg-brand-600', 'text-white', 'shadow-md');
+                monthlyBtn.classList.add('text-slate-500');
+            }
+
+            prices.forEach(el => {
+                el.textContent = '$' + el.dataset[plan];
+            });
+        }
+    </script>
+</body>
+</html>

@@ -304,6 +304,13 @@ def login_required(f):
 
 
 @app.route('/')
+def landing():
+    if session.get('user_id'):
+        return render_template('index.html')
+    return render_template('landing.html')
+
+
+@app.route('/dashboard')
 @login_required
 def index():
     return render_template('index.html')
