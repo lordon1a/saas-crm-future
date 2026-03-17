@@ -8,6 +8,7 @@ from services.quick_reply_manager import QuickReplyManager
 from services.collaboration_service import CollaborationService
 from services.email_hub_service import EmailHubService
 from services.telegram_service import TelegramService
+from realtime import socketio
 from datetime import datetime
 from sqlalchemy import or_
 from config import Config
@@ -41,6 +42,34 @@ def _message_to_json(msg, include_sender_name=False, user_cache=None):
     else:
         d['sender_name'] = None
     return d
+
+
+def _emit_realtime_message(workspace_id, conversation, message):
+    try:
+        socketio.emit(
+            'new_incoming_message',
+            {
+                'message_id': message.id,
+                'conversation_id': conversation.id,
+                'contact_id': conversation.customer_id,
+                'text': message.message_body,
+                'sender_type': message.sender_type,
+                'channel': getattr(message, 'channel', 'whatsapp') or 'whatsapp',
+                'timestamp': message.created_at.isoformat() if message.created_at else None,
+            },
+            room=f'contact_{conversation.customer_id}',
+        )
+        socketio.emit(
+            'inbox_updated',
+            {
+                'conversation_id': conversation.id,
+                'contact_id': conversation.customer_id,
+                'message_id': message.id,
+            },
+            room=f'ws_{workspace_id}',
+        )
+    except Exception as exc:
+        logger.warning('Socket emit failed for outgoing message: %s', exc)
 
 def login_required_api(f):
     from functools import wraps
@@ -570,6 +599,7 @@ def send_message():
         # Update conversation last_message_at
         ConversationManager.update_last_message_time(conversation_id)
         db.session.commit()
+        _emit_realtime_message(workspace_id, conversation, message)
         
         return jsonify({
             'status': 'sent',
@@ -667,6 +697,7 @@ def send_media():
     )
     ConversationManager.update_last_message_time(conversation_id)
     db.session.commit()
+    _emit_realtime_message(workspace_id, conversation, message)
     return jsonify({
         'status': 'sent',
         'message_id': message.id,
