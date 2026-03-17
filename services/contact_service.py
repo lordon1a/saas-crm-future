@@ -69,7 +69,11 @@ class ContactService:
                 workspace_id, 'company', company.id, data['custom_fields']
             )
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         logger.info(f"Created company {company.id}: {company.name}")
         
         return company
@@ -83,7 +87,7 @@ class ContactService:
         ).first()
         
         if not company:
-            raise ValueError(f"Company {company_id} not found")
+            raise LookupError(f"Company {company_id} not found")
         
         # Validate parent company if provided
         if 'parent_company_id' in data and data['parent_company_id']:
@@ -125,7 +129,11 @@ class ContactService:
                 workspace_id, 'company', company.id, data['custom_fields']
             )
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         logger.info(f"Updated company {company.id}")
         
         return company
@@ -229,7 +237,11 @@ class ContactService:
                 workspace_id, 'contact', contact.id, data['custom_fields']
             )
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         logger.info(f"Created contact {contact.id}: {contact.full_name}")
         
         return contact
@@ -243,7 +255,12 @@ class ContactService:
         ).first()
         
         if not contact:
-            raise ValueError(f"Contact {contact_id} not found")
+            raise LookupError(f"Contact {contact_id} not found")
+
+        if 'company_id' in data and data['company_id'] is not None:
+            target_company = Company.query.filter_by(id=data['company_id']).first()
+            if not target_company or target_company.workspace_id != contact.workspace_id:
+                raise ValueError("Yetkisiz şirket ataması")
         
         # Track changes
         changes = {}
@@ -274,7 +291,11 @@ class ContactService:
                 workspace_id, 'contact', contact.id, data['custom_fields']
             )
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         logger.info(f"Updated contact {contact.id}")
         
         return contact

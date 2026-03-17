@@ -10,7 +10,7 @@ from services.email_hub_service import EmailHubService
 from services.telegram_service import TelegramService
 from realtime import emit_chat_message_event
 from datetime import datetime
-from sqlalchemy import or_
+from sqlalchemy import or_, func, and_
 from config import Config
 import json, time, queue, threading, os
 import logging
@@ -309,11 +309,11 @@ def get_conversation_full(conversation_id):
     msgs = Message.query.filter_by(conversation_id=conversation_id)\
         .order_by(Message.created_at.asc()).all()
 
+    sender_ids = {msg.sender_id for msg in msgs if msg.sender_id}
     user_cache = {}
-    for msg in msgs:
-        if msg.sender_id and msg.sender_id not in user_cache:
-            u = User.query.get(msg.sender_id)
-            user_cache[msg.sender_id] = u.name if u else None
+    if sender_ids:
+        users = User.query.filter(User.id.in_(sender_ids)).all()
+        user_cache = {u.id: u.name for u in users}
     messages_data = [_message_to_json(msg, include_sender_name=True, user_cache=user_cache) for msg in msgs]
 
     # Mark unread as read (aynı istekte)
@@ -414,26 +414,55 @@ def get_customer_profile(customer_id):
                 if tag:
                     tag_freq[tag] = tag_freq.get(tag, 0) + 1
 
-    # Atanan temsilci bilgisi
-    def get_assignee_name(user_id):
-        if not user_id: return None
-        u = User.query.get(user_id)
-        return u.name if u else None
-
     # Konuşma geçmişiñ son 20 konuşma
+    recent_conversations = conversations[:20]
+    recent_conversation_ids = [conv.id for conv in recent_conversations]
+    assigned_user_ids = {conv.assigned_to for conv in recent_conversations if conv.assigned_to}
+
+    user_map = {}
+    if assigned_user_ids:
+        users = User.query.filter(User.id.in_(assigned_user_ids)).all()
+        user_map = {u.id: u.name for u in users}
+
+    message_count_map = {}
+    if recent_conversation_ids:
+        message_counts = db.session.query(
+            Message.conversation_id,
+            func.count(Message.id)
+        ).filter(
+            Message.conversation_id.in_(recent_conversation_ids)
+        ).group_by(Message.conversation_id).all()
+        message_count_map = {conversation_id: count for conversation_id, count in message_counts}
+
+    last_message_map = {}
+    if recent_conversation_ids:
+        last_message_times = db.session.query(
+            Message.conversation_id,
+            func.max(Message.created_at).label('max_created_at')
+        ).filter(
+            Message.conversation_id.in_(recent_conversation_ids)
+        ).group_by(Message.conversation_id).subquery()
+
+        last_message_rows = db.session.query(Message).join(
+            last_message_times,
+            and_(
+                Message.conversation_id == last_message_times.c.conversation_id,
+                Message.created_at == last_message_times.c.max_created_at
+            )
+        ).all()
+        last_message_map = {row.conversation_id: row for row in last_message_rows}
+
     conv_history = []
-    for conv in conversations[:20]:
-        last_msg = Message.query.filter_by(
-            conversation_id=conv.id
-        ).order_by(Message.created_at.desc()).first()
+    for conv in recent_conversations:
+        last_msg = last_message_map.get(conv.id)
         conv_history.append({
             'id': conv.id,
             'status': conv.status,
             'tags': conv.tags,
             'last_message': last_msg.message_body[:80] if last_msg else '',
             'last_message_at': conv.last_message_at.isoformat(),
-            'message_count': len(conv.messages),
-            'assigned_to_name': get_assignee_name(conv.assigned_to)
+            'message_count': message_count_map.get(conv.id, 0),
+            'assigned_to_name': user_map.get(conv.assigned_to)
         })
 
     return jsonify({

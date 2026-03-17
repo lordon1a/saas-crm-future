@@ -4,7 +4,7 @@ API endpoints for pipeline and deal management
 """
 from flask import Blueprint, request, jsonify, session
 from models import db
-from models_crm import Pipeline, DealStage, Deal, Company
+from models_crm import Pipeline, DealStage, Deal, Company, Contact
 from services.pipeline_service import PipelineService
 from services.quickbooks_service import QuickBooksService
 from services.collaboration_service import CollaborationService
@@ -87,7 +87,7 @@ def get_pipeline(pipeline_id):
 def get_deals():
     """
     Get deals with optional filters and pagination.
-    Query params: stage_id, owner_id, status, company_id, pipeline_id, page, per_page
+    Query params: stage_id, owner_id, status, company_id, contact_id, pipeline_id, page, per_page
     """
     workspace_id = session.get('workspace_id')
     
@@ -99,15 +99,32 @@ def get_deals():
     # Build filters from query params
     filters = {}
     if request.args.get('stage_id'):
-        filters['stage_id'] = int(request.args.get('stage_id'))
+        try:
+            filters['stage_id'] = int(request.args.get('stage_id'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
     if request.args.get('owner_id'):
-        filters['owner_id'] = int(request.args.get('owner_id'))
+        try:
+            filters['owner_id'] = int(request.args.get('owner_id'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
     if request.args.get('status'):
         filters['status'] = request.args.get('status')
     if request.args.get('company_id'):
-        filters['company_id'] = int(request.args.get('company_id'))
+        try:
+            filters['company_id'] = int(request.args.get('company_id'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+    if request.args.get('contact_id'):
+        try:
+            filters['contact_id'] = int(request.args.get('contact_id'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
     if request.args.get('pipeline_id'):
-        filters['pipeline_id'] = int(request.args.get('pipeline_id'))
+        try:
+            filters['pipeline_id'] = int(request.args.get('pipeline_id'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
     
     # Build query
     query = Deal.query.filter_by(workspace_id=workspace_id)
@@ -121,6 +138,11 @@ def get_deals():
         query = query.filter_by(status=filters['status'])
     if filters.get('company_id'):
         query = query.filter_by(company_id=filters['company_id'])
+    if filters.get('contact_id'):
+        query = query.join(Contact, Contact.company_id == Deal.company_id).filter(
+            Contact.id == filters['contact_id'],
+            Contact.workspace_id == workspace_id
+        )
     if filters.get('pipeline_id'):
         query = query.filter_by(pipeline_id=filters['pipeline_id'])
     

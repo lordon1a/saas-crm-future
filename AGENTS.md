@@ -13,6 +13,26 @@ Bu dokuman, bu repoda calisan AI coding agent'lar icin zorunlu calisma kurallari
 - Mevcut Tailwind tasarim dilini, sidebar/topbar yapisini ve renk dilini koru.
 - JS selector'lari (id/class/data-*) ile template ogeleri birebir eslesmeli.
 - Gorsel duzeltmelerde yalnizca gerekli siniflari degistir; toplu stil dagitma yapma.
+- Topbar tum uygulama sayfalarinda ayni duzende ve sabit olmali: solda sidebar offseti korunur, arama ortada, yardim/hesap sagda.
+- Yeni sayfa eklerken sidebar ikon seti eksiksiz olmali; kisa versiyon kullanma.
+
+### Sidebar Zorunlu Ikon Sirasi
+- / (Gelen Kutusu)
+- /analytics (Raporlar)
+- /contacts (Kisiler)
+- /companies (Sirketler)
+- /broadcast (Toplu Mesaj)
+- /automation (Otomasyon)
+- /pipeline (Pipeline)
+- /tasks (Gorevler)
+- /documents (Dokumanlar)
+- /channels (Kanallar)
+- /settings (Ayarlar)
+- Alt bolum: /logout (Cikis Yap)
+
+### Topbar Zorunlu Davranis
+- Topbar her zaman ustte sabit/fixed davranmali; sayfa scroll'unda yer degistirmemeli.
+- Topbar satiri yeni sayfalarda bolunmemeli; arama + sag aksiyonlar tek satirda kalmali.
 
 ## 3) Backend ve Veri Butunlugu
 - Mevcut endpoint'leri silme veya davranisini kirma.

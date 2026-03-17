@@ -121,7 +121,7 @@ def get_companies():
         
     except Exception as e:
         logger.error(f"Error getting companies: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/companies/<int:company_id>', methods=['GET'])
@@ -164,7 +164,7 @@ def get_company(company_id):
         
     except Exception as e:
         logger.error(f"Error getting company: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/companies', methods=['POST'])
@@ -196,11 +196,13 @@ def create_company():
             'created_at': company.created_at.isoformat() if company.created_at else None
         }), 201
         
+    except LookupError:
+        return jsonify({'error': 'Kayıt bulunamadı'}), 404
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error creating company: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/companies/<int:company_id>', methods=['PATCH'])
@@ -232,11 +234,13 @@ def update_company(company_id):
             'updated_at': company.updated_at.isoformat() if company.updated_at else None
         }), 200
         
+    except LookupError:
+        return jsonify({'error': 'Kayıt bulunamadı'}), 404
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error updating company: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 # ============================================================================
@@ -260,7 +264,10 @@ def get_contacts():
         # Get filters from query params
         filters = {}
         if request.args.get('company_id'):
-            filters['company_id'] = int(request.args.get('company_id'))
+            try:
+                filters['company_id'] = int(request.args.get('company_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
         if request.args.get('role'):
             filters['role'] = request.args.get('role')
         if request.args.get('search'):
@@ -328,7 +335,7 @@ def get_contacts():
         
     except Exception as e:
         logger.error(f"Error getting contacts: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/contacts/<int:contact_id>', methods=['GET'])
@@ -374,7 +381,7 @@ def get_contact(contact_id):
         
     except Exception as e:
         logger.error(f"Error getting contact: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/contacts/<int:contact_id>')
@@ -419,6 +426,18 @@ def get_contact_timeline(contact_id):
         workspace_id = session.get('workspace_id')
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+
+        try:
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+
+        if page < 1:
+            page = 1
+        if per_page < 1:
+            per_page = 20
+        per_page = min(per_page, 100)
         
         from models_crm import Contact
         from models_contact_timeline import ContactNote, ContactActivityLog
@@ -433,33 +452,49 @@ def get_contact_timeline(contact_id):
             return jsonify({'error': 'Contact not found'}), 404
         
         # Get notes
-        notes = ContactNote.query.filter_by(
+        notes_pagination = ContactNote.query.filter_by(
             contact_id=contact_id,
             workspace_id=workspace_id
-        ).order_by(ContactNote.created_at.desc()).all()
+        ).order_by(ContactNote.created_at.desc()).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
         
         # Get activity logs
-        activities = ContactActivityLog.query.filter_by(
+        activities_pagination = ContactActivityLog.query.filter_by(
             contact_id=contact_id,
             workspace_id=workspace_id
-        ).order_by(ContactActivityLog.created_at.desc()).all()
+        ).order_by(ContactActivityLog.created_at.desc()).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
         
         # Merge and sort
         timeline = []
-        timeline.extend([note.to_dict() for note in notes])
-        timeline.extend([activity.to_dict() for activity in activities])
+        timeline.extend([note.to_dict() for note in notes_pagination.items])
+        timeline.extend([activity.to_dict() for activity in activities_pagination.items])
         
         # Sort by created_at descending
         timeline.sort(key=lambda x: x['created_at'], reverse=True)
+        timeline = timeline[:per_page]
+
+        total_pages = max(notes_pagination.pages, activities_pagination.pages, 1)
+        has_next = notes_pagination.has_next or activities_pagination.has_next
         
         return jsonify({
-            'timeline': timeline,
-            'total': len(timeline)
+            'data': timeline,
+            'meta': {
+                'current_page': page,
+                'total_pages': total_pages,
+                'has_next': has_next
+            }
         }), 200
         
     except Exception as e:
         logger.error(f"Error getting contact timeline: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/<int:contact_id>/notes', methods=['POST'])
@@ -519,7 +554,7 @@ def create_contact_note(contact_id):
         
     except Exception as e:
         logger.error(f"Error creating contact note: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/<int:contact_id>/activities', methods=['POST'])
@@ -577,7 +612,7 @@ def create_contact_activity(contact_id):
         
     except Exception as e:
         logger.error(f"Error creating contact activity: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/<int:contact_id>/files', methods=['GET'])
@@ -635,7 +670,7 @@ def get_contact_files(contact_id):
         
     except Exception as e:
         logger.error(f"Error getting contact files: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/files/upload', methods=['POST'])
@@ -739,7 +774,7 @@ def upload_contact_files():
         except Exception:
             pass
         logger.error(f"Error uploading files: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/<int:contact_id>/files', methods=['DELETE'])
@@ -806,7 +841,7 @@ def delete_contact_file(contact_id):
         except Exception:
             pass
         logger.error(f"Error deleting contact file: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/<int:contact_id>/files/download/<path:stored_name>', methods=['GET'])
@@ -836,7 +871,7 @@ def download_contact_file(contact_id, stored_name):
 
     except Exception as e:
         logger.error(f"Error downloading contact file: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/contacts/<int:contact_id>/files/share-to-chat', methods=['POST'])
@@ -974,7 +1009,7 @@ def share_contact_file_to_chat(contact_id):
         except Exception:
             pass
         logger.error(f"Error sharing contact file to chat: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/contacts', methods=['POST'])
@@ -1034,7 +1069,7 @@ def create_contact():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error creating contact: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/contacts/<int:contact_id>', methods=['PATCH'])
@@ -1082,11 +1117,13 @@ def update_contact(contact_id):
             'updated_at': contact.updated_at.isoformat() if contact.updated_at else None
         }), 200
         
+    except LookupError:
+        return jsonify({'error': 'Kayıt bulunamadı'}), 404
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error updating contact: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/contacts/<int:contact_id>', methods=['DELETE'])
@@ -1118,7 +1155,7 @@ def delete_contact(contact_id):
         
     except Exception as e:
         logger.error(f"Error deleting contact: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 # ============================================================================
@@ -1137,7 +1174,10 @@ def export_contacts():
         # Get filters from query params
         filters = {}
         if request.args.get('company_id'):
-            filters['company_id'] = int(request.args.get('company_id'))
+            try:
+                filters['company_id'] = int(request.args.get('company_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
         if request.args.get('role'):
             filters['role'] = request.args.get('role')
         if request.args.get('search'):
@@ -1153,7 +1193,7 @@ def export_contacts():
         
     except Exception as e:
         logger.error(f"Error exporting contacts: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/contacts/import', methods=['POST'])
@@ -1195,7 +1235,7 @@ def import_contacts():
         
     except Exception as e:
         logger.error(f"Error importing contacts: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/companies/export', methods=['GET'])
@@ -1226,7 +1266,7 @@ def export_companies():
         
     except Exception as e:
         logger.error(f"Error exporting companies: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 # ============================================================================
@@ -1271,11 +1311,12 @@ def bulk_update_contacts():
         
         # Update each contact
         updated_count = 0
+        ALLOWED_UPDATE_FIELDS = {'first_name', 'last_name', 'email', 'phone', 'company_id'}
         for contact in contacts:
             try:
                 # Apply updates
                 for field, value in updates.items():
-                    if hasattr(contact, field):
+                    if field in ALLOWED_UPDATE_FIELDS:
                         setattr(contact, field, value)
                 
                 # Recalculate lead score if relevant fields changed
@@ -1296,7 +1337,7 @@ def bulk_update_contacts():
         
     except Exception as e:
         logger.error(f"Error bulk updating contacts: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/contacts/bulk-delete', methods=['POST'])
@@ -1322,12 +1363,21 @@ def bulk_delete_contacts():
         from models_crm import Contact
         from models import db
         
-        deleted_count = Contact.query.filter(
+        contacts_to_delete = db.session.query(Contact).filter(
             Contact.id.in_(contact_ids),
             Contact.workspace_id == workspace_id
-        ).delete(synchronize_session=False)
-        
-        db.session.commit()
+        ).all()
+
+        deleted_count = 0
+        for contact in contacts_to_delete:
+            db.session.delete(contact)
+            deleted_count += 1
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         
         return jsonify({
             'deleted': deleted_count,
@@ -1336,7 +1386,7 @@ def bulk_delete_contacts():
         
     except Exception as e:
         logger.error(f"Error bulk deleting contacts: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 # ============================================================================
@@ -1426,7 +1476,7 @@ def save_contacts_column_preferences():
         
     except Exception as e:
         logger.error(f"Error saving column preferences: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 @contacts_bp.route('/api/v1/user-preferences/contacts-column-widths', methods=['GET'])
@@ -1505,4 +1555,4 @@ def save_contacts_column_widths():
         
     except Exception as e:
         logger.error(f"Error saving column widths: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal Server Error'}), 500

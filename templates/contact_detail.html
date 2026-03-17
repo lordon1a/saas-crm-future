@@ -570,6 +570,17 @@
                                     <div class="timeline-wrapper" id="activity-items">
                                         <div class="text-sm text-gray-500 text-center py-8">Yükleniyor...</div>
                                     </div>
+                                    <div class="pt-4 text-center">
+                                        <button
+                                            id="timeline-load-more-btn"
+                                            type="button"
+                                            onclick="loadMoreTimeline()"
+                                            class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                                            style="display: none;"
+                                        >
+                                            Daha Fazla Yükle
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1062,6 +1073,14 @@
             currentTab: 'activity',
             historyFilter: 'all',
             timeline: [],
+            timelineLastBatch: [],
+            timelineMeta: {
+                currentPage: 1,
+                totalPages: 1,
+                hasNext: false
+            },
+            timelinePerPage: 20,
+            timelineLoading: false,
             deals: [],
             firstName: {{ (contact.first_name or '')|tojson }},
             lastName: {{ (contact.last_name or '')|tojson }},
@@ -1726,14 +1745,41 @@
         // ============================================================================
         // TIMELINE LOADING & RENDERING
         // ============================================================================
-        async function initTimeline() {
+        function updateTimelineLoadMoreButton() {
+            const loadMoreBtn = document.getElementById('timeline-load-more-btn');
+            if (!loadMoreBtn) return;
+
+            if (STATE.timelineMeta.hasNext) {
+                loadMoreBtn.style.display = 'inline-flex';
+                loadMoreBtn.disabled = !!STATE.timelineLoading;
+                loadMoreBtn.textContent = STATE.timelineLoading ? 'Yükleniyor...' : 'Daha Fazla Yükle';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
+
+        async function fetchTimelinePage(page = 1, append = false) {
             try {
-                const response = await fetch(`/api/contacts/${STATE.contactId}/timeline`);
+                const response = await fetch(`/api/contacts/${STATE.contactId}/timeline?page=${page}&per_page=${STATE.timelinePerPage}`);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    STATE.timeline = data.timeline || [];
-                    renderCurrentTabContent();
+                    const incoming = data.data || [];
+                    const meta = data.meta || {};
+
+                    STATE.timelineLastBatch = incoming;
+                    if (append) {
+                        STATE.timeline = STATE.timeline.concat(incoming);
+                    } else {
+                        STATE.timeline = incoming;
+                    }
+
+                    STATE.timelineMeta.currentPage = Number(meta.current_page || page);
+                    STATE.timelineMeta.totalPages = Number(meta.total_pages || 1);
+                    STATE.timelineMeta.hasNext = Boolean(meta.has_next);
+
+                    renderCurrentTabContent(append);
+                    updateTimelineLoadMoreButton();
                 } else {
                     throw new Error('Timeline yüklenemedi');
                 }
@@ -1747,20 +1793,41 @@
                 if (notesContainer) {
                     notesContainer.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Notlar yüklenemedi</div>';
                 }
+                STATE.timelineMeta.hasNext = false;
+                updateTimelineLoadMoreButton();
             }
         }
 
-        function renderCurrentTabContent() {
+        async function initTimeline() {
+            STATE.timelineLoading = false;
+            await fetchTimelinePage(1, false);
+        }
+
+        async function loadMoreTimeline() {
+            if (!STATE.timelineMeta.hasNext || STATE.timelineLoading) return;
+
+            STATE.timelineLoading = true;
+            updateTimelineLoadMoreButton();
+            try {
+                await fetchTimelinePage(STATE.timelineMeta.currentPage + 1, true);
+            } finally {
+                STATE.timelineLoading = false;
+                updateTimelineLoadMoreButton();
+            }
+        }
+
+        function renderCurrentTabContent(append = false) {
             if (STATE.currentTab === 'notes') {
                 renderNotesList();
                 return;
             }
-            renderActivityTimeline();
+            renderActivityTimeline(append);
         }
 
-        function renderActivityTimeline() {
+        function renderActivityTimeline(append = false) {
             const container = document.getElementById('activity-items');
-            const historyItems = [...STATE.timeline].sort((a, b) => {
+            const sourceItems = append ? STATE.timelineLastBatch : STATE.timeline;
+            const historyItems = [...sourceItems].sort((a, b) => {
                 const da = parseServerDate(a.created_at);
                 const db = parseServerDate(b.created_at);
                 return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
@@ -1783,39 +1850,73 @@
                 return true;
             });
 
-            if (filteredItems.length === 0) {
+            if (!append && filteredItems.length === 0) {
                 container.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Henüz kayıt yok</div>';
                 return;
             }
-            
-            container.innerHTML = filteredItems.map(item => {
+
+            if (append && filteredItems.length === 0) {
+                return;
+            }
+
+            if (!append) {
+                container.textContent = '';
+            }
+            filteredItems.forEach(item => {
                 const createdText = formatDate(item.created_at);
                 const userText = `${item.user_name || 'Sistem'} (Web Uygulaması)`;
 
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+
                 if (item.type === 'system' || item.action_type === 'field_update') {
-                    return `
-                        <div class="timeline-item">
-                            <div class="timeline-marker small-marker"></div>
-                            <div class="timeline-content transparent-content">
-                                <p class="content-text text-sm text-gray-700">${item.description || 'Sistem güncellemesi'}</p>
-                                <span class="meta-text">${createdText} - ${userText}</span>
-                            </div>
-                        </div>
-                    `;
+                    const marker = document.createElement('div');
+                    marker.className = 'timeline-marker small-marker';
+
+                    const content = document.createElement('div');
+                    content.className = 'timeline-content transparent-content';
+
+                    const text = document.createElement('p');
+                    text.className = 'content-text text-sm text-gray-700';
+                    text.textContent = item.description || 'Sistem güncellemesi';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'meta-text';
+                    meta.textContent = `${createdText} - ${userText}`;
+
+                    content.appendChild(text);
+                    content.appendChild(meta);
+                    timelineItem.appendChild(marker);
+                    timelineItem.appendChild(content);
+                    container.appendChild(timelineItem);
+                    return;
                 }
 
                 if (item.type === 'note') {
-                    return `
-                        <div class="timeline-item">
-                            <div class="timeline-marker large-marker">
-                                <i class="fas fa-sticky-note text-yellow-600 text-xs"></i>
-                            </div>
-                            <div class="timeline-content card-content yellow-card">
-                                <div class="text-sm text-gray-800 whitespace-pre-wrap">${item.content || ''}</div>
-                                <span class="meta-text">${createdText} - ${userText}</span>
-                            </div>
-                        </div>
-                    `;
+                    const marker = document.createElement('div');
+                    marker.className = 'timeline-marker large-marker';
+
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-sticky-note text-yellow-600 text-xs';
+                    marker.appendChild(icon);
+
+                    const content = document.createElement('div');
+                    content.className = 'timeline-content card-content yellow-card';
+
+                    const noteText = document.createElement('div');
+                    noteText.className = 'text-sm text-gray-800 whitespace-pre-wrap';
+                    noteText.textContent = item.content || '';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'meta-text';
+                    meta.textContent = `${createdText} - ${userText}`;
+
+                    content.appendChild(noteText);
+                    content.appendChild(meta);
+                    timelineItem.appendChild(marker);
+                    timelineItem.appendChild(content);
+                    container.appendChild(timelineItem);
+                    return;
                 }
 
                 const actionType = item.action_type || 'activity';
@@ -1825,19 +1926,37 @@
                 if (actionType === 'email') iconClass = 'fa-envelope text-indigo-500';
                 if (actionType === 'meeting') iconClass = 'fa-calendar text-purple-500';
 
-                return `
-                    <div class="timeline-item">
-                        <div class="timeline-marker large-marker">
-                            <i class="fas ${iconClass} text-xs"></i>
-                        </div>
-                        <div class="timeline-content card-content white-card">
-                            <div class="text-sm text-gray-700 font-semibold">${item.description || 'Etkinlik'}</div>
-                            ${item.metadata && item.metadata.amount ? `<span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">${item.metadata.amount}</span>` : ''}
-                            <span class="meta-text">${createdText} - ${userText}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                const marker = document.createElement('div');
+                marker.className = 'timeline-marker large-marker';
+
+                const icon = document.createElement('i');
+                icon.className = `fas ${iconClass} text-xs`;
+                marker.appendChild(icon);
+
+                const content = document.createElement('div');
+                content.className = 'timeline-content card-content white-card';
+
+                const title = document.createElement('div');
+                title.className = 'text-sm text-gray-700 font-semibold';
+                title.textContent = item.description || 'Etkinlik';
+                content.appendChild(title);
+
+                if (item.metadata && item.metadata.amount) {
+                    const amount = document.createElement('span');
+                    amount.className = 'ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs';
+                    amount.textContent = String(item.metadata.amount);
+                    content.appendChild(amount);
+                }
+
+                const meta = document.createElement('span');
+                meta.className = 'meta-text';
+                meta.textContent = `${createdText} - ${userText}`;
+                content.appendChild(meta);
+
+                timelineItem.appendChild(marker);
+                timelineItem.appendChild(content);
+                container.appendChild(timelineItem);
+            });
         }
 
         function setHistoryFilter(filter) {
@@ -1861,25 +1980,52 @@
                 return;
             }
 
-            container.innerHTML = notes.map(item => {
-                return `
-                    <div class="relative">
-                        <div class="absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
-                            <i class="fas fa-sticky-note text-yellow-600 text-xs"></i>
-                        </div>
-                        <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-md shadow-sm">
-                            <div class="flex items-start justify-between mb-2">
-                                <div class="text-xs text-gray-500">
-                                    <span class="font-semibold text-gray-700">${item.user_name || 'Kullanıcı'}</span>
-                                    <span class="mx-1">•</span>
-                                    <span>${formatDate(item.created_at)}</span>
-                                </div>
-                            </div>
-                            <div class="text-sm text-gray-800 whitespace-pre-wrap">${item.content}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            container.textContent = '';
+            notes.forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+
+                const marker = document.createElement('div');
+                marker.className = 'absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-sticky-note text-yellow-600 text-xs';
+                marker.appendChild(icon);
+
+                const card = document.createElement('div');
+                card.className = 'bg-yellow-50 border border-yellow-200 p-3 rounded-md shadow-sm';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-start justify-between mb-2';
+
+                const meta = document.createElement('div');
+                meta.className = 'text-xs text-gray-500';
+
+                const user = document.createElement('span');
+                user.className = 'font-semibold text-gray-700';
+                user.textContent = item.user_name || 'Kullanıcı';
+
+                const sep = document.createElement('span');
+                sep.className = 'mx-1';
+                sep.textContent = '•';
+
+                const date = document.createElement('span');
+                date.textContent = formatDate(item.created_at);
+
+                meta.appendChild(user);
+                meta.appendChild(sep);
+                meta.appendChild(date);
+                header.appendChild(meta);
+
+                const content = document.createElement('div');
+                content.className = 'text-sm text-gray-800 whitespace-pre-wrap';
+                content.textContent = item.content || '';
+
+                card.appendChild(header);
+                card.appendChild(content);
+                wrapper.appendChild(marker);
+                wrapper.appendChild(card);
+                container.appendChild(wrapper);
+            });
         }
 
         function toggleContactDetailHistory(forceOpen = null) {
@@ -1957,10 +2103,10 @@
             } else {
                 dealsList.innerHTML = STATE.deals.map(deal => `
                     <div class="p-2 bg-gray-50 rounded border border-gray-200">
-                        <div class="text-xs font-semibold text-gray-900 mb-1">${deal.title}</div>
+                        <div class="text-xs font-semibold text-gray-900 mb-1">${deal.name || '-'}</div>
                         <div class="flex items-center justify-between text-xs">
-                            <span class="text-gray-600">${deal.amount || '0'} TRY</span>
-                            <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded">${deal.stage || 'Yeni'}</span>
+                            <span class="text-gray-600">${deal.value || '0'} TRY</span>
+                            <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded">${(deal.stage && deal.stage.name) ? deal.stage.name : (deal.stage || 'Yeni')}</span>
                         </div>
                     </div>
                 `).join('');
