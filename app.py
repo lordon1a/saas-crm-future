@@ -224,7 +224,11 @@ def tasks_page():
     return render_template('tasks.html')
 
 
-
+@app.route('/analytics-dashboard')
+@login_required
+def analytics_dashboard():
+    return render_template('analytics_dashboard.html')
+    return render_template('tasks.html')
 
 
 with app.app_context():

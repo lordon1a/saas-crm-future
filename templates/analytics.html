@@ -108,9 +108,10 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Gelir Trendi</h2>
+                        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Konuşma & Mesaj Trendi</h2>
                         <div class="flex items-center gap-4">
-                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span><span class="text-[10px] font-bold text-slate-500 uppercase">Gelir</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span><span class="text-[10px] font-bold text-slate-500 uppercase">Konuşmalar</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span class="text-[10px] font-bold text-slate-500 uppercase">Mesajlar</span></div>
                         </div>
                     </div>
                     <div class="relative h-64">
@@ -119,9 +120,9 @@
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">Kazanma/Kaybetme Oranı</h2>
+                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">Etiket Dağılımı</h2>
                     <div class="relative h-64">
-                        <canvas id="winLossChart"></canvas>
+                        <canvas id="tagChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -129,14 +130,14 @@
             <!-- Charts Row 2 -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">Pipeline Dağılımı</h2>
+                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">Müşteri Büyümesi</h2>
                     <div class="relative h-64">
-                        <canvas id="pipelineChart"></canvas>
+                        <canvas id="customerChart"></canvas>
                     </div>
                 </div>
 
                 <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">En İyi Performans Gösterenler</h2>
+                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">Temsilci Performansı</h2>
                     <div id="agentTable" class="overflow-x-auto">
                         <!-- Dynamic -->
                     </div>
@@ -146,8 +147,15 @@
     </main>
 
     <script>
-        const API = '/api/analytics';
-        let trendChart, winLossChart, pipelineChart;
+        const API = '/api';
+        let trendChart, tagChart, customerChart;
+
+        const TAG_LABELS = {
+            yeni_siparis: { label: 'Yeni Sipariş', color: '#fbbf24' },
+            kargo_sorunu: { label: 'Kargo Sorunu', color: '#a78bfa' },
+            odeme_bekliyor: { label: 'Ödeme Bekliyor', color: '#f87171' },
+            kargolandi: { label: 'Kargolandı', color: '#34d399' },
+        };
 
         function kpiCardHTML(icon, label, value, sub, subClass, iconColor) {
             return `
@@ -163,19 +171,31 @@
                 </div>`;
         }
 
+        function weekTrend(current, last) {
+            if (last === 0) return ['', 'text-slate-400'];
+            const pct = Math.round(((current - last) / last) * 100);
+            if (pct > 0) return [`+${pct}%`, 'text-emerald-500'];
+            if (pct < 0) return [`${pct}%`, 'text-red-500'];
+            return ['—', 'text-slate-400'];
+        }
+
         function renderKPIs(kpis) {
+            const [wTrendText, wTrendClass] = weekTrend(kpis.this_week_conversations, kpis.last_week_conversations);
             const cards = [
-                kpiCardHTML('fas fa-dollar-sign', 'Toplam Gelir', kpis.total_revenue || 0, null, '', 'text-emerald-600'),
-                kpiCardHTML('fas fa-chart-line', 'Açık Fırsatlar', kpis.open_opportunities || 0, null, '', 'text-brand-600'),
-                kpiCardHTML('fas fa-users', 'Toplam Kişi', kpis.total_contacts || 0, null, '', 'text-indigo-500'),
-                kpiCardHTML('fas fa-tasks', 'Tamamlanan Görevler', kpis.completed_tasks || 0, null, '', 'text-sky-500'),
+                kpiCardHTML('fas fa-comments', 'Toplam Konuşma', kpis.total_conversations, wTrendText, wTrendClass, 'text-brand-600'),
+                kpiCardHTML('fas fa-envelope-open', 'Açık Konuşma', kpis.open_conversations, kpis.open_conversations > 0 ? 'Aktif' : null, 'text-emerald-500', 'text-sky-500'),
+                kpiCardHTML('fas fa-check-double', 'Kapatılan', kpis.closed_conversations, null, '', 'text-emerald-500'),
+                kpiCardHTML('fas fa-users', 'Müşteriler', kpis.total_customers, null, '', 'text-indigo-500'),
+                kpiCardHTML('fas fa-paper-plane', 'Toplam Mesaj', kpis.total_messages, null, '', 'text-brand-600'),
+                kpiCardHTML('fas fa-clock', 'Bekleyen', kpis.pending_conversations, null, '', 'text-amber-500'),
+                kpiCardHTML('fas fa-calendar-day', "Bugün", kpis.today_conversations, kpis.today_conversations > 0 ? `+${kpis.today_conversations}` : null, 'text-emerald-500', 'text-rose-500'),
+                kpiCardHTML('fas fa-bolt', "Bugünkü Mesaj", kpis.today_messages, null, '', 'text-teal-500'),
             ];
             document.getElementById('kpiGrid').innerHTML = cards.join('');
         }
 
         function renderTrendChart(trend) {
-            if (!trend || !trend.length) return;
-            const labels = trend.map(d => d.period);
+            const labels = trend.map(d => d.date);
             const ctx = document.getElementById('trendChart').getContext('2d');
             if (trendChart) trendChart.destroy();
             trendChart = new Chart(ctx, {
@@ -183,119 +203,88 @@
                 data: {
                     labels,
                     datasets: [
-                        { 
-                            label: 'Gelir', 
-                            data: trend.map(d => d.revenue), 
-                            borderColor: '#8b5cf6', 
-                            backgroundColor: 'rgba(139,92,246,.05)', 
-                            fill: true, 
-                            tension: 0.4, 
-                            pointRadius: 3,
-                            pointBackgroundColor: '#8b5cf6',
-                            borderWidth: 2 
-                        }
+                        { label: 'Konuşmalar', data: trend.map(d => d.conversations), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.05)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+                        { label: 'Mesajlar', data: trend.map(d => d.messages), borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.05)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2, yAxisID: 'y1' }
                     ]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false }, 
-                        tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } 
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } },
                     scales: {
                         x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' } },
-                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' }, beginAtZero: true }
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' }, beginAtZero: true },
+                        y1: { position: 'right', grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' }, beginAtZero: true }
                     }
                 }
             });
         }
 
-        function renderWinLossChart(data) {
-            if (!data) return;
-            const ctx = document.getElementById('winLossChart').getContext('2d');
-            if (winLossChart) winLossChart.destroy();
-            winLossChart = new Chart(ctx, {
+        function renderTagChart(tags) {
+            const ctx = document.getElementById('tagChart').getContext('2d');
+            if (tagChart) tagChart.destroy();
+            tagChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Kazanılan', 'Kaybedilen'],
+                    labels: tags.map(t => (TAG_LABELS[t.tag] || {}).label || t.tag),
                     datasets: [{
-                        data: [data.won_count || 0, data.lost_count || 0],
-                        backgroundColor: ['#34d399', '#f87171'],
+                        data: tags.map(t => t.count),
+                        backgroundColor: tags.map(t => (TAG_LABELS[t.tag] || {}).color || '#94a3b8'),
                         borderWidth: 0,
                         hoverOffset: 10
                     }]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     cutout: '70%',
                     plugins: {
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { 
-                                font: { size: 9, weight: 'bold' }, 
-                                color: '#64748b', 
-                                padding: 15, 
-                                usePointStyle: true 
-                            } 
-                        },
+                        legend: { position: 'bottom', labels: { font: { size: 9, weight: 'bold' }, color: '#64748b', padding: 15, usePointStyle: true } },
                         tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 }
                     }
                 }
             });
         }
 
-        function renderPipelineChart(pipeline) {
-            if (!pipeline || !pipeline.length) return;
-            const ctx = document.getElementById('pipelineChart').getContext('2d');
-            if (pipelineChart) pipelineChart.destroy();
-            pipelineChart = new Chart(ctx, {
+        function renderCustomerChart(customerTrend) {
+            const ctx = document.getElementById('customerChart').getContext('2d');
+            if (customerChart) customerChart.destroy();
+            customerChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: pipeline.map(d => d.stage),
-                    datasets: [{ 
-                        label: 'Toplam Değer', 
-                        data: pipeline.map(d => d.total_value), 
-                        backgroundColor: '#8b5cf6', 
-                        borderRadius: 4 
-                    }]
+                    labels: customerTrend.map(d => d.date),
+                    datasets: [{ label: 'Yeni Müşteri', data: customerTrend.map(d => d.count), backgroundColor: '#8b5cf6', borderRadius: 4 }]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false }, 
-                        tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } 
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' } },
-                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' }, beginAtZero: true }
+                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8', maxTicksLimit: 7 } },
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8', stepSize: 1 }, beginAtZero: true }
                     }
                 }
             });
         }
 
-        function renderTopPerformers(performers) {
+        function renderAgentTable(agents) {
             const el = document.getElementById('agentTable');
-            if (!performers || !performers.length) { 
-                el.innerHTML = `<p class="text-center text-slate-400 py-12 font-bold uppercase text-[10px] tracking-widest">Veri Yok</p>`; 
-                return; 
-            }
-            
-            const rows = performers.map(performer => {
+            if (!agents.length) { el.innerHTML = `<p class="text-center text-slate-400 py-12 font-bold uppercase text-[10px] tracking-widest">Veri Yok</p>`; return; }
+            const rows = agents.map(agent => {
+                const ratio = agent.total ? Math.round((agent.closed / agent.total) * 100) : 0;
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="py-4 px-2">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs">${performer.user_name.charAt(0).toUpperCase()}</div>
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-800">${performer.user_name}</p>
-                                </div>
+                                <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs">${agent.name.charAt(0).toUpperCase()}</div>
+                                <div><p class="text-sm font-semibold text-slate-800">${agent.name}</p><p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">${agent.role}</p></div>
                             </div>
                         </td>
-                        <td class="py-4 px-2 text-center text-sm font-bold text-slate-600">${performer.deal_count || 0}</td>
-                        <td class="py-4 px-2 text-center text-sm font-bold text-emerald-600">${(performer.total_value || 0).toLocaleString('tr-TR')} ₺</td>
+                        <td class="py-4 px-2 text-center text-sm font-bold text-slate-600">${agent.total}</td>
+                        <td class="py-4 px-2 text-center text-sm font-bold text-emerald-600">${agent.closed}</td>
+                        <td class="py-4 px-2 text-center">
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${ratio >= 70 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">${ratio}%</span>
+                        </td>
+                        <td class="py-4 px-2">
+                            <div class="w-24 bg-slate-100 h-1 rounded-full"><div class="bg-brand-500 h-1 rounded-full" style="width:${ratio}%"></div></div>
+                        </td>
                     </tr>`;
             }).join('');
 
@@ -303,9 +292,11 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="border-b border-slate-100">
-                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2">Kullanıcı</th>
-                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2 text-center">Fırsat Sayısı</th>
-                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2 text-center">Toplam Değer</th>
+                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2">Temsilci</th>
+                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2 text-center">Atanan</th>
+                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2 text-center">Kapatılan</th>
+                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2 text-center">Oran</th>
+                            <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-3 px-2">Performans</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">${rows}</tbody>
@@ -314,33 +305,14 @@
 
         async function loadAnalytics() {
             try {
-                // Load KPIs
-                const kpisRes = await fetch(`${API}/kpis`);
-                const kpis = await kpisRes.json();
-                renderKPIs(kpis);
-
-                // Load Revenue Trend
-                const trendRes = await fetch(`${API}/revenue-trend?days=30`);
-                const trend = await trendRes.json();
-                renderTrendChart(trend);
-
-                // Load Win/Loss Ratio
-                const winLossRes = await fetch(`${API}/win-loss-ratio`);
-                const winLoss = await winLossRes.json();
-                renderWinLossChart(winLoss);
-
-                // Load Pipeline Distribution
-                const pipelineRes = await fetch(`${API}/pipeline-distribution`);
-                const pipeline = await pipelineRes.json();
-                renderPipelineChart(pipeline);
-
-                // Load Top Performers
-                const performersRes = await fetch(`${API}/top-performers?limit=5`);
-                const performers = await performersRes.json();
-                renderTopPerformers(performers);
-            } catch (e) { 
-                console.error('Analytics load error', e); 
-            }
+                const res = await fetch(`${API}/analytics`);
+                const data = await res.json();
+                renderKPIs(data.kpis);
+                renderTrendChart(data.trend);
+                renderTagChart(data.tag_distribution);
+                renderCustomerChart(data.customer_trend);
+                renderAgentTable(data.agent_stats);
+            } catch (e) { console.error('Analytics load error', e); }
         }
 
         document.addEventListener('DOMContentLoaded', loadAnalytics);
