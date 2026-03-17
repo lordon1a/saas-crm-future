@@ -1257,6 +1257,7 @@
                     draggedHeader = this;
                     this.style.opacity = '0.4';
                     e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', this.innerHTML);
                 });
                 
                 header.addEventListener('dragover', function(e) {
@@ -1268,46 +1269,84 @@
                     e.dataTransfer.dropEffect = 'move';
                     
                     if (this !== draggedHeader && this.draggable) {
+                        // Visual feedback only - don't re-render
                         const rect = this.getBoundingClientRect();
                         const midpoint = rect.left + rect.width / 2;
                         
-                        const draggedCol = draggedHeader.dataset.column;
-                        const targetCol = this.dataset.column;
+                        // Remove any existing drop indicators
+                        document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
                         
-                        if (!draggedCol || !targetCol || draggedCol === 'name' || targetCol === 'name') return;
+                        // Add drop indicator
+                        const indicator = document.createElement('div');
+                        indicator.className = 'drop-indicator absolute top-0 bottom-0 w-1 bg-brand-500 z-50';
                         
-                        const draggedIndex = visibleColumns.indexOf(draggedCol);
-                        const targetIndex = visibleColumns.indexOf(targetCol);
-                        
-                        if (draggedIndex !== -1 && targetIndex !== -1) {
-                            visibleColumns.splice(draggedIndex, 1);
-                            
-                            if (e.clientX < midpoint) {
-                                visibleColumns.splice(targetIndex, 0, draggedCol);
-                            } else {
-                                visibleColumns.splice(targetIndex + 1, 0, draggedCol);
-                            }
-                            
-                            renderContacts(allContacts);
+                        if (e.clientX < midpoint) {
+                            indicator.style.left = '-2px';
+                            this.style.position = 'relative';
+                            this.appendChild(indicator);
+                        } else {
+                            indicator.style.right = '-2px';
+                            this.style.position = 'relative';
+                            this.appendChild(indicator);
                         }
                     }
                     
                     return false;
                 });
                 
+                header.addEventListener('dragleave', function(e) {
+                    // Remove drop indicators when leaving
+                    this.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+                });
+                
                 header.addEventListener('drop', function(e) {
                     if (e.stopPropagation) {
                         e.stopPropagation();
                     }
+                    
+                    if (!draggedHeader || draggedHeader === this) return false;
+                    
+                    const draggedCol = draggedHeader.dataset.column;
+                    const targetCol = this.dataset.column;
+                    
+                    if (!draggedCol || !targetCol || draggedCol === 'name' || targetCol === 'name') return false;
+                    
+                    const draggedIndex = visibleColumns.indexOf(draggedCol);
+                    const targetIndex = visibleColumns.indexOf(targetCol);
+                    
+                    if (draggedIndex !== -1 && targetIndex !== -1) {
+                        // Remove from old position
+                        visibleColumns.splice(draggedIndex, 1);
+                        
+                        // Insert at new position
+                        const rect = this.getBoundingClientRect();
+                        const midpoint = rect.left + rect.width / 2;
+                        
+                        if (e.clientX < midpoint) {
+                            visibleColumns.splice(targetIndex, 0, draggedCol);
+                        } else {
+                            visibleColumns.splice(targetIndex + 1, 0, draggedCol);
+                        }
+                    }
+                    
                     return false;
                 });
                 
                 header.addEventListener('dragend', function(e) {
                     this.style.opacity = '1';
-                    draggedHeader = null;
                     
-                    // Save column order
-                    saveColumnPreferences();
+                    // Remove all drop indicators
+                    document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+                    
+                    if (draggedHeader) {
+                        // Re-render table with new column order
+                        renderContacts(allContacts);
+                        
+                        // Save column order
+                        saveColumnPreferences();
+                    }
+                    
+                    draggedHeader = null;
                 });
             });
         }
