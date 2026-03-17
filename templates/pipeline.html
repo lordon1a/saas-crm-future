@@ -470,16 +470,16 @@
                         </div>
                         <div class="flex-1 overflow-y-auto p-3 space-y-2.5 drop-zone" 
                              id="stage-${stage.id}" 
-                             data-stage-id="${stage.id}"
-                             ondragover="handleDragOver(event)" 
-                             ondragleave="handleDragLeave(event)" 
-                             ondrop="handleDrop(event)">
+                             data-stage-id="${stage.id}">
                             ${stageDeals.length > 0 ? stageDeals.map(deal => renderDealCard(deal)).join('') : '<div class="flex flex-col items-center justify-center py-12 text-center"><div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3"><i class="fas fa-inbox text-slate-300 text-xl"></i></div><p class="text-xs text-slate-400">No deals in this stage</p></div>'}
                         </div>
                     </div>
                 `;
                 container.appendChild(stageEl);
             });
+            
+            // Setup event listeners after rendering
+            setupDragAndDropListeners();
         }
 
         function renderDealCard(deal) {
@@ -1210,14 +1210,28 @@
         let originalParentElement = null;
         let originalNextSibling = null;
 
+        // Setup event listeners using event delegation
+        function setupDragAndDropListeners() {
+            // Setup drag listeners for all deal cards
+            document.querySelectorAll('.deal-card').forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dblclick', function() {
+                    const dealId = parseInt(this.dataset.dealId);
+                    showDealDetails(dealId);
+                });
+            });
+
+            // Setup drop zone listeners
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('dragleave', handleDragLeave);
+                zone.addEventListener('drop', handleDrop);
+            });
+        }
+
         // FAZ 2: DRAGGABLE ELEMENTS - dragstart event
         function handleDragStart(event) {
-            // Prevent drag if clicking on detail area
-            if (event.target.closest('[onclick*="showDealDetails"]') && event.target !== event.currentTarget) {
-                event.preventDefault();
-                return;
-            }
-
             draggedDealElement = event.currentTarget;
             draggedDealId = parseInt(draggedDealElement.dataset.dealId);
             originalStageId = parseInt(draggedDealElement.dataset.stageId);
