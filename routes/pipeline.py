@@ -346,12 +346,16 @@ def move_deal_stage(deal_id):
             user_id
         )
 
-        CollaborationService.notify_followers_on_entity_change(
-            workspace_id=workspace_id,
-            entity_type='deal',
-            entity_id=deal.id,
-            message=f'Deal asamasi degisti: {deal.name} -> {deal.stage.name}',
-        )
+        # Notify followers asynchronously (don't block response)
+        try:
+            CollaborationService.notify_followers_on_entity_change(
+                workspace_id=workspace_id,
+                entity_type='deal',
+                entity_id=deal.id,
+                message=f'Deal asamasi degisti: {deal.name} -> {deal.stage.name}',
+            )
+        except Exception as notify_error:
+            logger.warning(f"Failed to notify followers: {notify_error}")
         
         return jsonify({
             'id': deal.id,

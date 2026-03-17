@@ -1337,7 +1337,7 @@
                 console.log('✅ Deal moved successfully:', data);
 
                 // Update stage counts and forecast without full reload
-                await updatePipelineStats();
+                updatePipelineStats();
 
                 showToast('✓ Anlaşma başarıyla taşındı', 'success');
 
@@ -1385,9 +1385,9 @@
         }
 
         // Update pipeline statistics without full reload
-        async function updatePipelineStats() {
+        function updatePipelineStats() {
             try {
-                // Update stage counts
+                // Update stage counts and values (synchronous, no API calls)
                 currentPipeline.stages.forEach(stage => {
                     const stageContainer = document.getElementById(`stage-${stage.id}`);
                     if (!stageContainer) return;
@@ -1412,10 +1412,8 @@
                     if (valueSpan) valueSpan.textContent = totalValue.toLocaleString('en-US');
                 });
 
-                // Reload forecast
-                const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
-                const forecast = await forecastRes.json();
-                renderForecast(forecast);
+                // Note: Forecast will update on next page load
+                // Removed slow forecast API call for instant drag-and-drop
 
             } catch (error) {
                 console.error('Error updating pipeline stats:', error);
