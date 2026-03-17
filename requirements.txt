@@ -17,6 +17,8 @@ urllib3==1.26.18
 # Production WSGI Server
 gunicorn==21.2.0
 gevent==24.2.1
+Flask-SocketIO==5.3.6
+gevent-websocket==0.10.1
 
 # PostgreSQL Database Driver
 psycopg2-binary==2.9.9

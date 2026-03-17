@@ -12,12 +12,13 @@ let currentChannel = 'all';
 let currentInboxItemType = 'whatsapp';
 let currentSendChannel = 'whatsapp';
 let currentLastMessageId = 0;
+let currentWorkspaceId = null;
+let socketClient = null;
+let currentSocketContactId = null;
 let quickReplies = [];
 let emailTemplates = [];
 let notifications = [];
 let searchDebounceTimer = null;
-let messagePollingInterval = null;
-const MESSAGE_POLL_INTERVAL_MS = 5000;
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
 
@@ -279,6 +280,7 @@ function showMessagesSkeleton() {
 }
 
 async function selectConversation(conversationId, customerName, customerPhone, initials, preferredChannel = 'whatsapp') {
+    const previousContactId = currentCustomerId;
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
         el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-white hover:shadow-sm';
     });
@@ -378,12 +380,11 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
     }
 
-    startMessagePolling();
-
     const detail = fullData?.conversation;
     if (detail) {
         const c = detail.customer;
         currentCustomerId = c.id;
+        updateSocketContactSubscription(previousContactId, currentCustomerId);
         document.getElementById('customerName').textContent = c.profile_name || c.phone_number;
         document.getElementById('customerPhone').textContent = c.phone_number;
         document.getElementById('privateNotesInput').value = c.private_notes || '';
@@ -395,11 +396,14 @@ async function selectConversation(conversationId, customerName, customerPhone, i
         loadTeamForDropdown(detail.assigned_to);
         switchProfileTab('summary');
         loadCustomerProfile(c.id);
+    } else {
+        updateSocketContactSubscription(previousContactId, null);
     }
 }
 
 function selectEmailItem(item, initials) {
-    stopMessagePolling();
+    updateSocketContactSubscription(currentCustomerId, null);
+    currentCustomerId = null;
     currentConversationId = item.item_id;
     currentInboxItemType = 'email';
     currentLastMessageId = 0;
@@ -539,47 +543,78 @@ function updateLastMessageCursorFromDOM() {
     currentLastMessageId = maxId;
 }
 
-function stopMessagePolling() {
-    if (messagePollingInterval) {
-        clearInterval(messagePollingInterval);
-        messagePollingInterval = null;
+function updateSocketContactSubscription(previousContactId, nextContactId) {
+    if (!socketClient || !socketClient.connected) {
+        currentSocketContactId = nextContactId || null;
+        return;
     }
+
+    if (previousContactId && String(previousContactId) !== String(nextContactId || '')) {
+        socketClient.emit('leave_contact_room', { contact_id: previousContactId });
+    }
+
+    if (nextContactId && String(previousContactId || '') !== String(nextContactId)) {
+        socketClient.emit('join_contact_room', { contact_id: nextContactId });
+    }
+
+    currentSocketContactId = nextContactId || null;
 }
 
-function startMessagePolling() {
-    stopMessagePolling();
-    messagePollingInterval = setInterval(pollNewMessages, MESSAGE_POLL_INTERVAL_MS);
-}
-
-async function pollNewMessages() {
-    if (!currentConversationId || currentInboxItemType !== 'whatsapp') return;
-
-    const afterId = Number(currentLastMessageId || 0);
-    try {
-        const res = await fetch(`${API_BASE}/conversations/${currentConversationId}/messages?after_id=${afterId}`);
-        if (res.status === 401) {
-            window.location.href = '/login';
-            return;
-        }
-        if (!res.ok) return;
-
-        const newMessages = await res.json();
-        if (!Array.isArray(newMessages) || newMessages.length === 0) return;
-
-        const container = document.getElementById('messagesContainer');
-        if (!container) return;
-
-        const emptyState = container.querySelector('.text-slate-400');
-        if (emptyState) container.innerHTML = '';
-
-        newMessages.forEach((msg) => appendMessageToDOM(msg));
-        updateLastMessageCursorFromDOM();
-        container.scrollTop = container.scrollHeight;
-
+function handleIncomingSocketMessage(payload) {
+    if (!payload || currentInboxItemType !== 'whatsapp') {
         loadConversations();
-    } catch (err) {
-        console.error('Message polling error:', err);
+        return;
     }
+
+    const payloadConversationId = Number(payload.conversation_id || 0);
+    const activeConversationId = Number(currentConversationId || 0);
+    const payloadContactId = Number(payload.contact_id || 0);
+    const activeContactId = Number(currentCustomerId || 0);
+
+    if (
+        payloadConversationId !== activeConversationId &&
+        payloadContactId !== activeContactId
+    ) {
+        loadConversations();
+        return;
+    }
+
+    const container = document.getElementById('messagesContainer');
+    if (!container) return;
+
+    const emptyState = container.querySelector('.text-slate-400');
+    if (emptyState) container.innerHTML = '';
+
+    appendMessageToDOM({
+        id: payload.message_id,
+        sender_type: payload.sender_type || 'customer',
+        message_body: payload.text || '',
+        channel: payload.channel || currentSendChannel || 'whatsapp',
+        created_at: payload.timestamp || new Date().toISOString()
+    });
+
+    loadConversations();
+}
+
+function initRealtimeSocket() {
+    if (socketClient || typeof io === 'undefined') return;
+
+    socketClient = io({ withCredentials: true, transports: ['websocket', 'polling'] });
+
+    socketClient.on('connect', () => {
+        if (currentWorkspaceId) {
+            socketClient.emit('join_workspace', { workspace_id: currentWorkspaceId });
+        }
+        if (currentSocketContactId) {
+            socketClient.emit('join_contact_room', { contact_id: currentSocketContactId });
+        }
+    });
+
+    socketClient.on('new_incoming_message', handleIncomingSocketMessage);
+    socketClient.on('inbox_updated', () => loadConversations());
+    socketClient.on('disconnect', () => {
+        // Socket.IO will auto-reconnect, so no manual retry timer is needed.
+    });
 }
 
 async function sendMessage() {
@@ -1091,8 +1126,13 @@ async function loadUserInfo() {
     try {
         const r = await fetch(`/api/me`);
         const u = await r.json();
+        currentWorkspaceId = u.workspace_id || null;
         if (document.getElementById('topbarName')) document.getElementById('topbarName').textContent = u.name;
         if (document.getElementById('topbarAvatar')) document.getElementById('topbarAvatar').textContent = u.name.charAt(0).toUpperCase();
+        initRealtimeSocket();
+        if (socketClient && socketClient.connected && currentWorkspaceId) {
+            socketClient.emit('join_workspace', { workspace_id: currentWorkspaceId });
+        }
     } catch {}
 }
 
@@ -1111,7 +1151,7 @@ async function loadTeamForDropdown(currentId) {
 
 window.openConversation = (id) => selectConversation(id, '', '', '');
 
-// ─── Polling Interval Tracker ───────────────────────────────────────
+// ─── Background Refresh Tracker ───────────────────────────────────────
 let conversationPollingInterval = null;
 
 loadConversations();
@@ -1122,74 +1162,21 @@ loadNotifications();
 conversationPollingInterval = setInterval(loadConversations, 30000);
 setInterval(loadNotifications, 45000);
 
-// ─── SSE (Server-Sent Events) Listener ───────────────────────────────────────
-let sseSource = null;
-let sseEnabled = false; // Production'da SSE devre dışı (Render free tier sorunu)
-
-function initSSE() {
-    // SSE devre dışı - production'da sorun yaratıyor
-    if (!sseEnabled) {
-        console.log('SSE disabled for production stability');
-        return;
-    }
-    
-    if (sseSource) return;
-    
-    try {
-        sseSource = new EventSource('/api/notifications/stream');
-        
-        sseSource.addEventListener('connected', () => {
-            console.log('SSE connected');
-        });
-        
-        sseSource.addEventListener('new_message', (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                if (data.conversation_id === window.currentConvId) {
-                    selectConversation(data.conversation_id, '', '', '');
-                }
-                loadConversations();
-                showToast('Yeni mesaj geldi: ' + (data.preview || ''), 'info');
-            } catch (err) {
-                console.error('SSE parse error:', err);
-            }
-        });
-        
-        sseSource.onerror = () => {
-            console.warn('SSE connection error');
-            if (sseSource) {
-                sseSource.close();
-                sseSource = null;
-            }
-        };
-    } catch (err) {
-        console.error('SSE initialization failed:', err);
-    }
-}
-
-// SSE devre dışı - manuel yenileme kullanılacak
-// initSSE();
-
-
 // ─── CRITICAL: Cleanup on Page Unload (Worker Starvation Fix) ───────────────
 function cleanupConnections() {
-    console.log('Cleaning up SSE and polling connections...');
+    console.log('Cleaning up socket and background refresh connections...');
     
-    // Close SSE connection
-    if (sseSource) {
-        sseSource.close();
-        sseSource = null;
-        console.log('SSE connection closed');
+    if (socketClient) {
+        socketClient.disconnect();
+        socketClient = null;
+        console.log('Socket connection closed');
     }
     
-    // Clear polling interval
     if (conversationPollingInterval) {
         clearInterval(conversationPollingInterval);
         conversationPollingInterval = null;
-        console.log('Polling interval cleared');
+        console.log('Background refresh interval cleared');
     }
-
-    stopMessagePolling();
 }
 
 // Cleanup when user navigates away (prevents worker starvation)

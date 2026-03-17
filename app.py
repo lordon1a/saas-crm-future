@@ -10,9 +10,12 @@ from urllib.parse import urlparse
 load_dotenv()
 
 from config import Config
+from realtime import socketio
+from flask_socketio import emit, join_room, leave_room
 
 app = Flask(__name__)
 app.config.from_object(Config)
+socketio.init_app(app, cors_allowed_origins='*')
 
 # Production hardening checks
 if Config.ENV == 'production':
@@ -115,6 +118,49 @@ app.register_blueprint(email_hub_bp)
 
 # Login endpoint'ine rate limit uygula
 app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
+
+
+@socketio.on('connect')
+def socket_connect():
+    if not session.get('user_id'):
+        return False
+    return True
+
+
+@socketio.on('join_workspace')
+def socket_join_workspace(payload):
+    if not session.get('user_id'):
+        return
+
+    workspace_id = session.get('workspace_id')
+    target_workspace_id = (payload or {}).get('workspace_id')
+    if str(target_workspace_id) != str(workspace_id):
+        return
+
+    join_room(f'ws_{workspace_id}')
+    emit('socket_connected', {'workspace_id': workspace_id})
+
+
+@socketio.on('join_contact_room')
+def socket_join_contact_room(payload):
+    if not session.get('user_id'):
+        return
+
+    contact_id = (payload or {}).get('contact_id')
+    if not contact_id:
+        return
+    join_room(f'contact_{contact_id}')
+
+
+@socketio.on('leave_contact_room')
+def socket_leave_contact_room(payload):
+    if not session.get('user_id'):
+        return
+
+    contact_id = (payload or {}).get('contact_id')
+    if not contact_id:
+        return
+    leave_room(f'contact_{contact_id}')
 
 def _parse_origin_host(origin_value):
     try:
@@ -509,4 +555,4 @@ with app.app_context():
 
 
 if __name__ == '__main__':
-    app.run(debug=Config.DEBUG, port=int(os.getenv('PORT', 5000)), host='0.0.0.0')
+    socketio.run(app, debug=Config.DEBUG, port=int(os.getenv('PORT', 5000)), host='0.0.0.0')

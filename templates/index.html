@@ -357,51 +357,11 @@
         <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
     </main>
 
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="/static/app.js"></script>
     <script>
-        function initSSE() {
-            if (!window.EventSource) return;
-            const es = new EventSource('/api/notifications/stream');
-            let unread = 0;
-            es.addEventListener('new_message', (e) => {
-                const data = JSON.parse(e.data);
-                if (data.conversation_id && data.conversation_id !== window.currentConvId) {
-                    unread++;
-                    const badge = document.getElementById('notifBadge');
-                    if (badge) {
-                        badge.textContent = unread > 9 ? '9+' : unread;
-                        badge.classList.remove('hidden');
-                    }
-                    showSSEToast(data.customer_name || 'Müşteri', data.preview || 'Yeni mesaj', data.conversation_id);
-                    if (typeof loadConversations === 'function') loadConversations(false);
-                }
-            });
-            es.onerror = () => { setTimeout(initSSE, 5000); es.close(); };
-        }
-
-        function showSSEToast(name, preview, convId) {
-            const el = document.createElement('div');
-            el.className = 'bg-white border border-slate-200 rounded-xl shadow-lg p-4 flex items-start gap-3 cursor-pointer hover:border-brand-300 transition-all max-w-sm animate-bounce-in';
-            el.innerHTML = `
-                <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center font-bold flex-shrink-0">${name.charAt(0).toUpperCase()}</div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-slate-800">${name}</p>
-                    <p class="text-xs text-slate-500 truncate mt-0.5">${preview}</p>
-                </div>
-                <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-slate-600 transition-colors"><i class="fas fa-times text-xs"></i></button>
-            `;
-            el.onclick = (e) => {
-                if (e.target.closest('button')) return;
-                if (typeof openConversation === 'function') openConversation(convId);
-                el.remove();
-            };
-            document.getElementById('toastContainer').appendChild(el);
-            setTimeout(() => el.remove(), 8000);
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
-            initSSE();
-            // Fetch profile for header
+            // Fetch profile role for header
             fetch('/api/settings/profile').then(r => r.json()).then(data => {
                 document.getElementById('topbarName').textContent = data.name;
                 document.getElementById('topbarAvatar').textContent = data.name.charAt(0).toUpperCase();

@@ -2,8 +2,9 @@ import logging
 
 from flask import Blueprint, jsonify, request
 
-from models import Workspace
+from models import Message, Workspace
 from routes.api import push_notification
+from realtime import socketio
 from services.telegram_service import TelegramService
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,28 @@ def telegram_webhook():
 
     if result.get('success') and result.get('conversation_id'):
         try:
+            msg = Message.query.get(result.get('message_id'))
+            realtime_payload = {
+                'message_id': result.get('message_id'),
+                'conversation_id': result.get('conversation_id'),
+                'contact_id': result.get('customer_id'),
+                'text': msg.message_body if msg else '',
+                'sender_type': msg.sender_type if msg else 'customer',
+                'channel': getattr(msg, 'channel', 'telegram') if msg else 'telegram',
+                'timestamp': msg.created_at.isoformat() if msg and msg.created_at else None,
+            }
+
+            socketio.emit('new_incoming_message', realtime_payload, room=f"contact_{result.get('customer_id')}")
+            socketio.emit(
+                'inbox_updated',
+                {
+                    'conversation_id': result.get('conversation_id'),
+                    'contact_id': result.get('customer_id'),
+                    'message_id': result.get('message_id'),
+                },
+                room=f'ws_{workspace_id}',
+            )
+
             push_notification(
                 workspace_id,
                 'new_message',
