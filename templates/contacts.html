@@ -795,15 +795,35 @@
             e.dataTransfer.dropEffect = 'move';
             
             const target = e.target.closest('.column-item');
-            if (target && target !== draggedElement) {
+            if (target && target !== draggedElement && target.draggable) {
                 const rect = target.getBoundingClientRect();
                 const midpoint = rect.top + rect.height / 2;
                 
+                const parent = target.parentNode;
+                
+                // Save checkbox states before moving
+                const checkboxStates = {};
+                parent.querySelectorAll('.column-item').forEach(item => {
+                    const checkbox = item.querySelector('.column-checkbox');
+                    if (checkbox) {
+                        checkboxStates[checkbox.value] = checkbox.checked;
+                    }
+                });
+                
+                // Move element
                 if (e.clientY < midpoint) {
-                    target.parentNode.insertBefore(draggedElement, target);
+                    parent.insertBefore(draggedElement, target);
                 } else {
-                    target.parentNode.insertBefore(draggedElement, target.nextSibling);
+                    parent.insertBefore(draggedElement, target.nextSibling);
                 }
+                
+                // Restore checkbox states
+                parent.querySelectorAll('.column-item').forEach(item => {
+                    const checkbox = item.querySelector('.column-checkbox');
+                    if (checkbox && checkboxStates.hasOwnProperty(checkbox.value)) {
+                        checkbox.checked = checkboxStates[checkbox.value];
+                    }
+                });
             }
             
             return false;
