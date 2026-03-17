@@ -86,10 +86,15 @@ def get_pipeline(pipeline_id):
 @login_required_api
 def get_deals():
     """
-    Get deals with optional filters.
-    Query params: stage_id, owner_id, status, company_id, pipeline_id
+    Get deals with optional filters and pagination.
+    Query params: stage_id, owner_id, status, company_id, pipeline_id, page, per_page
     """
     workspace_id = session.get('workspace_id')
+    
+    # Pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    per_page = min(per_page, 100)  # Max 100 items per page
     
     # Build filters from query params
     filters = {}
@@ -104,10 +109,36 @@ def get_deals():
     if request.args.get('pipeline_id'):
         filters['pipeline_id'] = int(request.args.get('pipeline_id'))
     
-    deals = PipelineService.get_deals(workspace_id, filters)
+    # Build query
+    query = Deal.query.filter_by(workspace_id=workspace_id)
+    
+    # Apply filters
+    if filters.get('stage_id'):
+        query = query.filter_by(stage_id=filters['stage_id'])
+    if filters.get('owner_id'):
+        query = query.filter_by(owner_id=filters['owner_id'])
+    if filters.get('status'):
+        query = query.filter_by(status=filters['status'])
+    if filters.get('company_id'):
+        query = query.filter_by(company_id=filters['company_id'])
+    if filters.get('pipeline_id'):
+        query = query.filter_by(pipeline_id=filters['pipeline_id'])
+    
+    # Eager load relationships
+    from models import db
+    query = query.options(
+        db.joinedload(Deal.company),
+        db.joinedload(Deal.pipeline),
+        db.joinedload(Deal.stage)
+    )
+    
+    # Paginate
+    pagination = query.order_by(Deal.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
     
     result = []
-    for deal in deals:
+    for deal in pagination.items:
         result.append({
             'id': deal.id,
             'name': deal.name,
@@ -133,7 +164,17 @@ def get_deals():
             'closed_at': deal.closed_at.isoformat() if deal.closed_at else None
         })
     
-    return jsonify(result), 200
+    return jsonify({
+        'deals': result,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'has_next': pagination.has_next,
+            'has_prev': pagination.has_prev
+        }
+    }), 200
 
 
 @bp.route('/deals/<int:deal_id>', methods=['GET'])

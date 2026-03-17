@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - İçe Aktar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: { 
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' },
+                        pipedrive: { 500: '#3175D3', 600: '#2563B8' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">g���</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="�?irketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/import" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="İçe Aktar"><i class="fas fa-file-import text-lg"></i></a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+                <main class="flex-1 flex flex-col overflow-hidden">
+<header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardim">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Ipuclari">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800">Araçlar ve uygulamalar / Verileri içeri aktar</h1>
+                    <p class="text-sm text-slate-500 mt-1">İçe aktarmak istediğiniz şeyi seçin</p>
+                </div>
+                <button onclick="window.location.href='/contacts'" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all">
+                    <i class="fas fa-times mr-2"></i> İptal
+                </button>
+            </div>
+        </header>
+
+        <!-- Progress Steps -->
+        <div class="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <div id="step1Indicator" class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm">
+                        <i class="fas fa-check text-xs"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-slate-800">1. Dosya bilgileri</span>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200"></div>
+                <div id="step2Indicator" class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold text-sm">2</div>
+                    <span class="text-sm text-gray-500">2. Dosyayı yükle</span>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200"></div>
+                <div id="step3Indicator" class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold text-sm">3</div>
+                    <span class="text-sm text-gray-500">3. Eşleştir</span>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200"></div>
+                <div id="step4Indicator" class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold text-sm">4</div>
+                    <span class="text-sm text-gray-500">4. Önizleme</span>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200"></div>
+                <div id="step5Indicator" class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold text-sm">5</div>
+                    <span class="text-sm text-gray-500">5. Bitir</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 overflow-auto">
+            <div class="max-w-7xl mx-auto px-8 py-8">
+                <div class="flex gap-8">
+                    <!-- Left Panel: Object Selection -->
+                    <div id="step1Content" class="flex-1 hidden">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4">Uygun olanları seçin</h2>
+                        <div class="space-y-3">
+                            <!-- Kişiler -->
+                            <div onclick="selectObject('contacts')" 
+                                 class="object-card bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all group"
+                                 data-object="contacts">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-user text-blue-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-base font-bold text-slate-800">Kişiler <i class="fas fa-check-circle text-emerald-500 ml-2 hidden check-icon"></i></h3>
+                                        </div>
+                                        <p class="text-sm text-slate-500 mt-1">Kişiler, ilişkili kuruluşunuz hihbat kişileridir.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Organizasyonlar -->
+                            <div onclick="selectObject('companies')" 
+                                 class="object-card bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all group"
+                                 data-object="companies">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-building text-purple-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-base font-bold text-slate-800">Organizasyonlar <i class="fas fa-check-circle text-emerald-500 ml-2 hidden check-icon"></i></h3>
+                                        </div>
+                                        <p class="text-sm text-slate-500 mt-1">Kuruluş, şirketler veya belirli bir ticari grubun içeren kişi listesidir.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Müşteri adayları -->
+                            <div onclick="selectObject('leads')" 
+                                 class="object-card bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all group"
+                                 data-object="leads">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-star text-yellow-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-base font-bold text-slate-800">Müşteri adayları <i class="fas fa-check-circle text-emerald-500 ml-2 hidden check-icon"></i></h3>
+                                        <p class="text-sm text-slate-500 mt-1">Müşteri adayları, henüz değerlendirilmediğiniz, fakat takip etmek istediğiniz potansiyel müşterilerdir.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Anlaşmalar -->
+                            <div onclick="selectObject('deals')" 
+                                 class="object-card bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all group"
+                                 data-object="deals">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-handshake text-green-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-base font-bold text-slate-800">Anlaşmalar <i class="fas fa-check-circle text-emerald-500 ml-2 hidden check-icon"></i></h3>
+                                        <p class="text-sm text-slate-500 mt-1">Bir anlaşma belirli gelir, geçerlilik tarihi ve potansiyel müşterilerle ilişkilendirilmiş bir satış fırsatıdır.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Etkinlikler -->
+                            <div onclick="selectObject('activities')" 
+                                 class="object-card bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all group"
+                                 data-object="activities">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-calendar text-orange-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-base font-bold text-slate-800">Etkinlikler <i class="fas fa-check-circle text-emerald-500 ml-2 hidden check-icon"></i></h3>
+                                        <p class="text-sm text-slate-500 mt-1">Etkinlikler, müşteri adaylarınız, anlaşmalarınız, kişiler ve diğer etkinliklerle bağlantılı toplanmalar, aramalar ve diğer etkinliklerdir.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ürün kataloğu -->
+                            <div onclick="selectObject('products')" 
+                                 class="object-card bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all group"
+                                 data-object="products">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-box text-indigo-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-base font-bold text-slate-800">Ürün kataloğu <i class="fas fa-check-circle text-emerald-500 ml-2 hidden check-icon"></i></h3>
+                                        <p class="text-sm text-slate-500 mt-1">Ürün kataloğu, anlaşmalara mal veya hizmetlerin ile ilgili bilgileri içerir.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: File Upload -->
+                    <div id="step2Content" class="flex-1 hidden">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4">Dosyayı yükle</h2>
+                        <div class="bg-white border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-400 transition-all" id="dropZone">
+                            <div class="mb-6">
+                                <i class="fas fa-cloud-upload-alt text-6xl text-gray-300"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-2">Dosyanızı buraya sürükleyin</h3>
+                            <p class="text-sm text-slate-500 mb-6">veya bilgisayarınızdan seçin</p>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="hidden" onchange="handleFileSelect(event)">
+                            <button onclick="document.getElementById('fileInput').click()" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                                <i class="fas fa-folder-open mr-2"></i> Dosya Seç
+                            </button>
+                            <p class="text-xs text-slate-400 mt-4">Desteklenen formatlar: CSV, XLSX, XLS (Maks. 50MB, 100.000 satır)</p>
+                        </div>
+                        
+                        <div id="fileInfo" class="hidden mt-6 bg-white border border-gray-200 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-file-excel text-green-600 text-2xl"></i>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-slate-800" id="fileName"></h4>
+                                        <p class="text-xs text-slate-500" id="fileSize"></p>
+                                    </div>
+                                </div>
+                                <button onclick="removeFile()" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <p class="text-sm text-slate-600 mb-2"><strong id="rowCount">0</strong> satır tespit edildi</p>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 bg-gray-200 rounded-full h-2">
+                                        <div id="uploadProgress" class="bg-emerald-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-500" id="uploadPercent">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Field Mapping -->
+                    <div id="step3Content" class="flex-1 hidden">
+                        <h2 class="text-lg font-bold text-slate-800 mb-2">Elektronik tablo sütunlarını Pipedrive alanları ile eşleştirin</h2>
+                        
+                        <!-- Info Banner -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                            <i class="fas fa-info-circle text-blue-600 text-xl mt-0.5"></i>
+                            <div class="flex-1">
+                                <p class="text-sm text-slate-700">Alanları, sağdaki seçme bölümünden verilerinize uyumlu soldaki kutulara sürükleyin.</p>
+                                <p class="text-sm text-slate-500 mt-1">Eşleştirilmemiş sütunlar, Pipedrive'a aktarılmayacaktır.</p>
+                            </div>
+                            <button onclick="document.getElementById('step3Content').querySelector('.bg-blue-50').remove()" class="text-blue-400 hover:text-blue-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex gap-8">
+                            <!-- Left: File Columns -->
+                            <div class="flex-1">
+                                <div class="bg-gray-50 border border-gray-200 rounded-t-xl px-4 py-3 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-file-excel text-green-600"></i>
+                                        <span class="text-sm font-bold text-slate-800">Elektronik tablo sütunu</span>
+                                    </div>
+                                    <span class="text-xs text-slate-500">Dosya adı: <span id="mappingFileName">-</span></span>
+                                </div>
+                                <div class="bg-white border border-gray-200 border-t-0 rounded-b-xl divide-y divide-gray-200" id="fileColumnsList">
+                                    <!-- Dynamically populated -->
+                                </div>
+                            </div>
+
+                            <!-- Center: Mapping Indicators -->
+                            <div class="w-24 flex flex-col items-center justify-center pt-16">
+                                <div class="text-center">
+                                    <i class="fas fa-arrows-alt-h text-gray-300 text-2xl mb-2"></i>
+                                    <p class="text-xs text-gray-400 font-semibold">Eşleştirme</p>
+                                </div>
+                            </div>
+
+                            <!-- Right: Pipedrive Fields -->
+                            <div class="w-80">
+                                <div class="bg-gray-50 border border-gray-200 rounded-t-xl px-4 py-3">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <i class="fas fa-database text-blue-600"></i>
+                                        <span class="text-sm font-bold text-slate-800">Pipedrive veri alanları</span>
+                                    </div>
+                                    <div class="relative">
+                                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                                        <input type="text" id="fieldSearch" placeholder="Bir alan için ara" 
+                                            class="w-full pl-8 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                                            oninput="filterPipedriveFields(this.value)">
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 border-t-0 rounded-b-xl max-h-[500px] overflow-y-auto" id="pipedriveFieldsList">
+                                    <!-- Dynamically populated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Preview -->
+                    <div id="step4Content" class="flex-1 hidden">
+                        <div class="max-w-6xl">
+                            <h2 class="text-lg font-bold text-slate-800 mb-2">İçe aktarma ön izlesi</h2>
+                            <p class="text-sm text-slate-500 mb-6">Önizlemesi kullanarak içe aktarılacak verileri denetleyin</p>
+                            
+                            <!-- Validation Summary Card -->
+                            <div id="validationCard" class="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-info-circle text-blue-600 text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-bold text-slate-800 mb-1">Doğrulama durumu</h4>
+                                    <p class="text-sm text-slate-600" id="validationSummary">Verileriniz kontrol ediliyor...</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Duplicate Handling Card -->
+                            <div id="duplicateCard" class="hidden bg-yellow-50 border border-yellow-200 rounded-xl p-5 mb-6">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-bold text-slate-800 mb-1">Yinelenen kayıtlar bulundu</h4>
+                                        <p class="text-sm text-slate-600 mb-3"><span id="duplicateCount">0</span> kayıt veritabanında zaten mevcut.</p>
+                                        
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-3 p-3 bg-white border-2 border-yellow-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-all">
+                                                <input type="radio" name="duplicateAction" value="skip" checked class="w-4 h-4 text-blue-600">
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-semibold text-slate-800">Yinelenen kayıtları atla</div>
+                                                    <div class="text-xs text-slate-500">Mevcut kayıtları koru, sadece yeni kayıtları ekle</div>
+                                                </div>
+                                            </label>
+                                            
+                                            <label class="flex items-center gap-3 p-3 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-all">
+                                                <input type="radio" name="duplicateAction" value="update" class="w-4 h-4 text-blue-600">
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-semibold text-slate-800">Mevcut kayıtları güncelle</div>
+                                                    <div class="text-xs text-slate-500">Yinelenen kayıtların bilgilerini yeni verilerle güncelle</div>
+                                                </div>
+                                            </label>
+                                            
+                                            <label class="flex items-center gap-3 p-3 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-all">
+                                                <input type="radio" name="duplicateAction" value="create" class="w-4 h-4 text-blue-600">
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-semibold text-slate-800">Yinelenen kayıt oluştur</div>
+                                                    <div class="text-xs text-slate-500">Aynı bilgilere sahip yeni kayıtlar oluştur (önerilmez)</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        
+                                        <button onclick="toggleDuplicateDetails()" class="mt-3 text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2">
+                                            <i class="fas fa-list"></i>
+                                            <span id="duplicateDetailsToggle">Yinelenen kayıtları göster</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Duplicate Details List -->
+                                <div id="duplicateDetailsList" class="hidden mt-4 border-t border-yellow-200 pt-4">
+                                    <div class="max-h-64 overflow-y-auto space-y-3" id="duplicateDetailsContent">
+                                        <!-- Dynamically populated -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats Cards -->
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="bg-white border border-gray-200 rounded-xl p-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                            <i class="fas fa-database text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-slate-800" id="totalRecords">0</div>
+                                            <div class="text-xs text-slate-500">Toplam kayıt</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-xl p-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                            <i class="fas fa-check-circle text-emerald-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-emerald-600" id="validRecords">0</div>
+                                            <div class="text-xs text-slate-500">Geçerli kayıt</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-xl p-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-2xl font-bold text-red-600" id="errorRecords">0</div>
+                                            <div class="text-xs text-slate-500">Hatalı kayıt</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Preview Table -->
+                            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
+                                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                    <h3 class="text-sm font-bold text-slate-800">İlk 10 kayıt önizlemesi</h3>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full" id="previewTable">
+                                        <thead class="bg-gray-50 border-b border-gray-200">
+                                            <tr id="previewHeaders">
+                                                <!-- Dynamically populated -->
+                                            </tr>
+                                        </thead>
+                                        <tbody id="previewBody" class="divide-y divide-gray-100">
+                                            <!-- Dynamically populated -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Errors List -->
+                            <div id="errorsList" class="hidden bg-white border border-red-200 rounded-xl overflow-hidden">
+                                <div class="px-6 py-4 bg-red-50 border-b border-red-200 flex items-center gap-3">
+                                    <i class="fas fa-exclamation-circle text-red-600"></i>
+                                    <h4 class="text-sm font-bold text-red-800">Doğrulama hataları</h4>
+                                </div>
+                                <div class="p-6">
+                                    <ul id="errorsContent" class="space-y-2 text-sm text-red-700">
+                                        <!-- Dynamically populated -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Complete -->
+                    <div id="step5Content" class="flex-1 hidden">
+                        <div class="max-w-3xl mx-auto text-center py-8">
+                            <!-- Success Icon -->
+                            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                                <i class="fas fa-check text-emerald-600 text-4xl"></i>
+                            </div>
+                            
+                            <h2 class="text-3xl font-bold text-slate-800 mb-3">İçe aktarma tamamlandı!</h2>
+                            <p class="text-slate-500 mb-8" id="completionMessage">Verileriniz başarıyla içe aktarıldı.</p>
+                            
+                            <!-- Results Card -->
+                            <div class="bg-white border border-gray-200 rounded-xl p-8 mb-8 shadow-sm">
+                                <div class="grid grid-cols-3 gap-6">
+                                    <div class="text-center">
+                                        <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <i class="fas fa-check-circle text-emerald-600 text-2xl"></i>
+                                        </div>
+                                        <div class="text-4xl font-bold text-emerald-600 mb-1" id="successCount">0</div>
+                                        <div class="text-sm text-slate-500">Başarılı</div>
+                                    </div>
+                                    <div class="text-center border-l border-r border-gray-200">
+                                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <i class="fas fa-times-circle text-red-600 text-2xl"></i>
+                                        </div>
+                                        <div class="text-4xl font-bold text-red-600 mb-1" id="failedCount">0</div>
+                                        <div class="text-sm text-slate-500">Başarısız</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <i class="fas fa-database text-blue-600 text-2xl"></i>
+                                        </div>
+                                        <div class="text-4xl font-bold text-slate-800 mb-1" id="totalCount">0</div>
+                                        <div class="text-sm text-slate-500">Toplam</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="flex gap-4 justify-center">
+                                <button onclick="window.location.href='/contacts'" class="px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 flex items-center gap-2">
+                                    <i class="fas fa-users"></i>
+                                    <span>Kişilere Git</span>
+                                </button>
+                                <button onclick="window.location.href='/companies'" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95 flex items-center gap-2">
+                                    <i class="fas fa-building"></i>
+                                    <span>�?irketlere Git</span>
+                                </button>
+                                <button onclick="window.location.reload()" class="px-8 py-3 bg-white border-2 border-gray-300 text-slate-700 font-semibold rounded-lg hover:bg-gray-50 transition-all active:scale-95 flex items-center gap-2">
+                                    <i class="fas fa-plus"></i>
+                                    <span>Yeni İçe Aktarma</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Additional Info -->
+                            <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                <div class="flex items-start gap-3 text-left">
+                                    <i class="fas fa-info-circle text-blue-600 text-lg mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-bold text-slate-800 mb-1">Sonraki adımlar</h4>
+                                        <p class="text-sm text-slate-600">İçe aktarılan verileri Kişiler veya �?irketler sayfasından görüntüleyebilir ve düzenleyebilirsiniz.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Panel: Guide & Resources -->
+                    <div class="w-96 flex-shrink-0">
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                            <div class="flex items-start gap-3 mb-4">
+                                <i class="fas fa-info-circle text-blue-600 text-xl mt-0.5"></i>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-800 mb-2">İçe aktarma rehberi</h3>
+                                    <a href="#" class="text-sm text-blue-600 hover:underline">Elektronik tablo kullanarak Pipedrive verilerini nasıl güncelleyeceğinizi öğrenin →</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="resourcePanel" class="bg-white border border-gray-200 rounded-xl p-6">
+                            <h3 class="text-base font-bold text-slate-800 mb-4">Seçilen veri için bilgiler</h3>
+                            <p class="text-sm text-slate-500 mb-6">Soldaki listeden bir veri tipi seçin</p>
+                            
+                            <div id="resourceContent" class="hidden">
+                                <div class="mb-6">
+                                    <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                        <i class="fas fa-asterisk text-red-500 text-xs"></i>
+                                        Herhangi bir anlayışa alanı *
+                                    </h4>
+                                    <ul id="requiredFields" class="space-y-2 text-sm text-slate-600">
+                                        <!-- Dynamically populated -->
+                                    </ul>
+                                </div>
+
+                                <div class="mb-6">
+                                    <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                        <i class="fas fa-link text-blue-500 text-xs"></i>
+                                        Herhangi bir etkinlik alanı *
+                                    </h4>
+                                    <ul id="optionalFields" class="space-y-2 text-sm text-slate-600">
+                                        <!-- Dynamically populated -->
+                                    </ul>
+                                </div>
+
+                                <div class="mb-6">
+                                    <h4 class="text-sm font-bold text-slate-700 mb-3">Elektronik tablo örneği</h4>
+                                    <div id="exampleTable" class="overflow-x-auto border border-gray-200 rounded-lg">
+                                        <!-- Dynamically populated -->
+                                    </div>
+                                </div>
+
+                                <button onclick="downloadTemplate()" class="w-full py-2.5 bg-white border-2 border-gray-300 text-slate-700 font-semibold rounded-lg hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2">
+                                    <i class="fas fa-download"></i>
+                                    �?ablon dosyası indir (.xlsx)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="bg-white border-t border-gray-200 px-8 py-4 flex items-center justify-between flex-shrink-0">
+            <button onclick="goBack()" class="px-6 py-2.5 bg-white border border-gray-300 text-slate-700 font-semibold rounded-lg hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" id="backBtn" disabled>
+                <i class="fas fa-arrow-left mr-2"></i> Geri
+            </button>
+            <button onclick="goNext()" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" id="nextBtn" disabled>
+                İleri <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </main>
+    <script>
+        // ============================================================================
+        // STATE MANAGEMENT
+        // ============================================================================
+        const STATE = {
+            currentStep: 1,
+            selectedObjectType: null,
+            uploadedFile: null,
+            fileHeaders: [],
+            fieldMapping: {},
+            confidenceScores: {},
+            previewData: [],
+            duplicates: [],
+            importJobId: null
+        };
+
+        // ============================================================================
+        // RESOURCES DATABASE
+        // ============================================================================
+        const RESOURCES = {
+            contacts: {
+                name: 'Kişiler',
+                requiredFields: [
+                    { key: 'name', label: 'Kişi - Ad *', icon: 'user' },
+                    { key: 'email', label: 'Kişi - E-posta (İş) (İsteğe bağlı)', icon: 'envelope' },
+                    { key: 'phone', label: 'Kişi - Telefon (İsteğe bağlı)', icon: 'phone' }
+                ],
+                optionalFields: [
+                    { key: 'company_name', label: 'Organizasyon - Ad *' },
+                    { key: 'job_title', label: 'Kişi - Unvan' },
+                    { key: 'role', label: 'Kişi - Rol' }
+                ],
+                exampleData: [
+                    { 'Kişi - Ad': 'Tony Turner', 'Kişi - E-posta': 'tony.turner@innovate.io', 'Kişi - Telefon': '570-608-8578', 'Organizasyon - Ad': 'Moveit Limited', 'Kişi - Unvan': 'CEO' },
+                    { 'Kişi - Ad': 'Hashim Handy', 'Kişi - E-posta': 'hashim.handy@...', 'Kişi - Telefon': '740-707-3884', 'Organizasyon - Ad': 'ABC Inc', 'Kişi - Unvan': 'Manager' }
+                ],
+                dbFields: ['first_name', 'last_name', 'email', 'phone', 'company_id', 'job_title', 'role', 'lead_score']
+            },
+            companies: {
+                name: 'Organizasyonlar',
+                requiredFields: [
+                    { key: 'name', label: 'Organizasyon - Ad *', icon: 'building' },
+                    { key: 'address', label: 'Organizasyon - Adres (İsteğe bağlı)', icon: 'map-marker-alt' }
+                ],
+                optionalFields: [
+                    { key: 'website', label: 'Organizasyon - Website' },
+                    { key: 'industry', label: 'Organizasyon - Sektör' }
+                ],
+                exampleData: [
+                    { 'Organizasyon - Ad': 'Moveit Limited', 'Organizasyon - Adres': '5,643 Finch...', 'Organizasyon - Website': 'moveit.com' },
+                    { 'Organizasyon - Ad': 'ABC Inc', 'Organizasyon - Adres': '9974 Pleasan...', 'Organizasyon - Website': 'abc.com' }
+                ],
+                dbFields: ['name', 'address', 'website', 'industry', 'employee_count']
+            },
+            leads: {
+                name: 'Müşteri Adayları',
+                requiredFields: [
+                    { key: 'title', label: 'Müşteri Adayı - Başlık *', icon: 'star' },
+                    { key: 'person_name', label: 'Kişi - Ad', icon: 'user' }
+                ],
+                optionalFields: [
+                    { key: 'value', label: 'Müşteri Adayı - Değer' },
+                    { key: 'source', label: 'Müşteri Adayı - Kaynak' }
+                ],
+                exampleData: [
+                    { 'Müşteri Adayı - Başlık': 'Yeni Proje', 'Kişi - Ad': 'John Doe', 'Müşteri Adayı - Değer': '$5,000' }
+                ],
+                dbFields: ['title', 'person_name', 'value', 'source', 'status']
+            },
+            deals: {
+                name: 'Anlaşmalar',
+                requiredFields: [
+                    { key: 'title', label: 'Anlaşma - Başlık *', icon: 'handshake' },
+                    { key: 'value', label: 'Anlaşma - Değer *', icon: 'dollar-sign' }
+                ],
+                optionalFields: [
+                    { key: 'stage', label: 'Anlaşma - Aşama' },
+                    { key: 'expected_close_date', label: 'Anlaşma - Kapanış Tarihi' }
+                ],
+                exampleData: [
+                    { 'Anlaşma - Başlık': 'Büyük Satış', 'Anlaşma - Değer': '$10,000', 'Anlaşma - Aşama': 'Teklif' }
+                ],
+                dbFields: ['title', 'value', 'stage', 'expected_close_date', 'person_id', 'company_id']
+            },
+            activities: {
+                name: 'Etkinlikler',
+                requiredFields: [
+                    { key: 'subject', label: 'Etkinlik - Konu *', icon: 'calendar' },
+                    { key: 'type', label: 'Etkinlik - Tip *', icon: 'tag' }
+                ],
+                optionalFields: [
+                    { key: 'due_date', label: 'Etkinlik - Tarih' },
+                    { key: 'duration', label: 'Etkinlik - Süre' }
+                ],
+                exampleData: [
+                    { 'Etkinlik - Konu': 'Müşteri Görüşmesi', 'Etkinlik - Tip': 'Toplantı', 'Etkinlik - Tarih': '17 Mart' }
+                ],
+                dbFields: ['subject', 'type', 'due_date', 'duration', 'person_id', 'deal_id']
+            },
+            products: {
+                name: 'Ürün Kataloğu',
+                requiredFields: [
+                    { key: 'name', label: 'Ürün - Ad *', icon: 'box' },
+                    { key: 'price', label: 'Ürün - Fiyat *', icon: 'dollar-sign' }
+                ],
+                optionalFields: [
+                    { key: 'code', label: 'Ürün - Kod' },
+                    { key: 'category', label: 'Ürün - Kategori' }
+                ],
+                exampleData: [
+                    { 'Ürün - Ad': 'Premium Paket', 'Ürün - Fiyat': '$99', 'Ürün - Kod': 'PRE-001' }
+                ],
+                dbFields: ['name', 'price', 'code', 'category', 'description']
+            }
+        };
+
+        // ============================================================================
+        // STEP 1: OBJECT SELECTION
+        // ============================================================================
+        function selectObject(objectType) {
+            STATE.selectedObjectType = objectType;
+            
+            // Update UI
+            document.querySelectorAll('.object-card').forEach(card => {
+                card.classList.remove('border-pipedrive-500', 'bg-blue-50');
+                card.classList.add('border-gray-200');
+                card.querySelector('.check-icon').classList.add('hidden');
+            });
+            
+            const selectedCard = document.querySelector(`[data-object="${objectType}"]`);
+            selectedCard.classList.remove('border-gray-200');
+            selectedCard.classList.add('border-pipedrive-500', 'bg-blue-50');
+            selectedCard.querySelector('.check-icon').classList.remove('hidden');
+            
+            // Update resource panel
+            updateResourcePanel(objectType);
+            
+            // Enable next button
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function updateResourcePanel(objectType) {
+            const resource = RESOURCES[objectType];
+            const panel = document.getElementById('resourceContent');
+            panel.classList.remove('hidden');
+            
+            // Update required fields
+            const requiredList = document.getElementById('requiredFields');
+            requiredList.innerHTML = resource.requiredFields.map(field => `
+                <li class="flex items-center gap-2">
+                    <i class="fas fa-${field.icon} text-gray-400 text-xs w-4"></i>
+                    <span>${field.label}</span>
+                </li>
+            `).join('');
+            
+            // Update optional fields
+            const optionalList = document.getElementById('optionalFields');
+            optionalList.innerHTML = resource.optionalFields.map(field => `
+                <li class="flex items-center gap-2">
+                    <i class="fas fa-circle text-gray-300 text-[6px] w-4"></i>
+                    <span>${field.label}</span>
+                </li>
+            `).join('');
+            
+            // Update example table
+            const tableDiv = document.getElementById('exampleTable');
+            const headers = Object.keys(resource.exampleData[0]);
+            tableDiv.innerHTML = `
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            ${headers.map(h => `<th class="px-3 py-2 text-left font-semibold text-gray-600 border-b">${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${resource.exampleData.map(row => `
+                            <tr class="border-b">
+                                ${headers.map(h => `<td class="px-3 py-2 text-gray-700">${row[h]}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function downloadTemplate() {
+            if (!STATE.selectedObjectType) return;
+            
+            showToast('�?ablon dosyası indiriliyor...', 'info');
+            
+            // Download actual template file
+            window.location.href = `/api/v1/import/template/${STATE.selectedObjectType}`;
+        }
+
+        // ============================================================================
+        // STEP 2: FILE UPLOAD
+        // ============================================================================
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            uploadFile(file);
+        }
+
+        // Drag and drop
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500', 'bg-blue-50');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+                
+                const file = e.dataTransfer.files[0];
+                if (file) uploadFile(file);
+            });
+        }
+
+        async function uploadFile(file) {
+            // Validate file
+            const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(csv|xlsx|xls)$/i)) {
+                showToast('Geçersiz dosya tipi. Sadece CSV ve Excel dosyaları desteklenir.', 'error');
+                return;
+            }
+            
+            if (file.size > 50 * 1024 * 1024) {
+                showToast('Dosya boyutu 50MB\'dan büyük olamaz', 'error');
+                return;
+            }
+            
+            // Show file info
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            document.getElementById('fileInfo').classList.remove('hidden');
+            
+            // Upload file
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('object_type', STATE.selectedObjectType);
+            
+            try {
+                // Simulate progress
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 10;
+                    if (progress <= 90) {
+                        document.getElementById('uploadProgress').style.width = progress + '%';
+                        document.getElementById('uploadPercent').textContent = progress + '%';
+                    }
+                }, 100);
+                
+                const response = await fetch('/api/v1/import/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                document.getElementById('uploadProgress').style.width = '100%';
+                document.getElementById('uploadPercent').textContent = '100%';
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+                
+                const data = await response.json();
+                
+                STATE.uploadedFile = data.file_id;
+                STATE.fileHeaders = data.headers;
+                STATE.previewData = data.preview_data;
+                
+                document.getElementById('rowCount').textContent = data.row_count.toLocaleString();
+                document.getElementById('nextBtn').disabled = false;
+                
+                showToast('Dosya başarıyla yüklendi', 'success');
+                
+                // Auto-suggest mapping
+                suggestMapping();
+                
+            } catch (error) {
+                showToast(error.message, 'error');
+                removeFile();
+            }
+        }
+
+        function removeFile() {
+            STATE.uploadedFile = null;
+            STATE.fileHeaders = [];
+            STATE.previewData = [];
+            document.getElementById('fileInfo').classList.add('hidden');
+            document.getElementById('fileInput').value = '';
+            document.getElementById('nextBtn').disabled = true;
+        }
+
+        async function suggestMapping() {
+            try {
+                const response = await fetch('/api/v1/import/suggest-mapping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_headers: STATE.fileHeaders,
+                        object_type: STATE.selectedObjectType,
+                        preview_data: STATE.previewData  // Send preview data for content analysis
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    STATE.fieldMapping = data.suggested_mapping;
+                    STATE.confidenceScores = data.confidence_scores || {};
+                    
+                    // Show detailed toast
+                    const mappedCount = data.mapped_fields || 0;
+                    const totalCount = data.total_fields || 0;
+                    const confidence = data.overall_confidence || 0;
+                    
+                    if (mappedCount > 0) {
+                        showToast(`✓ ${mappedCount}/${totalCount} alan otomatik eşleştirildi (%${confidence} güven)`, 'success');
+                    } else {
+                        showToast('Otomatik eşleştirme bulunamadı, lütfen manuel eşleştirin', 'info');
+                    }
+                }
+            } catch (error) {
+                console.error('Mapping suggestion failed:', error);
+            }
+        }
+
+        // ============================================================================
+        // STEP 3: FIELD MAPPING
+        // ============================================================================
+        function loadFieldMapping() {
+            const fileColumnsList = document.getElementById('fileColumnsList');
+            const pipedriveFieldsList = document.getElementById('pipedriveFieldsList');
+            const resource = RESOURCES[STATE.selectedObjectType];
+            
+            // Set filename
+            const fileNameSpan = document.getElementById('mappingFileName');
+            if (fileNameSpan && STATE.uploadedFile) {
+                fileNameSpan.textContent = STATE.uploadedFile.split('_').slice(1).join('_');
+            }
+            
+            // Render file columns (left side)
+            fileColumnsList.innerHTML = STATE.fileHeaders.map((header, idx) => {
+                const suggestedField = STATE.fieldMapping[header] || '';
+                const exampleValue = STATE.previewData[0] ? STATE.previewData[0][header] : '';
+                const mappedFieldLabel = suggestedField ? resource.dbFields.find(f => f === suggestedField) || suggestedField : '';
+                const confidence = STATE.confidenceScores[header] || {};
+                const confidenceScore = confidence.score || 0;
+                const matchMethod = confidence.method || '';
+                
+                // Determine confidence color classes (predefined for Tailwind)
+                let badgeClasses = '';
+                let iconClasses = '';
+                let textClasses = '';
+                let buttonClasses = '';
+                let confidenceIcon = 'question-circle';
+                
+                if (confidenceScore >= 95) {
+                    badgeClasses = 'bg-emerald-50 border-emerald-200';
+                    iconClasses = 'text-emerald-600';
+                    textClasses = 'text-emerald-800';
+                    buttonClasses = 'text-emerald-400 hover:text-emerald-600';
+                    confidenceIcon = 'check-circle';
+                } else if (confidenceScore >= 80) {
+                    badgeClasses = 'bg-green-50 border-green-200';
+                    iconClasses = 'text-green-600';
+                    textClasses = 'text-green-800';
+                    buttonClasses = 'text-green-400 hover:text-green-600';
+                    confidenceIcon = 'check-circle';
+                } else if (confidenceScore >= 60) {
+                    badgeClasses = 'bg-yellow-50 border-yellow-200';
+                    iconClasses = 'text-yellow-600';
+                    textClasses = 'text-yellow-800';
+                    buttonClasses = 'text-yellow-400 hover:text-yellow-600';
+                    confidenceIcon = 'exclamation-triangle';
+                } else {
+                    badgeClasses = 'bg-gray-50 border-gray-200';
+                    iconClasses = 'text-gray-600';
+                    textClasses = 'text-gray-800';
+                    buttonClasses = 'text-gray-400 hover:text-gray-600';
+                }
+                
+                return `
+                    <div class="p-4 hover:bg-gray-50 transition-colors group" data-file-column="${header}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-sm font-semibold text-slate-800">${header}</span>
+                                    ${suggestedField ? `<i class="fas fa-${confidenceIcon} ${iconClasses} text-xs" title="${matchMethod}: %${confidenceScore}"></i>` : ''}
+                                </div>
+                                <div class="text-xs text-slate-500 truncate">${exampleValue || 'Boş'}</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${suggestedField ? `
+                                    <div class="flex items-center gap-2 px-3 py-1.5 ${badgeClasses} border rounded-lg">
+                                        <i class="fas fa-user ${iconClasses} text-xs"></i>
+                                        <span class="text-xs font-semibold ${textClasses}">${mappedFieldLabel}</span>
+                                        ${confidenceScore < 100 ? `<span class="text-[10px] ${iconClasses}">%${confidenceScore}</span>` : ''}
+                                        <button onclick="removeMappingFromColumn('${header}')" class="${buttonClasses} ml-1">
+                                            <i class="fas fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <div class="px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-xs text-gray-500">
+                                        Eşleştirilmedi
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Render Pipedrive fields (right side)
+            renderPipedriveFields();
+        }
+
+        function renderPipedriveFields(searchTerm = '') {
+            const pipedriveFieldsList = document.getElementById('pipedriveFieldsList');
+            const resource = RESOURCES[STATE.selectedObjectType];
+            
+            // Get all available fields
+            const allFields = [
+                ...resource.requiredFields.map(f => ({ ...f, required: true })),
+                ...resource.optionalFields.map(f => ({ ...f, required: false }))
+            ];
+            
+            // Filter by search term
+            const filteredFields = searchTerm 
+                ? allFields.filter(f => f.label.toLowerCase().includes(searchTerm.toLowerCase()))
+                : allFields;
+            
+            // Group by category
+            const categories = {
+                'Kişi': filteredFields.filter(f => f.label.includes('Kişi')),
+                'Organizasyon': filteredFields.filter(f => f.label.includes('Organizasyon')),
+                'Diğer': filteredFields.filter(f => !f.label.includes('Kişi') && !f.label.includes('Organizasyon'))
+            };
+            
+            let html = '';
+            
+            Object.entries(categories).forEach(([category, fields]) => {
+                if (fields.length === 0) return;
+                
+                html += `
+                    <div class="border-b border-gray-200 last:border-b-0">
+                        <div class="px-4 py-2 bg-gray-50 text-xs font-bold text-gray-600 uppercase tracking-wider">
+                            ${category}
+                        </div>
+                        ${fields.map(field => {
+                            const isUsed = Object.values(STATE.fieldMapping).includes(field.key);
+                            const icon = field.icon || 'circle';
+                            
+                            return `
+                                <div class="px-4 py-3 hover:bg-blue-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0 ${isUsed ? 'opacity-50' : ''}"
+                                     onclick="selectPipedriveField('${field.key}', '${field.label}')"
+                                     data-field-key="${field.key}">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                                            <i class="fas fa-${icon} text-gray-400 text-xs"></i>
+                                            <span class="text-sm text-slate-700 truncate">${field.label}</span>
+                                            ${field.required ? '<span class="text-red-500 text-xs">*</span>' : ''}
+                                        </div>
+                                        ${isUsed ? '<i class="fas fa-check text-emerald-500 text-xs"></i>' : '<i class="fas fa-plus text-gray-300 text-xs"></i>'}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            });
+            
+            pipedriveFieldsList.innerHTML = html || '<div class="p-4 text-center text-sm text-gray-500">Alan bulunamadı</div>';
+        }
+
+        function filterPipedriveFields(searchTerm) {
+            renderPipedriveFields(searchTerm);
+        }
+
+        let selectedPipedriveFieldForMapping = null;
+
+        function selectPipedriveField(fieldKey, fieldLabel) {
+            // Check if already used
+            if (Object.values(STATE.fieldMapping).includes(fieldKey)) {
+                showToast('Bu alan zaten eşleştirilmiş', 'error');
+                return;
+            }
+            
+            // Store selected field
+            selectedPipedriveFieldForMapping = { key: fieldKey, label: fieldLabel };
+            
+            // Highlight file columns for selection
+            showToast('�?imdi sol taraftan bir dosya sütunu seçin', 'info');
+            
+            // Add click handlers to file columns
+            document.querySelectorAll('[data-file-column]').forEach(col => {
+                col.style.cursor = 'pointer';
+                col.classList.add('ring-2', 'ring-blue-300');
+                
+                col.onclick = function() {
+                    const fileColumn = this.dataset.fileColumn;
+                    mapFieldToColumn(fileColumn, selectedPipedriveFieldForMapping.key);
+                    
+                    // Remove highlights
+                    document.querySelectorAll('[data-file-column]').forEach(c => {
+                        c.classList.remove('ring-2', 'ring-blue-300');
+                        c.style.cursor = '';
+                        c.onclick = null;
+                    });
+                    
+                    selectedPipedriveFieldForMapping = null;
+                };
+            });
+        }
+
+        function mapFieldToColumn(fileColumn, pipedriveField) {
+            STATE.fieldMapping[fileColumn] = pipedriveField;
+            loadFieldMapping();
+            
+            // Enable next if at least one field is mapped
+            document.getElementById('nextBtn').disabled = Object.keys(STATE.fieldMapping).length === 0;
+            
+            showToast('Alan eşleştirildi', 'success');
+        }
+
+        function removeMappingFromColumn(fileColumn) {
+            delete STATE.fieldMapping[fileColumn];
+            loadFieldMapping();
+            
+            // Disable next if no fields mapped
+            document.getElementById('nextBtn').disabled = Object.keys(STATE.fieldMapping).length === 0;
+        }
+
+        function updateMapping(fileHeader, dbField) {
+            if (dbField) {
+                STATE.fieldMapping[fileHeader] = dbField;
+            } else {
+                delete STATE.fieldMapping[fileHeader];
+            }
+            
+            // Enable next if at least one field is mapped
+            document.getElementById('nextBtn').disabled = Object.keys(STATE.fieldMapping).length === 0;
+        }
+
+        // ============================================================================
+        // STEP 4: PREVIEW & VALIDATION
+        // ============================================================================
+        async function loadPreview() {
+            try {
+                const response = await fetch('/api/v1/import/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_id: STATE.uploadedFile,
+                        field_mapping: STATE.fieldMapping,
+                        object_type: STATE.selectedObjectType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Store duplicates in state
+                STATE.duplicates = data.duplicates || [];
+                
+                // Update stats cards
+                const totalRecords = document.getElementById('totalRecords');
+                if (totalRecords) totalRecords.textContent = data.total_rows || 0;
+                
+                const validRecords = document.getElementById('validRecords');
+                if (validRecords) {
+                    const valid = (data.total_rows || 0) - (data.errors?.length || 0);
+                    validRecords.textContent = valid;
+                }
+                
+                const errorRecords = document.getElementById('errorRecords');
+                if (errorRecords) errorRecords.textContent = data.errors?.length || 0;
+                
+                // Show duplicate handling card
+                if (data.duplicates && data.duplicates.length > 0) {
+                    const duplicateCard = document.getElementById('duplicateCard');
+                    const duplicateCount = document.getElementById('duplicateCount');
+                    const duplicateDetailsContent = document.getElementById('duplicateDetailsContent');
+                    
+                    if (duplicateCard && duplicateCount) {
+                        duplicateCard.classList.remove('hidden');
+                        duplicateCount.textContent = data.duplicates.length;
+                        
+                        // Populate duplicate details
+                        if (duplicateDetailsContent) {
+                            duplicateDetailsContent.innerHTML = data.duplicates.map(dup => {
+                                const match = dup.matches[0];
+                                return `
+                                    <div class="bg-white border border-yellow-200 rounded-lg p-3">
+                                        <div class="flex items-start justify-between gap-3 mb-2">
+                                            <div class="flex-1">
+                                                <div class="text-xs font-semibold text-slate-600 mb-1">Satır ${dup.row}</div>
+                                                <div class="text-sm font-bold text-slate-800">${dup.new_data.name}</div>
+                                                <div class="text-xs text-slate-500">${dup.new_data.email || '-'}</div>
+                                            </div>
+                                            <div class="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded text-xs font-semibold text-yellow-700">
+                                                <i class="fas fa-${match.match_type === 'email' ? 'envelope' : 'user'} text-[10px]"></i>
+                                                <span>${match.match_type === 'email' ? 'E-posta' : 'İsim'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                                            <i class="fas fa-arrow-right"></i>
+                                            <span>Mevcut: ${match.existing.name} (${match.existing.email || '-'})</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        }
+                    }
+                } else {
+                    const duplicateCard = document.getElementById('duplicateCard');
+                    if (duplicateCard) duplicateCard.classList.add('hidden');
+                }
+                
+                // Update validation card
+                const validationCard = document.getElementById('validationCard');
+                const validationSummary = document.getElementById('validationSummary');
+                
+                if (validationCard && validationSummary) {
+                    if (data.valid && data.duplicates.length === 0) {
+                        validationCard.className = 'bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6 flex items-start gap-4';
+                        validationCard.querySelector('.bg-blue-100').className = 'w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0';
+                        validationCard.querySelector('i').className = 'fas fa-check-circle text-emerald-600 text-lg';
+                        validationCard.querySelector('h4').textContent = 'Doğrulama başarılı';
+                        validationSummary.textContent = `✓ ${data.total_rows} kayıt doğrulandı ve içe aktarmaya hazır.`;
+                    } else if (data.duplicates.length > 0 && data.errors.length === 0) {
+                        validationCard.className = 'bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 flex items-start gap-4';
+                        validationCard.querySelector('.bg-emerald-100, .bg-red-100, .bg-blue-100').className = 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0';
+                        validationCard.querySelector('i').className = 'fas fa-info-circle text-blue-600 text-lg';
+                        validationCard.querySelector('h4').textContent = 'Yinelenen kayıtlar bulundu';
+                        validationSummary.textContent = `${data.duplicates.length} yinelenen kayıt tespit edildi. Lütfen nasıl işlem yapılacağını seçin.`;
+                    } else {
+                        validationCard.className = 'bg-red-50 border border-red-200 rounded-xl p-5 mb-6 flex items-start gap-4';
+                        validationCard.querySelector('.bg-blue-100, .bg-emerald-100').className = 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0';
+                        validationCard.querySelector('i').className = 'fas fa-exclamation-triangle text-red-600 text-lg';
+                        validationCard.querySelector('h4').textContent = 'Doğrulama hataları bulundu';
+                        validationSummary.textContent = `${data.errors.length} hata bulundu. Lütfen düzeltin veya hatalı kayıtları atlayarak devam edin.`;
+                    }
+                }
+                
+                // Show errors
+                if (data.errors && data.errors.length > 0) {
+                    const errorsList = document.getElementById('errorsList');
+                    const errorsContent = document.getElementById('errorsContent');
+                    if (errorsList && errorsContent) {
+                        errorsList.classList.remove('hidden');
+                        errorsContent.innerHTML = data.errors.map(err => `
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-exclamation-circle mt-0.5 flex-shrink-0"></i>
+                                <span>${err}</span>
+                            </li>
+                        `).join('');
+                    }
+                } else {
+                    const errorsList = document.getElementById('errorsList');
+                    if (errorsList) errorsList.classList.add('hidden');
+                }
+                
+                // Show preview table
+                const previewHeaders = document.getElementById('previewHeaders');
+                const previewBody = document.getElementById('previewBody');
+                
+                if (previewHeaders && previewBody) {
+                    const mappedFields = Object.values(STATE.fieldMapping);
+                    previewHeaders.innerHTML = mappedFields.map(field => `
+                        <th class="px-6 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">${field}</th>
+                    `).join('');
+                    
+                    previewBody.innerHTML = STATE.previewData.slice(0, 10).map((row, idx) => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            ${mappedFields.map(field => {
+                                const fileHeader = Object.keys(STATE.fieldMapping).find(k => STATE.fieldMapping[k] === field);
+                                const value = row[fileHeader] || '-';
+                                return `<td class="px-6 py-3 text-sm text-slate-700">${value}</td>`;
+                            }).join('')}
+                        </tr>
+                    `).join('');
+                }
+                
+                // Enable/disable next button
+                const nextBtn = document.getElementById('nextBtn');
+                if (nextBtn) {
+                    // Allow proceeding even with errors (will skip error rows)
+                    nextBtn.disabled = false;
+                }
+                
+            } catch (error) {
+                showToast('Doğrulama hatası: ' + error.message, 'error');
+            }
+        }
+        
+        function toggleDuplicateDetails() {
+            const detailsList = document.getElementById('duplicateDetailsList');
+            const toggleText = document.getElementById('duplicateDetailsToggle');
+            
+            if (detailsList.classList.contains('hidden')) {
+                detailsList.classList.remove('hidden');
+                toggleText.textContent = 'Yinelenen kayıtları gizle';
+            } else {
+                detailsList.classList.add('hidden');
+                toggleText.textContent = 'Yinelenen kayıtları göster';
+            }
+        }
+
+        // ============================================================================
+        // STEP 5: EXECUTE IMPORT
+        // ============================================================================
+        async function executeImport() {
+            try {
+                // Get duplicate action
+                const duplicateActionRadio = document.querySelector('input[name="duplicateAction"]:checked');
+                const duplicateAction = duplicateActionRadio ? duplicateActionRadio.value : 'skip';
+                
+                document.getElementById('nextBtn').disabled = true;
+                document.getElementById('nextBtn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> İçe aktarılıyor...';
+                
+                const response = await fetch('/api/v1/import/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_id: STATE.uploadedFile,
+                        field_mapping: STATE.fieldMapping,
+                        object_type: STATE.selectedObjectType,
+                        duplicate_action: duplicateAction
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    STATE.importJobId = data.job_id;
+                    STATE.currentStep = 5;
+                    updateStepUI();
+                    renderCurrentStep();
+                    
+                    // Show results immediately (synchronous import)
+                    document.getElementById('successCount').textContent = data.imported_rows + (data.updated_rows || 0);
+                    document.getElementById('failedCount').textContent = (data.failed_rows || 0) + (data.skipped_rows || 0);
+                    document.getElementById('totalCount').textContent = data.total_rows;
+                    
+                    let message = `${data.imported_rows} yeni kayıt eklendi.`;
+                    if (data.updated_rows > 0) {
+                        message += ` ${data.updated_rows} kayıt güncellendi.`;
+                    }
+                    if (data.skipped_rows > 0) {
+                        message += ` ${data.skipped_rows} yinelenen kayıt atlandı.`;
+                    }
+                    if (data.failed_rows > 0) {
+                        message += ` ${data.failed_rows} kayıt başarısız oldu.`;
+                    }
+                    
+                    document.getElementById('completionMessage').textContent = message;
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        console.log('Import errors:', data.errors);
+                    }
+                } else {
+                    throw new Error(data.message || 'Import failed');
+                }
+                
+            } catch (error) {
+                showToast('İçe aktarma hatası: ' + error.message, 'error');
+                document.getElementById('nextBtn').disabled = false;
+                document.getElementById('nextBtn').innerHTML = 'İleri <i class="fas fa-arrow-right ml-2"></i>';
+            }
+        }
+
+        async function pollImportStatus() {
+            // Not needed for synchronous import
+            // Kept for future async implementation
+        }
+
+        // ============================================================================
+        // NAVIGATION
+        // ============================================================================
+        function goNext() {
+            if (STATE.currentStep === 1 && !STATE.selectedObjectType) {
+                showToast('Lütfen bir veri tipi seçin', 'error');
+                return;
+            }
+            
+            if (STATE.currentStep === 2 && !STATE.uploadedFile) {
+                showToast('Lütfen bir dosya yükleyin', 'error');
+                return;
+            }
+            
+            if (STATE.currentStep === 3 && Object.keys(STATE.fieldMapping).length === 0) {
+                showToast('Lütfen en az bir alan eşleştirin', 'error');
+                return;
+            }
+            
+            if (STATE.currentStep === 4) {
+                // Start import
+                executeImport();
+                return;
+            }
+            
+            if (STATE.currentStep === 5) {
+                // Complete
+                window.location.href = '/contacts';
+                return;
+            }
+            
+            STATE.currentStep++;
+            updateStepUI();
+            renderCurrentStep();
+        }
+
+        function goBack() {
+            if (STATE.currentStep > 1) {
+                STATE.currentStep--;
+                updateStepUI();
+                renderCurrentStep();
+            }
+        }
+
+        function renderCurrentStep() {
+            // Hide all steps
+            for (let i = 1; i <= 5; i++) {
+                const content = document.getElementById(`step${i}Content`);
+                if (content) content.classList.add('hidden');
+            }
+            
+            // Show current step
+            const currentContent = document.getElementById(`step${STATE.currentStep}Content`);
+            if (currentContent) currentContent.classList.remove('hidden');
+            
+            // Load step-specific content
+            if (STATE.currentStep === 3 && STATE.fileHeaders.length > 0) {
+                loadFieldMapping();
+                
+                // Show auto-mapping info
+                const mappedCount = Object.keys(STATE.fieldMapping).length;
+                const totalCount = STATE.fileHeaders.length;
+                
+                if (mappedCount > 0) {
+                    const confidence = Math.round((mappedCount / totalCount) * 100);
+                    showToast(`✓ ${mappedCount}/${totalCount} alan otomatik eşleştirildi (%${confidence} güven)`, 'success');
+                }
+            } else if (STATE.currentStep === 4) {
+                loadPreview();
+            }
+        }
+
+        function updateStepUI() {
+            // Update progress indicators
+            for (let i = 1; i <= 5; i++) {
+                const indicator = document.getElementById(`step${i}Indicator`);
+                const circle = indicator.querySelector('div');
+                const text = indicator.querySelector('span');
+                
+                if (i < STATE.currentStep) {
+                    circle.className = 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm';
+                    circle.innerHTML = '<i class="fas fa-check text-xs"></i>';
+                    text.className = 'text-sm font-semibold text-slate-800';
+                } else if (i === STATE.currentStep) {
+                    circle.className = 'w-8 h-8 rounded-full bg-pipedrive-500 text-white flex items-center justify-center font-bold text-sm';
+                    circle.textContent = i;
+                    text.className = 'text-sm font-semibold text-slate-800';
+                } else {
+                    circle.className = 'w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold text-sm';
+                    circle.textContent = i;
+                    text.className = 'text-sm text-gray-500';
+                }
+            }
+            
+            // Update back button
+            document.getElementById('backBtn').disabled = STATE.currentStep === 1;
+            
+            // Update next button text
+            const nextBtn = document.getElementById('nextBtn');
+            if (STATE.currentStep === 5) {
+                nextBtn.innerHTML = 'Tamamla <i class="fas fa-check ml-2"></i>';
+            } else {
+                nextBtn.innerHTML = 'İleri <i class="fas fa-arrow-right ml-2"></i>';
+            }
+        }
+
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+        function showToast(message, type = 'info') {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-semibold z-50 ${
+                type === 'success' ? 'bg-emerald-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                'bg-blue-500'
+            }`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStepUI();
+            renderCurrentStep();
+            
+            // Add event listeners for duplicate action radio buttons
+            document.querySelectorAll('input[name="duplicateAction"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Remove highlight from all labels
+                    document.querySelectorAll('input[name="duplicateAction"]').forEach(r => {
+                        const label = r.closest('label');
+                        label.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-200');
+                        label.classList.add('border-gray-200');
+                    });
+                    
+                    // Highlight selected label
+                    const selectedLabel = this.closest('label');
+                    selectedLabel.classList.remove('border-gray-200');
+                    selectedLabel.classList.add('border-yellow-400', 'ring-2', 'ring-yellow-200');
+                });
+            });
+        });
+    </script>
+    <script src="/static/topbar-global.js"></script>
+</body>
+</html>
+

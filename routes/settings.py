@@ -6,6 +6,8 @@ from services.audit_service import AuditService
 from services.security_service import SecurityService
 from services.telegram_service import TelegramService
 import re
+from datetime import datetime
+import os
 
 bp = Blueprint('settings', __name__, url_prefix='/api/settings')
 
@@ -75,6 +77,262 @@ def security_manage_required(f):
         return f(*args, **kwargs)
 
     return decorated
+
+
+def _initials(name):
+    parts = [p for p in (name or '').strip().split(' ') if p]
+    if not parts:
+        return 'U'
+    if len(parts) == 1:
+        return parts[0][:1].upper()
+    return f"{parts[0][:1]}{parts[-1][:1]}".upper()
+
+
+def _safe_iso(dt):
+    if not dt:
+        return None
+    if isinstance(dt, datetime):
+        return dt.isoformat()
+    return None
+
+
+def _topbar_recent_items(workspace_id, limit=8):
+    """Build mixed recent items list for topbar search dropdown."""
+    from models_crm import Contact, Company, Deal, Task, Document
+
+    items = []
+
+    contacts = Contact.query.filter_by(workspace_id=workspace_id) \
+        .order_by(Contact.updated_at.desc(), Contact.created_at.desc()) \
+        .limit(4).all()
+    for c in contacts:
+        items.append({
+            'type': 'contact',
+            'title': c.full_name,
+            'subtitle': c.email or c.phone or 'Kisi',
+            'url': f'/contacts/{c.id}',
+            'icon': 'fa-user',
+            'timestamp': _safe_iso(c.updated_at or c.created_at),
+        })
+
+    documents = Document.query.filter_by(workspace_id=workspace_id) \
+        .order_by(Document.created_at.desc()) \
+        .limit(2).all()
+    for d in documents:
+        items.append({
+            'type': 'document',
+            'title': d.name,
+            'subtitle': 'Dokuman',
+            'url': '/documents',
+            'icon': 'fa-file-image',
+            'timestamp': _safe_iso(d.created_at),
+        })
+
+    # Include recent uploaded contact files from filesystem uploads/contacts/{contact_id}
+    uploads_root = os.path.join('uploads', 'contacts')
+    if os.path.isdir(uploads_root):
+        contact_names = {
+            c.id: c.full_name
+            for c in Contact.query.filter_by(workspace_id=workspace_id).all()
+        }
+        file_items = []
+        for contact_id in contact_names.keys():
+            contact_dir = os.path.join(uploads_root, str(contact_id))
+            if not os.path.isdir(contact_dir):
+                continue
+            try:
+                for filename in os.listdir(contact_dir):
+                    full_path = os.path.join(contact_dir, filename)
+                    if not os.path.isfile(full_path):
+                        continue
+                    display_name = filename.split('_', 1)[1] if '_' in filename else filename
+                    mtime = datetime.utcfromtimestamp(os.path.getmtime(full_path)).isoformat()
+                    file_items.append({
+                        'type': 'contact_file',
+                        'title': display_name,
+                        'subtitle': f"Dosya • {contact_names.get(contact_id, 'Kisi')}",
+                        'url': f'/contacts/{contact_id}?tab=files',
+                        'icon': 'fa-file',
+                        'timestamp': mtime,
+                    })
+            except Exception:
+                continue
+
+        file_items.sort(key=lambda i: i.get('timestamp') or '', reverse=True)
+        items.extend(file_items[:2])
+
+    deals = Deal.query.filter_by(workspace_id=workspace_id) \
+        .order_by(Deal.updated_at.desc(), Deal.created_at.desc()) \
+        .limit(2).all()
+    for deal in deals:
+        company_name = deal.company.name if deal.company else None
+        value = float(deal.value) if deal.value is not None else 0
+        subtitle = f"{value:,.0f} tl"
+        if company_name:
+            subtitle = f"{subtitle} • {company_name}"
+        items.append({
+            'type': 'deal',
+            'title': deal.name,
+            'subtitle': subtitle,
+            'url': '/pipeline',
+            'icon': 'fa-circle-dollar-to-slot',
+            'timestamp': _safe_iso(deal.updated_at or deal.created_at),
+        })
+
+    tasks = Task.query.filter_by(workspace_id=workspace_id) \
+        .order_by(Task.updated_at.desc(), Task.created_at.desc()) \
+        .limit(2).all()
+    for task in tasks:
+        items.append({
+            'type': 'task',
+            'title': task.title,
+            'subtitle': task.status or 'Gorev',
+            'url': '/tasks',
+            'icon': 'fa-paperclip',
+            'timestamp': _safe_iso(task.updated_at or task.created_at),
+        })
+
+    items.sort(key=lambda i: i.get('timestamp') or '', reverse=True)
+    return items[:limit]
+
+
+def _topbar_search(workspace_id, query, limit=12):
+    """Search across core CRM entities for topbar search."""
+    from models_crm import Contact, Company, Deal, Task, Document
+
+    q = (query or '').strip()
+    if not q:
+        return []
+
+    like = f"%{q}%"
+    results = []
+
+    contacts = Contact.query.filter(
+        Contact.workspace_id == workspace_id,
+        db.or_(
+            Contact.first_name.ilike(like),
+            Contact.last_name.ilike(like),
+            Contact.email.ilike(like),
+            Contact.phone.ilike(like),
+        )
+    ).order_by(Contact.updated_at.desc(), Contact.created_at.desc()).limit(5).all()
+    for c in contacts:
+        results.append({
+            'type': 'contact',
+            'title': c.full_name,
+            'subtitle': c.email or c.phone or 'Kisi',
+            'url': f'/contacts/{c.id}',
+            'icon': 'fa-user',
+            'timestamp': _safe_iso(c.updated_at or c.created_at),
+        })
+
+    companies = Company.query.filter(
+        Company.workspace_id == workspace_id,
+        db.or_(
+            Company.name.ilike(like),
+            Company.website.ilike(like),
+            Company.phone.ilike(like),
+        )
+    ).order_by(Company.updated_at.desc(), Company.created_at.desc()).limit(3).all()
+    for c in companies:
+        results.append({
+            'type': 'company',
+            'title': c.name,
+            'subtitle': c.industry or c.website or 'Sirket',
+            'url': '/companies',
+            'icon': 'fa-building',
+            'timestamp': _safe_iso(c.updated_at or c.created_at),
+        })
+
+    documents = Document.query.filter(
+        Document.workspace_id == workspace_id,
+        Document.name.ilike(like)
+    ).order_by(Document.created_at.desc()).limit(2).all()
+    for d in documents:
+        results.append({
+            'type': 'document',
+            'title': d.name,
+            'subtitle': 'Dokuman',
+            'url': '/documents',
+            'icon': 'fa-file-image',
+            'timestamp': _safe_iso(d.created_at),
+        })
+
+    # Search uploaded contact files from filesystem uploads/contacts/{contact_id}
+    uploads_root = os.path.join('uploads', 'contacts')
+    if os.path.isdir(uploads_root):
+        contact_names = {
+            c.id: c.full_name
+            for c in Contact.query.filter_by(workspace_id=workspace_id).all()
+        }
+
+        file_hits = []
+        q_lower = q.lower()
+        for contact_id in contact_names.keys():
+            contact_dir = os.path.join(uploads_root, str(contact_id))
+            if not os.path.isdir(contact_dir):
+                continue
+            try:
+                for filename in os.listdir(contact_dir):
+                    full_path = os.path.join(contact_dir, filename)
+                    if not os.path.isfile(full_path):
+                        continue
+                    display_name = filename.split('_', 1)[1] if '_' in filename else filename
+                    if q_lower not in display_name.lower():
+                        continue
+                    mtime = datetime.utcfromtimestamp(os.path.getmtime(full_path)).isoformat()
+                    file_hits.append({
+                        'type': 'contact_file',
+                        'title': display_name,
+                        'subtitle': f"Dosya • {contact_names.get(contact_id, 'Kisi')}",
+                        'url': f'/contacts/{contact_id}?tab=files',
+                        'icon': 'fa-file',
+                        'timestamp': mtime,
+                    })
+            except Exception:
+                continue
+
+        file_hits.sort(key=lambda i: i.get('timestamp') or '', reverse=True)
+        results.extend(file_hits[:4])
+
+    deals = Deal.query.filter(
+        Deal.workspace_id == workspace_id,
+        Deal.name.ilike(like)
+    ).order_by(Deal.updated_at.desc(), Deal.created_at.desc()).limit(3).all()
+    for deal in deals:
+        company_name = deal.company.name if deal.company else None
+        value = float(deal.value) if deal.value is not None else 0
+        subtitle = f"{value:,.0f} tl"
+        if company_name:
+            subtitle = f"{subtitle} • {company_name}"
+        results.append({
+            'type': 'deal',
+            'title': deal.name,
+            'subtitle': subtitle,
+            'url': '/pipeline',
+            'icon': 'fa-circle-dollar-to-slot',
+            'timestamp': _safe_iso(deal.updated_at or deal.created_at),
+        })
+
+    tasks = Task.query.filter(
+        Task.workspace_id == workspace_id,
+        db.or_(
+            Task.title.ilike(like),
+            Task.description.ilike(like),
+        )
+    ).order_by(Task.updated_at.desc(), Task.created_at.desc()).limit(3).all()
+    for task in tasks:
+        results.append({
+            'type': 'task',
+            'title': task.title,
+            'subtitle': task.status or 'Gorev',
+            'url': '/tasks',
+            'icon': 'fa-paperclip',
+            'timestamp': _safe_iso(task.updated_at or task.created_at),
+        })
+
+    results.sort(key=lambda i: i.get('timestamp') or '', reverse=True)
+    return results[:limit]
 
 # ─── Workspace Genel Bilgi ──────────────────────────────────────────────────
 
@@ -241,6 +499,71 @@ def update_workspace_preferences():
     return jsonify({
         'status': 'updated',
         'show_dashboard_insights': bool(pref.show_dashboard_insights),
+    }), 200
+
+
+@bp.route('/topbar', methods=['GET'])
+@login_required_api
+def get_topbar_config():
+    """Return topbar/profile metadata used by modern list pages."""
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+
+    ws = Workspace.query.get_or_404(workspace_id)
+    user = User.query.get_or_404(user_id)
+
+    return jsonify({
+        'user': {
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'role': user.role,
+            'initials': _initials(user.name),
+        },
+        'workspace': {
+            'id': ws.id,
+            'company_name': ws.company_name,
+        },
+        'search_placeholder': f"{ws.company_name} icinde ara...",
+        'account_menu': [
+            {'group': 'HESABIM', 'label': 'Kisisel tercihler', 'icon': 'fa-user-circle', 'url': '/account'},
+            {'group': 'HESABIM', 'label': 'Tavsiye programi', 'icon': 'fa-gift', 'url': '/settings'},
+            {'group': 'SIRKET HAKKINDA GENEL BILGILER', 'label': 'Sirket ayarlari', 'icon': 'fa-cog', 'url': '/settings'},
+            {'group': 'SIRKET HAKKINDA GENEL BILGILER', 'label': 'Kullanicilari yonet', 'icon': 'fa-users', 'url': '/settings'},
+            {'group': 'SIRKET HAKKINDA GENEL BILGILER', 'label': 'Faturalama', 'icon': 'fa-receipt', 'url': '/settings'},
+            {'group': 'SIRKET HAKKINDA GENEL BILGILER', 'label': 'Araclar ve uygulamalar', 'icon': 'fa-th', 'url': '/channels'},
+            {'group': 'SESSION', 'label': 'Cikis', 'icon': 'fa-sign-out-alt', 'url': '/logout'},
+        ],
+    }), 200
+
+
+@bp.route('/topbar/recent', methods=['GET'])
+@login_required_api
+def get_topbar_recent():
+    workspace_id = session.get('workspace_id')
+    limit = min(max(request.args.get('limit', 8, type=int), 1), 20)
+    return jsonify({
+        'items': _topbar_recent_items(workspace_id, limit=limit),
+    }), 200
+
+
+@bp.route('/topbar/search', methods=['GET'])
+@login_required_api
+def search_topbar():
+    workspace_id = session.get('workspace_id')
+    q = (request.args.get('q') or '').strip()
+
+    if len(q) < 2:
+        return jsonify({
+            'query': q,
+            'items': _topbar_recent_items(workspace_id, limit=8),
+            'mode': 'recent',
+        }), 200
+
+    return jsonify({
+        'query': q,
+        'items': _topbar_search(workspace_id, q, limit=12),
+        'mode': 'search',
     }), 200
 
 

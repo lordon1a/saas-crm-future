@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ contact.full_name }} - Kişi Detayı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans antialiased flex h-screen overflow-hidden">
+    <!-- App Sidebar -->
+    <aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">🐧</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-purple-600 bg-purple-50 rounded-xl shadow-sm transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
+        </div>
+    </aside>
+    
+    <!-- Main Grid Container: 12 columns, no gap -->
+    <div class="grid grid-cols-12 gap-0 flex-1 overflow-hidden">
+        
+        <!-- LEFT SIDEBAR: col-span-3 (25%) -->
+        <aside class="col-span-3 bg-white border-r border-gray-200 overflow-y-auto">
+            <!-- Header -->
+            <div class="px-4 py-3 border-b border-gray-200">
+                <div class="flex items-center justify-between mb-3">
+                    <a href="/contacts" class="text-gray-400 hover:text-gray-600 transition-colors text-sm">
+                        <i class="fas fa-arrow-left mr-1"></i> Geri
+                    </a>
+                    <div class="flex items-center gap-1">
+                        <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-all">
+                            <i class="fas fa-star text-xs"></i>
+                        </button>
+                        <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-all">
+                            <i class="fas fa-ellipsis-h text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Contact Avatar & Name -->
+                <div class="flex items-start gap-2 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        {{ contact.first_name[0] if contact.first_name else 'K' }}{{ contact.last_name[0] if contact.last_name else 'K' }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h1 class="text-base font-bold text-gray-900 truncate">{{ contact.full_name }}</h1>
+                        <p class="text-xs text-gray-500 truncate">{{ contact.company.name if contact.company else 'Kuruluş yok' }}</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="flex items-center gap-1">
+                    <button onclick="sendEmail()" class="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-all flex items-center justify-center gap-1">
+                        <i class="fas fa-envelope text-xs"></i>
+                        <span>E-posta</span>
+                    </button>
+                    <button onclick="makeCall()" class="flex-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-all flex items-center justify-center gap-1">
+                        <i class="fas fa-phone text-xs"></i>
+                        <span>Ara</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Özet Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('summary')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-xs font-semibold text-gray-700">Özet</span>
+                    <i id="summary-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="summary-content" class="px-4 py-2 space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Sahip</span>
+                        <span class="text-gray-900 font-medium">{{ session.get('user_name', 'Kullanıcı') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Oluşturulma</span>
+                        <span class="text-gray-900 font-medium">{{ contact.created_at.strftime('%d.%m.%Y') if contact.created_at else '-' }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ayrıntılar Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('details')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-xs font-semibold text-gray-700">Ayrıntılar</span>
+                    <i id="details-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="details-content" class="px-4 py-2">
+                    <div class="grid grid-cols-[80px_1fr] gap-2 text-xs">
+                        <div class="text-gray-500">Adı</div>
+                        <div class="text-gray-900 font-medium">{{ contact.first_name or '-' }}</div>
+                        
+                        <div class="text-gray-500">Soyadı</div>
+                        <div class="text-gray-900 font-medium">{{ contact.last_name or '-' }}</div>
+                        
+                        <div class="text-gray-500">E-posta</div>
+                        <div class="text-gray-900 font-medium truncate">{{ contact.email or '-' }}</div>
+                        
+                        <div class="text-gray-500">Telefon</div>
+                        <div class="text-gray-900 font-medium">{{ contact.phone or '-' }}</div>
+                        
+                        <div class="text-gray-500">Unvan</div>
+                        <div class="text-gray-900 font-medium">{{ contact.job_title or '-' }}</div>
+                        
+                        <div class="text-gray-500">Rol</div>
+                        <div class="text-gray-900 font-medium">{{ contact.role or '-' }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kuruluş Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('organization')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-xs font-semibold text-gray-700">Kuruluş</span>
+                    <i id="organization-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="organization-content" class="hidden px-4 py-2 text-xs">
+                    {% if contact.company %}
+                    <div class="font-medium text-gray-900 mb-1">{{ contact.company.name }}</div>
+                    <div class="text-gray-500">{{ contact.company.industry or 'Sektör belirtilmemiş' }}</div>
+                    {% else %}
+                    <div class="text-gray-500">Kuruluş bağlantısı yok</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Anlaşmalar Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('deals')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-xs font-semibold text-gray-700">Anlaşmalar</span>
+                    <i id="deals-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="deals-content" class="hidden px-4 py-2">
+                    <div id="deals-list" class="space-y-2 text-xs">
+                        <div class="text-gray-500">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- RIGHT MAIN CONTENT: col-span-9 (75%) -->
+        <main class="col-span-9 flex flex-col overflow-hidden bg-white">
+            <!-- Top Navigation Tabs -->
+            <div class="border-b border-gray-200 px-4">
+                <div class="flex items-center gap-4">
+                    <button data-tab="activity" class="tab-button py-3 text-xs font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors">
+                        <i class="fas fa-list mr-1"></i> Etkinlik
+                    </button>
+                    <button data-tab="notes" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+                        <i class="fas fa-sticky-note mr-1"></i> Notlar
+                    </button>
+                    <button data-tab="call" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+                        <i class="fas fa-phone mr-1"></i> Arama
+                    </button>
+                    <button data-tab="email" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+                        <i class="fas fa-envelope mr-1"></i> E-posta
+                    </button>
+                    <button data-tab="meeting" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+                        <i class="fas fa-calendar mr-1"></i> Toplantı Planlayıcı
+                    </button>
+                    <button data-tab="files" class="tab-button py-3 text-xs font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+                        <i class="fas fa-file mr-1"></i> Dosyalar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- TAB CONTENT CONTAINER -->
+            <div class="flex-1 overflow-hidden">
+                
+                <!-- ACTIVITY TAB -->
+                <div id="activity-tab" class="tab-content h-full flex flex-col">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">Etkinlikler</p>
+                                <p class="text-xs text-gray-600">Bu bölümde sadece etkinlik kayıtları gösterilir.</p>
+                            </div>
+                            <button onclick="openActivityModal()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i> Etkinlik Oluştur
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="flex-1 overflow-y-auto">
+                        <div class="p-4">
+                            <div class="mb-3">
+                                <button onclick="toggleContactDetailHistory()" class="flex items-center gap-2 text-sm font-semibold text-gray-800 hover:text-blue-600 transition-colors">
+                                    <i id="contactDetailHistoryChevron" class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                    <span>Geçmiş</span>
+                                </button>
+                            </div>
+                            <div id="contactDetailHistoryContent">
+                                <div class="relative pl-6 border-l-2 border-gray-200 ml-4 space-y-4" id="activity-items">
+                                    <div class="text-sm text-gray-500 text-center py-8">Yükleniyor...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NOTES TAB -->
+                <div id="notes-tab" class="tab-content hidden h-full flex flex-col">
+                    <div class="p-4 border-b border-gray-200">
+                        <div class="border border-yellow-300 rounded-md bg-yellow-50 overflow-hidden">
+                            <div class="flex items-center gap-2 p-2 border-b border-yellow-200 bg-white/50">
+                                <button class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded transition-colors">
+                                    <i class="fas fa-bold text-xs"></i>
+                                </button>
+                                <button class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded transition-colors">
+                                    <i class="fas fa-italic text-xs"></i>
+                                </button>
+                            </div>
+                            <textarea id="note-textarea-2" placeholder="Not ekleyin..." class="w-full px-3 py-2 text-sm text-gray-700 bg-transparent resize-none focus:outline-none" rows="3"></textarea>
+                            <div class="flex items-center justify-end gap-2 px-3 py-1.5 bg-white/50 border-t border-yellow-200">
+                                <button onclick="cancelNote()" class="text-sm px-3 py-1 text-gray-700 hover:bg-gray-200 rounded transition-colors">İptal Et</button>
+                                <button id="save-note-btn" onclick="saveNote()" class="text-sm px-3 py-1 text-white bg-green-600 hover:bg-green-700 rounded transition-colors font-medium">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4">
+                        <div class="text-sm text-gray-500 text-center py-3">Notlar sadece bu sekmede listelenir.</div>
+                        <div class="relative pl-6 border-l-2 border-gray-200 ml-4 space-y-6" id="notes-items">
+                            <div class="text-sm text-gray-500 text-center py-8">Yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- CALL TAB -->
+                <div id="call-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6 max-w-2xl">
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Giden arama</label>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 relative">
+                                    <i class="fas fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input type="text" value="{{ contact.phone or '' }}" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Telefon numarası">
+                                </div>
+                                <button class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm hover:bg-gray-200 transition-colors">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Arama yöntemi</label>
+                            <div class="flex gap-2">
+                                <button class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                                    Bilgisayar
+                                </button>
+                                <button class="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                    Telefon
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Arama entegrasyonu ile arayın</label>
+                            <select class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Varsayılan "callto" işleyicisi</option>
+                            </select>
+                            <input type="text" placeholder="callto:[number]" class="w-full px-4 py-2 mt-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-info-circle text-blue-600 mt-1"></i>
+                                <div class="text-sm text-gray-700">
+                                    <p class="font-semibold mb-2">İş ortaklarımızın gelişmiş arama uygulamaları ile satışları artırın</p>
+                                    <ul class="list-disc list-inside space-y-1 text-xs">
+                                        <li>Pipedrive üzerinden arama yapın ve alın</li>
+                                        <li>Otomatik SMS kampanyaları gönderin</li>
+                                        <li>Detaylı arama analizlerine erişin</li>
+                                    </ul>
+                                    <div class="mt-3 flex gap-2">
+                                        <span class="px-3 py-1 bg-white border border-blue-300 rounded text-xs font-medium">
+                                            <i class="fas fa-phone mr-1"></i> JustCall <span class="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded text-xs">YENİ</span>
+                                        </span>
+                                        <span class="px-3 py-1 bg-white border border-blue-300 rounded text-xs font-medium">
+                                            <i class="fas fa-phone mr-1"></i> CloudTalk <span class="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded text-xs">YENİ</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="makeCall()" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                            Aramayı başlat
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- EMAIL TAB -->
+                <div id="email-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6 max-w-4xl">
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i class="fas fa-envelope text-blue-600 text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">Daha iyi e-postalarla anlaşmaları daha hızlı kapatın</h3>
+                            <p class="text-sm text-gray-600 mb-6 max-w-2xl mx-auto">Akıllı, güvenilir, yapılandırılabilir <span class="font-semibold">Satış Gelen Kutusu</span>.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-8">
+                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                                        <i class="fas fa-link text-purple-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">Güçlü özellikler</h4>
+                                    <p class="text-sm text-gray-600">E-postaları anlaşmalara ve müşteri adaylarına bağlayın. E-postaları toplu olarak gönderin, açma ve tıklamayı takip edin, şablonları ayarlayın.</p>
+                                </div>
+                                
+                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                                        <i class="fas fa-users text-blue-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">Gelişmiş araçlar</h4>
+                                    <p class="text-sm text-gray-600">Yapay zeka ile görüşmeleri yazıp özetleyin. Daha iyi iş birliği yapmak için ekip gelen kutusu ekleyin.</p>
+                                </div>
+                                
+                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
+                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                                        <i class="fas fa-users-cog text-green-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">Ekip Gelen Kutusu</h4>
+                                    <p class="text-sm text-gray-600">Aynı gelen kutusunda iş birliği yapmak için ekip üyeleri ekleyin. Daha iyi iş birliği için e-posta atayın.</p>
+                                </div>
+                                
+                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
+                                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                                        <i class="fas fa-shield-alt text-yellow-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">Güvenli ve özel</h4>
+                                    <p class="text-sm text-gray-600">E-postalarınızı kimin görebileceğine karar verin. Verileriniz bizimle güvendedir.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-center gap-3">
+                                <input type="email" value="{{ contact.email or '' }}" placeholder="yigitguidal@gmail.com" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button onclick="sendEmail()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                                    Başlayın
+                                </button>
+                                <button class="px-4 py-2 text-blue-600 text-sm font-semibold hover:underline">
+                                    Satış Gelen Kutusu Aç <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                            
+                            <p class="text-xs text-gray-500 mt-4">Premium faturalama planınızda bulunmuyor.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- MEETING TAB -->
+                <div id="meeting-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6 max-w-3xl">
+                        <div class="mb-6">
+                            <input type="text" placeholder="Ara" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="flex gap-4 mb-6">
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-phone mr-2"></i> Ara
+                            </button>
+                            <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-users mr-2"></i> Toplantı
+                            </button>
+                            <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-clock mr-2"></i> Görev
+                            </button>
+                            <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-calendar-check mr-2"></i> Son Tarih
+                            </button>
+                            <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-envelope mr-2"></i> E-posta
+                            </button>
+                            <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-utensils mr-2"></i> Öğle Yemeği
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-clock mr-1"></i> Tarih
+                                </label>
+                                <input type="date" value="2026-03-17" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-2">Saat</label>
+                                <div class="flex gap-2">
+                                    <input type="time" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <span class="flex items-center text-gray-500">-</span>
+                                    <input type="time" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-calendar mr-1"></i> Öncelik
+                            </label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Öncelik</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-ellipsis-h mr-1"></i> Konum, görüntülü arama ve açıklama ekleyin
+                            </label>
+                            <textarea placeholder="Notlar Pipedrive'de görünür, fakat etkinliğin misafirlerine görünmez" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-yellow-50" rows="4"></textarea>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-user mr-1"></i> Yiğit Güidal (Siz)
+                            </label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Yiğit Güidal (Siz)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-link mr-1"></i> Anlaşma veya Müşteri Adayı
+                            </label>
+                            <input type="text" placeholder="Anlaşma veya Müşteri Adayı" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="mb-6">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-user text-gray-400"></i>
+                                <span class="text-sm text-gray-700">[Örnek] Benjamin Leon</span>
+                                <button class="ml-auto text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-building text-gray-400"></i>
+                                <input type="text" placeholder="Organizasyon" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-cog text-gray-400"></i>
+                                <label class="flex items-center gap-2 text-sm text-gray-700">
+                                    <input type="checkbox" class="rounded">
+                                    Bitti olarak işaretle
+                                </label>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">İptal</button>
+                                <button class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">Kaydet</button>
+                                <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side Calendar -->
+                        <div class="mt-6 bg-white border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-sm font-semibold">Salı, Mart 17</span>
+                                <div class="flex gap-2">
+                                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-chevron-left"></i></button>
+                                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2 p-2 bg-blue-50 border-l-4 border-blue-600 rounded">
+                                    <i class="fas fa-phone text-blue-600"></i>
+                                    <span class="text-sm font-medium">Ara</span>
+                                </div>
+                                <div class="text-xs text-gray-500 pl-6">[Örnek] Bağlam araması</div>
+                                <div class="text-xs text-gray-500 pl-6">[Örnek] Gösteriliyor</div>
+                                <div class="text-xs text-gray-500 pl-6">[Örnek] Son irtibat denemesi</div>
+                            </div>
+                            <div class="mt-4 space-y-1 text-xs text-gray-500">
+                                <div>12:00</div>
+                                <div>13:00</div>
+                                <div>14:00</div>
+                                <div>15:00</div>
+                                <div>16:00</div>
+                                <div>17:00</div>
+                                <div>18:00</div>
+                                <div>19:00</div>
+                                <div>20:00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FILES TAB -->
+                <div id="files-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6">
+                        <div class="text-center py-16">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i class="fas fa-file text-gray-400 text-3xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Dosyaları yükleyin</h3>
+                            <p class="text-sm text-gray-600 mb-6">ya da dosyaları buraya sürükleyin.</p>
+                            <button onclick="openFileUploadModal()" class="px-6 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                                Dosyaları yükleyin
+                            </button>
+                        </div>
+                        
+                        <div class="mt-8 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-700">Odak</span>
+                                <button class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="flex items-center gap-2 text-sm text-gray-600">
+                                    <input type="checkbox" class="rounded">
+                                    <span>Tüm öğeleri genişlet</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </main>
+    </div>
+    
+    <!-- Activity Creation Modal -->
+    <div id="activity-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900">Yeni Etkinlik</h3>
+                <button onclick="closeActivityModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Etkinlik Türü</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setActivityType('call')" class="activity-type-btn px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition-all">
+                            <i class="fas fa-phone mr-2"></i> Arama
+                        </button>
+                        <button onclick="setActivityType('meeting')" class="activity-type-btn px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition-all">
+                            <i class="fas fa-calendar mr-2"></i> Toplantı
+                        </button>
+                        <button onclick="setActivityType('task')" class="activity-type-btn px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition-all">
+                            <i class="fas fa-tasks mr-2"></i> Görev
+                        </button>
+                        <button onclick="setActivityType('email')" class="activity-type-btn px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition-all">
+                            <i class="fas fa-envelope mr-2"></i> E-posta
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Başlık</label>
+                    <input type="text" id="activity-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Etkinlik başlığı">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Tarih</label>
+                        <input type="date" id="activity-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Saat</label>
+                        <input type="time" id="activity-time" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Açıklama</label>
+                    <textarea id="activity-description" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Etkinlik detayları..."></textarea>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-4 border-t border-gray-200">
+                    <button onclick="closeActivityModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">İptal</button>
+                    <button onclick="saveActivity()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- File Upload Modal -->
+    <div id="file-upload-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg">
+            <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900">Dosya Yükle</h3>
+                <button onclick="closeFileUploadModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-sm text-gray-600 mb-2">Dosyaları buraya sürükleyin veya tıklayın</p>
+                    <p class="text-xs text-gray-500">Maksimum dosya boyutu: 50MB</p>
+                    <input type="file" id="file-input" multiple class="hidden" onchange="handleFileSelect(event)">
+                </div>
+                <div id="file-list" class="mt-4 space-y-2"></div>
+                <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+                    <button onclick="closeFileUploadModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">İptal</button>
+                    <button onclick="uploadFiles()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">Yükle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // GLOBAL STATE & CONFIG
+        // ============================================================================
+        const STATE = {
+            contactId: {{ contact.id }},
+            currentTab: 'activity',
+            timeline: [],
+            deals: []
+        };
+
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+        function parseServerDate(dateString) {
+            if (!dateString) return null;
+
+            // Backend returns naive ISO (UTC). Force UTC parse to avoid +3h drift.
+            const hasTimezone = /([zZ]|[+\-]\d{2}:?\d{2})$/.test(dateString);
+            const normalized = hasTimezone ? dateString : `${dateString}Z`;
+            const parsed = new Date(normalized);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = parseServerDate(dateString);
+            if (!date) return '-';
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Az önce';
+            if (diffMins < 60) return `${diffMins} dakika önce`;
+            if (diffHours < 24) return `${diffHours} saat önce`;
+            if (diffDays < 7) return `${diffDays} gün önce`;
+            
+            return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white text-xs font-medium z-50 ${
+                type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // ============================================================================
+        // TAB NAVIGATION
+        // ============================================================================
+        function initTabNavigation() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tab = button.getAttribute('data-tab');
+                    
+                    // Update active state
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('text-blue-600', 'border-blue-600');
+                        btn.classList.add('text-gray-500', 'border-transparent');
+                    });
+                    
+                    button.classList.remove('text-gray-500', 'border-transparent');
+                    button.classList.add('text-blue-600', 'border-blue-600');
+                    
+                    STATE.currentTab = tab;
+                    
+                    // Hide all tab contents
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    
+                    // Show selected tab content
+                    const selectedTab = document.getElementById(`${tab}-tab`);
+                    if (selectedTab) {
+                        selectedTab.classList.remove('hidden');
+                    }
+
+                    renderCurrentTabContent();
+                });
+            });
+        }
+
+        // ============================================================================
+        // COMPOSER FUNCTIONALITY (Note Saving)
+        // ============================================================================
+        async function saveNote() {
+            const textarea = document.getElementById('note-textarea-2');
+            const content = textarea.value.trim();
+            
+            if (!content) {
+                showToast('Lütfen bir not yazın', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('save-note-btn');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Kaydediliyor...';
+            
+            try {
+                const response = await fetch(`/api/contacts/${STATE.contactId}/notes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: content
+                    })
+                });
+                
+                if (response.ok) {
+                    const note = await response.json();
+                    showToast('Not kaydedildi');
+                    textarea.value = '';
+                    
+                    // Optimistic UI: Add to timeline immediately
+                    STATE.timeline.unshift(note);
+                    renderNotesList();
+                    renderActivityTimeline();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Not kaydedilemedi');
+                }
+            } catch (error) {
+                console.error('Error saving note:', error);
+                showToast(error.message || 'Not kaydedilemedi', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
+
+        function cancelNote() {
+            const textarea = document.getElementById('note-textarea-2');
+            textarea.value = '';
+        }
+
+        // ============================================================================
+        // TIMELINE LOADING & RENDERING
+        // ============================================================================
+        async function initTimeline() {
+            try {
+                const response = await fetch(`/api/contacts/${STATE.contactId}/timeline`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    STATE.timeline = data.timeline || [];
+                    renderCurrentTabContent();
+                } else {
+                    throw new Error('Timeline yüklenemedi');
+                }
+            } catch (error) {
+                console.error('Error loading timeline:', error);
+                const activityContainer = document.getElementById('activity-items');
+                const notesContainer = document.getElementById('notes-items');
+                if (activityContainer) {
+                    activityContainer.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Timeline yüklenemedi</div>';
+                }
+                if (notesContainer) {
+                    notesContainer.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Notlar yüklenemedi</div>';
+                }
+            }
+        }
+
+        function renderCurrentTabContent() {
+            if (STATE.currentTab === 'notes') {
+                renderNotesList();
+                return;
+            }
+            renderActivityTimeline();
+        }
+
+        function renderActivityTimeline() {
+            const container = document.getElementById('activity-items');
+            const historyItems = [...STATE.timeline].sort((a, b) => {
+                const da = parseServerDate(a.created_at);
+                const db = parseServerDate(b.created_at);
+                return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+            });
+
+            if (historyItems.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Henüz kayıt yok</div>';
+                return;
+            }
+            
+            container.innerHTML = historyItems.map(item => {
+                if (item.type === 'note') {
+                    return `
+                        <div class="relative">
+                            <div class="absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
+                                <i class="fas fa-sticky-note text-yellow-600 text-xs"></i>
+                            </div>
+                            <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg shadow-sm">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="text-xs text-gray-500">
+                                        <span class="font-semibold text-gray-700">${item.user_name || 'Kullanıcı'}</span>
+                                        <span class="mx-1">•</span>
+                                        <span>${formatDate(item.created_at)}</span>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-800 whitespace-pre-wrap">${item.content || ''}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const actionType = item.action_type || 'activity';
+                let iconClass = 'fa-circle text-gray-400';
+                if (actionType === 'file_upload') iconClass = 'fa-file text-blue-500';
+                if (actionType === 'call') iconClass = 'fa-phone text-green-500';
+                if (actionType === 'email') iconClass = 'fa-envelope text-indigo-500';
+                if (actionType === 'meeting') iconClass = 'fa-calendar text-purple-500';
+
+                return `
+                    <div class="relative">
+                        <div class="absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
+                            <i class="fas ${iconClass} text-xs"></i>
+                        </div>
+                        <div class="bg-white border border-gray-200 p-3 rounded-lg shadow-sm">
+                            <div class="text-xs text-gray-500 mb-1">
+                                <span class="font-semibold text-gray-700">${item.user_name || 'Sistem'}</span>
+                                <span class="mx-1">•</span>
+                                <span>${formatDate(item.created_at)}</span>
+                            </div>
+                            <div class="text-sm text-gray-700 font-semibold">${item.description || 'Etkinlik'}</div>
+                            ${item.metadata && item.metadata.amount ? `<span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">${item.metadata.amount}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderNotesList() {
+            const container = document.getElementById('notes-items');
+            const notes = STATE.timeline.filter(item => item.type === 'note');
+
+            if (notes.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">Henüz not yok</div>';
+                return;
+            }
+
+            container.innerHTML = notes.map(item => {
+                return `
+                    <div class="relative">
+                        <div class="absolute -left-[11px] top-2 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
+                            <i class="fas fa-sticky-note text-yellow-600 text-xs"></i>
+                        </div>
+                        <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-md shadow-sm">
+                            <div class="flex items-start justify-between mb-2">
+                                <div class="text-xs text-gray-500">
+                                    <span class="font-semibold text-gray-700">${item.user_name || 'Kullanıcı'}</span>
+                                    <span class="mx-1">•</span>
+                                    <span>${formatDate(item.created_at)}</span>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-800 whitespace-pre-wrap">${item.content}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleContactDetailHistory(forceOpen = null) {
+            const content = document.getElementById('contactDetailHistoryContent');
+            const chevron = document.getElementById('contactDetailHistoryChevron');
+            if (!content || !chevron) return;
+
+            const isOpen = !content.classList.contains('hidden');
+            const shouldOpen = forceOpen === null ? !isOpen : forceOpen;
+
+            if (shouldOpen) {
+                content.classList.remove('hidden');
+                chevron.classList.remove('fa-chevron-right');
+                chevron.classList.add('fa-chevron-down');
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.remove('fa-chevron-down');
+                chevron.classList.add('fa-chevron-right');
+            }
+        }
+
+        // ============================================================================
+        // SIDEBAR ACCORDION
+        // ============================================================================
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        // ============================================================================
+        // DEALS LOADING
+        // ============================================================================
+        async function loadDeals() {
+            const dealsList = document.getElementById('deals-list');
+            
+            try {
+                const response = await fetch(`/api/v1/deals?contact_id=${STATE.contactId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    STATE.deals = data.deals || [];
+                } else {
+                    STATE.deals = [];
+                }
+            } catch (error) {
+                console.warn('Could not load deals:', error);
+                STATE.deals = [];
+            }
+            
+            if (STATE.deals.length === 0) {
+                dealsList.innerHTML = '<div class="text-gray-500">Henüz anlaşma yok</div>';
+            } else {
+                dealsList.innerHTML = STATE.deals.map(deal => `
+                    <div class="p-2 bg-gray-50 rounded border border-gray-200">
+                        <div class="text-xs font-semibold text-gray-900 mb-1">${deal.title}</div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-gray-600">${deal.amount || '0'} TRY</span>
+                            <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded">${deal.stage || 'Yeni'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // ============================================================================
+        // QUICK ACTIONS
+        // ============================================================================
+        function sendEmail() {
+            const email = '{{ contact.email }}';
+            if (!email || email === 'None') {
+                showToast('E-posta adresi bulunamadı', 'error');
+                return;
+            }
+            window.location.href = `mailto:${email}`;
+        }
+
+        function makeCall() {
+            const phone = '{{ contact.phone }}';
+            if (!phone || phone === 'None') {
+                showToast('Telefon numarası bulunamadı', 'error');
+                return;
+            }
+            window.location.href = `tel:${phone}`;
+        }
+
+        // ============================================================================
+        // ACTIVITY MODAL
+        // ============================================================================
+        let selectedActivityType = 'call';
+        
+        function openActivityModal() {
+            document.getElementById('activity-modal').classList.remove('hidden');
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('activity-date').value = today;
+        }
+        
+        function closeActivityModal() {
+            document.getElementById('activity-modal').classList.add('hidden');
+            // Reset form
+            document.getElementById('activity-title').value = '';
+            document.getElementById('activity-description').value = '';
+        }
+        
+        function setActivityType(type) {
+            selectedActivityType = type;
+            // Update button styles
+            document.querySelectorAll('.activity-type-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-50');
+                btn.classList.add('border-gray-300');
+            });
+            event.target.closest('button').classList.remove('border-gray-300');
+            event.target.closest('button').classList.add('border-blue-500', 'bg-blue-50');
+        }
+        
+        async function saveActivity() {
+            const title = document.getElementById('activity-title').value.trim();
+            const date = document.getElementById('activity-date').value;
+            const time = document.getElementById('activity-time').value;
+            const description = document.getElementById('activity-description').value.trim();
+            
+            if (!title) {
+                showToast('Lütfen bir başlık girin', 'error');
+                return;
+            }
+            
+            if (!date) {
+                showToast('Lütfen bir tarih seçin', 'error');
+                return;
+            }
+            
+            try {
+                // Create activity log
+                const response = await fetch(`/api/contacts/${STATE.contactId}/activities`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action_type: selectedActivityType,
+                        description: title,
+                        metadata: {
+                            date: date,
+                            time: time,
+                            details: description
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    showToast('Etkinlik oluşturuldu');
+                    closeActivityModal();
+                    // Reload timeline
+                    await initTimeline();
+                } else {
+                    throw new Error('Etkinlik oluşturulamadı');
+                }
+            } catch (error) {
+                console.error('Error creating activity:', error);
+                showToast('Etkinlik oluşturulamadı', 'error');
+            }
+        }
+
+        // ============================================================================
+        // FILE UPLOAD
+        // ============================================================================
+        let selectedFiles = [];
+        const MAX_CONTACT_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+        
+        function openFileUploadModal() {
+            document.getElementById('file-upload-modal').classList.remove('hidden');
+        }
+        
+        function closeFileUploadModal() {
+            document.getElementById('file-upload-modal').classList.add('hidden');
+            selectedFiles = [];
+            document.getElementById('file-list').innerHTML = '';
+        }
+        
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            const validFiles = [];
+
+            files.forEach(file => {
+                if (file.size > MAX_CONTACT_FILE_SIZE) {
+                    showToast(`${file.name} 50MB sinirini asiyor`, 'error');
+                    return;
+                }
+                validFiles.push(file);
+            });
+
+            selectedFiles = [...selectedFiles, ...validFiles];
+            renderFileList();
+        }
+        
+        function renderFileList() {
+            const container = document.getElementById('file-list');
+            container.innerHTML = selectedFiles.map((file, index) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-file text-gray-400"></i>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${file.name}</div>
+                            <div class="text-xs text-gray-500">${(file.size / 1024).toFixed(2)} KB</div>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+        
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) {
+                showToast('Lütfen dosya seçin', 'error');
+                return;
+            }
+
+            const overLimit = selectedFiles.find(file => file.size > MAX_CONTACT_FILE_SIZE);
+            if (overLimit) {
+                showToast(`${overLimit.name} 50MB sinirini asiyor`, 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+            formData.append('contact_id', STATE.contactId);
+            
+            try {
+                const response = await fetch('/api/contacts/files/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    showToast(`${selectedFiles.length} dosya yüklendi`);
+                    closeFileUploadModal();
+                    // Reload files tab
+                    loadFiles();
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'Dosyalar yüklenemedi');
+                }
+            } catch (error) {
+                console.error('Error uploading files:', error);
+                showToast(error.message || 'Dosyalar yüklenemedi', 'error');
+            }
+        }
+
+        async function deleteContactFile(storedName, displayName) {
+            if (!storedName) {
+                showToast('Dosya bilgisi eksik', 'error');
+                return;
+            }
+
+            if (!confirm(`"${displayName}" dosyasini silmek istediginize emin misiniz?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/contacts/${STATE.contactId}/files`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stored_name: storedName })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'Dosya silinemedi');
+                }
+
+                showToast('Dosya silindi');
+                await loadFiles();
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                showToast(error.message || 'Dosya silinemedi', 'error');
+            }
+        }
+        
+        async function loadFiles() {
+            try {
+                const response = await fetch(`/api/contacts/${STATE.contactId}/files`);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderFiles(data.files || []);
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+        
+        function renderFiles(files) {
+            const filesTab = document.getElementById('files-tab');
+            if (files.length === 0) {
+                filesTab.innerHTML = `
+                    <div class="p-6">
+                        <div class="text-center py-16">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i class="fas fa-file text-gray-400 text-3xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Dosyaları yükleyin</h3>
+                            <p class="text-sm text-gray-600 mb-6">ya da dosyaları buraya sürükleyin.</p>
+                            <button onclick="openFileUploadModal()" class="px-6 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                                Dosyaları yükleyin
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                filesTab.innerHTML = `
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-gray-900">${files.length} Dosya</h3>
+                            <button onclick="openFileUploadModal()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i> Yeni Dosya
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${files.map(file => `
+                                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                                        <button onclick="deleteContactFile('${file.stored_name || ''}', '${(file.name || '').replace(/'/g, "\\'")}')" class="text-gray-400 hover:text-red-600" title="Dosyayi sil">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-1 truncate">${file.name}</h4>
+                                    <p class="text-xs text-gray-500">${file.size} • ${file.uploaded_at}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================================================
+        // QUICK ACTION BUTTONS
+        // ============================================================================
+        // Add floating action button for quick activity creation
+        function addQuickActionButton() {
+            const button = document.createElement('button');
+            button.className = 'fixed bottom-6 right-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition-all hover:scale-110 z-40';
+            button.innerHTML = '<i class="fas fa-plus text-xl"></i>';
+            button.onclick = openActivityModal;
+            document.body.appendChild(button);
+        }
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize all components
+            initTabNavigation();
+            initTimeline();
+            loadDeals();
+            loadFiles();
+
+            // Support deep-linking like /contacts/{id}?tab=files
+            const urlTab = new URLSearchParams(window.location.search).get('tab');
+            if (urlTab) {
+                const tabBtn = document.querySelector(`.tab-button[data-tab="${urlTab}"]`);
+                if (tabBtn) {
+                    tabBtn.click();
+                }
+            }
+            
+            // Open summary and details sections by default
+            toggleSection('summary');
+            toggleSection('details');
+            
+            // Add quick action button
+            addQuickActionButton();
+            
+            // Add click handler to Files tab upload button
+            const filesTab = document.getElementById('files-tab');
+            if (filesTab) {
+                filesTab.addEventListener('click', (e) => {
+                    if (e.target.closest('button')?.textContent.includes('Dosyaları yükleyin')) {
+                        openFileUploadModal();
+                    }
+                });
+            }
+            
+            console.log('Contact detail page initialized for contact ID:', STATE.contactId);
+        });
+    </script>
+</body>
+</html>

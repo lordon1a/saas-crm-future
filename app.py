@@ -107,6 +107,7 @@ limiter = Limiter(
 
 from models import db
 from models_crm import SessionActivity
+from models_contact_timeline import ContactNote, ContactActivityLog
 from routes import webhook, api
 from routes import auth as auth_route
 from routes import settings as settings_route
@@ -129,8 +130,14 @@ from routes import custom_fields as custom_fields_route
 from routes.scheduled_messages import scheduled_messages_bp
 from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
+from routes.import_wizard import import_bp
 from services import portal_notification_service  # noqa: F401
 from services.security_service import SecurityService
+from utils.exceptions import (
+    AppException, ValidationError, NotFoundError, 
+    UnauthorizedError, ForbiddenError, ConflictError,
+    RateLimitError, ExternalServiceError
+)
 
 db.init_app(app)
 
@@ -152,14 +159,53 @@ app.register_blueprint(email_tracking_route.bp)
 app.register_blueprint(analytics_route.bp)
 app.register_blueprint(telegram_bp)
 app.register_blueprint(contacts_bp)
+from routes.contacts_file_upload import contacts_files_bp
+app.register_blueprint(contacts_files_bp)
 app.register_blueprint(tasks_bp)
 app.register_blueprint(custom_fields_route.bp)
 app.register_blueprint(scheduled_messages_bp)
 app.register_blueprint(documents_bp)
 app.register_blueprint(email_hub_bp)
+app.register_blueprint(import_bp)
 
 # Login endpoint'ine rate limit uygula
 app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
+
+# Global API rate limiting
+@app.before_request
+def apply_rate_limiting():
+    """Apply rate limiting to all API endpoints"""
+    # Skip non-API endpoints
+    if not request.path.startswith('/api/'):
+        return None
+    
+    # Skip internal requests
+    if request.path.startswith('/socket.io'):
+        return None
+    
+    # Skip webhook endpoints (they have their own rate limiting)
+    if request.path.startswith('/webhook'):
+        return None
+    
+    # Get rate limit based on HTTP method
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        limit = '100 per minute'
+    elif request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        limit = '50 per minute'
+    else:
+        limit = '100 per minute'
+    
+    # Apply rate limit
+    try:
+        limiter.limit(limit)(lambda: None)()
+    except Exception as e:
+        logger.warning(f'Rate limit exceeded: {request.remote_addr} - {request.path}')
+        return jsonify({
+            'error': 'Rate limit exceeded. Please try again later.',
+            'retry_after': 60
+        }), 429
+    
+    return None
 
 
 @socketio.on('connect')
@@ -303,6 +349,97 @@ def login_required(f):
     return decorated
 
 
+# ============================================================================
+# GLOBAL ERROR HANDLERS
+# ============================================================================
+
+@app.errorhandler(AppException)
+def handle_app_exception(error):
+    """Handle custom application exceptions"""
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    logger.error(f'{error.__class__.__name__}: {error.message}')
+    return response
+
+
+@app.errorhandler(ValidationError)
+def handle_validation_error(error):
+    """Handle validation errors"""
+    return jsonify({'error': error.message}), 400
+
+
+@app.errorhandler(NotFoundError)
+def handle_not_found_error(error):
+    """Handle not found errors"""
+    return jsonify({'error': error.message}), 404
+
+
+@app.errorhandler(UnauthorizedError)
+def handle_unauthorized_error(error):
+    """Handle unauthorized errors"""
+    return jsonify({'error': error.message}), 401
+
+
+@app.errorhandler(ForbiddenError)
+def handle_forbidden_error(error):
+    """Handle forbidden errors"""
+    return jsonify({'error': error.message}), 403
+
+
+@app.errorhandler(ConflictError)
+def handle_conflict_error(error):
+    """Handle conflict errors"""
+    return jsonify({'error': error.message}), 409
+
+
+@app.errorhandler(RateLimitError)
+def handle_rate_limit_error(error):
+    """Handle rate limit errors"""
+    return jsonify({'error': error.message}), 429
+
+
+@app.errorhandler(ExternalServiceError)
+def handle_external_service_error(error):
+    """Handle external service errors"""
+    return jsonify({'error': error.message}), 502
+
+
+@app.errorhandler(404)
+def handle_404(error):
+    """Handle 404 errors"""
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Resource not found'}), 404
+    return render_template('landing.html'), 404
+
+
+@app.errorhandler(500)
+def handle_500(error):
+    """Handle 500 errors"""
+    logger.error(f'Internal server error: {error}', exc_info=True)
+    db.session.rollback()  # Rollback any failed transactions
+    
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Internal server error'}), 500
+    return render_template('landing.html'), 500
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    """Handle all unexpected errors"""
+    logger.error(f'Unexpected error: {error}', exc_info=True)
+    db.session.rollback()
+    
+    # Don't expose internal error details in production
+    if Config.ENV == 'production':
+        error_message = 'An unexpected error occurred'
+    else:
+        error_message = str(error)
+    
+    if request.path.startswith('/api/'):
+        return jsonify({'error': error_message}), 500
+    return render_template('landing.html'), 500
+
+
 @app.route('/')
 def landing():
     if session.get('user_id'):
@@ -389,6 +526,22 @@ def analytics_dashboard():
 
 
 with app.app_context():
+    # Validate configuration
+    errors, warnings = Config.validate()
+    
+    if errors:
+        logger.error('❌ Configuration validation failed:')
+        for error in errors:
+            logger.error(f'  - {error}')
+        raise RuntimeError('Configuration validation failed. Please check your environment variables.')
+    
+    if warnings:
+        logger.warning('⚠️  Configuration warnings:')
+        for warning in warnings:
+            logger.warning(f'  - {warning}')
+    
+    logger.info('✅ Configuration validated successfully')
+    
     db.create_all()
     
     # Eski DB'de messages tablosuna media sutunlari yoksa ekle (SQLite uyumluluk)

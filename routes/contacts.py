@@ -7,8 +7,19 @@ from functools import wraps
 from services.contact_service import ContactService
 from services.collaboration_service import CollaborationService
 import logging
+import os
+import json
+from datetime import datetime
+from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
+MAX_CONTACT_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+
+def _format_file_size(size_bytes):
+    if size_bytes >= 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+    return f"{size_bytes / 1024:.2f} KB"
 
 contacts_bp = Blueprint('contacts', __name__)
 
@@ -30,11 +41,16 @@ def login_required(f):
 @contacts_bp.route('/api/v1/companies', methods=['GET'])
 @login_required
 def get_companies():
-    """Get all companies with optional filters"""
+    """Get all companies with optional filters and pagination"""
     try:
         workspace_id = session.get('workspace_id')
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+        
+        # Pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        per_page = min(per_page, 100)  # Max 100 items per page
         
         # Get filters from query params
         filters = {}
@@ -45,7 +61,34 @@ def get_companies():
         if request.args.get('search'):
             filters['search'] = request.args.get('search')
         
-        companies = ContactService.get_companies(workspace_id, filters)
+        # Get paginated companies
+        from models_crm import Company
+        from models import db
+        
+        query = Company.query.filter_by(workspace_id=workspace_id)
+        
+        # Apply filters
+        if filters.get('industry'):
+            query = query.filter_by(industry=filters['industry'])
+        if filters.get('size'):
+            query = query.filter_by(size=filters['size'])
+        if filters.get('search'):
+            search_term = f"%{filters['search']}%"
+            query = query.filter(
+                db.or_(
+                    Company.name.ilike(search_term),
+                    Company.website.ilike(search_term),
+                    Company.phone.ilike(search_term)
+                )
+            )
+        
+        # Eager load parent company
+        query = query.options(db.joinedload(Company.parent_company))
+        
+        # Paginate
+        pagination = query.order_by(Company.name).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
         
         return jsonify({
             'companies': [
@@ -62,8 +105,16 @@ def get_companies():
                     'created_at': c.created_at.isoformat() if c.created_at else None,
                     'updated_at': c.updated_at.isoformat() if c.updated_at else None
                 }
-                for c in companies
-            ]
+                for c in pagination.items
+            ],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': pagination.total,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev
+            }
         }), 200
         
     except Exception as e:
@@ -193,11 +244,16 @@ def update_company(company_id):
 @contacts_bp.route('/api/v1/contacts', methods=['GET'])
 @login_required
 def get_contacts():
-    """Get all contacts with optional filters"""
+    """Get all contacts with optional filters and pagination"""
     try:
         workspace_id = session.get('workspace_id')
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+        
+        # Pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        per_page = min(per_page, 100)  # Max 100 items per page
         
         # Get filters from query params
         filters = {}
@@ -208,7 +264,35 @@ def get_contacts():
         if request.args.get('search'):
             filters['search'] = request.args.get('search')
         
-        contacts = ContactService.get_contacts(workspace_id, filters)
+        # Get paginated contacts
+        from models_crm import Contact
+        from models import db
+        
+        query = Contact.query.filter_by(workspace_id=workspace_id)
+        
+        # Apply filters
+        if filters.get('company_id'):
+            query = query.filter_by(company_id=filters['company_id'])
+        if filters.get('role'):
+            query = query.filter_by(role=filters['role'])
+        if filters.get('search'):
+            search_term = f"%{filters['search']}%"
+            query = query.filter(
+                db.or_(
+                    Contact.first_name.ilike(search_term),
+                    Contact.last_name.ilike(search_term),
+                    Contact.email.ilike(search_term),
+                    Contact.phone.ilike(search_term)
+                )
+            )
+        
+        # Eager load company
+        query = query.options(db.joinedload(Contact.company))
+        
+        # Paginate
+        pagination = query.order_by(Contact.first_name, Contact.last_name).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
         
         return jsonify({
             'contacts': [
@@ -228,8 +312,16 @@ def get_contacts():
                     'created_at': c.created_at.isoformat() if c.created_at else None,
                     'updated_at': c.updated_at.isoformat() if c.updated_at else None
                 }
-                for c in contacts
-            ]
+                for c in pagination.items
+            ],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': pagination.total,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev
+            }
         }), 200
         
     except Exception as e:
@@ -280,6 +372,437 @@ def get_contact(contact_id):
         
     except Exception as e:
         logger.error(f"Error getting contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/contacts/<int:contact_id>')
+@login_required
+def view_contact_page(contact_id):
+    """View contact detail page"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return redirect('/login')
+        
+        from models_crm import Contact
+        from flask import render_template, redirect
+        
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return "Contact not found", 404
+        
+        return render_template('contact_detail.html', contact=contact)
+        
+    except Exception as e:
+        logger.error(f"Error viewing contact: {str(e)}")
+        return str(e), 500
+
+
+# ============================================================================
+# CONTACT TIMELINE API (Enterprise Grade)
+# ============================================================================
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/timeline', methods=['GET'])
+@login_required
+def get_contact_timeline(contact_id):
+    """
+    Get unified timeline for contact (notes + activity logs).
+    Returns merged and sorted by created_at DESC.
+    """
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Contact
+        from models_contact_timeline import ContactNote, ContactActivityLog
+        
+        # Verify contact exists and belongs to workspace
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # Get notes
+        notes = ContactNote.query.filter_by(
+            contact_id=contact_id,
+            workspace_id=workspace_id
+        ).order_by(ContactNote.created_at.desc()).all()
+        
+        # Get activity logs
+        activities = ContactActivityLog.query.filter_by(
+            contact_id=contact_id,
+            workspace_id=workspace_id
+        ).order_by(ContactActivityLog.created_at.desc()).all()
+        
+        # Merge and sort
+        timeline = []
+        timeline.extend([note.to_dict() for note in notes])
+        timeline.extend([activity.to_dict() for activity in activities])
+        
+        # Sort by created_at descending
+        timeline.sort(key=lambda x: x['created_at'], reverse=True)
+        
+        return jsonify({
+            'timeline': timeline,
+            'total': len(timeline)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting contact timeline: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/notes', methods=['POST'])
+@login_required
+def create_contact_note(contact_id):
+    """
+    Create a new note for contact.
+    Uses transaction with rollback on error.
+    """
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        from models_crm import Contact
+        from models_contact_timeline import ContactNote
+        from models import db
+        
+        # Verify contact exists
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        data = request.get_json()
+        if not data or not data.get('content'):
+            return jsonify({'error': 'Content is required'}), 400
+        
+        content = data.get('content', '').strip()
+        if not content:
+            return jsonify({'error': 'Content cannot be empty'}), 400
+        
+        # Create note with transaction
+        try:
+            note = ContactNote(
+                workspace_id=workspace_id,
+                contact_id=contact_id,
+                user_id=user_id,
+                content=content
+            )
+            
+            db.session.add(note)
+            db.session.commit()
+            
+            # Return created note
+            return jsonify(note.to_dict()), 201
+            
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error creating note: {str(db_error)}")
+            return jsonify({'error': 'Failed to create note'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error creating contact note: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/activities', methods=['POST'])
+@login_required
+def create_contact_activity(contact_id):
+    """Create a new activity for contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        from models_crm import Contact
+        from models_contact_timeline import ContactActivityLog
+        from models import db
+        import json
+        
+        # Verify contact exists
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        data = request.get_json()
+        action_type = data.get('action_type', 'activity')
+        description = data.get('description', '').strip()
+        metadata = data.get('metadata', {})
+        
+        if not description:
+            return jsonify({'error': 'Description is required'}), 400
+        
+        try:
+            activity = ContactActivityLog(
+                workspace_id=workspace_id,
+                contact_id=contact_id,
+                user_id=user_id,
+                action_type=action_type,
+                description=description,
+                metadata_json=json.dumps(metadata) if metadata else None
+            )
+            
+            db.session.add(activity)
+            db.session.commit()
+            
+            return jsonify(activity.to_dict()), 201
+            
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error creating activity: {str(db_error)}")
+            return jsonify({'error': 'Failed to create activity'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error creating contact activity: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/files', methods=['GET'])
+@login_required
+def get_contact_files(contact_id):
+    """Get files for contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Contact
+        
+        # Verify contact exists
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # Get files from upload directory
+        upload_dir = os.path.join('uploads', 'contacts', str(contact_id))
+        files = []
+
+        if os.path.exists(upload_dir):
+            for filename in os.listdir(upload_dir):
+                filepath = os.path.join(upload_dir, filename)
+                if os.path.isfile(filepath):
+                    file_size = os.path.getsize(filepath)
+                    file_mtime = os.path.getmtime(filepath)
+
+                    # Hide generated timestamp prefix in UI
+                    display_name = filename
+                    if '_' in filename:
+                        parts = filename.split('_', 1)
+                        if len(parts) > 1:
+                            display_name = parts[1]
+
+                    files.append({
+                        'name': display_name,
+                        'stored_name': filename,
+                        'path': filepath,
+                        'size': _format_file_size(file_size),
+                        'uploaded_at': datetime.fromtimestamp(file_mtime).strftime('%d.%m.%Y %H:%M')
+                    })
+
+        return jsonify({
+            'files': files,
+            'total': len(files)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting contact files: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/files/upload', methods=['POST'])
+@login_required
+def upload_contact_files():
+    """Upload files for contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        contact_id = request.form.get('contact_id')
+        if not contact_id:
+            return jsonify({'error': 'Contact ID is required'}), 400
+        
+        from models_crm import Contact
+        
+        # Verify contact exists
+        contact = Contact.query.filter_by(
+            id=int(contact_id),
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # Check if files are in request
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        files = request.files.getlist('files')
+
+        # Validate all file sizes before saving anything
+        for file in files:
+            if not file.filename:
+                continue
+            file.stream.seek(0, os.SEEK_END)
+            file_size = file.stream.tell()
+            file.stream.seek(0)
+            if file_size > MAX_CONTACT_FILE_SIZE:
+                return jsonify({'error': f"'{file.filename}' dosyasi 50MB sinirini asiyor"}), 413
+        
+        from models import db
+        from models_contact_timeline import ContactActivityLog
+
+        upload_dir = os.path.join('uploads', 'contacts', str(contact_id))
+        os.makedirs(upload_dir, exist_ok=True)
+
+        uploaded_files = []
+        for file in files:
+            if not file.filename:
+                continue
+
+            filename = secure_filename(file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            unique_filename = f"{timestamp}_{filename}"
+            filepath = os.path.join(upload_dir, unique_filename)
+
+            file.save(filepath)
+            file_size = os.path.getsize(filepath)
+
+            uploaded_files.append({
+                'name': filename,
+                'stored_name': unique_filename,
+                'path': filepath,
+                'size': _format_file_size(file_size),
+                'uploaded_at': datetime.now().strftime('%d.%m.%Y %H:%M')
+            })
+
+        if not uploaded_files:
+            return jsonify({'error': 'No valid files to upload'}), 400
+
+        try:
+            activity = ContactActivityLog(
+                workspace_id=workspace_id,
+                contact_id=int(contact_id),
+                user_id=user_id,
+                action_type='file_upload',
+                description=f'{len(uploaded_files)} dosya yüklendi',
+                metadata_json=json.dumps({'files': [f['name'] for f in uploaded_files]})
+            )
+            db.session.add(activity)
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error while creating file upload activity: {str(db_error)}")
+            return jsonify({'error': 'Files uploaded but activity log creation failed'}), 500
+
+        return jsonify({
+            'uploaded': len(uploaded_files),
+            'files': uploaded_files,
+            'message': f'{len(uploaded_files)} files uploaded successfully'
+        }), 200
+        
+    except Exception as e:
+        try:
+            from models import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Error uploading files: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/files', methods=['DELETE'])
+@login_required
+def delete_contact_file(contact_id):
+    """Delete a file for contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from models_crm import Contact
+        from models import db
+        from models_contact_timeline import ContactActivityLog
+        import json
+
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+
+        payload = request.get_json(silent=True) or {}
+        stored_name = (payload.get('stored_name') or '').strip()
+        if not stored_name:
+            return jsonify({'error': 'stored_name zorunludur'}), 400
+
+        if os.path.basename(stored_name) != stored_name:
+            return jsonify({'error': 'Gecersiz dosya adi'}), 400
+
+        upload_dir = os.path.join('uploads', 'contacts', str(contact_id))
+        file_path = os.path.join(upload_dir, stored_name)
+        if not os.path.isfile(file_path):
+            return jsonify({'error': 'Dosya bulunamadi'}), 404
+
+        display_name = stored_name.split('_', 1)[1] if '_' in stored_name else stored_name
+        os.remove(file_path)
+
+        activity = ContactActivityLog(
+            workspace_id=workspace_id,
+            contact_id=contact_id,
+            user_id=user_id,
+            action_type='file_delete',
+            description='1 dosya silindi',
+            metadata_json=json.dumps({'file': display_name})
+        )
+        db.session.add(activity)
+        try:
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error while creating file delete activity: {str(db_error)}")
+            return jsonify({'error': 'Dosya silindi ancak aktivite kaydi olusturulamadi'}), 500
+
+        return jsonify({'status': 'deleted', 'file': display_name}), 200
+
+    except Exception as e:
+        try:
+            from models import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Error deleting contact file: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -392,6 +915,38 @@ def update_contact(contact_id):
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error updating contact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>', methods=['DELETE'])
+@login_required
+def delete_contact(contact_id):
+    """Delete a contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Contact
+        from models import db
+        
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # Delete the contact
+        db.session.delete(contact)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Contact deleted'}), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting contact: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

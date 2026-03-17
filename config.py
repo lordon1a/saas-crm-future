@@ -131,3 +131,43 @@ class Config:
 
     # Medya: indirilen/gönderilen dosyaların saklanacağı klasör
     MEDIA_UPLOAD_FOLDER = os.getenv('MEDIA_UPLOAD_FOLDER', 'uploads')
+    
+    @classmethod
+    def validate(cls):
+        """Validate required configuration variables"""
+        errors = []
+        
+        # Always required
+        if not cls.SECRET_KEY or len(cls.SECRET_KEY) < 16:
+            errors.append('SECRET_KEY must be at least 16 characters')
+        
+        if not cls.DATABASE_URL:
+            errors.append('DATABASE_URL is required')
+        
+        # Production-specific requirements
+        if cls.ENV == 'production':
+            if cls.SECRET_KEY in ('dev-secret-key-change-in-production', 'dev-secret-key', 'change-me'):
+                errors.append('SECRET_KEY must be changed in production')
+            
+            if len(cls.SECRET_KEY) < 32:
+                errors.append('SECRET_KEY must be at least 32 characters in production')
+            
+            if '*' in cls.CORS_ORIGINS:
+                errors.append('CORS_ORIGINS cannot contain "*" in production')
+            
+            if not cls.SESSION_COOKIE_SECURE:
+                errors.append('SESSION_COOKIE_SECURE must be True in production')
+        
+        # Warn about missing optional configs
+        warnings = []
+        
+        if not cls.WHATSAPP_TOKEN:
+            warnings.append('WHATSAPP_TOKEN not set - WhatsApp features will not work')
+        
+        if not cls.WHATSAPP_PHONE_NUMBER_ID:
+            warnings.append('WHATSAPP_PHONE_NUMBER_ID not set - WhatsApp features will not work')
+        
+        if not cls.WEBHOOK_VERIFY_TOKEN:
+            warnings.append('WEBHOOK_VERIFY_TOKEN not set - Webhook verification will fail')
+        
+        return errors, warnings

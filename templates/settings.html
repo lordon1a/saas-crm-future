@@ -61,27 +61,53 @@
     <!-- Main Sidebar (Global) -->
     <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
         <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
-            <span class="text-2xl">🐧</span>
+            <span class="text-2xl">g���</span>
         </a>
         <nav class="flex-1 flex flex-col gap-4 w-full px-3">
             <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
             <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
             <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
-            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="�?irketler"><i class="fas fa-building text-lg"></i></a>
             <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
             <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
             <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
             <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
             <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
-            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
-            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
-        </nav>
-        <div class="flex flex-col gap-4 w-full px-3 pb-4">
-            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
-        </div>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">        </div>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
+                <main class="flex-1 flex flex-col overflow-hidden">
+<header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardim">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Ipuclari">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
         <!-- Header -->
         <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
             <div class="flex items-center gap-3">
@@ -107,6 +133,9 @@
                         <button onclick="switchTab('workspace')" id="tab-workspace" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-building w-4 text-center group-hover:scale-110 transition-transform"></i> Çalışma Alanı
                         </button>
+                        <button onclick="switchTab('import-export')" id="tab-import-export" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-file-import w-4 text-center group-hover:scale-110 transition-transform"></i> İçe/Dışa Aktar
+                        </button>
                         <button onclick="switchTab('branding')" id="tab-branding" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-palette w-4 text-center group-hover:scale-110 transition-transform"></i> Portal Branding
                         </button>
@@ -117,7 +146,7 @@
                             <i class="fas fa-user-group w-4 text-center group-hover:scale-110 transition-transform"></i> Takım Üyeleri
                         </button>
                         <button onclick="switchTab('templates')" id="tab-templates" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
-                            <i class="fas fa-message w-4 text-center group-hover:scale-110 transition-transform"></i> Mesaj Şablonları
+                            <i class="fas fa-message w-4 text-center group-hover:scale-110 transition-transform"></i> Mesaj �?ablonları
                         </button>
                         <button onclick="switchTab('replies')" id="tab-replies" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-bolt w-4 text-center group-hover:scale-110 transition-transform"></i> Hızlı Yanıtlar
@@ -159,7 +188,7 @@
                             </div>
                             <div class="p-6 space-y-6">
                                 <div class="space-y-2">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Şirket Adı</label>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?irket Adı</label>
                                     <input type="text" id="ws_company_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Sleek CRM">
                                 </div>
                                 <div class="flex justify-end pt-2">
@@ -239,6 +268,132 @@
                                 <div class="flex justify-end">
                                     <button onclick="saveWorkspacePreferences()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
                                         Tercihi Kaydet
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ IMPORT/EXPORT TAB ═══ -->
+                    <div id="panel-import-export" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">İçe ve Dışa Aktarma</h2>
+                            <p class="text-sm text-slate-500">Verilerinizi içe veya dışa aktarın. Excel, CSV formatlarını destekler.</p>
+                        </div>
+
+                        <!-- Import Section -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Veri İçe Aktarma</h3>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <!-- Contacts Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-users text-blue-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">Kişileri İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından kişi verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-blue-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Companies Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-purple-400 hover:bg-purple-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-building text-purple-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">�?irketleri İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından şirket verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-purple-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Deals Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-green-400 hover:bg-green-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-handshake text-green-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">Anlaşmaları İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından anlaşma verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-green-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Products Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-orange-400 hover:bg-orange-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-box text-orange-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">Ürünleri İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından ürün verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-orange-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                                    <i class="fas fa-info-circle text-blue-600 text-lg mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-bold text-slate-800 mb-1">İçe aktarma hakkında</h4>
+                                        <p class="text-xs text-slate-600">Sistem otomatik olarak sütunları eşleştirir ve %95'e kadar doğrulukla alan tanıma yapar. Maksimum 100.000 satır ve 50MB dosya boyutu desteklenir.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Export Section -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Veri Dışa Aktarma</h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <button onclick="exportData('contacts')" class="flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50/50 transition-all group">
+                                        <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <i class="fas fa-users text-emerald-600"></i>
+                                        </div>
+                                        <div class="flex-1 text-left">
+                                            <div class="text-sm font-bold text-slate-800">Kişiler</div>
+                                            <div class="text-xs text-slate-500">CSV olarak indir</div>
+                                        </div>
+                                        <i class="fas fa-download text-gray-400 group-hover:text-emerald-600"></i>
+                                    </button>
+
+                                    <button onclick="exportData('companies')" class="flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/50 transition-all group">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <i class="fas fa-building text-blue-600"></i>
+                                        </div>
+                                        <div class="flex-1 text-left">
+                                            <div class="text-sm font-bold text-slate-800">�?irketler</div>
+                                            <div class="text-xs text-slate-500">CSV olarak indir</div>
+                                        </div>
+                                        <i class="fas fa-download text-gray-400 group-hover:text-blue-600"></i>
                                     </button>
                                 </div>
                             </div>
@@ -388,11 +543,11 @@
                     <div id="panel-templates" class="tab-panel space-y-8">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h2 class="text-lg font-bold text-slate-800 mb-1">Mesaj Şablonları</h2>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Mesaj �?ablonları</h2>
                                 <p class="text-sm text-slate-500">Hızlı ve tutarlı iletişim için hazır metinler.</p>
                             </div>
                             <button onclick="openModal('templateModal')" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
-                                <i class="fas fa-plus"></i> Yeni Şablon
+                                <i class="fas fa-plus"></i> Yeni �?ablon
                             </button>
                         </div>
 
@@ -562,25 +717,25 @@
 
                         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                             <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Şifre İşlemleri</h3>
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">�?ifre İşlemleri</h3>
                             </div>
                             <div class="p-8">
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div class="space-y-2">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Mevcut Şifre</label>
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Mevcut �?ifre</label>
                                         <input type="password" id="pass_current" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Yeni Şifre</label>
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Yeni �?ifre</label>
                                         <input type="password" id="pass_new" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Şifre (Tekrar)</label>
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?ifre (Tekrar)</label>
                                         <input type="password" id="pass_confirm" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
                                     </div>
                                 </div>
                                 <div class="flex justify-end pt-8">
-                                    <button onclick="changePassword()" class="px-8 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">Şifreyi Güncelle</button>
+                                    <button onclick="changePassword()" class="px-8 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">�?ifreyi Güncelle</button>
                                 </div>
                             </div>
                         </section>
@@ -871,7 +1026,7 @@
                         <input type="email" id="m_email" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="mehmet@sirket.com">
                     </div>
                     <div class="space-y-1.5">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Geçici Şifre</label>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Geçici �?ifre</label>
                         <input type="password" id="m_pass" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="En az 8 karakter">
                     </div>
                     <div class="space-y-1.5">
@@ -894,7 +1049,7 @@
             <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn">
                 <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-lg" id="tmplModalTitle">Yeni Şablon</h3>
+                        <h3 class="font-bold text-slate-800 text-lg" id="tmplModalTitle">Yeni �?ablon</h3>
                         <p class="text-xs text-slate-400 mt-0.5">Mesaj içeriğini ve kategorisini belirleyin.</p>
                     </div>
                     <button onclick="closeModal('templateModal')" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
@@ -903,7 +1058,7 @@
                 <div class="p-8 space-y-5">
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1.5">
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Şablon Adı</label>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?ablon Adı</label>
                             <input type="text" id="tmpl_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Sipariş Onayı">
                         </div>
                         <div class="space-y-1.5">
@@ -926,7 +1081,7 @@
                 </div>
                 <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
                     <button onclick="closeModal('templateModal')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
-                    <button onclick="saveTemplate()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Şablonu Kaydet</button>
+                    <button onclick="saveTemplate()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">�?ablonu Kaydet</button>
                 </div>
             </div>
         </div>
@@ -978,7 +1133,7 @@
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Varlık Türü</label>
                         <select id="cfEntityType" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
                             <option value="contact">Kişiler</option>
-                            <option value="company">Şirketler</option>
+                            <option value="company">�?irketler</option>
                             <option value="deal">Fırsatlar</option>
                         </select>
                     </div>
@@ -1058,7 +1213,7 @@
                     document.getElementById('tmpl_id').value = '';
                     document.getElementById('tmpl_name').value = '';
                     document.getElementById('tmpl_body').value = '';
-                    document.getElementById('tmplModalTitle').textContent = 'Yeni Şablon';
+                    document.getElementById('tmplModalTitle').textContent = 'Yeni �?ablon';
                 }
                 if (id === 'replyModal') {
                     document.getElementById('reply_id').value = '';
@@ -1090,6 +1245,48 @@
                 if (name === 'profile') loadProfile();
                 if (name === 'google') loadGoogleStatus();
                 if (name === 'security') loadSecurityTab();
+            }
+
+            // ═══ IMPORT/EXPORT ═══
+            async function exportData(type) {
+                try {
+                    showToast('Dışa aktarma başlatılıyor...', 'info');
+                    
+                    const response = await fetch(`/api/v1/export/${type}`, {
+                        method: 'GET'
+                    });
+                    
+                    if (!response.ok) throw new Error('Export failed');
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showToast('Dışa aktarma tamamlandı', 'success');
+                } catch (error) {
+                    showToast('Dışa aktarma hatası: ' + error.message, 'error');
+                }
+            }
+
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-semibold z-50 ${
+                    type === 'success' ? 'bg-emerald-500' : 
+                    type === 'error' ? 'bg-red-500' : 
+                    'bg-blue-500'
+                }`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
             }
 
             // ═══ WORKSPACE ═══
@@ -1136,7 +1333,7 @@
             async function saveWorkspace() {
                 const name = document.getElementById('ws_company_name').value.trim();
                 await api('/api/settings/workspace', 'PUT', { company_name: name });
-                showToast('Şirket bilgileri güncellendi');
+                showToast('�?irket bilgileri güncellendi');
             }
 
             async function saveAPI() {
@@ -1467,7 +1664,7 @@
                 document.getElementById('tmpl_name').value = t.name;
                 document.getElementById('tmpl_cat').value = t.category;
                 document.getElementById('tmpl_body').value = t.body;
-                document.getElementById('tmplModalTitle').textContent = 'Şablonu Düzenle';
+                document.getElementById('tmplModalTitle').textContent = '�?ablonu Düzenle';
                 openModal('templateModal');
             }
 
@@ -1485,7 +1682,7 @@
                 const url = id ? `/api/settings/templates/${id}` : '/api/settings/templates';
                 
                 await api(url, method, body);
-                showToast(id ? 'Şablon güncellendi' : 'Şablon oluşturuldu');
+                showToast(id ? '�?ablon güncellendi' : '�?ablon oluşturuldu');
                 closeModal('templateModal');
                 loadTemplates();
             }
@@ -1493,7 +1690,7 @@
             async function deleteTemplate(id) {
                 if (!confirm('Bu şablonu silmek istediğinize emin misiniz?')) return;
                 await api(`/api/settings/templates/${id}`, 'DELETE');
-                showToast('Şablon silindi');
+                showToast('�?ablon silindi');
                 loadTemplates();
             }
 
@@ -1601,7 +1798,7 @@
                 const confirmPass = document.getElementById('pass_confirm').value;
                 
                 if (!current || !newPass || !confirmPass) return showToast('Tüm alanları doldurun', 'error');
-                if (newPass !== confirmPass) return showToast('Şifreler uyuşmuyor', 'error');
+                if (newPass !== confirmPass) return showToast('�?ifreler uyuşmuyor', 'error');
                 if (newPass.length < 8) return showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
                 
                 await api('/api/settings/profile/password', 'PUT', {
@@ -1609,7 +1806,7 @@
                     new_password: newPass
                 });
                 
-                showToast('Şifreniz başarıyla değiştirildi');
+                showToast('�?ifreniz başarıyla değiştirildi');
                 document.getElementById('pass_current').value = '';
                 document.getElementById('pass_new').value = '';
                 document.getElementById('pass_confirm').value = '';
@@ -2359,6 +2556,8 @@
         </script>
         <script src="/static/custom-fields.js"></script>
     </main>
+    <script src="/static/topbar-global.js"></script>
 </body>
 
 </html>
+
