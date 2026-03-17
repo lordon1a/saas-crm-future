@@ -176,6 +176,36 @@
         </div>
     </div>
 
+    <!-- Edit Field Modal -->
+    <div id="editFieldModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 id="editModalTitle" class="text-base font-bold text-gray-800">Düzenle</h3>
+                <button onclick="closeEditModal()" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="editModalContent" class="mb-6">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <button onclick="deleteField()" class="w-10 h-10 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all flex items-center justify-center" title="Sil">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <div class="flex gap-2 flex-1">
+                        <button onclick="closeEditModal()" class="flex-1 py-2.5 bg-gray-100 text-gray-600 font-semibold rounded-lg hover:bg-gray-200 transition-all text-sm">
+                            İptal
+                        </button>
+                        <button id="saveFieldBtn" onclick="saveFieldEdit()" class="flex-1 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-all shadow-sm text-sm">
+                            Kaydet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- New Contact Modal -->
     <div id="newContactModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -306,7 +336,7 @@
 
             contacts.forEach(c => {
                 const tr = document.createElement('tr');
-                tr.className = 'h-12 hover:bg-blue-50/40 transition-colors';
+                tr.className = 'h-12 hover:bg-blue-50/40 transition-colors group';
                 
                 const initials = (c.first_name.substring(0, 1) + (c.last_name ? c.last_name.substring(0, 1) : '')).toUpperCase();
                 
@@ -337,50 +367,60 @@
                             <span class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer" onclick="viewContact(${c.id})">${c.full_name}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap editable-cell cursor-pointer hover:bg-blue-50/60 transition-colors" 
-                        data-id="${c.id}" 
-                        data-field="company_name" 
-                        data-value="${c.company_name || ''}"
-                        onclick="enableInlineEdit(this)">
-                        <span class="text-sm text-gray-500">${c.company_name || '-'}</span>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap editable-cell cursor-pointer hover:bg-blue-50/60 transition-colors" 
-                        data-id="${c.id}" 
-                        data-field="email" 
-                        data-value="${c.email || ''}"
-                        data-type="email"
-                        onclick="enableInlineEdit(this)">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-500">${c.email || '-'}</span>
-                            ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">İş</span>' : ''}
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm text-gray-500">${c.company_name || '-'}</span>
+                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                onclick="openEditModal(${c.id}, 'company_name', '${(c.company_name || '').replace(/'/g, "\\'")}', 'Kuruluş')" 
+                                title="Düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
                         </div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap editable-cell cursor-pointer hover:bg-blue-50/60 transition-colors" 
-                        data-id="${c.id}" 
-                        data-field="phone" 
-                        data-value="${c.phone || ''}"
-                        data-type="tel"
-                        onclick="enableInlineEdit(this)">
-                        <span class="text-sm text-gray-500">${c.phone || '-'}</span>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-500">${c.email || '-'}</span>
+                                ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">İş</span>' : ''}
+                            </div>
+                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                onclick="openEditModal(${c.id}, 'email', '${(c.email || '').replace(/'/g, "\\'")}', 'E-posta', 'email')" 
+                                title="Düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap editable-cell cursor-pointer hover:bg-blue-50/60 transition-colors" 
-                        data-id="${c.id}" 
-                        data-field="role" 
-                        data-value="${c.role || ''}"
-                        data-type="select"
-                        data-options='["Decision Maker","Champion","Influencer","Blocker","User"]'
-                        onclick="enableInlineEdit(this)">
-                        <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor}">${c.role || '-'}</span>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm text-gray-500">${c.phone || '-'}</span>
+                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                onclick="openEditModal(${c.id}, 'phone', '${(c.phone || '').replace(/'/g, "\\'")}', 'Telefon', 'tel')" 
+                                title="Düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap editable-cell cursor-pointer hover:bg-blue-50/60 transition-colors" 
-                        data-id="${c.id}" 
-                        data-field="lead_score" 
-                        data-value="${c.lead_score}"
-                        data-type="number"
-                        onclick="enableInlineEdit(this)">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full ${scoreColor}"></span>
-                            <span class="text-sm font-semibold text-gray-700">${c.lead_score}</span>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor}">${c.role || '-'}</span>
+                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                onclick="openEditModal(${c.id}, 'role', '${(c.role || '').replace(/'/g, "\\'")}', 'Rol', 'select', ['Decision Maker','Champion','Influencer','Blocker','User'])" 
+                                title="Düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full ${scoreColor}"></span>
+                                <span class="text-sm font-semibold text-gray-700">${c.lead_score}</span>
+                            </div>
+                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                onclick="openEditModal(${c.id}, 'lead_score', '${c.lead_score}', 'Lead Score', 'number')" 
+                                title="Düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
                         </div>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
@@ -397,39 +437,54 @@
             });
         }
         
-        // Inline Editing System
-        let currentEditingCell = null;
+        // Edit Modal System
+        let currentEditData = null;
         
-        function enableInlineEdit(cell) {
-            // Prevent multiple edits
-            if (currentEditingCell) {
-                cancelInlineEdit();
-            }
+        function openEditModal(contactId, field, currentValue, fieldLabel, fieldType = 'text', options = null) {
+            currentEditData = { contactId, field, currentValue, fieldLabel, fieldType, options };
             
-            currentEditingCell = cell;
-            const contactId = cell.dataset.id;
-            const field = cell.dataset.field;
-            const currentValue = cell.dataset.value;
-            const fieldType = cell.dataset.type || 'text';
+            const modal = document.getElementById('editFieldModal');
+            const modalTitle = document.getElementById('editModalTitle');
+            const modalContent = document.getElementById('editModalContent');
             
-            // Store original content
-            cell.dataset.originalHtml = cell.innerHTML;
+            modalTitle.textContent = `Düzenle ${fieldLabel.toLowerCase()}`;
             
-            // Create input based on type
             let inputHtml = '';
             
-            if (fieldType === 'select') {
-                const options = JSON.parse(cell.dataset.options || '[]');
+            if (fieldType === 'select' && options) {
                 inputHtml = `
-                    <select class="inline-edit-input w-full px-2 py-1 text-sm border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
+                    <select id="editFieldInput" class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
                         <option value="">Seçiniz</option>
                         ${options.map(opt => `<option value="${opt}" ${currentValue === opt ? 'selected' : ''}>${opt}</option>`).join('')}
                     </select>
+                    <label class="flex items-center gap-2 mt-3 text-sm text-gray-600">
+                        <input type="checkbox" class="w-4 h-4 text-brand-600 border-gray-300 rounded">
+                        <span>İş</span>
+                    </label>
+                `;
+            } else if (fieldType === 'tel') {
+                inputHtml = `
+                    <input type="tel" 
+                        id="editFieldInput"
+                        class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
+                        value="${currentValue}"
+                        placeholder="785-202-7824">
+                    <div class="mt-3">
+                        <select class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            <option>İş</option>
+                            <option>Ev</option>
+                            <option>Mobil</option>
+                        </select>
+                    </div>
+                    <button class="mt-3 text-blue-600 text-sm font-semibold flex items-center gap-2 hover:text-blue-700">
+                        <i class="fas fa-plus"></i> Telefon ekle
+                    </button>
                 `;
             } else if (fieldType === 'number') {
                 inputHtml = `
                     <input type="number" 
-                        class="inline-edit-input w-full px-2 py-1 text-sm border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
+                        id="editFieldInput"
+                        class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
                         value="${currentValue}"
                         min="0"
                         max="100">
@@ -437,53 +492,51 @@
             } else {
                 inputHtml = `
                     <input type="${fieldType}" 
-                        class="inline-edit-input w-full px-2 py-1 text-sm border-2 border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
+                        id="editFieldInput"
+                        class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
                         value="${currentValue}"
-                        placeholder="${field === 'email' ? 'ornek@mail.com' : field === 'phone' ? '+90 5xx xxx xxxx' : 'Değer girin'}">
+                        placeholder="${fieldType === 'email' ? 'ornek@mail.com' : 'Değer girin'}">
                 `;
             }
             
-            cell.innerHTML = inputHtml;
-            cell.classList.add('editing');
+            modalContent.innerHTML = inputHtml;
             
-            const input = cell.querySelector('.inline-edit-input');
-            input.focus();
-            if (input.type !== 'number') input.select();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
             
-            // Event listeners
-            input.addEventListener('blur', () => saveInlineEdit(cell, contactId, field));
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveInlineEdit(cell, contactId, field);
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    cancelInlineEdit();
-                }
-            });
+            // Focus input
+            setTimeout(() => {
+                const input = document.getElementById('editFieldInput');
+                input.focus();
+                if (input.type !== 'number' && input.type !== 'select-one') input.select();
+            }, 100);
         }
         
-        async function saveInlineEdit(cell, contactId, field) {
-            const input = cell.querySelector('.inline-edit-input');
-            const newValue = input.value.trim();
-            const oldValue = cell.dataset.value;
+        function closeEditModal() {
+            document.getElementById('editFieldModal').classList.add('hidden');
+            document.getElementById('editFieldModal').classList.remove('flex');
+            currentEditData = null;
+        }
+        
+        async function saveFieldEdit() {
+            if (!currentEditData) return;
             
-            // No change
-            if (newValue === oldValue) {
-                cancelInlineEdit();
+            const input = document.getElementById('editFieldInput');
+            const newValue = input.value.trim();
+            const { contactId, field, currentValue } = currentEditData;
+            
+            if (newValue === currentValue) {
+                closeEditModal();
                 return;
             }
             
-            // Show saving state
-            cell.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-500">${newValue || '-'}</span>
-                    <span class="text-[10px] text-gray-400 animate-pulse">Kaydediliyor...</span>
-                </div>
-            `;
+            // Show loading
+            const saveBtn = document.getElementById('saveFieldBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Kaydediliyor...';
+            saveBtn.disabled = true;
             
             try {
-                // API call to update contact
                 const response = await fetch(`/api/v1/contacts/${contactId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -495,93 +548,43 @@
                 }
                 
                 // Update local data
-                cell.dataset.value = newValue;
                 const contact = allContacts.find(c => c.id == contactId);
                 if (contact) {
                     contact[field] = newValue;
                 }
                 
-                // Show success state briefly
-                cell.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-500">${newValue || '-'}</span>
-                        <span class="text-[10px] text-green-600 font-semibold">✓ Kaydedildi</span>
-                    </div>
-                `;
+                // Show success
+                saveBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Kaydedildi';
+                saveBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                saveBtn.classList.add('bg-green-600');
                 
-                // Restore normal view after 1 second
                 setTimeout(() => {
-                    if (cell === currentEditingCell) {
-                        restoreCellView(cell, field, newValue);
-                        currentEditingCell = null;
-                    }
-                }, 1000);
+                    closeEditModal();
+                    renderContacts(allContacts);
+                }, 500);
                 
             } catch (error) {
                 console.error('Save error:', error);
+                saveBtn.innerHTML = '<i class="fas fa-times mr-2"></i> Hata';
+                saveBtn.classList.remove('bg-emerald-600');
+                saveBtn.classList.add('bg-red-600');
                 
-                // Show error state
-                cell.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-red-600">${newValue}</span>
-                        <span class="text-[10px] text-red-600 font-semibold">✗ Hata</span>
-                    </div>
-                `;
-                cell.classList.add('ring-2', 'ring-red-500');
-                
-                // Restore original after 2 seconds
                 setTimeout(() => {
-                    cell.classList.remove('ring-2', 'ring-red-500');
-                    restoreCellView(cell, field, oldValue);
-                    currentEditingCell = null;
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.classList.remove('bg-red-600');
+                    saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                    saveBtn.disabled = false;
                 }, 2000);
             }
         }
         
-        function cancelInlineEdit() {
-            if (!currentEditingCell) return;
+        function deleteField() {
+            if (!currentEditData) return;
             
-            const originalHtml = currentEditingCell.dataset.originalHtml;
-            currentEditingCell.innerHTML = originalHtml;
-            currentEditingCell.classList.remove('editing');
-            currentEditingCell = null;
-        }
-        
-        function restoreCellView(cell, field, value) {
-            cell.classList.remove('editing');
-            
-            // Restore based on field type
-            if (field === 'role') {
-                const roleColor = {
-                    'Decision Maker': 'bg-purple-100 text-purple-800',
-                    'Champion': 'bg-yellow-100 text-yellow-800',
-                    'Influencer': 'bg-blue-100 text-blue-800',
-                    'Blocker': 'bg-red-100 text-red-800',
-                    'User': 'bg-gray-100 text-gray-800'
-                }[value] || 'bg-gray-100 text-gray-800';
-                cell.innerHTML = `<span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor}">${value || '-'}</span>`;
-            } else if (field === 'lead_score') {
-                let scoreColor = 'bg-gray-400';
-                const score = parseInt(value);
-                if (score >= 80) scoreColor = 'bg-green-500';
-                else if (score >= 50) scoreColor = 'bg-yellow-500';
-                else if (score >= 30) scoreColor = 'bg-orange-500';
-                else scoreColor = 'bg-red-500';
-                cell.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full ${scoreColor}"></span>
-                        <span class="text-sm font-semibold text-gray-700">${value}</span>
-                    </div>
-                `;
-            } else if (field === 'email') {
-                cell.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-500">${value || '-'}</span>
-                        ${value ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">İş</span>' : ''}
-                    </div>
-                `;
-            } else {
-                cell.innerHTML = `<span class="text-sm text-gray-500">${value || '-'}</span>`;
+            if (confirm('Bu alanı silmek istediğinizden emin misiniz?')) {
+                const input = document.getElementById('editFieldInput');
+                input.value = '';
+                saveFieldEdit();
             }
         }
         
@@ -857,7 +860,22 @@
         window.onclick = (e) => {
             if (e.target.id === 'newContactModal') closeNewContactModal();
             if (e.target.id === 'contactDetailModal') closeContactDetailModal();
+            if (e.target.id === 'editFieldModal') closeEditModal();
         }
+        
+        // Keyboard shortcuts for edit modal
+        document.addEventListener('keydown', (e) => {
+            const editModal = document.getElementById('editFieldModal');
+            if (!editModal.classList.contains('hidden')) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveFieldEdit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeEditModal();
+                }
+            }
+        });
 
         loadCompanies();
         loadContacts();
