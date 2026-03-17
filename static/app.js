@@ -19,6 +19,7 @@ let quickReplies = [];
 let emailTemplates = [];
 let notifications = [];
 let searchDebounceTimer = null;
+let isRefreshingActiveMessages = false;
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
 
@@ -611,10 +612,55 @@ function initRealtimeSocket() {
     });
 
     socketClient.on('new_incoming_message', handleIncomingSocketMessage);
-    socketClient.on('inbox_updated', () => loadConversations());
+    socketClient.on('inbox_updated', handleInboxUpdatedEvent);
     socketClient.on('disconnect', () => {
         // Socket.IO will auto-reconnect, so no manual retry timer is needed.
     });
+}
+
+async function refreshActiveConversationMessages() {
+    if (isRefreshingActiveMessages || !currentConversationId || currentInboxItemType !== 'whatsapp') return;
+
+    isRefreshingActiveMessages = true;
+    try {
+        const afterId = Number(currentLastMessageId || 0);
+        const res = await fetch(`${API_BASE}/conversations/${currentConversationId}/messages?after_id=${afterId}`);
+        if (!res.ok) return;
+
+        const newMessages = await res.json();
+        if (!Array.isArray(newMessages) || newMessages.length === 0) return;
+
+        const container = document.getElementById('messagesContainer');
+        if (!container) return;
+
+        const emptyState = container.querySelector('.text-slate-400');
+        if (emptyState) container.innerHTML = '';
+
+        newMessages.forEach((msg) => appendMessageToDOM(msg));
+        updateLastMessageCursorFromDOM();
+    } catch (err) {
+        console.error('Active conversation refresh error:', err);
+    } finally {
+        isRefreshingActiveMessages = false;
+    }
+}
+
+function handleInboxUpdatedEvent(payload) {
+    loadConversations();
+
+    if (!payload || currentInboxItemType !== 'whatsapp') return;
+
+    const incomingConversationId = Number(payload.conversation_id || 0);
+    const activeConversationId = Number(currentConversationId || 0);
+    const incomingContactId = Number(payload.contact_id || 0);
+    const activeContactId = Number(currentCustomerId || 0);
+
+    if (
+        incomingConversationId === activeConversationId ||
+        (incomingContactId > 0 && incomingContactId === activeContactId)
+    ) {
+        refreshActiveConversationMessages();
+    }
 }
 
 async function sendMessage() {
