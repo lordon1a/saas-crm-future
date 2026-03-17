@@ -542,6 +542,62 @@ with app.app_context():
     except Exception as e:
         logger.warning('Drive attachments migration skip: %s', e)
     
+    # Auto-migration: User preferences table
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        
+        # Check if user_preferences table exists
+        if 'user_preferences' not in inspector.get_table_names():
+            logger.info('🔄 Creating user_preferences table...')
+            
+            if uri.startswith('sqlite'):
+                # SQLite syntax
+                db.session.execute(text("""
+                    CREATE TABLE user_preferences (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        workspace_id INTEGER NOT NULL,
+                        preference_key VARCHAR(100) NOT NULL,
+                        preference_value TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+                        UNIQUE(user_id, workspace_id, preference_key)
+                    )
+                """))
+            else:
+                # PostgreSQL syntax
+                db.session.execute(text("""
+                    CREATE TABLE user_preferences (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        workspace_id INTEGER NOT NULL,
+                        preference_key VARCHAR(100) NOT NULL,
+                        preference_value TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+                        UNIQUE(user_id, workspace_id, preference_key)
+                    )
+                """))
+            
+            # Create indexes
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_user_preferences_user 
+                ON user_preferences(user_id, workspace_id)
+            """))
+            
+            db.session.commit()
+            logger.info('✅ user_preferences table created successfully!')
+        else:
+            logger.info('✓ user_preferences table already exists')
+            
+    except Exception as e:
+        logger.warning('User preferences migration skip: %s', e)
+    
     # Auto-seed demo user for production
     try:
         from models import User, Workspace

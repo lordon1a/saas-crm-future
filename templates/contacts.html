@@ -12,7 +12,16 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['"Inter"', 'sans-serif'] },
-                    colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' } }
+                    colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' } },
+                    keyframes: {
+                        'slide-in-right': {
+                            '0%': { transform: 'translateX(100%)' },
+                            '100%': { transform: 'translateX(0)' }
+                        }
+                    },
+                    animation: {
+                        'slide-in-right': 'slide-in-right 0.3s ease-out'
+                    }
                 }
             }
         }
@@ -98,6 +107,28 @@
             <button class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all">
                 + Filtre Ekle
             </button>
+            <div class="flex-1"></div>
+            <button onclick="openColumnManager()" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2" title="Sütunları Yönet">
+                <i class="fas fa-columns text-xs"></i> Sütunları Yönet
+            </button>
+        </div>
+
+        <!-- Bulk Actions Bar (Hidden by default) -->
+        <div id="bulkActionsBar" class="hidden bg-blue-600 text-white px-8 py-3 flex items-center justify-between flex-shrink-0 shadow-lg">
+            <div class="flex items-center gap-4">
+                <span id="selectedCount" class="font-semibold">0 kişi seçildi</span>
+                <button onclick="clearSelection()" class="text-xs text-blue-100 hover:text-white underline">
+                    Seçimi Temizle
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openBulkEditModal()" class="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-all flex items-center gap-2">
+                    <i class="fas fa-edit"></i> Toplu Düzenle
+                </button>
+                <button onclick="bulkDeleteContacts()" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-all flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Sil
+                </button>
+            </div>
         </div>
 
         <!-- Contacts Table -->
@@ -206,6 +237,146 @@
         </div>
     </div>
 
+    <!-- Bulk Edit Modal -->
+    <div id="bulkEditModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-end p-0">
+        <div class="bg-white h-full w-full max-w-lg shadow-2xl flex flex-col animate-slide-in-right">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Toplu Düzenleme</h3>
+                    <p class="text-sm text-gray-500 mt-1"><span id="bulkEditCount">0</span> kişi düzenlenecek</p>
+                </div>
+                <button onclick="closeBulkEditModal()" class="w-10 h-10 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Company -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Kuruluş</label>
+                    <select id="bulkCompanyAction" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-2">
+                        <option value="">Mevcut değeri sakla</option>
+                        <option value="edit">Mevcut değeri düzenle...</option>
+                    </select>
+                    <select id="bulkCompanyValue" class="hidden w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm">
+                        <option value="">Seçiniz</option>
+                    </select>
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">E-posta</label>
+                    <select id="bulkEmailAction" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-2">
+                        <option value="">Mevcut değeri sakla</option>
+                        <option value="edit">Mevcut değeri düzenle...</option>
+                        <option value="clear">Temizle</option>
+                    </select>
+                    <input type="email" id="bulkEmailValue" class="hidden w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm" placeholder="ornek@mail.com">
+                </div>
+
+                <!-- Phone -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Telefon</label>
+                    <select id="bulkPhoneAction" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-2">
+                        <option value="">Mevcut değeri sakla</option>
+                        <option value="edit">Mevcut değeri düzenle...</option>
+                        <option value="clear">Temizle</option>
+                    </select>
+                    <input type="tel" id="bulkPhoneValue" class="hidden w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm" placeholder="+90 5xx xxx xxxx">
+                </div>
+
+                <!-- Role -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Rol</label>
+                    <select id="bulkRoleAction" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-2">
+                        <option value="">Mevcut değeri sakla</option>
+                        <option value="edit">Mevcut değeri düzenle...</option>
+                        <option value="clear">Temizle</option>
+                    </select>
+                    <select id="bulkRoleValue" class="hidden w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm">
+                        <option value="">Seçiniz</option>
+                        <option value="Decision Maker">Decision Maker</option>
+                        <option value="Champion">Champion</option>
+                        <option value="Influencer">Influencer</option>
+                        <option value="Blocker">Blocker</option>
+                        <option value="User">User</option>
+                    </select>
+                </div>
+
+                <!-- Lead Score -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lead Score</label>
+                    <select id="bulkLeadScoreAction" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mb-2">
+                        <option value="">Mevcut değeri sakla</option>
+                        <option value="edit">Mevcut değeri düzenle...</option>
+                    </select>
+                    <input type="number" id="bulkLeadScoreValue" class="hidden w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm" min="0" max="100" placeholder="0-100">
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex gap-3 flex-shrink-0">
+                <button onclick="closeBulkEditModal()" class="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-all">
+                    İptal
+                </button>
+                <button onclick="saveBulkEdit()" class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-md">
+                    <span id="bulkEditBtnText"><span id="bulkEditBtnCount">0</span> Kişiyi Düzenle</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Manager Modal -->
+    <div id="columnManagerModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800">Sütunları Yönet</h3>
+                <button onclick="closeColumnManager()" class="w-10 h-10 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-500 mb-4">Tabloda görmek istediğiniz sütunları seçin:</p>
+                <div class="space-y-2 mb-6">
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="name" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked disabled>
+                        <span class="text-sm font-medium text-gray-700">Ad Soyad</span>
+                        <span class="ml-auto text-xs text-gray-400">(Zorunlu)</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="company" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
+                        <span class="text-sm font-medium text-gray-700">Kuruluş</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="email" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
+                        <span class="text-sm font-medium text-gray-700">E-posta</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="phone" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
+                        <span class="text-sm font-medium text-gray-700">Telefon</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="role" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
+                        <span class="text-sm font-medium text-gray-700">Rol</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="lead_score" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
+                        <span class="text-sm font-medium text-gray-700">Lead Score</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
+                        <input type="checkbox" value="deals" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
+                        <span class="text-sm font-medium text-gray-700">Açık Anlaşmalar</span>
+                    </label>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="closeColumnManager()" class="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-all">
+                        İptal
+                    </button>
+                    <button onclick="saveColumnPreferences()" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 transition-all shadow-md">
+                        Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- New Contact Modal -->
     <div id="newContactModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -266,10 +437,276 @@
     <script>
         let allContacts = [];
         let allCompanies = [];
+        let selectedContactIds = new Set();
+        let visibleColumns = ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'];
 
         // Get company_id from URL if present
         const urlParams = new URLSearchParams(window.location.search);
         const companyIdFilter = urlParams.get('company_id');
+
+        // ============================================================================
+        // BULK ACTIONS
+        // ============================================================================
+
+        function updateBulkActionsBar() {
+            const bar = document.getElementById('bulkActionsBar');
+            const count = selectedContactIds.size;
+            
+            if (count > 0) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+                document.getElementById('selectedCount').textContent = `${count} kişi seçildi`;
+            } else {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+        }
+
+        function toggleContactSelection(contactId, checked) {
+            if (checked) {
+                selectedContactIds.add(contactId);
+            } else {
+                selectedContactIds.delete(contactId);
+            }
+            updateBulkActionsBar();
+        }
+
+        function toggleSelectAll(checked) {
+            const checkboxes = document.querySelectorAll('.contact-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+                const contactId = parseInt(cb.dataset.contactId);
+                if (checked) {
+                    selectedContactIds.add(contactId);
+                } else {
+                    selectedContactIds.delete(contactId);
+                }
+            });
+            updateBulkActionsBar();
+        }
+
+        function clearSelection() {
+            selectedContactIds.clear();
+            document.getElementById('selectAll').checked = false;
+            document.querySelectorAll('.contact-checkbox').forEach(cb => cb.checked = false);
+            updateBulkActionsBar();
+        }
+
+        function openBulkEditModal() {
+            if (selectedContactIds.size === 0) return;
+            
+            const modal = document.getElementById('bulkEditModal');
+            document.getElementById('bulkEditCount').textContent = selectedContactIds.size;
+            document.getElementById('bulkEditBtnCount').textContent = selectedContactIds.size;
+            
+            // Load companies for dropdown
+            const companySelect = document.getElementById('bulkCompanyValue');
+            companySelect.innerHTML = '<option value="">Seçiniz</option>';
+            allCompanies.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = c.name;
+                companySelect.appendChild(option);
+            });
+            
+            // Setup action dropdowns
+            setupBulkActionDropdown('bulkCompanyAction', 'bulkCompanyValue');
+            setupBulkActionDropdown('bulkEmailAction', 'bulkEmailValue');
+            setupBulkActionDropdown('bulkPhoneAction', 'bulkPhoneValue');
+            setupBulkActionDropdown('bulkRoleAction', 'bulkRoleValue');
+            setupBulkActionDropdown('bulkLeadScoreAction', 'bulkLeadScoreValue');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function setupBulkActionDropdown(actionId, valueId) {
+            const actionSelect = document.getElementById(actionId);
+            const valueInput = document.getElementById(valueId);
+            
+            actionSelect.addEventListener('change', function() {
+                if (this.value === 'edit') {
+                    valueInput.classList.remove('hidden');
+                } else {
+                    valueInput.classList.add('hidden');
+                }
+            });
+        }
+
+        function closeBulkEditModal() {
+            document.getElementById('bulkEditModal').classList.add('hidden');
+            document.getElementById('bulkEditModal').classList.remove('flex');
+            
+            // Reset all dropdowns
+            document.querySelectorAll('[id^="bulk"][id$="Action"]').forEach(select => {
+                select.value = '';
+                select.dispatchEvent(new Event('change'));
+            });
+        }
+
+        async function saveBulkEdit() {
+            if (selectedContactIds.size === 0) return;
+            
+            const updates = {};
+            
+            // Collect updates
+            const fields = [
+                { action: 'bulkCompanyAction', value: 'bulkCompanyValue', key: 'company_id', type: 'number' },
+                { action: 'bulkEmailAction', value: 'bulkEmailValue', key: 'email', type: 'text' },
+                { action: 'bulkPhoneAction', value: 'bulkPhoneValue', key: 'phone', type: 'text' },
+                { action: 'bulkRoleAction', value: 'bulkRoleValue', key: 'role', type: 'text' },
+                { action: 'bulkLeadScoreAction', value: 'bulkLeadScoreValue', key: 'lead_score', type: 'number' }
+            ];
+            
+            fields.forEach(field => {
+                const action = document.getElementById(field.action).value;
+                if (action === 'edit') {
+                    const value = document.getElementById(field.value).value;
+                    if (value) {
+                        updates[field.key] = field.type === 'number' ? parseInt(value) : value;
+                    }
+                } else if (action === 'clear') {
+                    updates[field.key] = null;
+                }
+            });
+            
+            if (Object.keys(updates).length === 0) {
+                showToast('Hiçbir değişiklik yapılmadı', 'info');
+                return;
+            }
+            
+            // Show loading
+            const btn = document.querySelector('#bulkEditModal button[onclick="saveBulkEdit()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Kaydediliyor...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/v1/contacts/bulk-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contact_ids: Array.from(selectedContactIds),
+                        updates: updates
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Toplu güncelleme başarısız');
+                }
+                
+                const data = await response.json();
+                
+                showToast(`${data.updated} kişi başarıyla güncellendi`, 'success');
+                closeBulkEditModal();
+                clearSelection();
+                loadContacts();
+                
+            } catch (error) {
+                console.error('Bulk update error:', error);
+                showToast('Toplu güncelleme başarısız oldu', 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function bulkDeleteContacts() {
+            if (selectedContactIds.size === 0) return;
+            
+            if (!confirm(`${selectedContactIds.size} kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/contacts/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contact_ids: Array.from(selectedContactIds)
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Toplu silme başarısız');
+                }
+                
+                const data = await response.json();
+                
+                showToast(`${data.deleted} kişi başarıyla silindi`, 'success');
+                clearSelection();
+                loadContacts();
+                
+            } catch (error) {
+                console.error('Bulk delete error:', error);
+                showToast('Toplu silme başarısız oldu', 'error');
+            }
+        }
+
+        // ============================================================================
+        // COLUMN MANAGEMENT
+        // ============================================================================
+
+        async function loadColumnPreferences() {
+            try {
+                const response = await fetch('/api/v1/user-preferences/contacts-columns');
+                if (response.ok) {
+                    const data = await response.json();
+                    visibleColumns = data.columns || ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'];
+                }
+            } catch (error) {
+                console.error('Error loading column preferences:', error);
+            }
+        }
+
+        function openColumnManager() {
+            const modal = document.getElementById('columnManagerModal');
+            
+            // Set current selections
+            document.querySelectorAll('.column-checkbox').forEach(cb => {
+                cb.checked = visibleColumns.includes(cb.value);
+            });
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeColumnManager() {
+            document.getElementById('columnManagerModal').classList.add('hidden');
+            document.getElementById('columnManagerModal').classList.remove('flex');
+        }
+
+        async function saveColumnPreferences() {
+            const checkboxes = document.querySelectorAll('.column-checkbox:checked');
+            const selectedColumns = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (!selectedColumns.includes('name')) {
+                selectedColumns.unshift('name'); // Always include name
+            }
+            
+            try {
+                const response = await fetch('/api/v1/user-preferences/contacts-columns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ columns: selectedColumns })
+                });
+                
+                if (response.ok) {
+                    visibleColumns = selectedColumns;
+                    showToast('Sütun tercihleri kaydedildi', 'success');
+                    closeColumnManager();
+                    renderContacts(allContacts);
+                } else {
+                    throw new Error('Kayıt başarısız');
+                }
+            } catch (error) {
+                console.error('Error saving column preferences:', error);
+                showToast('Sütun tercihleri kaydedilemedi', 'error');
+            }
+        }
+
+        function isColumnVisible(column) {
+            return visibleColumns.includes(column);
+        }
 
         async function loadCompanies() {
             try {
@@ -324,6 +761,7 @@
         function renderContacts(contacts) {
             const tbody = document.getElementById('contactsTableBody');
             const emptyState = document.getElementById('emptyState');
+            const thead = document.querySelector('thead tr');
             
             if (contacts.length === 0) {
                 tbody.innerHTML = '';
@@ -332,6 +770,24 @@
             }
             
             emptyState.classList.add('hidden');
+            
+            // Update table header based on visible columns
+            thead.innerHTML = `
+                <th scope="col" class="w-12 px-4 py-3">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                </th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Ad Soyad
+                </th>
+                ${isColumnVisible('company') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Kuruluş</th>' : ''}
+                ${isColumnVisible('email') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">E-posta</th>' : ''}
+                ${isColumnVisible('phone') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Telefon</th>' : ''}
+                ${isColumnVisible('role') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol</th>' : ''}
+                ${isColumnVisible('lead_score') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Score</th>' : ''}
+                ${isColumnVisible('deals') ? '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Açık Anlaşmalar</th>' : ''}
+                <th scope="col" class="w-12 px-4 py-3"></th>
+            `;
+            
             tbody.innerHTML = '';
 
             contacts.forEach(c => {
@@ -355,9 +811,9 @@
                 else if (c.lead_score >= 30) scoreColor = 'bg-orange-500';
                 else scoreColor = 'bg-red-500';
                 
-                tr.innerHTML = `
+                let html = `
                     <td class="px-4 py-3 whitespace-nowrap">
-                        <input type="checkbox" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                        <input type="checkbox" data-contact-id="${c.id}" onchange="toggleContactSelection(${c.id}, this.checked)" class="contact-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
                         <div class="flex items-center gap-3">
@@ -367,65 +823,98 @@
                             <span class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer" onclick="viewContact(${c.id})">${c.full_name}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-sm text-gray-500">${c.company_name || '-'}</span>
-                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
-                                onclick="openEditModal(${c.id}, 'company_name', '${(c.company_name || '').replace(/'/g, "\\'")}', 'Kuruluş')" 
-                                title="Düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm text-gray-500">${c.email || '-'}</span>
-                                ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">İş</span>' : ''}
+                `;
+                
+                if (isColumnVisible('company')) {
+                    html += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm text-gray-500">${c.company_name || '-'}</span>
+                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                    onclick="openEditModal(${c.id}, 'company_name', '${(c.company_name || '').replace(/'/g, "\\'")}', 'Kuruluş')" 
+                                    title="Düzenle">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
                             </div>
-                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
-                                onclick="openEditModal(${c.id}, 'email', '${(c.email || '').replace(/'/g, "\\'")}', 'E-posta', 'email')" 
-                                title="Düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-sm text-gray-500">${c.phone || '-'}</span>
-                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
-                                onclick="openEditModal(${c.id}, 'phone', '${(c.phone || '').replace(/'/g, "\\'")}', 'Telefon', 'tel')" 
-                                title="Düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor}">${c.role || '-'}</span>
-                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
-                                onclick="openEditModal(${c.id}, 'role', '${(c.role || '').replace(/'/g, "\\'")}', 'Rol', 'select', ['Decision Maker','Champion','Influencer','Blocker','User'])" 
-                                title="Düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full ${scoreColor}"></span>
-                                <span class="text-sm font-semibold text-gray-700">${c.lead_score}</span>
+                        </td>
+                    `;
+                }
+                
+                if (isColumnVisible('email')) {
+                    html += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm text-gray-500">${c.email || '-'}</span>
+                                    ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">İş</span>' : ''}
+                                </div>
+                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                    onclick="openEditModal(${c.id}, 'email', '${(c.email || '').replace(/'/g, "\\'")}', 'E-posta', 'email')" 
+                                    title="Düzenle">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
                             </div>
-                            <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
-                                onclick="openEditModal(${c.id}, 'lead_score', '${c.lead_score}', 'Lead Score', 'number')" 
-                                title="Düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs font-semibold">0 açık</span>
-                    </td>
+                        </td>
+                    `;
+                }
+                
+                if (isColumnVisible('phone')) {
+                    html += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm text-gray-500">${c.phone || '-'}</span>
+                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                    onclick="openEditModal(${c.id}, 'phone', '${(c.phone || '').replace(/'/g, "\\'")}', 'Telefon', 'tel')" 
+                                    title="Düzenle">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                }
+                
+                if (isColumnVisible('role')) {
+                    html += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor}">${c.role || '-'}</span>
+                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                    onclick="openEditModal(${c.id}, 'role', '${(c.role || '').replace(/'/g, "\\'")}', 'Rol', 'select', ['Decision Maker','Champion','Influencer','Blocker','User'])" 
+                                    title="Düzenle">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                }
+                
+                if (isColumnVisible('lead_score')) {
+                    html += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full ${scoreColor}"></span>
+                                    <span class="text-sm font-semibold text-gray-700">${c.lead_score}</span>
+                                </div>
+                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                    onclick="openEditModal(${c.id}, 'lead_score', '${c.lead_score}', 'Lead Score', 'number')" 
+                                    title="Düzenle">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                }
+                
+                if (isColumnVisible('deals')) {
+                    html += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs font-semibold">0 açık</span>
+                        </td>
+                    `;
+                }
+                
+                html += `
                     <td class="px-4 py-3 whitespace-nowrap text-right">
                         <button class="text-gray-400 hover:text-gray-600 p-1" onclick="showContactMenu(event, ${c.id})">
                             <i class="fas fa-ellipsis-v"></i>
@@ -433,6 +922,7 @@
                     </td>
                 `;
                 
+                tr.innerHTML = html;
                 tbody.appendChild(tr);
             });
         }
@@ -877,8 +1367,12 @@
             }
         });
 
-        loadCompanies();
-        loadContacts();
+        // Initialize
+        (async function() {
+            await loadColumnPreferences();
+            await loadCompanies();
+            await loadContacts();
+        })();
     </script>
 </body>
 </html>

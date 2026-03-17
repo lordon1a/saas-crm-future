@@ -501,3 +501,203 @@ def export_companies():
     except Exception as e:
         logger.error(f"Error exporting companies: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# BULK OPERATIONS
+# ============================================================================
+
+@contacts_bp.route('/api/v1/contacts/bulk-update', methods=['POST'])
+@login_required
+def bulk_update_contacts():
+    """Bulk update multiple contacts"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        contact_ids = data.get('contact_ids', [])
+        updates = data.get('updates', {})
+        
+        if not contact_ids:
+            return jsonify({'error': 'No contact IDs provided'}), 400
+        
+        if not updates:
+            return jsonify({'error': 'No updates provided'}), 400
+        
+        # Validate contact IDs belong to workspace
+        from models_crm import Contact
+        from models import db
+        
+        contacts = Contact.query.filter(
+            Contact.id.in_(contact_ids),
+            Contact.workspace_id == workspace_id
+        ).all()
+        
+        if len(contacts) != len(contact_ids):
+            return jsonify({'error': 'Some contacts not found'}), 404
+        
+        # Update each contact
+        updated_count = 0
+        for contact in contacts:
+            try:
+                # Apply updates
+                for field, value in updates.items():
+                    if hasattr(contact, field):
+                        setattr(contact, field, value)
+                
+                # Recalculate lead score if relevant fields changed
+                if any(f in updates for f in ['email', 'phone', 'role', 'company_id']):
+                    contact.lead_score = ContactService.calculate_lead_score(contact)
+                
+                updated_count += 1
+            except Exception as e:
+                logger.error(f"Error updating contact {contact.id}: {str(e)}")
+                continue
+        
+        db.session.commit()
+        
+        return jsonify({
+            'updated': updated_count,
+            'total': len(contact_ids)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error bulk updating contacts: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_contacts():
+    """Bulk delete multiple contacts"""
+    try:
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        contact_ids = data.get('contact_ids', [])
+        
+        if not contact_ids:
+            return jsonify({'error': 'No contact IDs provided'}), 400
+        
+        # Validate and delete contacts
+        from models_crm import Contact
+        from models import db
+        
+        deleted_count = Contact.query.filter(
+            Contact.id.in_(contact_ids),
+            Contact.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'deleted': deleted_count,
+            'total': len(contact_ids)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error bulk deleting contacts: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# USER PREFERENCES
+# ============================================================================
+
+@contacts_bp.route('/api/v1/user-preferences/contacts-columns', methods=['GET'])
+@login_required
+def get_contacts_column_preferences():
+    """Get user's column preferences for contacts table"""
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id or not workspace_id:
+            return jsonify({'error': 'User or workspace not found'}), 400
+        
+        from models import db
+        from sqlalchemy import text
+        
+        # Try to get from database
+        result = db.session.execute(
+            text("SELECT preference_value FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_visible_columns'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            import json
+            return jsonify({'columns': json.loads(result[0])}), 200
+        
+        # Return default columns
+        default_columns = [
+            'name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'
+        ]
+        
+        return jsonify({'columns': default_columns}), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting column preferences: {str(e)}")
+        # Return defaults on error
+        return jsonify({'columns': ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals']}), 200
+
+
+@contacts_bp.route('/api/v1/user-preferences/contacts-columns', methods=['POST'])
+@login_required
+def save_contacts_column_preferences():
+    """Save user's column preferences for contacts table"""
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id or not workspace_id:
+            return jsonify({'error': 'User or workspace not found'}), 400
+        
+        data = request.get_json()
+        if not data or 'columns' not in data:
+            return jsonify({'error': 'No columns provided'}), 400
+        
+        columns = data['columns']
+        
+        from models import db
+        from sqlalchemy import text
+        import json
+        
+        # Check if preference exists
+        result = db.session.execute(
+            text("SELECT id FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_visible_columns'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            # Update existing
+            db.session.execute(
+                text("UPDATE user_preferences SET preference_value = :value, updated_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_visible_columns'"),
+                {'value': json.dumps(columns), 'user_id': user_id, 'workspace_id': workspace_id}
+            )
+        else:
+            # Insert new
+            db.session.execute(
+                text("INSERT INTO user_preferences (user_id, workspace_id, preference_key, preference_value, created_at, updated_at) VALUES (:user_id, :workspace_id, 'contacts_visible_columns', :value, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                {'user_id': user_id, 'workspace_id': workspace_id, 'value': json.dumps(columns)}
+            )
+        
+        db.session.commit()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        logger.error(f"Error saving column preferences: {str(e)}")
+        return jsonify({'error': str(e)}), 500
