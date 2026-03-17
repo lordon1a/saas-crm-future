@@ -337,11 +337,11 @@ function showMessagesSkeleton() {
 async function selectConversation(conversationId, customerName, customerPhone, initials, preferredChannel = 'whatsapp') {
     const previousContactId = currentCustomerId;
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
-        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-white hover:shadow-sm';
+        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
     });
     const activeItem = document.querySelector(`[data-id="${conversationId}"]`);
     if (activeItem) {
-        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-slate-100 bg-white shadow-sm ring-1 ring-brand-500/10';
+        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-brand-100 bg-brand-50/50 shadow-sm ring-1 ring-brand-500/20';
     }
 
     currentConversationId = conversationId;
@@ -469,11 +469,11 @@ function selectEmailItem(item, initials) {
     window.currentConvId = null;
 
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
-        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-white hover:shadow-sm';
+        el.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-slate-50 hover:shadow-sm';
     });
     const activeItem = document.querySelector(`[data-id="${item.item_id}"]`);
     if (activeItem) {
-        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-slate-100 bg-white shadow-sm ring-1 ring-brand-500/10';
+        activeItem.className = 'flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-brand-100 bg-brand-50/50 shadow-sm ring-1 ring-brand-500/20';
     }
 
     document.getElementById('emptyChat').classList.add('hidden');
@@ -514,8 +514,8 @@ function selectEmailItem(item, initials) {
     const container = document.getElementById('messagesContainer');
     container.innerHTML = `
         <div class="flex mb-4 justify-start">
-            <div class="max-w-[75%] px-5 py-3.5 bg-white text-slate-800 rounded-2xl rounded-tl-sm border border-slate-200/60 shadow-sm">
-                <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Email ${escapeHtml((item.direction || 'received').toUpperCase())}</div>
+            <div class="max-w-[75%] px-5 py-3.5 bg-white text-slate-800 rounded-2xl rounded-tl-md border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
+                <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="fas fa-envelope text-[9px]"></i>Email ${escapeHtml((item.direction || 'received').toUpperCase())}</div>
                 <div class="text-[13px] font-semibold text-slate-700 mb-1">${escapeHtml(item.subject || '(Konu yok)')}</div>
                 <div class="text-[14px] leading-relaxed break-words">${escapeHtml(body)}</div>
                 <div class="text-[10px] text-slate-500 text-right mt-1.5 font-medium">${formatTime(item.created_at || new Date().toISOString())}</div>
@@ -548,20 +548,20 @@ function buildMessageHTML(msg) {
     const rowClasses = `flex mb-4 animate-fade-in-up ${isAgent ? 'justify-end' : 'justify-start'}`;
     const rowMessageId = escapeHtml(msg.id || '');
 
-    let bubbleClasses = 'max-w-[70%] px-5 py-3.5 shadow-sm relative group ';
+    let bubbleClasses = 'max-w-[70%] px-5 py-3.5 shadow-sm hover:shadow-md relative group transition-all ';
     if (isAgent) {
-        bubbleClasses += 'bg-brand-600 text-white rounded-2xl rounded-tr-sm';
+        bubbleClasses += 'bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl rounded-tr-md';
     } else {
-        bubbleClasses += 'bg-white text-slate-800 rounded-2xl rounded-tl-sm border border-slate-200/60';
+        bubbleClasses += 'bg-white text-slate-800 rounded-2xl rounded-tl-md border border-slate-200/80';
     }
 
     let mediaHtml = '';
     if (msg.media_url) {
         if (msg.media_type === 'image') {
-            mediaHtml = `<div class="mb-2 rounded-xl overflow-hidden max-w-full"><img src="${escapeHtml(msg.media_url)}" alt="Görsel" class="max-h-64 w-auto object-cover" loading="lazy" onerror="this.style.display='none'"></div>`;
+            mediaHtml = `<div class="mb-2 rounded-xl overflow-hidden max-w-full border ${isAgent ? 'border-white/20' : 'border-slate-200'}"><img src="${escapeHtml(msg.media_url)}" alt="Görsel" class="max-h-64 w-auto object-cover" loading="lazy" onerror="this.style.display='none'"></div>`;
         } else if (msg.media_type === 'document' || msg.media_type === 'audio' || msg.media_type === 'video') {
             const label = msg.media_type === 'document' ? '📄 Belge' : msg.media_type === 'audio' ? '🎵 Ses' : '🎥 Video';
-            mediaHtml = `<a href="${escapeHtml(msg.media_url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm underline font-medium mb-2 ${isAgent ? 'text-white/90' : 'text-brand-600'}">${label} – İndir</a>`;
+            mediaHtml = `<a href="${escapeHtml(msg.media_url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm underline font-medium mb-2 hover:opacity-80 transition-opacity ${isAgent ? 'text-white/90' : 'text-brand-600'}">${label} – İndir</a>`;
         }
     }
 

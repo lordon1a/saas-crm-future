@@ -22,81 +22,54 @@
     <!-- Sidebar -->
     <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
         <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
-            <i class="fab fa-whatsapp"></i>
+            <span class="text-2xl">🐧</span>
         </a>
         <nav class="flex-1 flex flex-col gap-4 w-full px-3">
-            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
-                <i class="fas fa-inbox text-lg"></i>
-            </a>
-            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
-                <i class="fas fa-chart-line text-lg"></i>
-            </a>
-            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Kişiler">
-                <i class="fas fa-address-book text-lg"></i>
-            </a>
-            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
-                <i class="fas fa-building text-lg"></i>
-            </a>
-            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
-                <i class="fas fa-bullhorn text-lg"></i>
-            </a>
-            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
-                <i class="fas fa-robot text-lg"></i>
-            </a>
-            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
-                <i class="fas fa-chart-line text-lg"></i>
-            </a>
-            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
-                <i class="fas fa-list-check text-lg"></i>
-            </a>
-            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokumanlar">
-                <i class="fas fa-file-lines text-lg"></i>
-            </a>
-            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
-                <i class="fas fa-plug text-lg"></i>
-            </a>
-            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
-                <i class="fas fa-cog text-lg"></i>
-            </a>
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
         </nav>
         <div class="flex flex-col gap-4 w-full px-3 pb-4">
-            <a href="/account" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Hesap">
-                <i class="fas fa-user text-lg"></i>
-            </a>
-            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap">
-                <i class="fas fa-sign-out-alt text-lg"></i>
-            </a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col overflow-hidden">
         <!-- Top Bar -->
-        <header class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 flex-shrink-0">
+        <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
             <div class="flex items-center gap-4">
-                <h1 class="text-xl font-bold text-slate-800">Kişiler</h1>
+                <h1 class="text-xl font-semibold text-slate-800">Kişiler</h1>
                 <div class="flex items-center gap-2 pl-4 border-l border-slate-200">
                     <span class="text-sm text-slate-500"><span id="contactCount">0</span> kişi</span>
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="exportContacts()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                <button onclick="exportContacts()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all">
                     <i class="fas fa-download mr-2"></i> CSV İndir
                 </button>
-                <button onclick="openNewContactModal()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-colors shadow-sm">
+                <button onclick="openNewContactModal()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md">
                     <i class="fas fa-plus mr-2"></i> Yeni Kişi
                 </button>
             </div>
         </header>
 
         <!-- Search Bar -->
-        <div class="bg-white border-b border-slate-200 px-8 py-4 flex items-center gap-4 flex-shrink-0">
+        <div class="bg-white border-b border-slate-200/80 px-8 py-4 flex items-center gap-4 flex-shrink-0">
             <div class="relative flex-1 max-w-md">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                 <input type="text" id="searchInput" placeholder="İsim, email veya telefon ile ara..." 
-                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:bg-white transition-all">
             </div>
-            <select id="roleFilter" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+            <select id="roleFilter" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-500 transition-all">
                 <option value="">Tüm Roller</option>
                 <option value="Decision Maker">Decision Maker</option>
                 <option value="Champion">Champion</option>
@@ -121,12 +94,12 @@
     <!-- Contact Detail Modal -->
     <div id="contactDetailModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
                 <div>
                     <h3 class="text-lg font-bold text-slate-800" id="contactDetailName">Kişi Detayı</h3>
                     <p class="text-sm text-slate-500 mt-1" id="contactDetailCompany"></p>
                 </div>
-                <button onclick="closeContactDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                <button onclick="closeContactDetailModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center"><i class="fas fa-times"></i></button>
             </div>
             <div class="flex-1 overflow-y-auto p-8">
                 <div id="contactDetailContent" class="space-y-6"></div>
@@ -137,39 +110,39 @@
     <!-- New Contact Modal -->
     <div id="newContactModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div class="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="text-lg font-bold text-slate-800">Yeni Kişi Ekle</h3>
-                <button onclick="closeNewContactModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                <button onclick="closeNewContactModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center"><i class="fas fa-times"></i></button>
             </div>
             <form id="newContactForm" class="p-8 space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ad *</label>
-                        <input type="text" id="newFirstName" required placeholder="Ad" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                        <input type="text" id="newFirstName" required placeholder="Ad" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Soyad</label>
-                        <input type="text" id="newLastName" placeholder="Soyad" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                        <input type="text" id="newLastName" placeholder="Soyad" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
-                    <input type="email" id="newEmail" placeholder="ornek@mail.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    <input type="email" id="newEmail" placeholder="ornek@mail.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
-                    <input type="tel" id="newPhone" placeholder="+90 5xx xxx xxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    <input type="tel" id="newPhone" placeholder="+90 5xx xxx xxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Şirket</label>
-                    <select id="newCompanyId" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    <select id="newCompanyId" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
                         <option value="">Seçiniz</option>
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol</label>
-                        <select id="newRole" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                        <select id="newRole" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
                             <option value="">Seçiniz</option>
                             <option value="Decision Maker">Decision Maker</option>
                             <option value="Champion">Champion</option>
@@ -180,12 +153,12 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Unvan</label>
-                        <input type="text" id="newJobTitle" placeholder="İş Unvanı" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                        <input type="text" id="newJobTitle" placeholder="İş Unvanı" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all">
                     </div>
                 </div>
                 <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="closeNewContactModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">İptal</button>
-                    <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">Kişiyi Kaydet</button>
+                    <button type="button" onclick="closeNewContactModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all">İptal</button>
+                    <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 hover:shadow-lg transition-all shadow-md">Kişiyi Kaydet</button>
                 </div>
             </form>
         </div>
@@ -255,7 +228,7 @@
 
             contacts.forEach(c => {
                 const card = document.createElement('div');
-                card.className = 'bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-all';
+                card.className = 'bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:border-brand-200 transition-all cursor-pointer group';
                 
                 const initials = (c.first_name.substring(0, 1) + (c.last_name ? c.last_name.substring(0, 1) : '')).toUpperCase();
                 
@@ -268,53 +241,53 @@
                 }[c.role] || '👤';
                 
                 const roleColor = {
-                    'Decision Maker': 'bg-purple-100 text-purple-700',
-                    'Champion': 'bg-yellow-100 text-yellow-700',
-                    'Influencer': 'bg-blue-100 text-blue-700',
-                    'Blocker': 'bg-red-100 text-red-700',
-                    'User': 'bg-slate-100 text-slate-600'
-                }[c.role] || 'bg-slate-100 text-slate-600';
+                    'Decision Maker': 'bg-purple-50 text-purple-700 border-purple-100',
+                    'Champion': 'bg-amber-50 text-amber-700 border-amber-100',
+                    'Influencer': 'bg-blue-50 text-blue-700 border-blue-100',
+                    'Blocker': 'bg-red-50 text-red-700 border-red-100',
+                    'User': 'bg-slate-50 text-slate-600 border-slate-100'
+                }[c.role] || 'bg-slate-50 text-slate-600 border-slate-100';
                 
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-sm">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-50 to-violet-100 text-brand-700 flex items-center justify-center font-bold text-sm border border-brand-100 group-hover:scale-110 transition-transform">
                                 ${initials}
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-slate-800">${c.full_name}</h3>
-                                <p class="text-xs text-slate-400">${c.job_title || 'Unvan belirtilmemiş'}</p>
+                                <h3 class="text-base font-bold text-slate-800 group-hover:text-brand-600 transition-colors">${c.full_name}</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">${c.job_title || 'Unvan belirtilmemiş'}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 rounded-lg text-xs font-bold ${roleColor}">
-                                ${roleEmoji} ${c.role || 'N/A'}
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${roleColor}">
+                                ${roleEmoji}
                             </span>
                         </div>
                     </div>
                     <div class="space-y-2 text-sm mb-4">
                         ${c.company_name ? `<div class="flex items-center gap-2 text-slate-600">
-                            <i class="fas fa-building w-4"></i>
+                            <i class="fas fa-building w-4 text-slate-400"></i>
                             <span class="truncate">${c.company_name}</span>
                         </div>` : ''}
                         ${c.email ? `<div class="flex items-center gap-2 text-slate-600">
-                            <i class="fas fa-envelope w-4"></i>
+                            <i class="fas fa-envelope w-4 text-slate-400"></i>
                             <span class="truncate">${c.email}</span>
                         </div>` : ''}
                         ${c.phone ? `<div class="flex items-center gap-2 text-slate-600">
-                            <i class="fas fa-phone w-4"></i>
+                            <i class="fas fa-phone w-4 text-slate-400"></i>
                             <span>${c.phone}</span>
                         </div>` : ''}
                     </div>
                     <div class="flex items-center justify-between pt-4 border-t border-slate-100">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-slate-400">Lead Score:</span>
-                            <span class="px-2 py-1 rounded-lg text-xs font-bold ${c.lead_score >= 80 ? 'bg-green-100 text-green-700' : c.lead_score >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'}">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${c.lead_score >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : c.lead_score >= 50 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-600 border-slate-100'}">
                                 ${c.lead_score}
                             </span>
                         </div>
-                        <button onclick="viewContact(${c.id})" class="text-brand-600 hover:text-brand-700 text-sm font-semibold">
-                            Detay <i class="fas fa-arrow-right ml-1"></i>
+                        <button onclick="viewContact(${c.id})" class="text-brand-600 hover:text-brand-700 text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                            Detay <i class="fas fa-arrow-right text-xs"></i>
                         </button>
                     </div>
                 `;

@@ -31,7 +31,7 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .tab-btn.active {
-            @apply bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50;
+            @apply bg-brand-50 text-brand-600 shadow-sm ring-1 ring-brand-100;
         }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; animation: fadeIn 0.2s ease-out; }
@@ -61,58 +61,34 @@
     <!-- Main Sidebar (Global) -->
     <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
         <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
-            <i class="fab fa-whatsapp"></i>
+            <span class="text-2xl">🐧</span>
         </a>
         <nav class="flex-1 flex flex-col gap-4 w-full px-3">
-            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
-                <i class="fas fa-inbox text-lg"></i>
-            </a>
-            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
-                <i class="fas fa-chart-line text-lg"></i>
-            </a>
-            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
-                <i class="fas fa-address-book text-lg"></i>
-            </a>
-            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
-                <i class="fas fa-building text-lg"></i>
-            </a>
-            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
-                <i class="fas fa-bullhorn text-lg"></i>
-            </a>
-            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
-                <i class="fas fa-robot text-lg"></i>
-            </a>
-            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
-                <i class="fas fa-chart-line text-lg"></i>
-            </a>
-            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
-                <i class="fas fa-list-check text-lg"></i>
-            </a>
-            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokumanlar">
-                <i class="fas fa-file-lines text-lg"></i>
-            </a>
-            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
-                <i class="fas fa-plug text-lg"></i>
-            </a>
-            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Ayarlar">
-                <i class="fas fa-cog text-lg"></i>
-            </a>
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
         </nav>
         <div class="flex flex-col gap-4 w-full px-3 pb-4">
-            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap">
-                <i class="fas fa-sign-out-alt text-lg"></i>
-            </a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
         <!-- Header -->
-        <header class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 flex-shrink-0">
+        <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
             <div class="flex items-center gap-3">
-                <h1 class="text-xl font-bold text-slate-800 tracking-tight">Ayarlar</h1>
+                <h1 class="text-xl font-semibold text-slate-800 tracking-tight">Ayarlar</h1>
             </div>
             <div class="flex items-center gap-4">
-                <div id="userProfile" class="flex items-center gap-3 bg-slate-50 pl-4 pr-1.5 py-1.5 rounded-2xl border border-slate-100">
+                <div id="userProfile" class="flex items-center gap-3 bg-slate-50 pl-4 pr-1.5 py-1.5 rounded-2xl border border-slate-200/80">
                     <div class="text-right hidden sm:block">
                         <p class="text-xs font-bold text-slate-800 leading-none" id="userName">Yükleniyor...</p>
                         <p class="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-wider" id="userRole">...</p>
@@ -124,42 +100,42 @@
 
         <div class="flex-1 flex overflow-hidden">
             <!-- Settings Sub-Sidebar -->
-            <aside class="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-10 flex-shrink-0">
+            <aside class="w-64 bg-white border-r border-slate-200/80 flex flex-col z-10 flex-shrink-0">
                 <div class="p-6">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 ml-2">Sistem Ayarları</p>
                     <nav class="space-y-1">
-                        <button onclick="switchTab('workspace')" id="tab-workspace" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('workspace')" id="tab-workspace" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-building w-4 text-center group-hover:scale-110 transition-transform"></i> Çalışma Alanı
                         </button>
-                        <button onclick="switchTab('branding')" id="tab-branding" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('branding')" id="tab-branding" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-palette w-4 text-center group-hover:scale-110 transition-transform"></i> Portal Branding
                         </button>
-                        <button onclick="switchTab('webhooks')" id="tab-webhooks" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('webhooks')" id="tab-webhooks" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-link w-4 text-center group-hover:scale-110 transition-transform"></i> Webhooklar
                         </button>
-                        <button onclick="switchTab('team')" id="tab-team" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('team')" id="tab-team" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-user-group w-4 text-center group-hover:scale-110 transition-transform"></i> Takım Üyeleri
                         </button>
-                        <button onclick="switchTab('templates')" id="tab-templates" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('templates')" id="tab-templates" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-message w-4 text-center group-hover:scale-110 transition-transform"></i> Mesaj Şablonları
                         </button>
-                        <button onclick="switchTab('replies')" id="tab-replies" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('replies')" id="tab-replies" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-bolt w-4 text-center group-hover:scale-110 transition-transform"></i> Hızlı Yanıtlar
                         </button>
-                        <button onclick="switchTab('custom-fields')" id="tab-custom-fields" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('custom-fields')" id="tab-custom-fields" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-list-check w-4 text-center group-hover:scale-110 transition-transform"></i> Özel Alanlar
                         </button>
-                        <button onclick="switchTab('google')" id="tab-google" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('google')" id="tab-google" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fab fa-google w-4 text-center group-hover:scale-110 transition-transform"></i> Google Workspace
                         </button>
-                        <button onclick="switchTab('security')" id="tab-security" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group overflow-hidden" title="Security & Compliance">
+                        <button onclick="switchTab('security')" id="tab-security" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group overflow-hidden" title="Security & Compliance">
                             <i class="fas fa-shield w-4 text-center group-hover:scale-110 transition-transform"></i><span class="truncate">Security</span>
                         </button>
                     </nav>
 
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-8 mb-4 ml-2">Hesap</p>
                     <nav class="space-y-1">
-                        <button onclick="switchTab('profile')" id="tab-profile" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-white/50 group">
+                        <button onclick="switchTab('profile')" id="tab-profile" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-user-circle w-4 text-center group-hover:scale-110 transition-transform"></i> Profilim
                         </button>
                     </nav>
