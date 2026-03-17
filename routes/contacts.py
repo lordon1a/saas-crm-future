@@ -701,3 +701,82 @@ def save_contacts_column_preferences():
     except Exception as e:
         logger.error(f"Error saving column preferences: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/v1/user-preferences/contacts-column-widths', methods=['GET'])
+@login_required
+def get_contacts_column_widths():
+    """Get user's column width preferences for contacts table"""
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id or not workspace_id:
+            return jsonify({'error': 'User or workspace not found'}), 400
+        
+        from models import db
+        from sqlalchemy import text
+        
+        result = db.session.execute(
+            text("SELECT preference_value FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_column_widths'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            import json
+            return jsonify({'widths': json.loads(result[0])}), 200
+        
+        return jsonify({'widths': {}}), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting column widths: {str(e)}")
+        return jsonify({'widths': {}}), 200
+
+
+@contacts_bp.route('/api/v1/user-preferences/contacts-column-widths', methods=['POST'])
+@login_required
+def save_contacts_column_widths():
+    """Save user's column width preferences for contacts table"""
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id or not workspace_id:
+            return jsonify({'error': 'User or workspace not found'}), 400
+        
+        data = request.get_json()
+        if not data or 'widths' not in data:
+            return jsonify({'error': 'No widths provided'}), 400
+        
+        widths = data['widths']
+        
+        from models import db
+        from sqlalchemy import text
+        import json
+        
+        # Check if preference exists
+        result = db.session.execute(
+            text("SELECT id FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_column_widths'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            # Update existing
+            db.session.execute(
+                text("UPDATE user_preferences SET preference_value = :value, updated_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_column_widths'"),
+                {'value': json.dumps(widths), 'user_id': user_id, 'workspace_id': workspace_id}
+            )
+        else:
+            # Insert new
+            db.session.execute(
+                text("INSERT INTO user_preferences (user_id, workspace_id, preference_key, preference_value, created_at, updated_at) VALUES (:user_id, :workspace_id, 'contacts_column_widths', :value, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                {'user_id': user_id, 'workspace_id': workspace_id, 'value': json.dumps(widths)}
+            )
+        
+        db.session.commit()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        logger.error(f"Error saving column widths: {str(e)}")
+        return jsonify({'error': str(e)}), 500

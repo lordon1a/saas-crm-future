@@ -459,6 +459,9 @@
         let selectedContactIds = new Set();
         let visibleColumns = ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'];
         let customFields = []; // Store custom fields
+        let columnWidths = {}; // Store column widths
+        let isResizing = false;
+        let currentResizeColumn = null;
 
         // Get company_id from URL if present
         const urlParams = new URLSearchParams(window.location.search);
@@ -1020,38 +1023,221 @@
                 <th scope="col" class="w-12 px-4 py-3">
                     <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
                 </th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Ad Soyad
-                </th>
             `;
             
-            visibleColumns.forEach(col => {
-                if (col === 'name') return; // Already added
+            visibleColumns.forEach((col, index) => {
+                if (col === 'name') {
+                    const width = columnWidths['name'] || 200;
+                    headerHtml += `
+                        <th scope="col" data-column="name" draggable="false" 
+                            class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none"
+                            style="min-width: ${width}px; width: ${width}px;">
+                            <div class="flex items-center justify-between">
+                                <span>Ad Soyad</span>
+                                <span class="text-xs text-gray-400 ml-2">(Zorunlu)</span>
+                            </div>
+                            <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-500 resize-handle" data-column="name"></div>
+                        </th>
+                    `;
+                    return;
+                }
                 
-                if (col === 'company') {
-                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Kuruluş</th>';
-                } else if (col === 'email') {
-                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">E-posta</th>';
-                } else if (col === 'phone') {
-                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Telefon</th>';
-                } else if (col === 'role') {
-                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol</th>';
-                } else if (col === 'lead_score') {
-                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Score</th>';
-                } else if (col === 'deals') {
-                    headerHtml += '<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Açık Anlaşmalar</th>';
-                } else if (col.startsWith('custom_')) {
-                    // Custom field
+                let label = '';
+                let colId = col;
+                
+                if (col === 'company') label = 'Kuruluş';
+                else if (col === 'email') label = 'E-posta';
+                else if (col === 'phone') label = 'Telefon';
+                else if (col === 'role') label = 'Rol';
+                else if (col === 'lead_score') label = 'Lead Score';
+                else if (col === 'deals') label = 'Açık Anlaşmalar';
+                else if (col.startsWith('custom_')) {
                     const fieldId = parseInt(col.replace('custom_', ''));
                     const field = customFields.find(f => f.id === fieldId);
                     if (field) {
-                        headerHtml += `<th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">${field.field_name}</th>`;
+                        label = field.field_name;
+                    } else {
+                        return; // Skip if field not found
                     }
                 }
+                
+                const width = columnWidths[colId] || 150;
+                headerHtml += `
+                    <th scope="col" data-column="${colId}" draggable="true" 
+                        class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-move select-none hover:bg-gray-100 transition-colors"
+                        style="min-width: ${width}px; width: ${width}px;">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-grip-vertical text-gray-400 text-xs"></i>
+                            <span>${label}</span>
+                        </div>
+                        <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-500 resize-handle" data-column="${colId}"></div>
+                    </th>
+                `;
             });
             
             headerHtml += '<th scope="col" class="w-12 px-4 py-3"></th>';
             thead.innerHTML = headerHtml;
+            
+            // Setup drag and drop for headers
+            setupHeaderDragDrop();
+            
+            // Setup resize for columns
+            setupColumnResize();
+            
+            tbody.innerHTML = '';
+
+            contacts.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = 'h-12 hover:bg-blue-50/40 transition-colors group';
+                
+                const initials = (c.first_name.substring(0, 1) + (c.last_name ? c.last_name.substring(0, 1) : '')).toUpperCase();
+                
+                const roleColor = {
+                    'Decision Maker': 'bg-purple-100 text-purple-800',
+                    'Champion': 'bg-yellow-100 text-yellow-800',
+                    'Influencer': 'bg-blue-100 text-blue-800',
+                    'Blocker': 'bg-red-100 text-red-800',
+                    'User': 'bg-gray-100 text-gray-800'
+                }[c.role] || 'bg-gray-100 text-gray-800';
+                
+                // Lead score color indicator
+                let scoreColor = 'bg-gray-400';
+                if (c.lead_score >= 80) scoreColor = 'bg-green-500';
+                else if (c.lead_score >= 50) scoreColor = 'bg-yellow-500';
+                else if (c.lead_score >= 30) scoreColor = 'bg-orange-500';
+                else scoreColor = 'bg-red-500';
+                
+                let html = `
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="checkbox" data-contact-id="${c.id}" onchange="toggleContactSelection(${c.id}, this.checked)" class="contact-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                    </td>
+                `;
+                
+                visibleColumns.forEach(col => {
+                    const width = columnWidths[col] || (col === 'name' ? 200 : 150);
+                    const style = `style="min-width: ${width}px; width: ${width}px;"`;
+                    
+                    if (col === 'name') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap" ${style}>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                        ${initials}
+                                    </div>
+                                    <span class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer truncate" onclick="viewContact(${c.id})">${c.full_name}</span>
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'company') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm text-gray-500 truncate">${c.company_name || '-'}</span>
+                                    <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
+                                        onclick="openEditModal(${c.id}, 'company_name', '${(c.company_name || '').replace(/'/g, "\\'")}', 'Kuruluş')" 
+                                        title="Düzenle">
+                                        <i class="fas fa-pen text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'email') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="text-sm text-gray-500 truncate">${c.email || '-'}</span>
+                                        ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold flex-shrink-0">İş</span>' : ''}
+                                    </div>
+                                    <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
+                                        onclick="openEditModal(${c.id}, 'email', '${(c.email || '').replace(/'/g, "\\'")}', 'E-posta', 'email')" 
+                                        title="Düzenle">
+                                        <i class="fas fa-pen text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'phone') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm text-gray-500 truncate">${c.phone || '-'}</span>
+                                    <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
+                                        onclick="openEditModal(${c.id}, 'phone', '${(c.phone || '').replace(/'/g, "\\'")}', 'Telefon', 'tel')" 
+                                        title="Düzenle">
+                                        <i class="fas fa-pen text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'role') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor} truncate">${c.role || '-'}</span>
+                                    <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
+                                        onclick="openEditModal(${c.id}, 'role', '${(c.role || '').replace(/'/g, "\\'")}', 'Rol', 'select', ['Decision Maker','Champion','Influencer','Blocker','User'])" 
+                                        title="Düzenle">
+                                        <i class="fas fa-pen text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'lead_score') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full ${scoreColor} flex-shrink-0"></span>
+                                        <span class="text-sm font-semibold text-gray-700">${c.lead_score}</span>
+                                    </div>
+                                    <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
+                                        onclick="openEditModal(${c.id}, 'lead_score', '${c.lead_score}', 'Lead Score', 'number')" 
+                                        title="Düzenle">
+                                        <i class="fas fa-pen text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'deals') {
+                        html += `
+                            <td class="px-4 py-3 whitespace-nowrap" ${style}>
+                                <span class="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs font-semibold">0 açık</span>
+                            </td>
+                        `;
+                    } else if (col.startsWith('custom_')) {
+                        const fieldId = parseInt(col.replace('custom_', ''));
+                        const field = customFields.find(f => f.id === fieldId);
+                        if (field && c.customFieldValues) {
+                            const value = c.customFieldValues[field.field_name] || '-';
+                            html += `
+                                <td class="px-4 py-3 whitespace-nowrap group/cell" ${style}>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-sm text-gray-500 truncate">${value}</span>
+                                        <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0" 
+                                            onclick="viewContact(${c.id})" 
+                                            title="Düzenle">
+                                            <i class="fas fa-pen text-xs"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                        }
+                    }
+                });
+                
+                html += `
+                    <td class="px-4 py-3 whitespace-nowrap text-right">
+                        <button class="text-gray-400 hover:text-gray-600 p-1" onclick="showContactMenu(event, ${c.id})">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+        }
             
             tbody.innerHTML = '';
 
@@ -1213,6 +1399,158 @@
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
             });
+        }
+        
+        // ============================================================================
+        // COLUMN DRAG & DROP AND RESIZE
+        // ============================================================================
+        
+        let draggedHeader = null;
+        
+        function setupHeaderDragDrop() {
+            const headers = document.querySelectorAll('th[draggable="true"]');
+            
+            headers.forEach(header => {
+                header.addEventListener('dragstart', function(e) {
+                    if (isResizing) {
+                        e.preventDefault();
+                        return;
+                    }
+                    draggedHeader = this;
+                    this.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                
+                header.addEventListener('dragover', function(e) {
+                    if (e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    if (isResizing || !draggedHeader) return;
+                    
+                    e.dataTransfer.dropEffect = 'move';
+                    
+                    if (this !== draggedHeader && this.draggable) {
+                        const rect = this.getBoundingClientRect();
+                        const midpoint = rect.left + rect.width / 2;
+                        
+                        const draggedCol = draggedHeader.dataset.column;
+                        const targetCol = this.dataset.column;
+                        
+                        if (!draggedCol || !targetCol || draggedCol === 'name' || targetCol === 'name') return;
+                        
+                        const draggedIndex = visibleColumns.indexOf(draggedCol);
+                        const targetIndex = visibleColumns.indexOf(targetCol);
+                        
+                        if (draggedIndex !== -1 && targetIndex !== -1) {
+                            visibleColumns.splice(draggedIndex, 1);
+                            
+                            if (e.clientX < midpoint) {
+                                visibleColumns.splice(targetIndex, 0, draggedCol);
+                            } else {
+                                visibleColumns.splice(targetIndex + 1, 0, draggedCol);
+                            }
+                            
+                            renderContacts(allContacts);
+                        }
+                    }
+                    
+                    return false;
+                });
+                
+                header.addEventListener('drop', function(e) {
+                    if (e.stopPropagation) {
+                        e.stopPropagation();
+                    }
+                    return false;
+                });
+                
+                header.addEventListener('dragend', function(e) {
+                    this.style.opacity = '1';
+                    draggedHeader = null;
+                    
+                    // Save column order
+                    saveColumnPreferences();
+                });
+            });
+        }
+        
+        function setupColumnResize() {
+            const resizeHandles = document.querySelectorAll('.resize-handle');
+            
+            resizeHandles.forEach(handle => {
+                handle.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    isResizing = true;
+                    currentResizeColumn = this.dataset.column;
+                    const th = this.parentElement;
+                    const startX = e.pageX;
+                    const startWidth = th.offsetWidth;
+                    
+                    const onMouseMove = (e) => {
+                        if (!isResizing) return;
+                        
+                        const diff = e.pageX - startX;
+                        const newWidth = Math.max(80, startWidth + diff);
+                        
+                        // Update header width
+                        th.style.width = newWidth + 'px';
+                        th.style.minWidth = newWidth + 'px';
+                        
+                        // Update all cells in this column
+                        const columnIndex = Array.from(th.parentElement.children).indexOf(th);
+                        const rows = document.querySelectorAll('#contactsTableBody tr');
+                        rows.forEach(row => {
+                            const cell = row.children[columnIndex];
+                            if (cell) {
+                                cell.style.width = newWidth + 'px';
+                                cell.style.minWidth = newWidth + 'px';
+                            }
+                        });
+                        
+                        // Store width
+                        columnWidths[currentResizeColumn] = newWidth;
+                    };
+                    
+                    const onMouseUp = () => {
+                        isResizing = false;
+                        currentResizeColumn = null;
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                        
+                        // Save widths to preferences
+                        saveColumnWidths();
+                    };
+                    
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+        
+        async function saveColumnWidths() {
+            try {
+                await fetch('/api/v1/user-preferences/contacts-column-widths', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widths: columnWidths })
+                });
+            } catch (error) {
+                console.error('Error saving column widths:', error);
+            }
+        }
+        
+        async function loadColumnWidths() {
+            try {
+                const response = await fetch('/api/v1/user-preferences/contacts-column-widths');
+                if (response.ok) {
+                    const data = await response.json();
+                    columnWidths = data.widths || {};
+                }
+            } catch (error) {
+                console.error('Error loading column widths:', error);
+            }
         }
         
         // Edit Modal System
@@ -1658,6 +1996,7 @@
         // Initialize
         (async function() {
             await loadColumnPreferences();
+            await loadColumnWidths();
             await loadCompanies();
             await loadContacts();
         })();
