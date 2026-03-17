@@ -469,6 +469,23 @@ class ContactService:
         ).all()
         
         field_map = {f.field_name: f for f in fields}
+
+        # Auto-create missing field definitions so first-time usage works seamlessly.
+        for field_name in field_values.keys():
+            if field_name in field_map:
+                continue
+
+            guessed_type = 'number' if field_name in ('annual_revenue', 'employee_count') else 'text'
+            new_field = CustomField(
+                workspace_id=workspace_id,
+                entity_type=entity_type,
+                field_name=field_name,
+                field_type=guessed_type,
+                is_required=False,
+            )
+            db.session.add(new_field)
+            db.session.flush()
+            field_map[field_name] = new_field
         
         for field_name, value in field_values.items():
             if field_name not in field_map:

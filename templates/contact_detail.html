@@ -35,15 +35,48 @@
         </div>
     </aside>
     
-    <!-- Main Grid Container: 12 columns, no gap -->
-    <div class="grid grid-cols-12 gap-0 flex-1 overflow-hidden">
+    <!-- Main Grid Container: detached layout -->
+    <div class="flex-1 overflow-hidden bg-slate-100 px-3 md:px-4 pb-3 md:pb-4 pt-[72px]">
+    <div class="grid grid-cols-12 grid-rows-[auto_1fr] gap-3 h-full overflow-hidden">
+
+        <!-- Global Topbar (Sticky, full-width over both panels) -->
+        <header class="col-span-12 fixed top-0 left-16 right-0 z-40 bg-white border-b border-gray-200 shadow-sm px-4 md:px-6 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[200px_minmax(420px,1fr)_320px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardım">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="İpuçları">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
         
         <!-- LEFT SIDEBAR: col-span-3 (25%) -->
-        <aside class="col-span-3 bg-white border-r border-gray-200 overflow-y-auto">
+        <aside class="col-span-3 row-start-2 bg-white border border-gray-200 rounded-b-xl shadow-sm overflow-y-auto">
             <!-- Header -->
-            <div class="px-4 py-3 border-b border-gray-200">
+            <div class="px-5 py-4 border-b border-gray-200">
                 <div class="flex items-center justify-between mb-3">
-                    <a href="/contacts" class="text-gray-400 hover:text-gray-600 transition-colors text-sm">
+                    <a href="/contacts" class="text-gray-500 hover:text-gray-700 transition-colors text-base font-medium">
                         <i class="fas fa-arrow-left mr-1"></i> Geri
                     </a>
                     <div class="flex items-center gap-1">
@@ -57,23 +90,36 @@
                 </div>
                 
                 <!-- Contact Avatar & Name -->
-                <div class="flex items-start gap-2 mb-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                <div class="flex items-start gap-3 mb-4">
+                    <div id="contact-avatar" class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
                         {{ contact.first_name[0] if contact.first_name else 'K' }}{{ contact.last_name[0] if contact.last_name else 'K' }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h1 class="text-base font-bold text-gray-900 truncate">{{ contact.full_name }}</h1>
-                        <p class="text-xs text-gray-500 truncate">{{ contact.company.name if contact.company else 'Kuruluş yok' }}</p>
+                        <h1
+                            id="contact-name-display"
+                            class="text-2xl leading-tight font-bold text-gray-900 truncate cursor-text"
+                            title="Düzenlemek için çift tıklayın"
+                            ondblclick="startNameEdit()"
+                        >{{ contact.full_name }}</h1>
+                        <input
+                            id="contact-name-input"
+                            type="text"
+                            class="hidden w-full text-2xl leading-tight font-bold text-gray-900 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value="{{ contact.full_name }}"
+                            maxlength="200"
+                        >
+                        <p class="text-sm text-gray-600 truncate mt-1">{{ contact.company.name if contact.company else 'Kuruluş yok' }}</p>
+                        <p class="text-xs text-gray-400 mt-1">İsmi düzenlemek için çift tıklayın</p>
                     </div>
                 </div>
                 
                 <!-- Quick Actions -->
-                <div class="flex items-center gap-1">
-                    <button onclick="sendEmail()" class="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-all flex items-center justify-center gap-1">
+                <div class="flex items-center gap-2">
+                    <button onclick="sendEmail()" class="flex-1 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-all flex items-center justify-center gap-1.5">
                         <i class="fas fa-envelope text-xs"></i>
                         <span>E-posta</span>
                     </button>
-                    <button onclick="makeCall()" class="flex-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-all flex items-center justify-center gap-1">
+                    <button onclick="makeCall()" class="flex-1 px-3 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition-all flex items-center justify-center gap-1.5">
                         <i class="fas fa-phone text-xs"></i>
                         <span>Ara</span>
                     </button>
@@ -82,83 +128,194 @@
             
             <!-- Özet Section -->
             <div class="border-b border-gray-200">
-                <button onclick="toggleSection('summary')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-xs font-semibold text-gray-700">Özet</span>
-                    <i id="summary-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                <button onclick="toggleSection('summary')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Özet</span>
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-cog text-sm text-gray-400"></i>
+                        <i id="summary-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                    </span>
                 </button>
-                <div id="summary-content" class="px-4 py-2 space-y-2 text-xs">
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Sahip</span>
-                        <span class="text-gray-900 font-medium">{{ session.get('user_name', 'Kullanıcı') }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Oluşturulma</span>
-                        <span class="text-gray-900 font-medium">{{ contact.created_at.strftime('%d.%m.%Y') if contact.created_at else '-' }}</span>
+                <div id="summary-content" class="px-5 py-4 space-y-3 text-sm">
+                    <a href="#" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+                        <span>Etiket ekle</span>
+                    </a>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3 group">
+                            <i class="fas fa-envelope text-gray-500 w-4 text-center"></i>
+                            <div class="flex-1 min-w-0">
+                                <a id="summary-email-display" href="mailto:{{ contact.email or '' }}" ondblclick="event.preventDefault(); startInlineEdit('contact.email')" class="text-blue-600 hover:text-blue-700">{{ (contact.email + ' (iş)') if contact.email else '-' }}</a>
+                                <input id="summary-email-input" type="email" class="hidden w-full px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.email or '' }}">
+                            </div>
+                            <button type="button" onclick="startInlineEdit('contact.email')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="E-posta düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-3 group">
+                            <i class="fas fa-phone text-gray-500 w-4 text-center"></i>
+                            <div class="flex-1 min-w-0">
+                                <a id="summary-phone-display" href="tel:{{ contact.phone or '' }}" ondblclick="event.preventDefault(); startInlineEdit('contact.phone')" class="text-blue-600 hover:text-blue-700">{{ contact.phone or '-' }}</a>
+                                <input id="summary-phone-input" type="text" class="hidden w-full px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.phone or '' }}">
+                            </div>
+                            <button type="button" onclick="startInlineEdit('contact.phone')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Telefon düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-3 group">
+                            <i class="fas fa-building text-gray-500 w-4 text-center"></i>
+                            <div class="flex-1 min-w-0">
+                                {% if contact.company %}
+                                <a id="summary-company-display" href="/companies" ondblclick="event.preventDefault(); openSectionEditor('organization')" class="text-blue-600 hover:text-blue-700 font-semibold">{{ contact.company.name }}</a>
+                                {% else %}
+                                <button id="summary-company-display" type="button" ondblclick="openOrganizationModal('create')" onclick="openOrganizationModal('create')" class="text-blue-600 hover:text-blue-700 font-medium">Kuruluş ekle</button>
+                                {% endif %}
+                            </div>
+                            <button type="button" onclick="openSectionEditor('organization')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Kuruluş düzenle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
             
             <!-- Ayrıntılar Section -->
             <div class="border-b border-gray-200">
-                <button onclick="toggleSection('details')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-xs font-semibold text-gray-700">Ayrıntılar</span>
+                <button onclick="toggleSection('details')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Ayrıntılar</span>
                     <i id="details-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
                 </button>
-                <div id="details-content" class="px-4 py-2">
-                    <div class="grid grid-cols-[80px_1fr] gap-2 text-xs">
+                <div id="details-content" class="px-5 py-3">
+                    <div class="grid grid-cols-[90px_1fr] gap-y-2 gap-x-3 text-sm">
                         <div class="text-gray-500">Adı</div>
-                        <div class="text-gray-900 font-medium">{{ contact.first_name or '-' }}</div>
+                        <div class="flex items-center justify-between gap-2 group w-full">
+                            <span id="details-first-name" ondblclick="startInlineEdit('contact.first_name')" class="text-gray-900 font-medium flex-1">{{ contact.first_name or '-' }}</span>
+                            <input id="details-first-name-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.first_name or '' }}">
+                            <button type="button" onclick="startInlineEdit('contact.first_name')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Ad düzenle"><i class="fas fa-pen text-[10px]"></i></button>
+                        </div>
                         
                         <div class="text-gray-500">Soyadı</div>
-                        <div class="text-gray-900 font-medium">{{ contact.last_name or '-' }}</div>
+                        <div class="flex items-center justify-between gap-2 group w-full">
+                            <span id="details-last-name" ondblclick="startInlineEdit('contact.last_name')" class="text-gray-900 font-medium flex-1">{{ contact.last_name or '-' }}</span>
+                            <input id="details-last-name-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.last_name or '' }}">
+                            <button type="button" onclick="startInlineEdit('contact.last_name')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Soyad düzenle"><i class="fas fa-pen text-[10px]"></i></button>
+                        </div>
                         
                         <div class="text-gray-500">E-posta</div>
-                        <div class="text-gray-900 font-medium truncate">{{ contact.email or '-' }}</div>
+                        <div class="flex items-center justify-between gap-2 min-w-0 group w-full">
+                            <span id="details-email" ondblclick="startInlineEdit('details.email')" class="text-gray-900 font-medium truncate flex-1">{{ contact.email or '-' }}</span>
+                            <input id="details-email-input" type="email" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.email or '' }}">
+                            <button type="button" onclick="startInlineEdit('details.email')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="E-posta düzenle"><i class="fas fa-pen text-[10px]"></i></button>
+                        </div>
                         
                         <div class="text-gray-500">Telefon</div>
-                        <div class="text-gray-900 font-medium">{{ contact.phone or '-' }}</div>
+                        <div class="flex items-center justify-between gap-2 group w-full">
+                            <span id="details-phone" ondblclick="startInlineEdit('details.phone')" class="text-gray-900 font-medium flex-1">{{ contact.phone or '-' }}</span>
+                            <input id="details-phone-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.phone or '' }}">
+                            <button type="button" onclick="startInlineEdit('details.phone')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Telefon düzenle"><i class="fas fa-pen text-[10px]"></i></button>
+                        </div>
                         
                         <div class="text-gray-500">Unvan</div>
-                        <div class="text-gray-900 font-medium">{{ contact.job_title or '-' }}</div>
+                        <div class="flex items-center justify-between gap-2 group w-full">
+                            <span id="details-job-title" ondblclick="startInlineEdit('contact.job_title')" class="text-gray-900 font-medium flex-1">{{ contact.job_title or '-' }}</span>
+                            <input id="details-job-title-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.job_title or '' }}">
+                            <button type="button" onclick="startInlineEdit('contact.job_title')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Unvan düzenle"><i class="fas fa-pen text-[10px]"></i></button>
+                        </div>
                         
                         <div class="text-gray-500">Rol</div>
-                        <div class="text-gray-900 font-medium">{{ contact.role or '-' }}</div>
+                        <div class="flex items-center justify-between gap-2 group w-full">
+                            <span id="details-role" ondblclick="startInlineEdit('contact.role')" class="text-gray-900 font-medium flex-1">{{ contact.role or '-' }}</span>
+                            <input id="details-role-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.role or '' }}">
+                            <button type="button" onclick="startInlineEdit('contact.role')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Rol düzenle"><i class="fas fa-pen text-[10px]"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
             
             <!-- Kuruluş Section -->
             <div class="border-b border-gray-200">
-                <button onclick="toggleSection('organization')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-xs font-semibold text-gray-700">Kuruluş</span>
+                <button onclick="toggleSection('organization')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Kuruluş</span>
                     <i id="organization-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
                 </button>
-                <div id="organization-content" class="hidden px-4 py-2 text-xs">
-                    {% if contact.company %}
-                    <div class="font-medium text-gray-900 mb-1">{{ contact.company.name }}</div>
-                    <div class="text-gray-500">{{ contact.company.industry or 'Sektör belirtilmemiş' }}</div>
-                    {% else %}
-                    <div class="text-gray-500">Kuruluş bağlantısı yok</div>
-                    {% endif %}
+                <div id="organization-content" class="hidden px-5 py-3 text-sm">
+                    <div id="organization-body"></div>
                 </div>
             </div>
             
             <!-- Anlaşmalar Section -->
             <div class="border-b border-gray-200">
-                <button onclick="toggleSection('deals')" class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-xs font-semibold text-gray-700">Anlaşmalar</span>
+                <button onclick="toggleSection('deals')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Anlaşmalar</span>
                     <i id="deals-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
                 </button>
-                <div id="deals-content" class="hidden px-4 py-2">
-                    <div id="deals-list" class="space-y-2 text-xs">
+                <div id="deals-content" class="hidden px-5 py-3">
+                    <div id="deals-list" class="space-y-2 text-sm">
                         <div class="text-gray-500">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Genel Bakış Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('overview')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Genel bakış</span>
+                    <i id="overview-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="overview-content" class="hidden px-5 py-3 space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500">Lead Score</span>
+                        <span class="text-gray-900 font-medium">{{ contact.lead_score or 0 }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500">Rol</span>
+                        <span class="text-gray-900 font-medium">{{ contact.role or '-' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Akıllı Bcc Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('smart-bcc')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Akıllı Bcc</span>
+                    <i id="smart-bcc-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="smart-bcc-content" class="hidden px-5 py-3 text-sm text-gray-600">
+                    Bu kişi için Akıllı Bcc kaydı bulunmuyor.
+                </div>
+            </div>
+
+            <!-- Müşteri Adayları Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('leads')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Müşteri Adayları</span>
+                    <i id="leads-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="leads-content" class="hidden px-5 py-3 text-sm text-gray-600">
+                    Bu kişiye bağlı müşteri adayı yok.
+                </div>
+            </div>
+
+            <!-- Projeler Section -->
+            <div class="border-b border-gray-200">
+                <button onclick="toggleSection('projects')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
+                    <span class="text-base font-semibold text-gray-800">Projeler</span>
+                    <i id="projects-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
+                </button>
+                <div id="projects-content" class="hidden px-5 py-3 text-sm space-y-2">
+                    <div class="text-gray-600">Bu kişiyle ilgili proje yok.</div>
+                    <div class="pt-2 border-t border-gray-100 text-gray-500">
+                        <div>Güncellenme: {{ contact.updated_at.strftime('%d.%m.%Y %H:%M') if contact.updated_at else '-' }}</div>
+                        <div>Oluşturulma: {{ contact.created_at.strftime('%d.%m.%Y %H:%M') if contact.created_at else '-' }}</div>
                     </div>
                 </div>
             </div>
         </aside>
         
         <!-- RIGHT MAIN CONTENT: col-span-9 (75%) -->
-        <main class="col-span-9 flex flex-col overflow-hidden bg-white">
+        <main class="col-span-9 row-start-2 flex flex-col overflow-hidden bg-white border border-gray-200 rounded-b-xl shadow-sm">
+
             <!-- Top Navigation Tabs -->
             <div class="border-b border-gray-200 px-4">
                 <div class="flex items-center gap-4">
@@ -546,6 +703,7 @@
             </div>
         </main>
     </div>
+    </div>
     
     <!-- Activity Creation Modal -->
     <div id="activity-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -625,6 +783,67 @@
         </div>
     </div>
 
+    <!-- Organization Modal -->
+    <div id="organization-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 id="organization-modal-title" class="text-lg font-bold text-gray-900">Kuruluş Ekle</h3>
+                <button onclick="closeOrganizationModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Kuruluş Adı</label>
+                    <input type="text" id="org-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Örn: Dasdas A.Ş.">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Etiketler</label>
+                        <input type="text" id="org-tags" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Örn: partner, vip">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Sektör</label>
+                        <input type="text" id="org-industry" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Örn: Finans">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Web sitesi</label>
+                        <input type="text" id="org-website" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">LinkedIn Profili</label>
+                        <input type="text" id="org-linkedin" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://linkedin.com/company/...">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Adres</label>
+                    <textarea id="org-address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Kuruluş adresi"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Yıllık Gelir</label>
+                        <input type="text" id="org-revenue" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Örn: 2.500.000 USD">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Çalışan Sayısı</label>
+                        <input type="text" id="org-employees" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Örn: 150">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-4 border-t border-gray-200">
+                    <button onclick="closeOrganizationModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">İptal</button>
+                    <button onclick="saveOrganization()" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================================================
         // GLOBAL STATE & CONFIG
@@ -633,7 +852,23 @@
             contactId: {{ contact.id }},
             currentTab: 'activity',
             timeline: [],
-            deals: []
+            deals: [],
+            firstName: {{ (contact.first_name or '')|tojson }},
+            lastName: {{ (contact.last_name or '')|tojson }},
+            email: {{ (contact.email or '')|tojson }},
+            phone: {{ (contact.phone or '')|tojson }},
+            jobTitle: {{ (contact.job_title or '')|tojson }},
+            role: {{ (contact.role or '')|tojson }},
+            companyId: {{ (contact.company_id or 0)|int }},
+            company: {{ ({
+                'id': contact.company.id,
+                'name': contact.company.name,
+                'industry': contact.company.industry,
+                'website': contact.company.website,
+                'address': contact.company.address,
+                'size': contact.company.size
+            } if contact.company else None)|tojson }},
+            orgEditMode: 'create'
         };
 
         // ============================================================================
@@ -678,6 +913,512 @@
             setTimeout(() => {
                 toast.remove();
             }, 3000);
+        }
+
+        function getFullNameFromState() {
+            return `${(STATE.firstName || '').trim()} ${(STATE.lastName || '').trim()}`.trim();
+        }
+
+        function getInitialsFromName(fullName) {
+            const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return 'K';
+            if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+            return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+        }
+
+        function splitName(fullName) {
+            const cleaned = (fullName || '').trim().replace(/\s+/g, ' ');
+            if (!cleaned) return { firstName: '', lastName: '' };
+
+            const parts = cleaned.split(' ');
+            if (parts.length === 1) {
+                return { firstName: parts[0], lastName: '' };
+            }
+
+            return {
+                firstName: parts[0],
+                lastName: parts.slice(1).join(' ')
+            };
+        }
+
+        function updateNameUI() {
+            const fullName = getFullNameFromState() || 'İsimsiz Kişi';
+            const initials = getInitialsFromName(fullName);
+
+            const display = document.getElementById('contact-name-display');
+            const input = document.getElementById('contact-name-input');
+            const avatar = document.getElementById('contact-avatar');
+            const firstNameField = document.getElementById('details-first-name');
+            const lastNameField = document.getElementById('details-last-name');
+
+            if (display) display.textContent = fullName;
+            if (input) input.value = fullName;
+            if (avatar) avatar.textContent = initials;
+            if (firstNameField) firstNameField.textContent = STATE.firstName || '-';
+            if (lastNameField) lastNameField.textContent = STATE.lastName || '-';
+
+            const summaryEmail = document.getElementById('summary-email-display');
+            const summaryPhone = document.getElementById('summary-phone-display');
+            const detailsEmail = document.getElementById('details-email');
+            const detailsPhone = document.getElementById('details-phone');
+            const detailsJobTitle = document.getElementById('details-job-title');
+            const detailsRole = document.getElementById('details-role');
+
+            const emailText = STATE.email ? `${STATE.email} (iş)` : '-';
+            if (summaryEmail) {
+                summaryEmail.textContent = emailText;
+                summaryEmail.setAttribute('href', STATE.email ? `mailto:${STATE.email}` : '#');
+            }
+            if (summaryPhone) {
+                summaryPhone.textContent = STATE.phone || '-';
+                summaryPhone.setAttribute('href', STATE.phone ? `tel:${STATE.phone}` : '#');
+            }
+            if (detailsEmail) detailsEmail.textContent = STATE.email || '-';
+            if (detailsPhone) detailsPhone.textContent = STATE.phone || '-';
+            if (detailsJobTitle) detailsJobTitle.textContent = STATE.jobTitle || '-';
+            if (detailsRole) detailsRole.textContent = STATE.role || '-';
+
+            document.title = `${fullName} - Kişi Detayı`;
+        }
+
+        function openSectionEditor(sectionId) {
+            if (sectionId === 'summary') {
+                setSectionOpen('summary', true);
+                startInlineEdit('contact.email');
+                return;
+            }
+
+            if (sectionId === 'details') {
+                setSectionOpen('details', true);
+                startInlineEdit('contact.first_name');
+                return;
+            }
+
+            if (sectionId === 'organization') {
+                setSectionOpen('organization', true);
+                openOrganizationModal(STATE.companyId ? 'edit' : 'create');
+            }
+        }
+
+        function startInlineEdit(fieldKey) {
+            const inputMap = {
+                'contact.email': document.getElementById('summary-email-input'),
+                'contact.phone': document.getElementById('summary-phone-input'),
+                'details.email': document.getElementById('details-email-input'),
+                'details.phone': document.getElementById('details-phone-input'),
+                'contact.first_name': document.getElementById('details-first-name-input'),
+                'contact.last_name': document.getElementById('details-last-name-input'),
+                'contact.job_title': document.getElementById('details-job-title-input'),
+                'contact.role': document.getElementById('details-role-input')
+            };
+
+            const input = inputMap[fieldKey];
+            if (!input) return;
+
+            let display = null;
+            if (fieldKey === 'contact.email') display = document.getElementById('summary-email-display');
+            if (fieldKey === 'contact.phone') display = document.getElementById('summary-phone-display');
+            if (fieldKey === 'details.email') display = document.getElementById('details-email');
+            if (fieldKey === 'details.phone') display = document.getElementById('details-phone');
+            if (fieldKey === 'contact.first_name') display = document.getElementById('details-first-name');
+            if (fieldKey === 'contact.last_name') display = document.getElementById('details-last-name');
+            if (fieldKey === 'contact.job_title') display = document.getElementById('details-job-title');
+            if (fieldKey === 'contact.role') display = document.getElementById('details-role');
+
+            if (display) display.classList.add('hidden');
+            input.classList.remove('hidden');
+            input.dataset.fieldKey = fieldKey;
+            input.focus();
+            input.select();
+        }
+
+        function closeInlineEdit(input, restoreDisplay = true) {
+            if (!input) return;
+            input.classList.add('hidden');
+            const key = input.dataset.fieldKey;
+            const displayMap = {
+                'contact.email': document.getElementById('summary-email-display'),
+                'contact.phone': document.getElementById('summary-phone-display'),
+                'details.email': document.getElementById('details-email'),
+                'details.phone': document.getElementById('details-phone'),
+                'contact.first_name': document.getElementById('details-first-name'),
+                'contact.last_name': document.getElementById('details-last-name'),
+                'contact.job_title': document.getElementById('details-job-title'),
+                'contact.role': document.getElementById('details-role')
+            };
+            if (restoreDisplay && displayMap[key]) displayMap[key].classList.remove('hidden');
+        }
+
+        async function saveInlineField(input) {
+            if (!input || !input.dataset.fieldKey) return;
+
+            const fieldKey = input.dataset.fieldKey;
+            const value = (input.value || '').trim();
+
+            const payload = {};
+            const contactField = fieldKey.startsWith('details.')
+                ? fieldKey.replace('details.', '')
+                : fieldKey.replace('contact.', '');
+            payload[contactField] = value || null;
+
+            if (contactField === 'first_name' && !value) {
+                showToast('Ad alanı boş olamaz', 'error');
+                input.focus();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/contacts/${STATE.contactId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Alan güncellenemedi');
+                }
+
+                STATE.firstName = data.first_name || '';
+                STATE.lastName = data.last_name || '';
+                STATE.email = data.email || '';
+                STATE.phone = data.phone || '';
+                STATE.jobTitle = data.job_title || '';
+                STATE.role = data.role || '';
+
+                if (document.getElementById('summary-email-input')) {
+                    document.getElementById('summary-email-input').value = STATE.email || '';
+                }
+                if (document.getElementById('summary-phone-input')) {
+                    document.getElementById('summary-phone-input').value = STATE.phone || '';
+                }
+                if (document.getElementById('details-first-name-input')) {
+                    document.getElementById('details-first-name-input').value = STATE.firstName || '';
+                }
+                if (document.getElementById('details-last-name-input')) {
+                    document.getElementById('details-last-name-input').value = STATE.lastName || '';
+                }
+                if (document.getElementById('details-job-title-input')) {
+                    document.getElementById('details-job-title-input').value = STATE.jobTitle || '';
+                }
+                if (document.getElementById('details-role-input')) {
+                    document.getElementById('details-role-input').value = STATE.role || '';
+                }
+
+                updateNameUI();
+                closeInlineEdit(input, true);
+                showToast('Güncellendi');
+            } catch (error) {
+                showToast(error.message || 'Alan güncellenemedi', 'error');
+                input.focus();
+            }
+        }
+
+        function startNameEdit() {
+            const display = document.getElementById('contact-name-display');
+            const input = document.getElementById('contact-name-input');
+            if (!display || !input) return;
+
+            display.classList.add('hidden');
+            input.classList.remove('hidden');
+            input.value = getFullNameFromState() || display.textContent.trim();
+            input.focus();
+            input.select();
+        }
+
+        function stopNameEdit(resetValue = true) {
+            const display = document.getElementById('contact-name-display');
+            const input = document.getElementById('contact-name-input');
+            if (!display || !input) return;
+
+            if (resetValue) {
+                input.value = getFullNameFromState() || display.textContent.trim();
+            }
+
+            input.classList.add('hidden');
+            display.classList.remove('hidden');
+        }
+
+        async function saveNameEdit() {
+            const input = document.getElementById('contact-name-input');
+            if (!input) return;
+
+            const newFullName = (input.value || '').trim();
+            if (!newFullName) {
+                showToast('İsim boş olamaz', 'error');
+                input.focus();
+                return;
+            }
+
+            const parsed = splitName(newFullName);
+            if (!parsed.firstName) {
+                showToast('Ad alanı boş olamaz', 'error');
+                input.focus();
+                return;
+            }
+
+            const prevFirstName = STATE.firstName;
+            const prevLastName = STATE.lastName;
+
+            try {
+                const response = await fetch(`/api/v1/contacts/${STATE.contactId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        first_name: parsed.firstName,
+                        last_name: parsed.lastName
+                    })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'İsim güncellenemedi');
+                }
+
+                STATE.firstName = data.first_name || parsed.firstName;
+                STATE.lastName = data.last_name || parsed.lastName;
+                updateNameUI();
+                stopNameEdit(false);
+                showToast('İsim güncellendi');
+            } catch (error) {
+                STATE.firstName = prevFirstName;
+                STATE.lastName = prevLastName;
+                updateNameUI();
+                showToast(error.message || 'İsim güncellenemedi', 'error');
+                input.focus();
+            }
+        }
+
+        function normalizeCompany(raw) {
+            if (!raw) return null;
+
+            const cf = raw.custom_fields || {};
+            return {
+                id: raw.id || null,
+                name: raw.name || '',
+                industry: raw.industry || '',
+                website: raw.website || '',
+                address: raw.address || '',
+                size: raw.size || '',
+                tags: cf.tags || '',
+                linkedin_profile: cf.linkedin_profile || '',
+                annual_revenue: cf.annual_revenue || '',
+                employee_count: cf.employee_count || ''
+            };
+        }
+
+        function renderOrganizationSection() {
+            const container = document.getElementById('organization-body');
+            if (!container) return;
+
+            if (!STATE.companyId || !STATE.company) {
+                container.innerHTML = `
+                    <div class="group rounded-md p-2 -mx-2" ondblclick="openOrganizationModal('create')" title="Kuruluş eklemek için çift tıklayın">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-gray-600">Hiçbir kuruluş bu kişiye bağlı değildir.</div>
+                            <button onclick="openOrganizationModal('create')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Kuruluş ekle">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                        </div>
+                        <button onclick="openOrganizationModal('create')" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold">
+                            <i class="fas fa-plus"></i> Kuruluş
+                        </button>
+                    </div>
+                `;
+
+                const summaryCompanyDisplay = document.getElementById('summary-company-display');
+                if (summaryCompanyDisplay) {
+                    summaryCompanyDisplay.textContent = 'Kuruluş ekle';
+                }
+                return;
+            }
+
+            const org = STATE.company;
+            const websiteValue = org.website ? `<a href="${org.website}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${org.website}</a>` : '-';
+            const linkedinValue = org.linkedin_profile ? `<a href="${org.linkedin_profile}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${org.linkedin_profile}</a>` : '-';
+
+            container.innerHTML = `
+                <div class="flex items-start justify-between mb-4 group" ondblclick="openSectionEditor('organization')" title="Düzenlemek için çift tıklayın">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xl font-bold text-gray-900 truncate">${org.name || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openOrganizationModal('edit')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Kuruluşu düzenle">
+                            <i class="fas fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="unlinkOrganization()" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50" title="Kuruluş bağlantısını kaldır">
+                            <i class="fas fa-link-slash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-[120px_1fr] gap-y-2 gap-x-3 text-sm" ondblclick="openSectionEditor('organization')" title="Düzenlemek için çift tıklayın">
+                    <div class="text-gray-500">Etiketler</div><div class="text-gray-900">${org.tags || '-'}</div>
+                    <div class="text-gray-500">Adres</div><div class="text-gray-900">${org.address || '-'}</div>
+                    <div class="text-gray-500">Web sitesi</div><div class="text-gray-900">${websiteValue}</div>
+                    <div class="text-gray-500">LinkedIn profili</div><div class="text-gray-900">${linkedinValue}</div>
+                    <div class="text-gray-500">Sektör</div><div class="text-gray-900">${org.industry || '-'}</div>
+                    <div class="text-gray-500">Yıllık gelir</div><div class="text-gray-900">${org.annual_revenue || '-'}</div>
+                    <div class="text-gray-500">Çalışan sayısı</div><div class="text-gray-900">${org.employee_count || org.size || '-'}</div>
+                </div>
+            `;
+
+            const summaryCompanyDisplay = document.getElementById('summary-company-display');
+            if (summaryCompanyDisplay) {
+                summaryCompanyDisplay.textContent = org.name || 'Kuruluş';
+            }
+        }
+
+        async function refreshOrganizationDetails() {
+            if (!STATE.companyId) {
+                STATE.company = null;
+                renderOrganizationSection();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/companies/${STATE.companyId}`);
+                if (!response.ok) {
+                    STATE.company = null;
+                    STATE.companyId = null;
+                    renderOrganizationSection();
+                    return;
+                }
+
+                const data = await response.json();
+                STATE.company = normalizeCompany(data);
+                renderOrganizationSection();
+            } catch (error) {
+                console.error('Error loading organization details:', error);
+                renderOrganizationSection();
+            }
+        }
+
+        function openOrganizationModal(mode = 'create') {
+            STATE.orgEditMode = mode;
+
+            const modal = document.getElementById('organization-modal');
+            const title = document.getElementById('organization-modal-title');
+            if (!modal || !title) return;
+
+            const company = mode === 'edit' ? (STATE.company || {}) : {};
+
+            title.textContent = mode === 'edit' ? 'Kuruluş Düzenle' : 'Kuruluş Ekle';
+            document.getElementById('org-name').value = company.name || '';
+            document.getElementById('org-tags').value = company.tags || '';
+            document.getElementById('org-address').value = company.address || '';
+            document.getElementById('org-website').value = company.website || '';
+            document.getElementById('org-linkedin').value = company.linkedin_profile || '';
+            document.getElementById('org-industry').value = company.industry || '';
+            document.getElementById('org-revenue').value = company.annual_revenue || '';
+            document.getElementById('org-employees').value = company.employee_count || company.size || '';
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeOrganizationModal() {
+            document.getElementById('organization-modal')?.classList.add('hidden');
+        }
+
+        async function saveOrganization() {
+            const name = document.getElementById('org-name').value.trim();
+            if (!name) {
+                showToast('Kuruluş adı zorunludur', 'error');
+                return;
+            }
+
+            const payload = {
+                name,
+                industry: document.getElementById('org-industry').value.trim(),
+                website: document.getElementById('org-website').value.trim(),
+                address: document.getElementById('org-address').value.trim(),
+                size: document.getElementById('org-employees').value.trim(),
+                custom_fields: {
+                    tags: document.getElementById('org-tags').value.trim(),
+                    linkedin_profile: document.getElementById('org-linkedin').value.trim(),
+                    annual_revenue: document.getElementById('org-revenue').value.trim(),
+                    employee_count: document.getElementById('org-employees').value.trim()
+                }
+            };
+
+            try {
+                let companyId = STATE.companyId;
+
+                if (STATE.orgEditMode === 'edit' && companyId) {
+                    const updateResponse = await fetch(`/api/v1/companies/${companyId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const updateData = await updateResponse.json().catch(() => ({}));
+                    if (!updateResponse.ok) {
+                        throw new Error(updateData.error || 'Kuruluş güncellenemedi');
+                    }
+                } else {
+                    const createResponse = await fetch('/api/v1/companies', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const createData = await createResponse.json().catch(() => ({}));
+                    if (!createResponse.ok) {
+                        throw new Error(createData.error || 'Kuruluş oluşturulamadı');
+                    }
+                    companyId = createData.id;
+
+                    const linkResponse = await fetch(`/api/v1/contacts/${STATE.contactId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ company_id: companyId })
+                    });
+                    const linkData = await linkResponse.json().catch(() => ({}));
+                    if (!linkResponse.ok) {
+                        throw new Error(linkData.error || 'Kuruluş kişiye bağlanamadı');
+                    }
+                }
+
+                STATE.companyId = companyId;
+                await refreshOrganizationDetails();
+                closeOrganizationModal();
+                setSectionOpen('organization', true);
+                showToast('Kuruluş kaydedildi');
+            } catch (error) {
+                console.error('Error saving organization:', error);
+                showToast(error.message || 'Kuruluş kaydedilemedi', 'error');
+            }
+        }
+
+        async function unlinkOrganization() {
+            if (!STATE.companyId) return;
+
+            if (!confirm('Bu kişiden kuruluş bağlantısını kaldırmak istediğinize emin misiniz?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/contacts/${STATE.contactId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company_id: null })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Kuruluş bağlantısı kaldırılamadı');
+                }
+
+                STATE.companyId = null;
+                STATE.company = null;
+                renderOrganizationSection();
+                showToast('Kuruluş bağlantısı kaldırıldı');
+            } catch (error) {
+                console.error('Error unlinking organization:', error);
+                showToast(error.message || 'Kuruluş bağlantısı kaldırılamadı', 'error');
+            }
         }
 
         // ============================================================================
@@ -922,8 +1663,23 @@
         function toggleSection(sectionId) {
             const content = document.getElementById(`${sectionId}-content`);
             const icon = document.getElementById(`${sectionId}-icon`);
+            if (!content || !icon) return;
             
             if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        function setSectionOpen(sectionId, isOpen) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            if (!content || !icon) return;
+
+            if (isOpen) {
                 content.classList.remove('hidden');
                 icon.classList.add('rotate-180');
             } else {
@@ -1334,9 +2090,69 @@
                 }
             }
             
-            // Open summary and details sections by default
-            toggleSection('summary');
-            toggleSection('details');
+            // Initialize sidebar sections to match expected default layout
+            setSectionOpen('summary', true);
+            setSectionOpen('details', true);
+            setSectionOpen('organization', false);
+            setSectionOpen('deals', false);
+            setSectionOpen('overview', false);
+            setSectionOpen('smart-bcc', false);
+            setSectionOpen('leads', false);
+            setSectionOpen('projects', false);
+
+            // Inline contact name edit handlers
+            updateNameUI();
+            refreshOrganizationDetails();
+
+            const inlineInputs = [
+                document.getElementById('summary-email-input'),
+                document.getElementById('summary-phone-input'),
+                document.getElementById('details-email-input'),
+                document.getElementById('details-phone-input'),
+                document.getElementById('details-first-name-input'),
+                document.getElementById('details-last-name-input'),
+                document.getElementById('details-job-title-input'),
+                document.getElementById('details-role-input')
+            ].filter(Boolean);
+
+            inlineInputs.forEach((input) => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveInlineField(input);
+                    }
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        closeInlineEdit(input, true);
+                    }
+                });
+
+                input.addEventListener('blur', () => {
+                    if (!input.classList.contains('hidden')) {
+                        saveInlineField(input);
+                    }
+                });
+            });
+            const nameInput = document.getElementById('contact-name-input');
+            if (nameInput) {
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveNameEdit();
+                    }
+
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        stopNameEdit(true);
+                    }
+                });
+
+                nameInput.addEventListener('blur', () => {
+                    if (!nameInput.classList.contains('hidden')) {
+                        saveNameEdit();
+                    }
+                });
+            }
             
             // Add quick action button
             addQuickActionButton();
@@ -1371,5 +2187,6 @@
             console.log('Contact detail page initialized for contact ID:', STATE.contactId);
         });
     </script>
+    <script src="/static/topbar-global.js"></script>
 </body>
 </html>
