@@ -1189,6 +1189,38 @@
                 showToast(error.message || 'Dosya silinemedi', 'error');
             }
         }
+
+        async function shareContactFileToChat(storedName, displayName) {
+            if (!storedName) {
+                showToast('Dosya bilgisi eksik', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/contacts/${STATE.contactId}/files/share-to-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stored_name: storedName, channel: 'telegram' })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Dosya Telegram sohbetinde paylasilamadi');
+                }
+
+                showToast(`"${displayName}" Telegram sohbetinde paylasildi`);
+
+                if (data.conversation_id) {
+                    const shouldOpenInbox = confirm('Sohbeti Gelen Kutusu ekraninda acmak ister misiniz?');
+                    if (shouldOpenInbox) {
+                        window.open(`/?open_conversation=${data.conversation_id}`, '_blank');
+                    }
+                }
+            } catch (error) {
+                console.error('Error sharing file to chat:', error);
+                showToast(error.message || 'Dosya Telegram sohbetinde paylasilamadi', 'error');
+            }
+        }
         
         async function loadFiles() {
             try {
@@ -1233,12 +1265,36 @@
                                 <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                                     <div class="flex items-start justify-between mb-3">
                                         <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
-                                        <button onclick="deleteContactFile('${file.stored_name || ''}', '${(file.name || '').replace(/'/g, "\\'")}')" class="text-gray-400 hover:text-red-600" title="Dosyayi sil">
+                                        <button
+                                            data-action="delete-file"
+                                            data-stored-name="${encodeURIComponent(file.stored_name || '')}"
+                                            data-display-name="${encodeURIComponent(file.name || '')}"
+                                            class="text-gray-400 hover:text-red-600"
+                                            title="Dosyayi sil"
+                                        >
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                     <h4 class="text-sm font-semibold text-gray-900 mb-1 truncate">${file.name}</h4>
                                     <p class="text-xs text-gray-500">${file.size} • ${file.uploaded_at}</p>
+                                    <div class="mt-3 flex items-center gap-2">
+                                        <a
+                                            href="${file.download_url || '#'}"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                                            title="Dosyayi indir"
+                                        >
+                                            <i class="fas fa-download text-[10px]"></i> Indir
+                                        </a>
+                                        <button
+                                            data-action="share-file"
+                                            data-stored-name="${encodeURIComponent(file.stored_name || '')}"
+                                            data-display-name="${encodeURIComponent(file.name || '')}"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors"
+                                            title="Chatte paylas"
+                                        >
+                                            <i class="fas fa-paper-plane text-[10px]"></i> Chatte Paylas
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -1289,6 +1345,23 @@
             const filesTab = document.getElementById('files-tab');
             if (filesTab) {
                 filesTab.addEventListener('click', (e) => {
+                    const actionBtn = e.target.closest('[data-action]');
+                    if (actionBtn) {
+                        const action = actionBtn.dataset.action;
+                        const storedName = decodeURIComponent(actionBtn.dataset.storedName || '');
+                        const displayName = decodeURIComponent(actionBtn.dataset.displayName || '');
+
+                        if (action === 'delete-file') {
+                            deleteContactFile(storedName, displayName);
+                            return;
+                        }
+
+                        if (action === 'share-file') {
+                            shareContactFileToChat(storedName, displayName);
+                            return;
+                        }
+                    }
+
                     if (e.target.closest('button')?.textContent.includes('Dosyaları yükleyin')) {
                         openFileUploadModal();
                     }

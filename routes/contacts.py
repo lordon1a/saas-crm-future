@@ -2,13 +2,15 @@
 Contact Management Routes
 API endpoints for companies and contacts
 """
-from flask import Blueprint, request, jsonify, session, make_response
+from flask import Blueprint, request, jsonify, session, make_response, send_from_directory
 from functools import wraps
 from services.contact_service import ContactService
 from services.collaboration_service import CollaborationService
 import logging
 import os
 import json
+import shutil
+import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -620,6 +622,7 @@ def get_contact_files(contact_id):
                     files.append({
                         'name': display_name,
                         'stored_name': filename,
+                        'download_url': f"/api/contacts/{contact_id}/files/download/{filename}",
                         'path': filepath,
                         'size': _format_file_size(file_size),
                         'uploaded_at': datetime.fromtimestamp(file_mtime).strftime('%d.%m.%Y %H:%M')
@@ -803,6 +806,174 @@ def delete_contact_file(contact_id):
         except Exception:
             pass
         logger.error(f"Error deleting contact file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/files/download/<path:stored_name>', methods=['GET'])
+@login_required
+def download_contact_file(contact_id, stored_name):
+    """Download a file belonging to a contact in current workspace."""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        if os.path.basename(stored_name) != stored_name:
+            return jsonify({'error': 'Gecersiz dosya adi'}), 400
+
+        from models_crm import Contact
+        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id).first()
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+
+        upload_dir = os.path.join('uploads', 'contacts', str(contact_id))
+        file_path = os.path.join(upload_dir, stored_name)
+        if not os.path.isfile(file_path):
+            return jsonify({'error': 'Dosya bulunamadi'}), 404
+
+        display_name = stored_name.split('_', 1)[1] if '_' in stored_name else stored_name
+        return send_from_directory(upload_dir, stored_name, as_attachment=True, download_name=display_name)
+
+    except Exception as e:
+        logger.error(f"Error downloading contact file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contacts_bp.route('/api/contacts/<int:contact_id>/files/share-to-chat', methods=['POST'])
+@login_required
+def share_contact_file_to_chat(contact_id):
+    """Share a contact file into the linked Telegram chat conversation."""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        payload = request.get_json(silent=True) or {}
+        stored_name = (payload.get('stored_name') or '').strip()
+        caption = (payload.get('caption') or '').strip()
+        channel = (payload.get('channel') or 'telegram').strip().lower()
+
+        if channel != 'telegram':
+            return jsonify({'error': 'Su anda sadece Telegram destekleniyor'}), 400
+
+        if not stored_name:
+            return jsonify({'error': 'stored_name zorunludur'}), 400
+        if os.path.basename(stored_name) != stored_name:
+            return jsonify({'error': 'Gecersiz dosya adi'}), 400
+
+        from models_crm import Contact
+        from models import db, Workspace
+        from services.conversation_manager import ConversationManager
+        from services.message_manager import MessageManager
+        from services.telegram_service import TelegramService
+        from realtime import emit_chat_message_event
+
+        contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id).first()
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        if not contact.customer_id:
+            return jsonify({'error': 'Bu kisiye bagli aktif chat bulunamadi'}), 400
+
+        upload_dir = os.path.join('uploads', 'contacts', str(contact_id))
+        source_path = os.path.join(upload_dir, stored_name)
+        if not os.path.isfile(source_path):
+            return jsonify({'error': 'Dosya bulunamadi'}), 404
+
+        display_name = stored_name.split('_', 1)[1] if '_' in stored_name else stored_name
+
+        conversation = ConversationManager.get_or_create_conversation(workspace_id, contact.customer_id)
+        workspace = Workspace.query.get(workspace_id)
+        if not workspace or not workspace.telegram_bot_token:
+            return jsonify({'error': 'Telegram kanali yapilandirilmamis'}), 400
+
+        telegram_chat_id = contact.telegram_chat_id
+        if not telegram_chat_id and conversation.customer:
+            telegram_chat_id = conversation.customer.telegram_chat_id
+        if not telegram_chat_id:
+            return jsonify({'error': 'Bu kisi icin telegram_chat_id bulunamadi'}), 400
+
+        media_root = os.path.abspath(os.path.join('uploads', f'workspace_{workspace_id}'))
+        os.makedirs(media_root, exist_ok=True)
+
+        safe_original = secure_filename(display_name) or 'document.pdf'
+        safe_name = secure_filename(f"{time.time_ns()}_{contact_id}_{safe_original}")[:220]
+        if not safe_name:
+            safe_name = f"{time.time_ns()}_{contact_id}_document.pdf"
+
+        shared_path = os.path.join(media_root, safe_name)
+        shutil.copy2(source_path, shared_path)
+
+        relative_path = f"workspace_{workspace_id}/{safe_name}"
+        telegram_service = TelegramService(workspace.telegram_bot_token)
+        result = telegram_service.send_document(
+            chat_id=telegram_chat_id,
+            file_path=shared_path,
+            caption=caption or None,
+            filename=display_name,
+        )
+
+        if not result.get('success'):
+            try:
+                if os.path.exists(shared_path):
+                    os.remove(shared_path)
+            except Exception:
+                pass
+            return jsonify({'error': result.get('error', 'Dosya Telegram sohbetinde paylasilamadi')}), 500
+
+        body_label = f"[📄 Telegram Belge] {display_name}"
+        if caption:
+            body_label += f" - {caption}"
+
+        try:
+            message = MessageManager.save_outgoing_message(
+                conversation_id=conversation.id,
+                message_body=body_label,
+                sender_id=user_id,
+                meta_message_id=result.get('message_id'),
+                channel='telegram',
+                media_type='document',
+                media_url=relative_path,
+            )
+            message.is_read = True
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            logger.error(f"Database error while saving shared file message: {str(db_error)}")
+            return jsonify({'error': 'Dosya gonderildi ancak chat kaydi olusturulamadi'}), 500
+
+        try:
+            ConversationManager.update_last_message_time(conversation.id)
+        except Exception as conv_error:
+            logger.warning(f"Conversation timestamp update warning: {str(conv_error)}")
+
+        try:
+            emit_chat_message_event(message.id, workspace_id=workspace_id)
+        except Exception as emit_error:
+            logger.warning(f"Realtime emit warning: {str(emit_error)}")
+
+        return jsonify({
+            'status': 'sent',
+            'channel': 'telegram',
+            'conversation_id': conversation.id,
+            'message_id': message.id,
+            'message': {
+                'id': message.id,
+                'conversation_id': conversation.id,
+                'message_body': message.message_body,
+                'media_type': message.media_type,
+                'media_url': f"/api/media/{message.media_url}",
+                'created_at': message.created_at.isoformat(),
+            },
+        }), 200
+
+    except Exception as e:
+        try:
+            from models import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Error sharing contact file to chat: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

@@ -24,6 +24,8 @@ let lastUnreadSignalAt = 0;
 let conversationsRefreshTimer = null;
 let isUserScrolling = false;
 let lastScrollPosition = 0;
+const initialUrlParams = new URLSearchParams(window.location.search);
+let pendingOpenConversationId = Number(initialUrlParams.get('open_conversation') || 0) || null;
 
 // ─── Scroll Management ──────────────────────────────────────────
 
@@ -310,6 +312,32 @@ async function loadConversations() {
             }
             listEl.appendChild(div);
         });
+
+        if (pendingOpenConversationId) {
+            const targetConversation = conversations.find((conv) => (
+                conv.item_type !== 'email' && Number(conv.conversation_id) === Number(pendingOpenConversationId)
+            ));
+
+            if (targetConversation) {
+                const targetName = targetConversation.counterparty_name || targetConversation.counterparty_email || targetConversation.counterparty_phone || 'Bilinmeyen';
+                const targetInitials = getInitials(targetName);
+                const preferredChannel = targetConversation.item_type === 'telegram' ? 'telegram' : 'whatsapp';
+
+                pendingOpenConversationId = null;
+                await selectConversation(
+                    targetConversation.conversation_id,
+                    targetName,
+                    targetConversation.counterparty_phone,
+                    targetInitials,
+                    preferredChannel
+                );
+
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('open_conversation');
+                const nextUrl = `${currentUrl.pathname}${currentUrl.search ? currentUrl.search : ''}`;
+                window.history.replaceState({}, '', nextUrl);
+            }
+        }
     } catch (error) {
         console.error('Error loading conversations:', error);
     }

@@ -37,6 +37,38 @@ class TelegramService:
             logger.exception('Telegram send_message failed: %s', exc)
             return {'success': False, 'error': str(exc)}
 
+    def send_document(self, chat_id, file_path, caption=None, filename=None):
+        if not self.base_url:
+            return {'success': False, 'error': 'Telegram bot token not configured'}
+
+        if not file_path:
+            return {'success': False, 'error': 'file_path gerekli'}
+
+        url = f'{self.base_url}/sendDocument'
+        data = {'chat_id': str(chat_id)}
+        if caption:
+            data['caption'] = caption
+
+        safe_filename = (filename or '').strip()
+
+        try:
+            with open(file_path, 'rb') as fp:
+                files = {
+                    'document': (safe_filename or 'document', fp, 'application/octet-stream')
+                }
+                response = requests.post(url, data=data, files=files, timeout=30)
+
+            payload = response.json() if response.content else {}
+            if not response.ok or not payload.get('ok'):
+                description = payload.get('description') if isinstance(payload, dict) else None
+                return {'success': False, 'error': description or response.text}
+
+            message_id = ((payload.get('result') or {}).get('message_id'))
+            return {'success': True, 'message_id': f'tg-{message_id}' if message_id is not None else None}
+        except Exception as exc:
+            logger.exception('Telegram send_document failed: %s', exc)
+            return {'success': False, 'error': str(exc)}
+
     def set_webhook(self, url, secret_token=None):
         if not self.base_url:
             return {'success': False, 'error': 'Telegram bot token not configured'}
