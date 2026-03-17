@@ -1336,8 +1336,8 @@
                 const data = await response.json();
                 console.log('✅ Deal moved successfully:', data);
 
-                // Reload pipeline to update counts and forecast
-                await loadPipeline();
+                // Update stage counts and forecast without full reload
+                await updatePipelineStats();
 
                 showToast('✓ Anlaşma başarıyla taşındı', 'success');
 
@@ -1382,6 +1382,44 @@
             originalStageId = null;
             originalParentElement = null;
             originalNextSibling = null;
+        }
+
+        // Update pipeline statistics without full reload
+        async function updatePipelineStats() {
+            try {
+                // Update stage counts
+                currentPipeline.stages.forEach(stage => {
+                    const stageContainer = document.getElementById(`stage-${stage.id}`);
+                    if (!stageContainer) return;
+
+                    const dealCards = stageContainer.querySelectorAll('.deal-card');
+                    const count = dealCards.length;
+                    
+                    // Calculate total value for this stage
+                    let totalValue = 0;
+                    dealCards.forEach(card => {
+                        const dealId = parseInt(card.dataset.dealId);
+                        const deal = deals.find(d => d.id === dealId);
+                        if (deal) totalValue += deal.value;
+                    });
+
+                    // Update count badge
+                    const countBadge = stageContainer.closest('.bg-white').querySelector('.px-2.py-0\\.5.bg-slate-100');
+                    if (countBadge) countBadge.textContent = count;
+
+                    // Update total value
+                    const valueSpan = stageContainer.closest('.bg-white').querySelector('.text-emerald-600');
+                    if (valueSpan) valueSpan.textContent = totalValue.toLocaleString('en-US');
+                });
+
+                // Reload forecast
+                const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
+                const forecast = await forecastRes.json();
+                renderForecast(forecast);
+
+            } catch (error) {
+                console.error('Error updating pipeline stats:', error);
+            }
         }
 
         // Load on page load
