@@ -471,7 +471,52 @@ def restore_deal(deal_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 
-# ═══ FORECASTING ═══
+# ═══ FORECASTING & ANALYTICS ═══
+
+@bp.route('/deals/analytics', methods=['GET'])
+@login_required_api
+def get_analytics():
+    """
+    Get pipeline analytics and KPI metrics.
+    Query params: pipeline_id (optional)
+    Returns: total_value, open_deals, weighted_forecast
+    """
+    workspace_id = session.get('workspace_id')
+    pipeline_id = request.args.get('pipeline_id', type=int)
+    
+    try:
+        # Build query for open deals
+        query = Deal.query.filter_by(
+            workspace_id=workspace_id,
+            is_deleted=False,
+            status='open'
+        )
+        
+        if pipeline_id:
+            query = query.filter_by(pipeline_id=pipeline_id)
+        
+        # Eager load stage for probability calculation
+        query = query.options(db.joinedload(Deal.stage))
+        deals = query.all()
+        
+        # Calculate metrics
+        total_value = sum(float(deal.value) for deal in deals)
+        open_deals = len(deals)
+        weighted_forecast = sum(
+            float(deal.value) * (deal.stage.probability if deal.stage else 0.0)
+            for deal in deals
+        )
+        
+        return jsonify({
+            'total_value': round(total_value, 2),
+            'open_deals': open_deals,
+            'weighted_forecast': round(weighted_forecast, 2)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error calculating analytics: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 
 @bp.route('/deals/forecast', methods=['GET'])
 @login_required_api

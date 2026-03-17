@@ -410,11 +410,11 @@
                 const dealsData = await dealsRes.json();
                 deals = Array.isArray(dealsData) ? dealsData : (dealsData.deals || dealsData.data || []);
                 
-                // Load forecast
-                const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
-                const forecast = await forecastRes.json();
+                // Load analytics (KPI metrics)
+                const analyticsRes = await fetch(`/api/v1/deals/analytics?pipeline_id=${currentPipeline.id}`);
+                const analytics = await analyticsRes.json();
                 
-                renderForecast(forecast);
+                renderAnalytics(analytics);
                 renderPipeline();
             } catch (error) {
                 console.error('Error loading pipeline:', error);
