@@ -412,6 +412,14 @@ with app.app_context():
                     conn.execute(text('CREATE INDEX IF NOT EXISTS idx_contacts_telegram_chat_id ON contacts(telegram_chat_id)'))
                     need_commit = True
                     logger.info('contacts.telegram_chat_id column added')
+
+                r_notes = conn.execute(text('PRAGMA table_info(notes)'))
+                notes_cols = [row[1] for row in r_notes.fetchall()]
+                if 'is_internal' not in notes_cols:
+                    conn.execute(text('ALTER TABLE notes ADD COLUMN is_internal BOOLEAN NOT NULL DEFAULT 0'))
+                    conn.execute(text('CREATE INDEX IF NOT EXISTS idx_notes_is_internal ON notes(is_internal)'))
+                    need_commit = True
+                    logger.info('notes.is_internal column added')
                 if need_commit:
                     conn.commit()
     except Exception as e:
@@ -427,8 +435,10 @@ with app.app_context():
                 conn.execute(text('ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS telegram_bot_token TEXT'))
                 conn.execute(text('ALTER TABLE customers ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
                 conn.execute(text('ALTER TABLE contacts ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'))
+                conn.execute(text('ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_internal BOOLEAN NOT NULL DEFAULT FALSE'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON customers(telegram_chat_id)'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS idx_contacts_telegram_chat_id ON contacts(telegram_chat_id)'))
+                conn.execute(text('CREATE INDEX IF NOT EXISTS idx_notes_is_internal ON notes(is_internal)'))
                 conn.commit()
     except Exception as e:
         logger.warning('PostgreSQL telegram migration skip: %s', e)

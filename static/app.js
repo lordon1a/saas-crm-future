@@ -614,6 +614,8 @@ function triggerUnreadSignal() {
 }
 
 function handleIncomingSocketMessage(payload) {
+    console.log('WebSocket event received:', payload);
+
     if (!payload || currentInboxItemType !== 'whatsapp') {
         loadConversations();
         return;
@@ -670,9 +672,18 @@ function initRealtimeSocket() {
         console.error('❌ Connection Error:', error);
     });
 
-    socketClient.on('new_message', handleIncomingSocketMessage);
-    socketClient.on('new_incoming_message', handleIncomingSocketMessage);
-    socketClient.on('inbox_updated', handleInboxUpdatedEvent);
+    socketClient.on('new_message', (data) => {
+        console.log('WebSocket event received:', data);
+        handleIncomingSocketMessage(data);
+    });
+    socketClient.on('new_incoming_message', (data) => {
+        console.log('WebSocket event received:', data);
+        handleIncomingSocketMessage(data);
+    });
+    socketClient.on('inbox_updated', (data) => {
+        console.log('WebSocket event received:', data);
+        handleInboxUpdatedEvent(data);
+    });
     socketClient.on('disconnect', () => {
         console.warn('WebSocket disconnected');
         // Socket.IO will auto-reconnect, so no manual retry timer is needed.
@@ -707,6 +718,8 @@ async function refreshActiveConversationMessages() {
 }
 
 function handleInboxUpdatedEvent(payload) {
+    console.log('WebSocket event received:', payload);
+
     loadConversations();
 
     if (!payload || currentInboxItemType !== 'whatsapp') return;
@@ -720,7 +733,9 @@ function handleInboxUpdatedEvent(payload) {
         incomingConversationId === activeConversationId ||
         (incomingContactId > 0 && incomingContactId === activeContactId)
     ) {
-        refreshActiveConversationMessages();
+        refreshActiveConversationMessages().then(() => {
+            smoothScrollMessagesToBottom();
+        });
     } else {
         triggerUnreadSignal();
     }
