@@ -333,38 +333,13 @@
                 </button>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-500 mb-4">Tabloda görmek istediğiniz sütunları seçin:</p>
-                <div class="space-y-2 mb-6">
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="name" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked disabled>
-                        <span class="text-sm font-medium text-gray-700">Ad Soyad</span>
-                        <span class="ml-auto text-xs text-gray-400">(Zorunlu)</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="company" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
-                        <span class="text-sm font-medium text-gray-700">Kuruluş</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="email" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
-                        <span class="text-sm font-medium text-gray-700">E-posta</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="phone" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
-                        <span class="text-sm font-medium text-gray-700">Telefon</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="role" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
-                        <span class="text-sm font-medium text-gray-700">Rol</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="lead_score" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
-                        <span class="text-sm font-medium text-gray-700">Lead Score</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer">
-                        <input type="checkbox" value="deals" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" checked>
-                        <span class="text-sm font-medium text-gray-700">Açık Anlaşmalar</span>
-                    </label>
+                <p class="text-sm text-gray-500 mb-4">Sütunları sürükleyerek sıralayın veya görünürlüğünü değiştirin:</p>
+                <div id="columnList" class="space-y-2 mb-6">
+                    <!-- Will be populated dynamically -->
                 </div>
+                <button onclick="openAddCustomFieldModal()" class="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2 mb-4">
+                    <i class="fas fa-plus"></i> Özel Sütun Ekle
+                </button>
                 <div class="flex gap-3">
                     <button onclick="closeColumnManager()" class="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-all">
                         İptal
@@ -374,6 +349,50 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Custom Field Modal -->
+    <div id="addCustomFieldModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800">Özel Sütun Ekle</h3>
+                <button onclick="closeAddCustomFieldModal()" class="w-10 h-10 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addCustomFieldForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alan Adı *</label>
+                    <input type="text" id="customFieldName" required placeholder="Örn: Doğum Tarihi" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alan Tipi *</label>
+                    <select id="customFieldType" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        <option value="text">Metin</option>
+                        <option value="number">Sayı</option>
+                        <option value="date">Tarih</option>
+                        <option value="checkbox">Onay Kutusu</option>
+                        <option value="dropdown">Açılır Liste</option>
+                    </select>
+                </div>
+                <div id="customFieldOptionsDiv" class="hidden">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Seçenekler (virgülle ayırın)</label>
+                    <input type="text" id="customFieldOptions" placeholder="Seçenek1, Seçenek2, Seçenek3" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="customFieldRequired" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                    <label for="customFieldRequired" class="text-sm text-gray-700">Zorunlu alan</label>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeAddCustomFieldModal()" class="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-all">
+                        İptal
+                    </button>
+                    <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 transition-all shadow-md">
+                        Ekle
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -524,11 +543,16 @@
             const actionSelect = document.getElementById(actionId);
             const valueInput = document.getElementById(valueId);
             
-            actionSelect.addEventListener('change', function() {
+            // Remove old event listeners by cloning
+            const newActionSelect = actionSelect.cloneNode(true);
+            actionSelect.parentNode.replaceChild(newActionSelect, actionSelect);
+            
+            newActionSelect.addEventListener('change', function() {
+                const newValueInput = document.getElementById(valueId);
                 if (this.value === 'edit') {
-                    valueInput.classList.remove('hidden');
+                    newValueInput.classList.remove('hidden');
                 } else {
-                    valueInput.classList.add('hidden');
+                    newValueInput.classList.add('hidden');
                 }
             });
         }
@@ -537,10 +561,13 @@
             document.getElementById('bulkEditModal').classList.add('hidden');
             document.getElementById('bulkEditModal').classList.remove('flex');
             
-            // Reset all dropdowns
+            // Reset all dropdowns and inputs
             document.querySelectorAll('[id^="bulk"][id$="Action"]').forEach(select => {
                 select.value = '';
-                select.dispatchEvent(new Event('change'));
+            });
+            document.querySelectorAll('[id^="bulk"][id$="Value"]').forEach(input => {
+                input.value = '';
+                input.classList.add('hidden');
             });
         }
 
@@ -646,6 +673,18 @@
         // COLUMN MANAGEMENT
         // ============================================================================
 
+        let availableColumns = [
+            { id: 'name', label: 'Ad Soyad', required: true },
+            { id: 'company', label: 'Kuruluş', required: false },
+            { id: 'email', label: 'E-posta', required: false },
+            { id: 'phone', label: 'Telefon', required: false },
+            { id: 'role', label: 'Rol', required: false },
+            { id: 'lead_score', label: 'Lead Score', required: false },
+            { id: 'deals', label: 'Açık Anlaşmalar', required: false }
+        ];
+
+        let draggedElement = null;
+
         async function loadColumnPreferences() {
             try {
                 const response = await fetch('/api/v1/user-preferences/contacts-columns');
@@ -660,14 +699,92 @@
 
         function openColumnManager() {
             const modal = document.getElementById('columnManagerModal');
+            const columnList = document.getElementById('columnList');
             
-            // Set current selections
-            document.querySelectorAll('.column-checkbox').forEach(cb => {
-                cb.checked = visibleColumns.includes(cb.value);
+            // Build column list with drag-and-drop
+            columnList.innerHTML = '';
+            
+            // First add visible columns in order
+            visibleColumns.forEach(colId => {
+                const col = availableColumns.find(c => c.id === colId);
+                if (col) {
+                    columnList.appendChild(createColumnItem(col, true));
+                }
+            });
+            
+            // Then add hidden columns
+            availableColumns.forEach(col => {
+                if (!visibleColumns.includes(col.id)) {
+                    columnList.appendChild(createColumnItem(col, false));
+                }
             });
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+        }
+
+        function createColumnItem(col, isVisible) {
+            const div = document.createElement('div');
+            div.className = 'column-item flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-move';
+            div.draggable = !col.required;
+            div.dataset.columnId = col.id;
+            
+            div.innerHTML = `
+                <i class="fas fa-grip-vertical text-gray-400 ${col.required ? 'invisible' : ''}"></i>
+                <input type="checkbox" value="${col.id}" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" 
+                    ${isVisible ? 'checked' : ''} ${col.required ? 'disabled' : ''}>
+                <span class="text-sm font-medium text-gray-700 flex-1">${col.label}</span>
+                ${col.required ? '<span class="text-xs text-gray-400">(Zorunlu)</span>' : ''}
+            `;
+            
+            // Drag and drop events
+            if (!col.required) {
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragend', handleDragEnd);
+            }
+            
+            return div;
+        }
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            const target = e.target.closest('.column-item');
+            if (target && target !== draggedElement) {
+                const rect = target.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                if (e.clientY < midpoint) {
+                    target.parentNode.insertBefore(draggedElement, target);
+                } else {
+                    target.parentNode.insertBefore(draggedElement, target.nextSibling);
+                }
+            }
+            
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            draggedElement = null;
         }
 
         function closeColumnManager() {
@@ -676,8 +793,16 @@
         }
 
         async function saveColumnPreferences() {
-            const checkboxes = document.querySelectorAll('.column-checkbox:checked');
-            const selectedColumns = Array.from(checkboxes).map(cb => cb.value);
+            const columnItems = document.querySelectorAll('.column-item');
+            const selectedColumns = [];
+            
+            // Get columns in the order they appear
+            columnItems.forEach(item => {
+                const checkbox = item.querySelector('.column-checkbox');
+                if (checkbox.checked) {
+                    selectedColumns.push(checkbox.value);
+                }
+            });
             
             if (!selectedColumns.includes('name')) {
                 selectedColumns.unshift('name'); // Always include name
@@ -707,6 +832,76 @@
         function isColumnVisible(column) {
             return visibleColumns.includes(column);
         }
+
+        // Custom Field Management
+        function openAddCustomFieldModal() {
+            document.getElementById('addCustomFieldModal').classList.remove('hidden');
+            document.getElementById('addCustomFieldModal').classList.add('flex');
+        }
+
+        function closeAddCustomFieldModal() {
+            document.getElementById('addCustomFieldModal').classList.add('hidden');
+            document.getElementById('addCustomFieldModal').classList.remove('flex');
+            document.getElementById('addCustomFieldForm').reset();
+            document.getElementById('customFieldOptionsDiv').classList.add('hidden');
+        }
+
+        // Show/hide options field based on field type
+        document.getElementById('customFieldType')?.addEventListener('change', function() {
+            const optionsDiv = document.getElementById('customFieldOptionsDiv');
+            if (this.value === 'dropdown') {
+                optionsDiv.classList.remove('hidden');
+            } else {
+                optionsDiv.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('addCustomFieldForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fieldName = document.getElementById('customFieldName').value.trim();
+            const fieldType = document.getElementById('customFieldType').value;
+            const isRequired = document.getElementById('customFieldRequired').checked;
+            const options = document.getElementById('customFieldOptions').value.trim();
+            
+            try {
+                const response = await fetch('/api/v1/custom-fields', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        entity_type: 'contact',
+                        field_name: fieldName,
+                        field_type: fieldType,
+                        is_required: isRequired,
+                        options: options ? options.split(',').map(o => o.trim()) : null
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Add to available columns
+                    availableColumns.push({
+                        id: `custom_${data.id}`,
+                        label: fieldName,
+                        required: false,
+                        custom: true
+                    });
+                    
+                    showToast('Özel sütun eklendi', 'success');
+                    closeAddCustomFieldModal();
+                    closeColumnManager();
+                    
+                    // Reopen column manager to show new field
+                    setTimeout(() => openColumnManager(), 300);
+                } else {
+                    throw new Error('Ekleme başarısız');
+                }
+            } catch (error) {
+                console.error('Error adding custom field:', error);
+                showToast('Özel sütun eklenemedi', 'error');
+            }
+        });
 
         async function loadCompanies() {
             try {
@@ -827,10 +1022,10 @@
                 
                 if (isColumnVisible('company')) {
                     html += `
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap group/cell">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-sm text-gray-500">${c.company_name || '-'}</span>
-                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
                                     onclick="openEditModal(${c.id}, 'company_name', '${(c.company_name || '').replace(/'/g, "\\'")}', 'Kuruluş')" 
                                     title="Düzenle">
                                     <i class="fas fa-pen text-xs"></i>
@@ -842,13 +1037,13 @@
                 
                 if (isColumnVisible('email')) {
                     html += `
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap group/cell">
                             <div class="flex items-center justify-between gap-2">
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-500">${c.email || '-'}</span>
                                     ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">İş</span>' : ''}
                                 </div>
-                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
                                     onclick="openEditModal(${c.id}, 'email', '${(c.email || '').replace(/'/g, "\\'")}', 'E-posta', 'email')" 
                                     title="Düzenle">
                                     <i class="fas fa-pen text-xs"></i>
@@ -860,10 +1055,10 @@
                 
                 if (isColumnVisible('phone')) {
                     html += `
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap group/cell">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-sm text-gray-500">${c.phone || '-'}</span>
-                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
                                     onclick="openEditModal(${c.id}, 'phone', '${(c.phone || '').replace(/'/g, "\\'")}', 'Telefon', 'tel')" 
                                     title="Düzenle">
                                     <i class="fas fa-pen text-xs"></i>
@@ -875,10 +1070,10 @@
                 
                 if (isColumnVisible('role')) {
                     html += `
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap group/cell">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="px-2 py-1 rounded-md text-xs font-semibold ${roleColor}">${c.role || '-'}</span>
-                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
                                     onclick="openEditModal(${c.id}, 'role', '${(c.role || '').replace(/'/g, "\\'")}', 'Rol', 'select', ['Decision Maker','Champion','Influencer','Blocker','User'])" 
                                     title="Düzenle">
                                     <i class="fas fa-pen text-xs"></i>
@@ -890,13 +1085,13 @@
                 
                 if (isColumnVisible('lead_score')) {
                     html += `
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap group/cell">
                             <div class="flex items-center justify-between gap-2">
                                 <div class="flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full ${scoreColor}"></span>
                                     <span class="text-sm font-semibold text-gray-700">${c.lead_score}</span>
                                 </div>
-                                <button class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
+                                <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1" 
                                     onclick="openEditModal(${c.id}, 'lead_score', '${c.lead_score}', 'Lead Score', 'number')" 
                                     title="Düzenle">
                                     <i class="fas fa-pen text-xs"></i>
