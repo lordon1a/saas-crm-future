@@ -456,8 +456,13 @@ def get_messages(conversation_id):
     conversation = Conversation.query.filter_by(id=conversation_id, workspace_id=workspace_id).first()
     if not conversation:
         return jsonify({'error': 'Conversation not found'}), 404
-        
-    messages = MessageManager.get_conversation_messages(conversation_id)
+
+    after_id = request.args.get('after_id', type=int)
+    query = Message.query.filter_by(conversation_id=conversation_id)
+    if after_id and after_id > 0:
+        query = query.filter(Message.id > after_id)
+
+    messages = query.order_by(Message.created_at.asc()).all()
     
     result = []
     for msg in messages:

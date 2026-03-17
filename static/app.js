@@ -11,10 +11,13 @@ let currentSearch = '';
 let currentChannel = 'all';
 let currentInboxItemType = 'whatsapp';
 let currentSendChannel = 'whatsapp';
+let currentLastMessageId = 0;
 let quickReplies = [];
 let emailTemplates = [];
 let notifications = [];
 let searchDebounceTimer = null;
+let messagePollingInterval = null;
+const MESSAGE_POLL_INTERVAL_MS = 5000;
 
 // ─── Yardımcı Fonksiyonlar ──────────────────────────────────────────
 
@@ -366,12 +369,16 @@ async function selectConversation(conversationId, customerName, customerPhone, i
 
     if (messages.length === 0) {
         container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center py-16 text-slate-400"><p class="text-sm">Henüz mesaj yok</p></div>`;
+        currentLastMessageId = 0;
     } else {
         const fragment = document.createDocumentFragment();
         messages.forEach(msg => fragment.appendChild(buildMessageElement(msg)));
         container.appendChild(fragment);
+        updateLastMessageCursorFromDOM();
         requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
     }
+
+    startMessagePolling();
 
     const detail = fullData?.conversation;
     if (detail) {
@@ -392,8 +399,10 @@ async function selectConversation(conversationId, customerName, customerPhone, i
 }
 
 function selectEmailItem(item, initials) {
+    stopMessagePolling();
     currentConversationId = item.item_id;
     currentInboxItemType = 'email';
+    currentLastMessageId = 0;
     window.currentConvId = null;
 
     document.querySelectorAll('#conversationList > div[data-id]').forEach(el => {
@@ -490,9 +499,19 @@ function buildMessageElement(msg) {
 function appendMessageToDOM(msg, tempId) {
     const container = document.getElementById('messagesContainer');
     if (!container) return null;
+
+    const numericMessageId = Number(msg?.id);
+    if (!Number.isNaN(numericMessageId) && numericMessageId > 0) {
+        const existing = container.querySelector(`[data-message-id="${numericMessageId}"]`);
+        if (existing) return existing;
+    }
+
     const el = buildMessageElement(msg);
     if (tempId) el.dataset.tempId = tempId;
     container.appendChild(el);
+    if (!Number.isNaN(numericMessageId) && numericMessageId > currentLastMessageId) {
+        currentLastMessageId = numericMessageId;
+    }
     requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
     return el;
 }
@@ -502,6 +521,65 @@ function removeTempMessage(tempId) {
     const container = document.getElementById('messagesContainer');
     const el = container && container.querySelector(`[data-temp-id="${tempId}"]`);
     if (el) el.remove();
+}
+
+function updateLastMessageCursorFromDOM() {
+    const container = document.getElementById('messagesContainer');
+    if (!container) {
+        currentLastMessageId = 0;
+        return;
+    }
+
+    const messageNodes = container.querySelectorAll('[data-message-id]');
+    let maxId = 0;
+    messageNodes.forEach((node) => {
+        const id = Number(node.dataset.messageId);
+        if (!Number.isNaN(id) && id > maxId) maxId = id;
+    });
+    currentLastMessageId = maxId;
+}
+
+function stopMessagePolling() {
+    if (messagePollingInterval) {
+        clearInterval(messagePollingInterval);
+        messagePollingInterval = null;
+    }
+}
+
+function startMessagePolling() {
+    stopMessagePolling();
+    messagePollingInterval = setInterval(pollNewMessages, MESSAGE_POLL_INTERVAL_MS);
+}
+
+async function pollNewMessages() {
+    if (!currentConversationId || currentInboxItemType !== 'whatsapp') return;
+
+    const afterId = Number(currentLastMessageId || 0);
+    try {
+        const res = await fetch(`${API_BASE}/conversations/${currentConversationId}/messages?after_id=${afterId}`);
+        if (res.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
+        if (!res.ok) return;
+
+        const newMessages = await res.json();
+        if (!Array.isArray(newMessages) || newMessages.length === 0) return;
+
+        const container = document.getElementById('messagesContainer');
+        if (!container) return;
+
+        const emptyState = container.querySelector('.text-slate-400');
+        if (emptyState) container.innerHTML = '';
+
+        newMessages.forEach((msg) => appendMessageToDOM(msg));
+        updateLastMessageCursorFromDOM();
+        container.scrollTop = container.scrollHeight;
+
+        loadConversations();
+    } catch (err) {
+        console.error('Message polling error:', err);
+    }
 }
 
 async function sendMessage() {
@@ -1110,6 +1188,8 @@ function cleanupConnections() {
         conversationPollingInterval = null;
         console.log('Polling interval cleared');
     }
+
+    stopMessagePolling();
 }
 
 // Cleanup when user navigates away (prevents worker starvation)
