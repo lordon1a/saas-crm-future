@@ -647,16 +647,27 @@ function handleIncomingSocketMessage(payload) {
 function initRealtimeSocket() {
     if (socketClient || typeof io === 'undefined') return;
 
-    socketClient = io({ transports: ['websocket', 'polling'], withCredentials: true });
+    socketClient = io({
+        transports: ['websocket'],
+        upgrade: false,
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        withCredentials: true
+    });
 
     socketClient.on('connect', () => {
-        console.log('Connected to WebSocket');
+        console.log('✅ WebSocket Connected Successfully!');
         if (currentWorkspaceId) {
             socketClient.emit('join_workspace', { workspace_id: currentWorkspaceId });
         }
         if (currentSocketContactId) {
             socketClient.emit('join_contact_room', { contact_id: currentSocketContactId });
         }
+    });
+
+    socketClient.on('connect_error', (error) => {
+        console.error('❌ Connection Error:', error);
     });
 
     socketClient.on('new_message', handleIncomingSocketMessage);

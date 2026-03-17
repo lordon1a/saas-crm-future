@@ -10,12 +10,20 @@ from urllib.parse import urlparse
 load_dotenv()
 
 from config import Config
-from realtime import socketio
-from flask_socketio import emit, join_room, leave_room
+import realtime
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
 app.config.from_object(Config)
-socketio.init_app(app, cors_allowed_origins='*')
+realtime.socketio = SocketIO(
+    app,
+    cors_allowed_origins='*',
+    async_mode='eventlet',
+    engineio_logger=True,
+    logger=True,
+    always_connect=True,
+)
+socketio = realtime.socketio
 
 # Production hardening checks
 if Config.ENV == 'production':
