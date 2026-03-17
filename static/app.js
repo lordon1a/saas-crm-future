@@ -601,11 +601,6 @@ function normalizeRealtimeMessage(payload) {
     };
 }
 
-function isSameId(left, right) {
-    if (left === undefined || left === null || right === undefined || right === null) return false;
-    return String(left) === String(right);
-}
-
 function renderMessage(payload) {
     appendMessageToDOM(normalizeRealtimeMessage(payload));
 }
@@ -650,26 +645,37 @@ function handleIncomingSocketMessage(payload) {
         return;
     }
 
-    const payloadConversationId = payload.conversation_id;
-    const activeConversationId = currentConversationId;
-    const payloadContactId = payload.contact_id || payload.customer_id;
-    const activeContactId = currentCustomerId;
+    // Type-safe ID comparison: convert both to Number for accurate matching
+    const payloadConversationId = Number(payload.conversation_id);
+    const activeConversationId = Number(currentConversationId);
+    const payloadContactId = Number(payload.contact_id || payload.customer_id || 0);
+    const activeContactId = Number(currentCustomerId || 0);
 
-    if (
-        !isSameId(payloadConversationId, activeConversationId) &&
-        !isSameId(payloadContactId, activeContactId)
-    ) {
+    // Check if message belongs to currently active conversation
+    const isActiveConversation = (
+        (payloadConversationId && payloadConversationId === activeConversationId) ||
+        (payloadContactId && payloadContactId === activeContactId)
+    );
+
+    if (!isActiveConversation) {
+        // Message is for a different conversation - just update sidebar
         triggerUnreadSignal();
         scheduleConversationsRefresh(800);
         return;
     }
 
+    // Message belongs to active conversation - inject it into chat window
     const container = getMessagesContainer();
-    if (!container) return;
+    if (!container) {
+        scheduleConversationsRefresh(800);
+        return;
+    }
 
+    // Remove empty state if present
     const emptyState = container.querySelector('.text-slate-400');
     if (emptyState) container.innerHTML = '';
 
+    // Inject message into active chat window
     renderMessage(payload);
     smoothScrollMessagesToBottom();
     scheduleConversationsRefresh(1200);
@@ -751,20 +757,34 @@ async function refreshActiveConversationMessages() {
 }
 
 function handleInboxUpdatedEvent(payload) {
-    console.log('WebSocket event received:', payload);
+    console.log('WebSocket inbox_updated event received:', payload);
     scheduleConversationsRefresh(1000);
 
     if (!payload || currentInboxItemType === 'email') return;
 
-    const incomingConversationId = payload.conversation_id;
-    const activeConversationId = currentConversationId;
-    const incomingContactId = payload.contact_id || payload.customer_id;
-    const activeContactId = currentCustomerId;
+    // Type-safe ID comparison: convert both to Number
+    const incomingConversationId = Number(payload.conversation_id || 0);
+    const activeConversationId = Number(currentConversationId || 0);
+    const incomingContactId = Number(payload.contact_id || payload.customer_id || 0);
+    const activeContactId = Number(currentCustomerId || 0);
 
-    if (
-        isSameId(incomingConversationId, activeConversationId) ||
-        isSameId(incomingContactId, activeContactId)
-    ) {
+    // Check if update is for currently active conversation
+    const isActiveConversation = (
+        (incomingConversationId && incomingConversationId === activeConversationId) ||
+        (incomingContactId && incomingContactId === activeContactId)
+    );
+
+    if (isActiveConversation) {
+        // If message data is included, inject it into chat window
+        if (payload.message_body || payload.text || payload.message) {
+            const container = getMessagesContainer();
+            if (container) {
+                const emptyState = container.querySelector('.text-slate-400');
+                if (emptyState) container.innerHTML = '';
+                
+                renderMessage(payload);
+            }
+        }
         smoothScrollMessagesToBottom();
     } else {
         triggerUnreadSignal();
