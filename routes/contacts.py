@@ -1646,6 +1646,47 @@ def bulk_delete_all_contacts():
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+@contacts_bp.route('/api/v1/companies/bulk-delete-all', methods=['POST'])
+@login_required
+def bulk_delete_all_companies():
+    """Delete ALL companies in workspace (dangerous operation)"""
+    try:
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Company
+        from models import db
+        
+        # Get all non-deleted companies
+        companies_to_delete = db.session.query(Company).filter(
+            Company.workspace_id == workspace_id,
+            Company.is_deleted == False,
+        ).all()
+
+        deleted_count = 0
+        for company in companies_to_delete:
+            company.is_deleted = True
+            company.deleted_at = datetime.utcnow()
+            deleted_count += 1
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        
+        return jsonify({
+            'deleted_count': deleted_count,
+            'message': f'{deleted_count} şirket başarıyla silindi'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting all companies: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
 # ============================================================================
 # USER PREFERENCES
 # ============================================================================

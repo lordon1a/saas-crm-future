@@ -108,8 +108,11 @@
                 <button onclick="exportCompanies()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-download mr-2"></i> CSV İndir
                 </button>
+                <button onclick="deleteAllCompaniesConfirm()" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i> Tümünü Sil
+                </button>
                 <button onclick="openNewCompanyModal()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-colors shadow-sm">
-                    <i class="fas fa-plus mr-2"></i> Yeni �?irket
+                    <i class="fas fa-plus mr-2"></i> Yeni Şirket
                 </button>
             </div>
         </header>
@@ -568,6 +571,31 @@
                 window.location.href = url;
             } catch (e) {
                 showToast('CSV indirme başarısız oldu.', 'error');
+            }
+        }
+
+        async function deleteAllCompaniesConfirm() {
+            const total = document.getElementById('companyCount')?.textContent || '?';
+            if (!confirm(`TÜM ${total} ŞİRKETİ silmek istediğinizden emin misiniz? Bu işlem GERİ ALINAMAZ!`)) return;
+            if (!confirm('Son onay: Tüm şirketler kalıcı olarak silinecek. Devam?')) return;
+            
+            try {
+                const res = await fetch('/api/v1/companies/bulk-delete-all', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                if (!res.ok) throw new Error('Silme başarısız');
+                
+                const data = await res.json();
+                showToast(`${data.deleted_count || total} şirket silindi`, 'success');
+                if (typeof loadCompanies === 'function') {
+                    await loadCompanies(1);
+                } else {
+                    window.location.reload();
+                }
+            } catch(e) {
+                showToast('Silme işlemi başarısız', 'error');
             }
         }
 
