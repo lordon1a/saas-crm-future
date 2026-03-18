@@ -163,6 +163,12 @@
                     <button onclick="window.location.href='/contacts?company_id=' + currentCompany.id" class="px-4 py-2 bg-brand-50 text-brand-600 rounded-xl text-sm font-semibold hover:bg-brand-100 transition-colors">
                         <i class="fas fa-users mr-2"></i>Kişileri Gör
                     </button>
+                    <button onclick="openEditCompanyModal()" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors">
+                        <i class="fas fa-edit mr-2"></i>Düzenle
+                    </button>
+                    <button onclick="deleteCompany()" class="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Sil
+                    </button>
                     <button onclick="closeCompanyDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
                 </div>
             </div>
@@ -223,6 +229,62 @@
                 <div class="flex gap-3 pt-4">
                     <button type="button" onclick="closeNewCompanyModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">İptal</button>
                     <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">�?irketi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Company Modal -->
+    <div id="editCompanyModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800">�?irketi Düzenle</h3>
+                <button onclick="closeEditCompanyModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="editCompanyForm" class="p-8 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">�?irket Adı *</label>
+                    <input type="text" id="editName" required placeholder="�?irket Adı" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sektör</label>
+                        <select id="editIndustry" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                            <option value="">Seçiniz</option>
+                            <option value="Technology">Teknoloji</option>
+                            <option value="Healthcare">Sağlık</option>
+                            <option value="Finance">Finans</option>
+                            <option value="Retail">Perakende</option>
+                            <option value="Manufacturing">İmalat</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Çalışan Sayısı</label>
+                        <select id="editSize" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                            <option value="">Seçiniz</option>
+                            <option value="1-10">1-10</option>
+                            <option value="11-50">11-50</option>
+                            <option value="51-200">51-200</option>
+                            <option value="201-500">201-500</option>
+                            <option value="500+">500+</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Website</label>
+                    <input type="url" id="editWebsite" placeholder="https://example.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
+                    <input type="tel" id="editPhone" placeholder="+90 xxx xxx xxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Adres</label>
+                    <textarea id="editAddress" rows="2" placeholder="�?irket adresi" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeEditCompanyModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">İptal</button>
+                    <button type="submit" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">Değişiklikleri Kaydet</button>
                 </div>
             </form>
         </div>
@@ -521,6 +583,87 @@
             document.getElementById('newCompanyForm').reset();
         }
 
+        function openEditCompanyModal() {
+            if (!currentCompany) return;
+            
+            // Populate form with current company data
+            document.getElementById('editName').value = currentCompany.name || '';
+            document.getElementById('editIndustry').value = currentCompany.industry || '';
+            document.getElementById('editSize').value = currentCompany.size || '';
+            document.getElementById('editWebsite').value = currentCompany.website || '';
+            document.getElementById('editPhone').value = currentCompany.phone || '';
+            document.getElementById('editAddress').value = currentCompany.address || '';
+            
+            // Show edit modal
+            document.getElementById('editCompanyModal').classList.remove('hidden');
+            document.getElementById('editCompanyModal').classList.add('flex');
+        }
+
+        function closeEditCompanyModal() {
+            document.getElementById('editCompanyModal').classList.add('hidden');
+            document.getElementById('editCompanyModal').classList.remove('flex');
+            document.getElementById('editCompanyForm').reset();
+        }
+
+        document.getElementById('editCompanyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentCompany) return;
+            
+            const payload = {
+                name: document.getElementById('editName').value.trim(),
+                industry: document.getElementById('editIndustry').value,
+                size: document.getElementById('editSize').value,
+                website: document.getElementById('editWebsite').value.trim(),
+                phone: document.getElementById('editPhone').value.trim(),
+                address: document.getElementById('editAddress').value.trim()
+            };
+
+            try {
+                const res = await fetch(`/api/v1/companies/${currentCompany.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showToast('Şirket başarıyla güncellendi.', 'success');
+                    closeEditCompanyModal();
+                    closeCompanyDetailModal();
+                    loadCompanies();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Güncelleme başarısız.', 'error');
+                }
+            } catch (e) {
+                showToast('Bağlantı hatası.', 'error');
+            }
+        });
+
+        async function deleteCompany() {
+            if (!currentCompany) return;
+            
+            if (!confirm(`"${currentCompany.name}" şirketini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/v1/companies/${currentCompany.id}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    showToast('Şirket başarıyla silindi.', 'success');
+                    closeCompanyDetailModal();
+                    loadCompanies();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Silme başarısız.', 'error');
+                }
+            } catch (e) {
+                showToast('Bağlantı hatası.', 'error');
+            }
+        }
+
         document.getElementById('newCompanyForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = {
@@ -572,6 +715,7 @@
 
         window.onclick = (e) => {
             if (e.target.id === 'newCompanyModal') closeNewCompanyModal();
+            if (e.target.id === 'editCompanyModal') closeEditCompanyModal();
             if (e.target.id === 'companyDetailModal') closeCompanyDetailModal();
         }
 
