@@ -108,6 +108,7 @@ limiter = Limiter(
     default_limits=[],
     default_limits_exempt_when=_is_internal_or_socket_request,
     storage_uri=os.getenv('RATELIMIT_STORAGE_URI', 'memory://'),  # production'da redis kullanılabilir
+    swallow_errors=True,
 )
 
 from models import db
@@ -176,7 +177,10 @@ app.register_blueprint(email_hub_bp)
 app.register_blueprint(import_bp)
 
 # Login endpoint'ine rate limit uygula
-app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
+try:
+    app.view_functions['auth.login'] = limiter.limit(Config.RATELIMIT_LOGIN)(app.view_functions['auth.login'])
+except Exception as exc:
+    logger.error('Failed to attach login rate limiter: %s', exc)
 
 # Global API rate limiting
 @app.before_request

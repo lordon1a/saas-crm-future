@@ -18,59 +18,64 @@ def login_page():
 
 @bp.route('/login', methods=['POST'])
 def login():
-    from flask import session as flask_session
-    data = request.get_json(silent=True) or {}
-    email = data.get('email', '').strip()
-    password = data.get('password', '')
-    two_factor_token = str(data.get('two_factor_token', '')).strip()
-
-    if not email or not password:
-        return jsonify({'error': 'Email ve şifre gereklidir'}), 400
-
-    user = AuthManager.authenticate_user(email, password)
-    if not user:
-        logger.warning('Başarısız giriş denemesi: %s', email)
-        return jsonify({'error': 'Email veya şifre hatalı'}), 401
-
     try:
-        if not SecurityService.is_ip_allowed(user.workspace_id, request.remote_addr):
-            return jsonify({'error': 'IP erişimi engellendi'}), 403
-    except Exception as exc:
-        logger.error('IP whitelist check failed during login for user %s: %s', user.id, exc)
+        from flask import session as flask_session
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+        email = str(data.get('email', '')).strip()
+        password = str(data.get('password', ''))
+        two_factor_token = str(data.get('two_factor_token', '')).strip()
 
-    try:
-        if SecurityService.get_2fa_status(user.id):
-            if not two_factor_token:
-                return jsonify({'error': '2FA kodu gerekli', 'needs_2fa': True}), 401
-            if not SecurityService.verify_login_2fa(user.id, two_factor_token):
-                return jsonify({'error': '2FA kodu geçersiz', 'needs_2fa': True}), 401
-    except Exception as exc:
-        logger.error('2FA check failed during login for user %s: %s', user.id, exc)
+        if not email or not password:
+            return jsonify({'error': 'Email ve şifre gereklidir'}), 400
 
-    # Session'ı permanent yap (config'deki PERMANENT_SESSION_LIFETIME kullanılır)
-    flask_session.permanent = True
-    session_token = secrets.token_urlsafe(32)
-    session['user_id'] = user.id
-    session['workspace_id'] = user.workspace_id
-    session['user_name'] = user.name
-    session['user_email'] = user.email
-    session['user_role'] = user.role
-    session['session_token'] = session_token
+        user = AuthManager.authenticate_user(email, password)
+        if not user:
+            logger.warning('Başarısız giriş denemesi: %s', email)
+            return jsonify({'error': 'Email veya şifre hatalı'}), 401
 
-    timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
-    try:
-        SecurityService.record_session_activity(
-            workspace_id=user.workspace_id,
-            user_id=user.id,
-            session_token=session_token,
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent', ''),
-            timeout_minutes=timeout_minutes,
-        )
+        try:
+            if not SecurityService.is_ip_allowed(user.workspace_id, request.remote_addr):
+                return jsonify({'error': 'IP erişimi engellendi'}), 403
+        except Exception as exc:
+            logger.error('IP whitelist check failed during login for user %s: %s', user.id, exc)
+
+        try:
+            if SecurityService.get_2fa_status(user.id):
+                if not two_factor_token:
+                    return jsonify({'error': '2FA kodu gerekli', 'needs_2fa': True}), 401
+                if not SecurityService.verify_login_2fa(user.id, two_factor_token):
+                    return jsonify({'error': '2FA kodu geçersiz', 'needs_2fa': True}), 401
+        except Exception as exc:
+            logger.error('2FA check failed during login for user %s: %s', user.id, exc)
+
+        # Session'ı permanent yap (config'deki PERMANENT_SESSION_LIFETIME kullanılır)
+        flask_session.permanent = True
+        session_token = secrets.token_urlsafe(32)
+        session['user_id'] = user.id
+        session['workspace_id'] = user.workspace_id
+        session['user_name'] = user.name
+        session['user_email'] = user.email
+        session['user_role'] = user.role
+        session['session_token'] = session_token
+
+        timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
+        try:
+            SecurityService.record_session_activity(
+                workspace_id=user.workspace_id,
+                user_id=user.id,
+                session_token=session_token,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', ''),
+                timeout_minutes=timeout_minutes,
+            )
+        except Exception as exc:
+            logger.error('Session activity write failed during login for user %s: %s', user.id, exc)
+        AuditService.log_event(user.workspace_id, user.id, 'auth.login', 'user', entity_id=user.id)
+        return jsonify({'status': 'ok', 'name': user.name, 'role': user.role}), 200
     except Exception as exc:
-        logger.error('Session activity write failed during login for user %s: %s', user.id, exc)
-    AuditService.log_event(user.workspace_id, user.id, 'auth.login', 'user', entity_id=user.id)
-    return jsonify({'status': 'ok', 'name': user.name, 'role': user.role}), 200
+        logger.exception('Unexpected login error: %s', exc)
+        db.session.rollback()
+        return jsonify({'error': 'Giris sirasinda beklenmeyen bir hata olustu'}), 500
 
 @bp.route('/logout')
 def logout():
