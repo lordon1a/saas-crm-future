@@ -24,9 +24,13 @@ engine_options = dict(app.config.get('SQLALCHEMY_ENGINE_OPTIONS') or {})
 engine_options.setdefault('pool_pre_ping', True)
 
 if not str(db_uri).startswith('sqlite'):
-    # PostgreSQL/MySQL için pool ayarları
-    engine_options.setdefault('pool_size', 5)
-    engine_options.setdefault('max_overflow', 5)
+    # Render'da gevent worker ile QueuePool lock sorunlari gorulebiliyor.
+    # NullPool kullanarak her istek icin temiz baglanti ac/kapat yapariz.
+    from sqlalchemy.pool import NullPool
+    engine_options['poolclass'] = NullPool
+    engine_options.pop('pool_size', None)
+    engine_options.pop('max_overflow', None)
+    engine_options.pop('pool_timeout', None)
     engine_options.setdefault('pool_recycle', 1800)
 else:
     # SQLite için StaticPool (tek connection, lock contention önler)
