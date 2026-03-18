@@ -365,11 +365,48 @@ def create_default_pipelines():
         logger.warning(f"Failed to create default pipelines: {e}")
         db.session.rollback()
 
+def check_db_schema():
+    """Check if database schema matches models - runs on every startup"""
+    try:
+        from sqlalchemy import inspect
+        from models_crm import Deal, DealStage, Pipeline
+        
+        inspector = inspect(db.engine)
+        issues = []
+        
+        # Check critical tables
+        for table_name, model in [
+            ('deals', Deal),
+            ('deal_stages', DealStage),
+            ('pipelines', Pipeline),
+        ]:
+            if not inspector.has_table(table_name):
+                issues.append(f"TABLE MISSING: {table_name}")
+                continue
+            
+            db_cols = {c['name'] for c in inspector.get_columns(table_name)}
+            model_cols = {c.name for c in model.__table__.columns}
+            missing = model_cols - db_cols
+            
+            if missing:
+                issues.append(f"COLUMNS MISSING [{table_name}]: {missing}")
+        
+        if issues:
+            for issue in issues:
+                logger.critical(f"⚠️  SCHEMA MISMATCH: {issue}")
+            logger.critical("⚠️  Run migrations or check auto-migration logs above")
+        else:
+            logger.info("✓ Schema validation: OK")
+            
+    except Exception as e:
+        logger.warning(f"Schema check failed: {e}")
+
 # Run migrations with app context
 with app.app_context():
     try:
         run_migrations()
         create_default_pipelines()
+        check_db_schema()
     except Exception as e:
         logger.error(f"Failed to run migrations: {e}")
 

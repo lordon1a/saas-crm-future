@@ -26,6 +26,20 @@ meta_api_client.py  ← WhatsApp Meta API HTTP client (requests kütüphanesi)
 - **models.py'e her kolon/tablo eklendiğinde, aynı görevde flask db migrate + upgrade ZORUNLUDUR. Migrate edilmeden commit yapılmaz.**
 - Render Free 512MB RAM — ağır işlem yapma, pool_size=2 tut
 
+## MODEL DEĞİŞİKLİĞİ PROTOKOLÜ (İHLAL EDİLEMEZ)
+
+models.py'e her değişiklik yapıldığında aynı commit'te:
+1. `flask db migrate -m "açıklama"` çalıştır
+2. `flask db upgrade` çalıştır
+3. Migration dosyası (migrations/versions/*.py) commit'e dahil et
+4. Migration dosyası olmadan commit YAPMA
+
+Kontrol listesi — her model değişikliğinde sor:
+- [ ] Yeni kolon var mı? → migrate et
+- [ ] Kolon tipi değişti mi? → migrate et
+- [ ] Yeni tablo var mı? → migrate et
+- [ ] İlişki değişti mi? → migrate et
+
 ## DOKUNMA KURALLARI (EN ÖNEMLİ)
 1. Kullanıcı hangi dosyayı belirttiyse SADECE o dosyaya dokun
 2. Başka dosyaya dokunmadan önce MUTLAKA sor ve onay al
