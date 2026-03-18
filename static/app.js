@@ -997,10 +997,10 @@ function initRealtimeSocket() {
     socketClient.on('connect', () => {
         socketConnectErrorCount = 0;
         console.log('✅ WebSocket Connected Successfully!');
-        if (currentWorkspaceId) {
+        if (socketClient && currentWorkspaceId) {
             socketClient.emit('join_workspace', { workspace_id: currentWorkspaceId });
         }
-        if (currentSocketContactId) {
+        if (socketClient && currentSocketContactId) {
             socketClient.emit('join_contact_room', { contact_id: currentSocketContactId });
         }
     });
