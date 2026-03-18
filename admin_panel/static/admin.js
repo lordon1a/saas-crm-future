@@ -3,7 +3,7 @@
  */
 
 // API Base URL - read from environment or default to relative path
-const API_BASE_URL = window.SUPER_ADMIN_API_URL || '/api/super';
+const API_BASE_URL = window.SUPER_ADMIN_API_URL || '';
 
 /**
  * Check if user is authenticated
