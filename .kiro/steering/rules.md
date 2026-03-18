@@ -66,6 +66,13 @@ Kontrol listesi — her model değişikliğinde sor:
 - Commit öncesi ne değiştiğini kullanıcıya söyle
 - Push sonrası Render deploy'u bekle, log paylaşılana kadar yorum yapma
 
+## SUPER ADMIN PANELİ
+- Route prefix: `/api/super/`
+- Ayrı JWT auth — normal session auth ile karışmaz
+- Her işlem ImpersonateLog'a yazılır
+- `admin_panel/` klasörü ayrı Render servisi olarak deploy edilir
+- SuperAdmin modeli normal User modelinden TAMAMEN ayrıdır
+
 ## MEVCUT ÇALIŞAN ÖZELLİKLER (DOKUNMA)
 - ✅ Socket.IO bağlantısı (gevent ile)
 - ✅ Auth sistemi (session-based)
@@ -73,6 +80,7 @@ Kontrol listesi — her model değişikliğinde sor:
 - ✅ WhatsApp webhook ve mesaj alma
 - ✅ Meta API ile mesaj gönderme (meta_api_client.py)
 - ✅ Multi-tenant workspace izolasyonu
+- ✅ Super admin panel (JWT auth, tenant management, impersonation)
 
 ## SIKÇA YAPILAN HATALAR (YAPMA)
 - ❌ eventlet import etme — gevent kullanılıyor
