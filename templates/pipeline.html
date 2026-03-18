@@ -706,15 +706,25 @@
             try {
                 // Load pipelines
                 const pipelinesRes = await fetch('/api/v1/pipelines');
+                
+                if (!pipelinesRes.ok) {
+                    throw new Error(`HTTP error! status: ${pipelinesRes.status}`);
+                }
+                
                 const pipelines = await pipelinesRes.json();
                 
-                if (pipelines.length === 0) {
-                    alert('No pipeline found. Please create a pipeline first.');
+                if (!Array.isArray(pipelines) || pipelines.length === 0) {
+                    console.warn('No pipelines found');
+                    showToast('No pipeline found. Please create a pipeline first.', 'error');
                     return;
                 }
                 
                 // Use first (default) pipeline
                 currentPipeline = pipelines[0];
+                
+                if (!currentPipeline || !currentPipeline.id) {
+                    throw new Error('Invalid pipeline data');
+                }
                 
                 // Load deals
                 const dealsRes = await fetch(`/api/v1/deals?pipeline_id=${currentPipeline.id}`);
@@ -729,7 +739,7 @@
                 renderPipeline();
             } catch (error) {
                 console.error('Error loading pipeline:', error);
-                alert('Error loading pipeline data');
+                showToast('Error loading pipeline data: ' + error.message, 'error');
             }
         }
 
