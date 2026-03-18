@@ -130,7 +130,7 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    return send_from_directory('templates', 'dashboard.html')
+    return send_from_directory('.', 'dashboard.html')
 
 @app.route('/<path:path>')
 def serve_file(path):
