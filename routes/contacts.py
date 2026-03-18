@@ -323,8 +323,8 @@ def get_contacts():
         
         # Pagination parameters
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 50, type=int)
-        per_page = min(per_page, 100)  # Max 100 items per page
+        per_page = min(request.args.get('per_page', 50, type=int), 100)
+        offset = (page - 1) * per_page
         
         # Get filters from query params
         filters = {}
@@ -340,6 +340,7 @@ def get_contacts():
         if request.args.get('limit'):
             try:
                 per_page = min(int(request.args.get('limit')), 100)
+                offset = (page - 1) * per_page
             except (TypeError, ValueError):
                 pass
         
@@ -371,8 +372,11 @@ def get_contacts():
         # Eager load company
         query = query.options(db.joinedload(Contact.company))
         
-        # Get CRM contacts
-        crm_contacts = query.order_by(Contact.first_name, Contact.last_name).limit(per_page).all()
+        # Get total count BEFORE pagination
+        total = query.count()
+        
+        # Get CRM contacts with pagination
+        crm_contacts = query.order_by(Contact.first_name, Contact.last_name).offset(offset).limit(per_page).all()
         
         # Also get Customers that are NOT linked to CRM Contacts (for Telegram/WhatsApp users)
         customer_query = Customer.query.filter_by(workspace_id=workspace_id)
@@ -480,15 +484,18 @@ def get_contacts():
                 'customer_id': customer.id
             })
         
+        # Calculate pagination info
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+        
         return jsonify({
             'contacts': result,
             'pagination': {
                 'page': page,
                 'per_page': per_page,
-                'total': len(result),
-                'pages': 1,
-                'has_next': False,
-                'has_prev': False
+                'total': total,
+                'pages': total_pages,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
             }
         }), 200
         
