@@ -107,10 +107,8 @@
 
     <script src="static/admin.js"></script>
     <script>
-        checkAuth();
-        
         const token = localStorage.getItem('admin_token');
-        if (!token && window.location.pathname !== '/') {
+        if (!token) {
             window.location.replace('/');
         }
         

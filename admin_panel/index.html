@@ -79,7 +79,7 @@
                 localStorage.setItem('admin_token', data.token);
                 
                 // Redirect to dashboard
-                window.location.href = '/dashboard';
+                window.location.replace('/dashboard');
                 
             } catch (error) {
                 errorDiv.textContent = error.message;
