@@ -284,18 +284,26 @@ def create_deal():
                     data['company_id'] = crm_contact.company_id
                 else:
                     # Create a company for this contact
-                    company_name = f"{crm_contact.full_name}'s Company"
-                    company = Company(
-                        workspace_id=workspace_id,
-                        name=company_name,
-                        phone=crm_contact.phone or crm_contact.whatsapp_phone
-                    )
-                    db.session.add(company)
-                    db.session.flush()
-                    
-                    # Link contact to company
-                    crm_contact.company_id = company.id
-                    data['company_id'] = company.id
+                    try:
+                        company_name = f"{crm_contact.full_name}'s Company"
+                        company = Company(
+                            workspace_id=workspace_id,
+                            name=company_name,
+                            phone=crm_contact.phone or crm_contact.whatsapp_phone
+                        )
+                        db.session.add(company)
+                        db.session.commit()
+                        
+                        # Link contact to company
+                        crm_contact.company_id = company.id
+                        db.session.commit()
+                        
+                        data['company_id'] = company.id
+                        logger.info(f"Created company {company.id} for contact {crm_contact.id}")
+                    except Exception as e:
+                        db.session.rollback()
+                        logger.error(f"Error creating company for contact: {e}")
+                        raise ValueError(f"Failed to create company for contact")
             else:
                 # Try to find Customer (Telegram/WhatsApp user)
                 customer = Customer.query.filter_by(
@@ -304,33 +312,38 @@ def create_deal():
                 ).first()
                 
                 if customer:
-                    # Create company from customer data
-                    company_name = customer.company or f"{customer.profile_name or 'Unknown'}'s Company"
-                    company = Company(
-                        workspace_id=workspace_id,
-                        name=company_name,
-                        phone=customer.phone_number
-                    )
-                    db.session.add(company)
-                    db.session.flush()
-                    
-                    # Create CRM Contact from Customer
-                    crm_contact = Contact(
-                        workspace_id=workspace_id,
-                        company_id=company.id,
-                        customer_id=customer.id,
-                        first_name=customer.profile_name or 'Unknown',
-                        last_name='',
-                        phone=customer.phone_number,
-                        whatsapp_phone=customer.phone_number,
-                        email=customer.email,
-                        job_title=customer.job_title
-                    )
-                    db.session.add(crm_contact)
-                    db.session.flush()
-                    
-                    data['company_id'] = company.id
-                    logger.info(f"Created CRM Contact {crm_contact.id} and Company {company.id} from Customer {customer.id}")
+                    try:
+                        # Create company from customer data
+                        company_name = customer.company or f"{customer.profile_name or 'Unknown'}'s Company"
+                        company = Company(
+                            workspace_id=workspace_id,
+                            name=company_name,
+                            phone=customer.phone_number
+                        )
+                        db.session.add(company)
+                        db.session.commit()
+                        
+                        # Create CRM Contact from Customer
+                        crm_contact = Contact(
+                            workspace_id=workspace_id,
+                            company_id=company.id,
+                            customer_id=customer.id,
+                            first_name=customer.profile_name or 'Unknown',
+                            last_name='',
+                            phone=customer.phone_number,
+                            whatsapp_phone=customer.phone_number,
+                            email=customer.email,
+                            job_title=customer.job_title
+                        )
+                        db.session.add(crm_contact)
+                        db.session.commit()
+                        
+                        data['company_id'] = company.id
+                        logger.info(f"Created CRM Contact {crm_contact.id} and Company {company.id} from Customer {customer.id}")
+                    except Exception as e:
+                        db.session.rollback()
+                        logger.error(f"Error creating company/contact from customer: {e}")
+                        raise ValueError(f"Failed to create company from customer data")
                 else:
                     raise ValueError(f"Contact {contact_id} not found")
         
