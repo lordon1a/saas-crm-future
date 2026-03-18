@@ -680,9 +680,17 @@ def get_rotting_deals():
     if not workspace_id or not isinstance(workspace_id, int):
         return jsonify({'error': 'Invalid workspace'}), 400
     
-    pipeline_id = request.args.get('pipeline_id', type=int)
-    if pipeline_id is not None and pipeline_id < 1:
-        return jsonify({'error': 'Invalid pipeline_id'}), 400
+    # Handle pipeline_id parameter - can be None, empty string, or valid int
+    pipeline_id_str = request.args.get('pipeline_id', '').strip()
+    pipeline_id = None
+    
+    if pipeline_id_str:
+        try:
+            pipeline_id = int(pipeline_id_str)
+            if pipeline_id < 1:
+                return jsonify({'error': 'Invalid pipeline_id'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid pipeline_id format'}), 400
     
     try:
         rotting_deals = PipelineService.get_rotting_deals(workspace_id, pipeline_id)
