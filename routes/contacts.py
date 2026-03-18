@@ -1598,6 +1598,47 @@ def bulk_delete_contacts():
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+@contacts_bp.route('/api/v1/contacts/bulk-delete-all', methods=['POST'])
+@login_required
+def bulk_delete_all_contacts():
+    """Delete ALL contacts in workspace (dangerous operation)"""
+    try:
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Contact
+        from models import db
+        
+        # Get all non-deleted contacts
+        contacts_to_delete = db.session.query(Contact).filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+        ).all()
+
+        deleted_count = 0
+        for contact in contacts_to_delete:
+            contact.is_deleted = True
+            contact.deleted_at = datetime.utcnow()
+            deleted_count += 1
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        
+        return jsonify({
+            'deleted_count': deleted_count,
+            'message': f'{deleted_count} kişi başarıyla silindi'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting all contacts: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
 # ============================================================================
 # USER PREFERENCES
 # ============================================================================

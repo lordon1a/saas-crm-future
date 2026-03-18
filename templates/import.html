@@ -363,10 +363,18 @@
                                             </label>
                                             
                                             <label class="flex items-center gap-3 p-3 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-all">
+                                                <input type="radio" name="duplicateAction" value="create_with_suffix" class="w-4 h-4 text-blue-600">
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-semibold text-slate-800">Yinelenen kayıtları da ekle (sayı ekleyerek)</div>
+                                                    <div class="text-xs text-slate-500">Email/isme sayı ekleyerek tüm kayıtları ekle (örn: ahmet1@example.com)</div>
+                                                </div>
+                                            </label>
+                                            
+                                            <label class="flex items-center gap-3 p-3 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-all">
                                                 <input type="radio" name="duplicateAction" value="create" class="w-4 h-4 text-blue-600">
                                                 <div class="flex-1">
-                                                    <div class="text-sm font-semibold text-slate-800">Yinelenen kayıt oluştur</div>
-                                                    <div class="text-xs text-slate-500">Aynı bilgilere sahip yeni kayıtlar oluştur (önerilmez)</div>
+                                                    <div class="text-sm font-semibold text-slate-800">Yinelenen kayıt oluştur (riskli)</div>
+                                                    <div class="text-xs text-slate-500">Aynı bilgilere sahip yeni kayıtlar oluştur (veritabanı hatası verebilir)</div>
                                                 </div>
                                             </label>
                                         </div>
@@ -1337,8 +1345,8 @@
                     renderCurrentStep();
                     
                     // Show results immediately (synchronous import)
-                    document.getElementById('successCount').textContent = data.imported_rows + (data.updated_rows || 0);
-                    document.getElementById('failedCount').textContent = (data.failed_rows || 0) + (data.skipped_rows || 0);
+                    document.getElementById('successCount').textContent = data.imported_rows + (data.updated_rows || 0) + (data.skipped_rows || 0);
+                    document.getElementById('failedCount').textContent = (data.failed_rows || 0);
                     document.getElementById('totalCount').textContent = data.total_rows;
                     
                     let message = `${data.imported_rows} yeni kayıt eklendi.`;

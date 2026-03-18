@@ -653,7 +653,7 @@ def execute_import():
     file_id = data.get('file_id')
     field_mapping = data.get('field_mapping')
     object_type = data.get('object_type')
-    duplicate_action = data.get('duplicate_action', 'skip')  # skip, update, or create
+    duplicate_action = data.get('duplicate_action', 'skip')  # skip, update, create, or create_with_suffix
     
     # Get workspace_id from session
     workspace_id = session.get('workspace_id', 1)  # Default to 1 if not in session
@@ -809,14 +809,42 @@ def execute_import():
                             
                             updated_count += 1
                             continue
-                        # else: duplicate_action == 'create' - continue to create new
+                        elif duplicate_action == 'create_with_suffix':
+                            # Create new contact with modified email/name to avoid duplicates
+                            suffix = 1
+                            original_email = email
+                            original_first_name = first_name
+                            
+                            # Find unique email
+                            if email:
+                                email_parts = email.rsplit('@', 1)
+                                while Contact.query.filter_by(workspace_id=workspace_id, email=email).first():
+                                    if len(email_parts) == 2:
+                                        email = f"{email_parts[0]}{suffix}@{email_parts[1]}"
+                                    else:
+                                        email = f"{original_email}{suffix}"
+                                    suffix += 1
+                            
+                            # Find unique name if no email
+                            if not original_email:
+                                suffix = 1
+                                while Contact.query.filter_by(
+                                    workspace_id=workspace_id,
+                                    first_name=first_name,
+                                    last_name=last_name
+                                ).first():
+                                    first_name = f"{original_first_name} ({suffix})"
+                                    suffix += 1
+                            
+                            # Continue to create with modified data
+                        # else: duplicate_action == 'create' - continue to create new (may cause duplicates)
                     
                     # Create contact
                     contact = Contact(
                         workspace_id=workspace_id,
                         first_name=first_name,
                         last_name=last_name,
-                        email=contact_data.get('email'),
+                        email=contact_data.get('email') if not existing_contact or duplicate_action != 'create_with_suffix' else email,
                         phone=contact_data.get('phone'),
                         company_id=company_id,
                         job_title=contact_data.get('job_title'),
@@ -896,9 +924,19 @@ def execute_import():
                             
                             updated_count += 1
                             continue
+                        elif duplicate_action == 'create_with_suffix':
+                            # Create new company with modified name to avoid duplicates
+                            suffix = 1
+                            original_name = contact_data['name']
+                            company_name = original_name
+                            
+                            while Company.query.filter_by(workspace_id=workspace_id, name=company_name).first():
+                                company_name = f"{original_name} ({suffix})"
+                                suffix += 1
+                            
+                            contact_data['name'] = company_name
+                            # Continue to create with modified name
                         # else: duplicate_action == 'create' - continue to create new
-                        errors.append(f'Row {idx + 2}: Company "{contact_data["name"]}" already exists')
-                        continue
                     
                     company = Company(
                         workspace_id=workspace_id,

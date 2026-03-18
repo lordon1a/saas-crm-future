@@ -217,6 +217,42 @@
                 <p class="text-slate-500 text-sm">Yükleniyor...</p>
             </div>
         </div>
+        
+        <!-- Pagination & Bulk Actions Bar -->
+        <div id="paginationBar" class="hidden bg-white border-t border-gray-200 px-6 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Bulk Actions (shown when items selected) -->
+                <div id="bulkActionsBar" class="hidden flex items-center gap-3">
+                    <span id="selectedCount" class="text-sm font-semibold text-gray-700">0 kişi seçildi</span>
+                    <button onclick="bulkDeleteContacts()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all flex items-center gap-2">
+                        <i class="fas fa-trash"></i> Seçilenleri Sil
+                    </button>
+                    <button onclick="deleteAllContacts()" class="px-4 py-2 bg-red-700 text-white rounded-lg text-sm font-semibold hover:bg-red-800 transition-all flex items-center gap-2">
+                        <i class="fas fa-trash-alt"></i> Tüm Kişileri Sil
+                    </button>
+                </div>
+                
+                <!-- Pagination Info -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <span id="paginationInfo">1-50 / 100</span>
+                </div>
+                
+                <!-- Pagination Controls -->
+                <div class="flex items-center gap-2">
+                    <button id="prevPageBtn" onclick="goToPage(currentPage - 1)" disabled class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    
+                    <div id="pageNumbers" class="flex items-center gap-1">
+                        <!-- Page numbers will be inserted here -->
+                    </div>
+                    
+                    <button id="nextPageBtn" onclick="goToPage(currentPage + 1)" disabled class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Overlay (Behind Panel) -->
@@ -3363,5 +3399,6 @@
         })();
     </script>
     <script src="/static/topbar-global.js"></script>
+    <script src="/static/contacts-pagination.js"></script>
 </body>
 </html>
