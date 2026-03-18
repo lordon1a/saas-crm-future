@@ -982,8 +982,8 @@ function initRealtimeSocket() {
     if (socketClient || typeof io === 'undefined') return;
 
     socketClient = io({
-        transports: ['websocket', 'polling'],
-        upgrade: true,
+        transports: ['polling'],
+        upgrade: false,
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,

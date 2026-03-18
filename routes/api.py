@@ -668,81 +668,89 @@ def mark_conversation_read(conversation_id):
 @login_required_api
 def send_message():
     """Send message to customer"""
-    data = request.get_json()
-    conversation_id = data.get('conversation_id')
-    message_body = data.get('message_body', '').strip()
-    channel = (data.get('channel') or 'whatsapp').strip().lower()
-    workspace_id = session.get('workspace_id')
-    
-    if not message_body:
-        return jsonify({'error': 'Mesaj boş olamaz'}), 400
-    
-    conversation = Conversation.query.filter_by(id=conversation_id, workspace_id=workspace_id).first()
-    if not conversation:
-        return jsonify({'error': 'Conversation not found'}), 404
-    
-    customer = conversation.customer
-    workspace = Workspace.query.get(workspace_id)
+    try:
+        data = request.get_json(silent=True) or {}
+        conversation_id = data.get('conversation_id')
+        message_body = data.get('message_body', '').strip()
+        channel = (data.get('channel') or 'whatsapp').strip().lower()
+        workspace_id = session.get('workspace_id')
 
-    if channel not in {'whatsapp', 'telegram', 'email'}:
-        return jsonify({'error': 'Geçersiz kanal'}), 400
+        if not message_body:
+            return jsonify({'error': 'Mesaj boş olamaz'}), 400
 
-    result = {'success': False, 'error': 'Gönderilemedi', 'message_id': None}
+        conversation = Conversation.query.filter_by(id=conversation_id, workspace_id=workspace_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
 
-    if channel == 'whatsapp':
-        token = (workspace and workspace.whatsapp_access_token) or None
-        phone_id = (workspace and workspace.whatsapp_phone_number_id) or None
-        meta_client = MetaAPIClient(access_token=token, phone_number_id=phone_id)
-        result = meta_client.send_text_message(customer.phone_number, message_body)
-    elif channel == 'telegram':
-        if not workspace or not workspace.telegram_bot_token:
-            return jsonify({'error': 'Telegram bot token yapılandırılmamış'}), 400
-        if not customer.telegram_chat_id:
-            return jsonify({'error': 'Bu müşteri için telegram_chat_id yok'}), 400
-        telegram_service = TelegramService(workspace.telegram_bot_token)
-        result = telegram_service.send_message(customer.telegram_chat_id, message_body)
-    else:
-        if not customer.email:
-            return jsonify({'error': 'Müşterinin email adresi yok'}), 400
-        try:
-            EmailHubService.queue_outbound_email(
-                workspace_id=workspace_id,
-                user_id=session.get('user_id', 1),
-                to_email=customer.email,
-                subject='CRM Mesajı',
-                body_text=message_body,
-                body_html='',
+        customer = conversation.customer
+        workspace = Workspace.query.get(workspace_id)
+
+        if channel not in {'whatsapp', 'telegram', 'email'}:
+            return jsonify({'error': 'Geçersiz kanal'}), 400
+
+        result = {'success': False, 'error': 'Gönderilemedi', 'message_id': None}
+
+        if channel == 'whatsapp':
+            token = (workspace and workspace.whatsapp_access_token) or None
+            phone_id = (workspace and workspace.whatsapp_phone_number_id) or None
+            meta_client = MetaAPIClient(access_token=token, phone_number_id=phone_id)
+            result = meta_client.send_text_message(customer.phone_number, message_body)
+        elif channel == 'telegram':
+            if not workspace or not workspace.telegram_bot_token:
+                return jsonify({'error': 'Telegram bot token yapılandırılmamış'}), 400
+            if not customer.telegram_chat_id:
+                return jsonify({'error': 'Bu müşteri için telegram_chat_id yok'}), 400
+            telegram_service = TelegramService(workspace.telegram_bot_token)
+            result = telegram_service.send_message(customer.telegram_chat_id, message_body)
+        else:
+            if not customer.email:
+                return jsonify({'error': 'Müşterinin email adresi yok'}), 400
+            try:
+                EmailHubService.queue_outbound_email(
+                    workspace_id=workspace_id,
+                    user_id=session.get('user_id', 1),
+                    to_email=customer.email,
+                    subject='CRM Mesajı',
+                    body_text=message_body,
+                    body_html='',
+                )
+                result = {'success': True, 'message_id': f'email-{time.time_ns()}', 'error': None}
+            except Exception as exc:
+                result = {'success': False, 'message_id': None, 'error': str(exc)}
+
+        if result.get('success'):
+            sender_id = session.get('user_id', 1)
+            message = MessageManager.save_outgoing_message(
+                conversation_id=conversation_id,
+                message_body=message_body,
+                sender_id=sender_id,
+                meta_message_id=result.get('message_id'),
+                channel=channel,
             )
-            result = {'success': True, 'message_id': f'email-{time.time_ns()}', 'error': None}
-        except Exception as exc:
-            result = {'success': False, 'message_id': None, 'error': str(exc)}
-    
-    if result['success']:
-        # Save to database
-        sender_id = session.get('user_id', 1)
-        message = MessageManager.save_outgoing_message(
-            conversation_id=conversation_id,
-            message_body=message_body,
-            sender_id=sender_id,
-            meta_message_id=result['message_id'],
-            channel=channel,
-        )
-        
-        # Giden mesajları otomatik okundu işaretle
-        message.is_read = True
-        
-        # Update conversation last_message_at
-        ConversationManager.update_last_message_time(conversation_id)
-        db.session.commit()
-        _emit_realtime_message(workspace_id, conversation, message)
-        
-        return jsonify({
-            'status': 'sent',
-            'message_id': message.id,
-            'message': _message_to_json(message)
-        }), 200
-    
-    return jsonify({'error': result['error']}), 500
+
+            message.is_read = True
+            ConversationManager.update_last_message_time(conversation_id)
+
+            try:
+                db.session.commit()
+            except Exception as commit_exc:
+                db.session.rollback()
+                logger.error('Failed to commit outgoing message: %s', commit_exc)
+                return jsonify({'error': 'Mesaj kaydedilemedi'}), 500
+
+            _emit_realtime_message(workspace_id, conversation, message)
+
+            return jsonify({
+                'status': 'sent',
+                'message_id': message.id,
+                'message': _message_to_json(message)
+            }), 200
+
+        return jsonify({'error': result.get('error') or 'Gönderilemedi'}), 500
+    except Exception as exc:
+        db.session.rollback()
+        logger.error('Unexpected error sending message: %s', exc)
+        return jsonify({'error': 'Mesaj gönderilirken bir hata oluştu'}), 500
 
 
 # ─── Medya: dosya sunumu ve medya gönderimi ─────────────────────────────────
