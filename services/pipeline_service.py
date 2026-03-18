@@ -238,22 +238,24 @@ class PipelineService:
         old_stage_name = old_stage.name
         new_stage_name = new_stage.name
         old_version = deal.version
+        now = datetime.utcnow()
 
         try:
-            deal.stage_id = stage_id
-            deal.stage_entered_at = datetime.utcnow()  # Reset stage timer
-            deal.updated_at = datetime.utcnow()
-            deal.version += 1  # Increment version for optimistic locking
-            
-            db.session.flush()
-            
-            # Check if another transaction modified the deal (optimistic locking)
-            conflict_check = db.session.query(Deal).filter_by(
+            # Atomic optimistic lock: update only if version is unchanged.
+            # This prevents false conflicts and correctly detects concurrent writes.
+            rows_updated = Deal.query.filter_by(
                 id=deal.id,
+                workspace_id=workspace_id,
+                is_deleted=False,
                 version=old_version
-            ).first()
-            
-            if not conflict_check:
+            ).update({
+                Deal.stage_id: stage_id,
+                Deal.stage_entered_at: now,
+                Deal.updated_at: now,
+                Deal.version: old_version + 1,
+            }, synchronize_session=False)
+
+            if rows_updated == 0:
                 db.session.rollback()
                 raise ValueError('Deal was modified by another user. Please refresh and try again.')
             
@@ -271,6 +273,7 @@ class PipelineService:
                 logger.warning(f"Activity creation failed (non-blocking): {activity_error}")
             
             db.session.commit()
+            db.session.refresh(deal)
             logger.info(f"Moved deal {deal.id} from stage {old_stage_id} to {stage_id}")
         except Exception as e:
             db.session.rollback()
