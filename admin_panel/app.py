@@ -9,7 +9,11 @@ app = Flask(__name__, static_folder='static', static_url_path='/static')
 
 # CORS configuration from environment
 cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
-CORS(app, origins=cors_origins.split(','))
+CORS(app, 
+     origins=cors_origins.split(','),
+     supports_credentials=True,
+     allow_headers=['Content-Type', 'Authorization'],
+     methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
 
 # Database setup
 import sys
