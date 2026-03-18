@@ -106,8 +106,20 @@ window.createAutoTasksForRottingDeals = async function() {
 
 // Check for rotting deals periodically
 window.checkRottingDeals = async function() {
+    // Don't check if pipeline is not loaded yet
+    if (!window.currentPipeline || !window.currentPipeline.id) {
+        console.log('Pipeline not loaded yet, skipping rotting deals check');
+        return [];
+    }
+    
     try {
-        const response = await fetch(`/api/v1/deals/rotting?pipeline_id=${window.currentPipeline?.id || ''}`);
+        const response = await fetch(`/api/v1/deals/rotting?pipeline_id=${window.currentPipeline.id}`);
+        
+        if (!response.ok) {
+            console.error('Failed to fetch rotting deals:', response.status);
+            return [];
+        }
+        
         const data = await response.json();
         
         if (data.rotting_deals && data.rotting_deals.length > 0) {
@@ -118,6 +130,12 @@ window.checkRottingDeals = async function() {
             if (badge) {
                 badge.textContent = data.rotting_deals.length;
                 badge.classList.remove('hidden');
+            }
+        } else {
+            // Hide badge if no rotting deals
+            const badge = document.getElementById('rottingDealsBadge');
+            if (badge) {
+                badge.classList.add('hidden');
             }
         }
         
@@ -130,9 +148,17 @@ window.checkRottingDeals = async function() {
 
 // Initialize enhancements
 document.addEventListener('DOMContentLoaded', function() {
-    // Check for rotting deals every 5 minutes
-    setInterval(checkRottingDeals, 5 * 60 * 1000);
+    // Check for rotting deals every 5 minutes (only if pipeline is loaded)
+    setInterval(() => {
+        if (window.currentPipeline && window.currentPipeline.id) {
+            checkRottingDeals();
+        }
+    }, 5 * 60 * 1000);
     
-    // Initial check
-    setTimeout(checkRottingDeals, 2000);
+    // Initial check after 3 seconds (give time for pipeline to load)
+    setTimeout(() => {
+        if (window.currentPipeline && window.currentPipeline.id) {
+            checkRottingDeals();
+        }
+    }, 3000);
 });
