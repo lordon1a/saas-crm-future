@@ -76,54 +76,6 @@ def login():
     
     return jsonify({'token': token, 'name': admin.name}), 200
 
-@app.route('/api/super/tenants', methods=['GET'])
-def get_tenants():
-    """Get all workspaces with statistics"""
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({'error': 'Token gerekli'}), 401
-    
-    token = auth_header.split(' ')[1]
-    try:
-        payload = jwt.decode(
-            token,
-            os.environ.get('SUPER_ADMIN_JWT_SECRET'),
-            algorithms=['HS256']
-        )
-    except:
-        return jsonify({'error': 'Geçersiz token'}), 401
-    
-    # Ana uygulamanın DB'sinden workspace'leri çek
-    from sqlalchemy import create_engine, text
-    engine = create_engine(os.environ.get('DATABASE_URL', '').replace('postgres://', 'postgresql://', 1))
-    
-    with engine.connect() as conn:
-        workspaces = conn.execute(text("""
-            SELECT w.id, w.name, w.created_at,
-                   COUNT(DISTINCT u.id) as user_count,
-                   COUNT(DISTINCT c.id) as conversation_count,
-                   COUNT(DISTINCT m.id) as message_count
-            FROM workspaces w
-            LEFT JOIN users u ON u.workspace_id = w.id
-            LEFT JOIN conversations c ON c.workspace_id = w.id
-            LEFT JOIN messages m ON m.conversation_id = c.id
-            GROUP BY w.id, w.name, w.created_at
-            ORDER BY w.created_at DESC
-        """)).fetchall()
-        
-        result = []
-        for row in workspaces:
-            result.append({
-                'id': row[0],
-                'name': row[1],
-                'created_at': str(row[2]),
-                'user_count': row[3],
-                'conversation_count': row[4],
-                'message_count': row[5]
-            })
-        
-        return jsonify({'tenants': result}), 200
-
 @app.route('/tenants', methods=['GET'])
 def get_tenants():
     auth_header = request.headers.get('Authorization')
@@ -194,8 +146,8 @@ def get_analytics():
         stats = conn.execute(text("""
             SELECT
                 (SELECT COUNT(*) FROM workspaces) as total_workspaces,
-                (SELECT COUNT(DISTINCT user_id) FROM audit_logs WHERE created_at > NOW() - INTERVAL '1 day') as dau,
-                (SELECT COUNT(DISTINCT user_id) FROM audit_logs WHERE created_at > NOW() - INTERVAL '30 days') as mau,
+                0 as dau,
+                0 as mau,
                 (SELECT COUNT(*) FROM messages WHERE created_at > NOW() - INTERVAL '30 days') as messages_30d
         """)).fetchone()
         
