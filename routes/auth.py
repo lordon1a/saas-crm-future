@@ -32,14 +32,20 @@ def login():
         logger.warning('Başarısız giriş denemesi: %s', email)
         return jsonify({'error': 'Email veya şifre hatalı'}), 401
 
-    if not SecurityService.is_ip_allowed(user.workspace_id, request.remote_addr):
-        return jsonify({'error': 'IP erişimi engellendi'}), 403
+    try:
+        if not SecurityService.is_ip_allowed(user.workspace_id, request.remote_addr):
+            return jsonify({'error': 'IP erişimi engellendi'}), 403
+    except Exception as exc:
+        logger.error('IP whitelist check failed during login for user %s: %s', user.id, exc)
 
-    if SecurityService.get_2fa_status(user.id):
-        if not two_factor_token:
-            return jsonify({'error': '2FA kodu gerekli', 'needs_2fa': True}), 401
-        if not SecurityService.verify_login_2fa(user.id, two_factor_token):
-            return jsonify({'error': '2FA kodu geçersiz', 'needs_2fa': True}), 401
+    try:
+        if SecurityService.get_2fa_status(user.id):
+            if not two_factor_token:
+                return jsonify({'error': '2FA kodu gerekli', 'needs_2fa': True}), 401
+            if not SecurityService.verify_login_2fa(user.id, two_factor_token):
+                return jsonify({'error': '2FA kodu geçersiz', 'needs_2fa': True}), 401
+    except Exception as exc:
+        logger.error('2FA check failed during login for user %s: %s', user.id, exc)
 
     # Session'ı permanent yap (config'deki PERMANENT_SESSION_LIFETIME kullanılır)
     flask_session.permanent = True
@@ -52,14 +58,17 @@ def login():
     session['session_token'] = session_token
 
     timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
-    SecurityService.record_session_activity(
-        workspace_id=user.workspace_id,
-        user_id=user.id,
-        session_token=session_token,
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get('User-Agent', ''),
-        timeout_minutes=timeout_minutes,
-    )
+    try:
+        SecurityService.record_session_activity(
+            workspace_id=user.workspace_id,
+            user_id=user.id,
+            session_token=session_token,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', ''),
+            timeout_minutes=timeout_minutes,
+        )
+    except Exception as exc:
+        logger.error('Session activity write failed during login for user %s: %s', user.id, exc)
     AuditService.log_event(user.workspace_id, user.id, 'auth.login', 'user', entity_id=user.id)
     return jsonify({'status': 'ok', 'name': user.name, 'role': user.role}), 200
 

@@ -212,17 +212,27 @@ class SecurityService:
     @staticmethod
     def get_2fa_status(user_id):
         """Return 2FA enabled status."""
-        row = TwoFactorAuth.query.filter_by(user_id=user_id).first()
-        return bool(row and row.is_enabled)
+        try:
+            row = TwoFactorAuth.query.filter_by(user_id=user_id).first()
+            return bool(row and row.is_enabled)
+        except Exception as exc:
+            logger.error('Failed to read 2FA status for user %s: %s', user_id, exc)
+            # Fail-open to avoid blocking login when security tables are not ready.
+            return False
 
     @staticmethod
     def is_ip_allowed(workspace_id, ip_address):
         """Validate IP against whitelist if whitelist is configured."""
-        rows = IPWhitelist.query.filter_by(workspace_id=workspace_id, is_active=True).all()
-        if not rows:
+        try:
+            rows = IPWhitelist.query.filter_by(workspace_id=workspace_id, is_active=True).all()
+            if not rows:
+                return True
+            allowed = {row.ip_address for row in rows}
+            return ip_address in allowed
+        except Exception as exc:
+            logger.error('Failed to evaluate IP whitelist for workspace %s: %s', workspace_id, exc)
+            # Fail-open to avoid full login outage on schema/runtime issues.
             return True
-        allowed = {row.ip_address for row in rows}
-        return ip_address in allowed
 
     @staticmethod
     def list_ip_whitelist(workspace_id):
