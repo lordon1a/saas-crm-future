@@ -1,9 +1,4 @@
 // Contacts Pagination & Bulk Actions
-let currentPage = 1;
-let totalPages = 1;
-let totalContacts = 0;
-let perPage = 50;
-let selectedContactIds = new Set();
 
 // Initialize pagination
 function initPagination() {
@@ -148,13 +143,15 @@ function updatePaginationUI() {
 }
 
 // Go to specific page
-function goToPage(page) {
+window.goToPage = function(page) {
     if (page < 1 || page > (window.totalPages || 1)) return;
     window.currentPage = page;
-    selectedContactIds.clear();
-    updateBulkActionsBar();
-    loadContacts(page);
+    if (typeof loadContacts === 'function') {
+        loadContacts(page);
+    }
 }
+
+window.updatePaginationUI = updatePaginationUI;
 
 // Bulk delete selected contacts
 async function bulkDeleteContacts() {
