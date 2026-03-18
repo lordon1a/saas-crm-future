@@ -489,6 +489,8 @@ app.register_blueprint(scheduled_messages_bp)
 app.register_blueprint(documents_bp)
 app.register_blueprint(email_hub_bp)
 app.register_blueprint(import_bp)
+from routes.super_admin import bp as super_admin_bp
+app.register_blueprint(super_admin_bp)
 
 # Login endpoint'ine rate limit uygula
 try:
