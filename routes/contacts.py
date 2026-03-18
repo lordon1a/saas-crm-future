@@ -1573,21 +1573,15 @@ def bulk_delete_contacts():
         if not contact_ids:
             return jsonify({'error': 'No contact IDs provided'}), 400
         
-        # Validate and soft delete contacts
+        # Hard delete contacts
         from models_crm import Contact
         from models import db
         
-        contacts_to_delete = db.session.query(Contact).filter(
+        deleted_count = db.session.query(Contact).filter(
             Contact.id.in_(contact_ids),
             Contact.workspace_id == workspace_id,
             Contact.is_deleted == False,
-        ).all()
-
-        deleted_count = 0
-        for contact in contacts_to_delete:
-            contact.is_deleted = True
-            contact.deleted_at = datetime.utcnow()
-            deleted_count += 1
+        ).delete(synchronize_session=False)
 
         try:
             db.session.commit()
@@ -1618,17 +1612,11 @@ def bulk_delete_all_contacts():
         from models_crm import Contact
         from models import db
         
-        # Get all non-deleted contacts
-        contacts_to_delete = db.session.query(Contact).filter(
+        # Hard delete all non-deleted contacts
+        deleted_count = db.session.query(Contact).filter(
             Contact.workspace_id == workspace_id,
             Contact.is_deleted == False,
-        ).all()
-
-        deleted_count = 0
-        for contact in contacts_to_delete:
-            contact.is_deleted = True
-            contact.deleted_at = datetime.utcnow()
-            deleted_count += 1
+        ).delete(synchronize_session=False)
 
         try:
             db.session.commit()
@@ -1659,17 +1647,11 @@ def bulk_delete_all_companies():
         from models_crm import Company
         from models import db
         
-        # Get all non-deleted companies
-        companies_to_delete = db.session.query(Company).filter(
+        # Hard delete all non-deleted companies
+        deleted_count = db.session.query(Company).filter(
             Company.workspace_id == workspace_id,
             Company.is_deleted == False,
-        ).all()
-
-        deleted_count = 0
-        for company in companies_to_delete:
-            company.is_deleted = True
-            company.deleted_at = datetime.utcnow()
-            deleted_count += 1
+        ).delete(synchronize_session=False)
 
         try:
             db.session.commit()
@@ -1678,6 +1660,13 @@ def bulk_delete_all_companies():
             raise e
         
         return jsonify({
+            'deleted_count': deleted_count,
+            'message': f'{deleted_count} şirket başarıyla silindi'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting all companies: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
             'deleted_count': deleted_count,
             'message': f'{deleted_count} şirket başarıyla silindi'
         }), 200
