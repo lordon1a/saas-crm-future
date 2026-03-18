@@ -49,7 +49,9 @@ class DealStage(db.Model):
     pipeline_id = db.Column(db.Integer, db.ForeignKey('pipelines.id'), nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
     order = db.Column(db.Integer, nullable=False)  # 1, 2, 3... for stage ordering
-    probability = db.Column(db.Float, default=0.0)  # 0.0 to 1.0 for forecasting
+    probability = db.Column(db.Integer, default=100)  # 0-100 for forecasting (changed from Float)
+    rotting_days = db.Column(db.Integer, nullable=True)  # Days until deal is considered stale
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # Soft delete flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     __table_args__ = (
@@ -83,6 +85,8 @@ class Deal(db.Model):
     closed_at = db.Column(db.DateTime)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    stage_entered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)  # Track when deal entered current stage
+    version = db.Column(db.Integer, default=0, nullable=False)  # Optimistic locking
     
     # Relationships
     stage = db.relationship('DealStage', foreign_keys=[stage_id], backref='deals')
@@ -95,8 +99,22 @@ class Deal(db.Model):
     def get_weighted_value(self):
         """Calculate weighted value for forecasting: value * stage probability"""
         if self.status == 'open' and self.stage:
-            return float(self.value) * self.stage.probability
+            return float(self.value) * (self.stage.probability / 100.0)
         return 0.0
+    
+    def is_rotting(self):
+        """Check if deal has been in current stage too long"""
+        if not self.stage or not self.stage.rotting_days or self.status != 'open':
+            return False
+        
+        days_in_stage = (datetime.utcnow() - self.stage_entered_at).days
+        return days_in_stage >= self.stage.rotting_days
+    
+    def days_in_current_stage(self):
+        """Get number of days deal has been in current stage"""
+        if not self.stage_entered_at:
+            return 0
+        return (datetime.utcnow() - self.stage_entered_at).days
 
 
 # ============================================================================

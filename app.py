@@ -1,6 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
-
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -9,7 +6,7 @@ import logging
 import os
 import ipaddress
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from urllib.parse import urlparse
 
 load_dotenv()
@@ -25,22 +22,29 @@ app.config.from_object(Config)
 db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
 engine_options = dict(app.config.get('SQLALCHEMY_ENGINE_OPTIONS') or {})
 engine_options.setdefault('pool_pre_ping', True)
-engine_options.setdefault('pool_size', 5)
-engine_options.setdefault('max_overflow', 5)
+
 if not str(db_uri).startswith('sqlite'):
+    # PostgreSQL/MySQL için pool ayarları
+    engine_options.setdefault('pool_size', 5)
+    engine_options.setdefault('max_overflow', 5)
     engine_options.setdefault('pool_recycle', 1800)
 else:
+    # SQLite için StaticPool (tek connection, lock contention önler)
+    from sqlalchemy.pool import StaticPool
+    engine_options['poolclass'] = StaticPool
     connect_args = dict(engine_options.get('connect_args') or {})
     connect_args.setdefault('check_same_thread', False)
+    connect_args.setdefault('timeout', 30)  # 30 saniye lock timeout
     engine_options['connect_args'] = connect_args
+
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 realtime.socketio = SocketIO(
     app,
     cors_allowed_origins=Config.CORS_ORIGINS,
-    async_mode='eventlet',
-    engineio_logger=True,
-    logger=True,
+    async_mode='threading',
+    engineio_logger=False,
+    logger=False,
     always_connect=True,
 )
 socketio = realtime.socketio
@@ -132,6 +136,7 @@ from routes.scheduled_messages import scheduled_messages_bp
 from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
 from routes.import_wizard import import_bp
+from routes.pipeline_settings import pipeline_settings_bp
 from services import portal_notification_service  # noqa: F401
 from services.security_service import SecurityService
 from utils.exceptions import (
@@ -149,6 +154,7 @@ app.register_blueprint(settings_route.bp)
 app.register_blueprint(templates_route.bp)
 app.register_blueprint(automation_route.bp)
 app.register_blueprint(pipeline_route.bp)
+app.register_blueprint(pipeline_settings_bp)
 app.register_blueprint(portal_route.bp)
 app.register_blueprint(public_api_route.bp)
 app.register_blueprint(api_docs_route.bp)
@@ -301,10 +307,11 @@ def enforce_csrf_origin_check():
 
 @app.before_request
 def enforce_active_session_timeout():
+    # Skip auth check for login/logout pages and static files
     if not session.get('user_id'):
         return None
 
-    if request.endpoint in {'auth.logout'}:
+    if request.endpoint in {'auth.logout', 'auth.login_page', 'auth.login', 'auth.register', 'auth.register_page', 'static', 'landing'}:
         return None
 
     session_token = session.get('session_token')
@@ -314,30 +321,41 @@ def enforce_active_session_timeout():
             return jsonify({'error': 'Session expired'}), 401
         return redirect(url_for('auth.login_page'))
 
-    row = SessionActivity.query.filter_by(session_token=session_token, is_active=True).first()
-    if not row:
+    try:
+        row = SessionActivity.query.filter_by(session_token=session_token, is_active=True).first()
+        if not row:
+            session.clear()
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'Session expired'}), 401
+            return redirect(url_for('auth.login_page'))
+
+        if row.expires_at:
+            # Ensure both datetimes are timezone-aware for comparison
+            expires_at_utc = row.expires_at.replace(tzinfo=UTC) if row.expires_at.tzinfo is None else row.expires_at
+            if expires_at_utc < datetime.now(UTC):
+                row.is_active = False
+                db.session.commit()
+                session.clear()
+                if request.path.startswith('/api/'):
+                    return jsonify({'error': 'Session expired'}), 401
+                return redirect(url_for('auth.login_page'))
+
+        timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
+        SecurityService.record_session_activity(
+            workspace_id=session.get('workspace_id'),
+            user_id=session.get('user_id'),
+            session_token=session_token,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', ''),
+            timeout_minutes=timeout_minutes,
+        )
+    except Exception as e:
+        logger.error(f'Session validation error: {e}')
         session.clear()
         if request.path.startswith('/api/'):
-            return jsonify({'error': 'Session expired'}), 401
+            return jsonify({'error': 'Session error'}), 401
         return redirect(url_for('auth.login_page'))
-
-    if row.expires_at and row.expires_at < datetime.utcnow():
-        row.is_active = False
-        db.session.commit()
-        session.clear()
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Session expired'}), 401
-        return redirect(url_for('auth.login_page'))
-
-    timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
-    SecurityService.record_session_activity(
-        workspace_id=session.get('workspace_id'),
-        user_id=session.get('user_id'),
-        session_token=session_token,
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get('User-Agent', ''),
-        timeout_minutes=timeout_minutes,
-    )
+    
     return None
 
 
@@ -523,10 +541,27 @@ def documents_page():
 @app.route('/analytics-dashboard')
 @login_required
 def analytics_dashboard():
-    return render_template('analytics.html')
+    return render_template('analytics_dashboard.html')
 
 
 with app.app_context():
+    # SQLite için WAL mode ve PRAGMA ayarları (database is locked hatasını önler)
+    from sqlalchemy import event
+    
+    @event.listens_for(db.engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """SQLite bağlantılarında WAL mode ve timeout ayarlarını etkinleştirir"""
+        cursor = dbapi_connection.cursor()
+        try:
+            # Write-Ahead Logging: Eşzamanlı okuma/yazma desteği
+            cursor.execute("PRAGMA journal_mode=WAL")
+            # Synchronous mode: Performans/güvenlik dengesi
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            # Busy timeout: Lock beklemesi (30 saniye)
+            cursor.execute("PRAGMA busy_timeout=30000")
+        finally:
+            cursor.close()
+    
     # Validate configuration
     errors, warnings = Config.validate()
     

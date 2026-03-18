@@ -385,25 +385,88 @@ async function saveTask(event) {
         payload.assignee_id = Number(assigneeId);
     }
 
+    // Prevent double submission
+    if (window.isSavingTask) {
+        return;
+    }
+    window.isSavingTask = true;
+
+    const isUpdate = Boolean(taskId);
+    let previousTaskSnapshot = null;
+
+    // Adım 1: Mevcut Durumu Sakla
+    if (isUpdate) {
+        const existingTask = tasks.find(task => String(task.id) === String(taskId));
+        previousTaskSnapshot = existingTask ? { ...existingTask } : null;
+    }
+
+    // Adım 2: Arayüzü Anında Güncelle
+    if (isUpdate && previousTaskSnapshot) {
+        const optimisticTask = {
+            ...previousTaskSnapshot,
+            ...payload,
+            id: previousTaskSnapshot.id
+        };
+
+        tasks = tasks.map(task => String(task.id) === String(taskId) ? optimisticTask : task);
+        if (selectedTask && String(selectedTask.id) === String(taskId)) {
+            selectedTask = { ...selectedTask, ...optimisticTask };
+        }
+        renderTasks();
+        renderStats();
+    }
+
     try {
-        const response = await fetch(taskId ? `/api/v1/tasks/${taskId}` : '/api/v1/tasks', {
-            method: taskId ? 'PATCH' : 'POST',
+        // Adım 3: Arka Planda API İsteğini At
+        const response = await fetch(isUpdate ? `/api/v1/tasks/${taskId}` : '/api/v1/tasks', {
+            method: isUpdate ? 'PATCH' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
+        const responseData = await safeJson(response);
+
         if (!response.ok) {
-            const errorData = await safeJson(response);
-            showToast(errorData?.error || 'Görev kaydedilemedi', 'error');
+            // Adım 4: Hata Yönetimi ve Geri Alma
+            if (isUpdate && previousTaskSnapshot) {
+                tasks = tasks.map(task => String(task.id) === String(taskId) ? previousTaskSnapshot : task);
+                if (selectedTask && String(selectedTask.id) === String(taskId)) {
+                    selectedTask = { ...selectedTask, ...previousTaskSnapshot };
+                }
+                renderTasks();
+                renderStats();
+            }
+
+            showToast(responseData?.error || 'Görev kaydedilemedi', 'error');
             return;
         }
 
-        showToast(taskId ? 'Görev güncellendi' : 'Görev oluşturuldu', 'success');
+        if (isUpdate && responseData && typeof responseData === 'object') {
+            tasks = tasks.map(task => String(task.id) === String(taskId) ? responseData : task);
+            if (selectedTask && String(selectedTask.id) === String(taskId)) {
+                selectedTask = responseData;
+            }
+        }
+
+        showToast(isUpdate ? 'Görev güncellendi' : 'Görev oluşturuldu', 'success');
         closeTaskModal();
         await Promise.all([loadTasks(), loadMilestones()]);
     } catch (error) {
         console.error('Task save error:', error);
+
+        // Adım 4: Hata Yönetimi ve Geri Alma
+        if (isUpdate && previousTaskSnapshot) {
+            tasks = tasks.map(task => String(task.id) === String(taskId) ? previousTaskSnapshot : task);
+            if (selectedTask && String(selectedTask.id) === String(taskId)) {
+                selectedTask = { ...selectedTask, ...previousTaskSnapshot };
+            }
+            renderTasks();
+            renderStats();
+        }
+
         showToast('Görev kaydı sırasında hata oluştu', 'error');
+    } finally {
+        window.isSavingTask = false;
     }
 }
 

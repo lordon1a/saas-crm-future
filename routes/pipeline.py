@@ -49,7 +49,7 @@ def get_pipelines():
                 'name': stage.name,
                 'order': stage.order,
                 'probability': stage.probability
-            } for stage in pipeline.stages],
+            } for stage in pipeline.stages if stage.is_active],
             'created_at': pipeline.created_at.isoformat()
         })
     
@@ -75,7 +75,7 @@ def get_pipeline(pipeline_id):
             'name': stage.name,
             'order': stage.order,
             'probability': stage.probability
-        } for stage in pipeline.stages],
+        } for stage in pipeline.stages if stage.is_active],
         'created_at': pipeline.created_at.isoformat()
     }), 200
 
@@ -184,7 +184,10 @@ def get_deals():
             'win_loss_reason': deal.win_loss_reason,
             'created_at': deal.created_at.isoformat(),
             'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
-            'closed_at': deal.closed_at.isoformat() if deal.closed_at else None
+            'closed_at': deal.closed_at.isoformat() if deal.closed_at else None,
+            'stage_entered_at': deal.stage_entered_at.isoformat() if deal.stage_entered_at else None,
+            'days_in_stage': deal.days_in_current_stage(),
+            'is_rotting': deal.is_rotting()
         })
     
     return jsonify({
@@ -274,6 +277,7 @@ def create_deal():
     
     except ValueError as e:
         logger.error(f"Error creating deal: {e}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Unexpected error creating deal: {e}")
@@ -298,25 +302,35 @@ def update_deal(deal_id):
             data['expected_close_date'] = datetime.fromisoformat(data['expected_close_date']).date()
         
         deal = PipelineService.update_deal(workspace_id, deal_id, data, user_id)
-
-        CollaborationService.notify_followers_on_entity_change(
-            workspace_id=workspace_id,
-            entity_type='deal',
-            entity_id=deal.id,
-            message=f'Takip ettiginiz deal guncellendi: {deal.name}',
-        )
         
-        return jsonify({
+        # Prepare response data before async operations
+        response_data = {
             'id': deal.id,
             'name': deal.name,
             'value': float(deal.value),
             'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
             'owner_id': deal.owner_id,
             'updated_at': deal.updated_at.isoformat()
-        }), 200
+        }
+
+        # Notify followers AFTER commit (asenkron spawn - response'u bloklamaz)
+        try:
+            import eventlet
+            eventlet.spawn_n(
+                CollaborationService.notify_followers_on_entity_change,
+                workspace_id=workspace_id,
+                entity_type='deal',
+                entity_id=deal.id,
+                message=f'Takip ettiginiz deal guncellendi: {deal.name}',
+            )
+        except Exception as notify_error:
+            logger.warning(f"Failed to spawn follower notification: {notify_error}")
+        
+        return jsonify(response_data), 200
     
     except ValueError as e:
         logger.error(f"Error updating deal: {e}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Unexpected error updating deal: {e}")
@@ -345,27 +359,33 @@ def move_deal_stage(deal_id):
             data['stage_id'], 
             user_id
         )
+        
+        # Prepare response data before async operations
+        response_data = {
+            'id': deal.id,
+            'stage_id': deal.stage_id,
+            'stage_name': deal.stage.name,
+            'updated_at': deal.updated_at.isoformat()
+        }
 
-        # Notify followers asynchronously (don't block response)
+        # Notify followers AFTER commit (asenkron spawn - response'u bloklamaz)
         try:
-            CollaborationService.notify_followers_on_entity_change(
+            import eventlet
+            eventlet.spawn_n(
+                CollaborationService.notify_followers_on_entity_change,
                 workspace_id=workspace_id,
                 entity_type='deal',
                 entity_id=deal.id,
                 message=f'Deal asamasi degisti: {deal.name} -> {deal.stage.name}',
             )
         except Exception as notify_error:
-            logger.warning(f"Failed to notify followers: {notify_error}")
+            logger.warning(f"Failed to spawn follower notification: {notify_error}")
         
-        return jsonify({
-            'id': deal.id,
-            'stage_id': deal.stage_id,
-            'stage_name': deal.stage.name,
-            'updated_at': deal.updated_at.isoformat()
-        }), 200
+        return jsonify(response_data), 200
     
     except ValueError as e:
         logger.error(f"Error moving deal stage: {e}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Unexpected error moving deal stage: {e}")
@@ -397,30 +417,47 @@ def close_deal(deal_id):
             data['win_loss_reason'],
             user_id
         )
-
-        if deal.status == 'won':
-            try:
-                QuickBooksService.create_invoice_for_deal(workspace_id, user_id, deal.id)
-            except Exception as exc:
-                logger.warning('QuickBooks invoice create failed for deal %s: %s', deal.id, exc)
-
-        CollaborationService.notify_followers_on_entity_change(
-            workspace_id=workspace_id,
-            entity_type='deal',
-            entity_id=deal.id,
-            message=f'Deal kapatildi: {deal.name} ({deal.status})',
-        )
         
-        return jsonify({
+        # Prepare response data before async operations
+        response_data = {
             'id': deal.id,
             'status': deal.status,
             'win_loss_reason': deal.win_loss_reason,
             'closed_at': deal.closed_at.isoformat(),
             'updated_at': deal.updated_at.isoformat()
-        }), 200
+        }
+
+        # QuickBooks invoice creation AFTER commit (asenkron spawn - response'u bloklamaz)
+        if deal.status == 'won':
+            try:
+                import eventlet
+                eventlet.spawn_n(
+                    QuickBooksService.create_invoice_for_deal,
+                    workspace_id,
+                    user_id,
+                    deal.id
+                )
+            except Exception as exc:
+                logger.warning('QuickBooks invoice spawn failed for deal %s: %s', deal.id, exc)
+
+        # Notify followers AFTER commit (asenkron spawn - response'u bloklamaz)
+        try:
+            import eventlet
+            eventlet.spawn_n(
+                CollaborationService.notify_followers_on_entity_change,
+                workspace_id=workspace_id,
+                entity_type='deal',
+                entity_id=deal.id,
+                message=f'Deal kapatildi: {deal.name} ({deal.status})',
+            )
+        except Exception as notify_error:
+            logger.warning(f"Failed to spawn follower notification: {notify_error}")
+        
+        return jsonify(response_data), 200
     
     except ValueError as e:
         logger.error(f"Error closing deal: {e}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Unexpected error closing deal: {e}")
@@ -534,3 +571,49 @@ def get_forecast():
     except Exception as e:
         logger.error(f"Error calculating forecast: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/rotting', methods=['GET'])
+@login_required_api
+def get_rotting_deals():
+    """
+    Get deals that have been in their stage too long.
+    Query params: pipeline_id (optional)
+    """
+    workspace_id = session.get('workspace_id')
+    if not workspace_id or not isinstance(workspace_id, int):
+        return jsonify({'error': 'Invalid workspace'}), 400
+    
+    pipeline_id = request.args.get('pipeline_id', type=int)
+    if pipeline_id is not None and pipeline_id < 1:
+        return jsonify({'error': 'Invalid pipeline_id'}), 400
+    
+    try:
+        rotting_deals = PipelineService.get_rotting_deals(workspace_id, pipeline_id)
+        return jsonify({'rotting_deals': rotting_deals}), 200
+    except Exception as e:
+        logger.error(f"Error getting rotting deals: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/auto-tasks', methods=['POST'])
+@login_required_api
+def create_auto_tasks():
+    """
+    Manually trigger auto-task creation for rotting deals.
+    """
+    workspace_id = session.get('workspace_id')
+    if not workspace_id or not isinstance(workspace_id, int):
+        return jsonify({'error': 'Invalid workspace'}), 400
+    
+    try:
+        tasks_created = PipelineService.create_auto_tasks_for_rotting_deals(workspace_id)
+        return jsonify({
+            'message': f'Created {tasks_created} reminder tasks',
+            'tasks_created': tasks_created
+        }), 200
+    except Exception as e:
+        logger.error(f"Error creating auto-tasks: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+

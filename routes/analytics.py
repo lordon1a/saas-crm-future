@@ -1,389 +1,305 @@
 """
-Analytics Routes
-API endpoints for advanced reporting and analytics
+Sales Analytics API Routes
+Provides comprehensive analytics endpoints for pipeline, deals, and performance metrics
 """
-import io
-import time
-
-from flask import Blueprint, request, jsonify, session, send_file
-from services.analytics_service import AnalyticsService
-from services.report_service import ReportService
-from functools import wraps
+from flask import Blueprint, request, jsonify, session
+from models import db
+from models_crm import Deal, DealStage, Pipeline
+from datetime import datetime, timedelta, UTC
+from sqlalchemy import func
 import logging
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
-_DASHBOARD_CACHE = {}
-_DASHBOARD_CACHE_TTL_SECONDS = 30
+bp = Blueprint('analytics', __name__, url_prefix='/api/v1/analytics')
 
 
-def login_required(f):
-    """Decorator to require login for API endpoints"""
+def login_required_api(f):
+    """API authentication decorator with workspace validation"""
+    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get('user_id'):
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id:
             return jsonify({'error': 'Unauthorized'}), 401
-        if not session.get('workspace_id'):
-            return jsonify({'error': 'Workspace context missing'}), 401
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+            
         return f(*args, **kwargs)
     return decorated
 
 
-@bp.route('/kpis', methods=['GET'])
-@login_required
-def get_kpis():
+@bp.route('/overview', methods=['GET'])
+@login_required_api
+def get_analytics_overview():
     """
-    Get critical KPI metrics
-    
-    Returns:
-        JSON: {
-            'total_revenue': float,
-            'open_opportunities': int,
-            'total_contacts': int,
-            'total_companies': int,
-            'active_tasks': int,
-            'completed_tasks_this_month': int
-        }
+    Comprehensive analytics overview endpoint
+    Returns: Funnel data, conversion rate, monthly performance, win/loss ratio
     """
     try:
         workspace_id = session.get('workspace_id')
-        kpis = AnalyticsService.get_kpi_metrics(workspace_id)
-        return jsonify(kpis), 200
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        # Get funnel data (active deals by stage)
+        funnel_data = _get_funnel_data(workspace_id)
+        
+        # Get conversion rate
+        conversion_rate = _get_conversion_rate(workspace_id)
+        
+        # Get monthly performance (last 6 months)
+        monthly_performance = _get_monthly_performance(workspace_id, months=6)
+        
+        # Get win/loss ratio
+        win_loss_ratio = _get_win_loss_ratio(workspace_id)
+        
+        # Get average sales cycle
+        avg_sales_cycle = _get_average_sales_cycle(workspace_id)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'funnel': funnel_data,
+                'conversion_rate': conversion_rate,
+                'monthly_performance': monthly_performance,
+                'win_loss_ratio': win_loss_ratio,
+                'avg_sales_cycle_days': avg_sales_cycle
+            }
+        }), 200
         
     except Exception as e:
-        logger.error(f'Failed to get KPIs: {e}')
-        return jsonify({'error': 'Failed to fetch KPI metrics'}), 500
+        logger.error(f'Analytics overview error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to fetch analytics data'}), 500
 
 
-@bp.route('/pipeline-distribution', methods=['GET'])
-@login_required
-def get_pipeline_distribution():
+def _get_funnel_data(workspace_id):
     """
-    Get deal distribution across pipeline stages
-    
-    Returns:
-        JSON: {
-            'stages': [
-                {
-                    'stage_name': str,
-                    'deal_count': int,
-                    'total_value': float,
-                    'probability': float,
-                    'weighted_value': float
-                }
-            ]
-        }
+    Get sales funnel data: active deals count and total value per stage
     """
     try:
-        workspace_id = session.get('workspace_id')
-        distribution = AnalyticsService.get_pipeline_distribution(workspace_id)
-        return jsonify(distribution), 200
+        results = db.session.query(
+            DealStage.name,
+            DealStage.order,
+            func.count(Deal.id).label('deal_count'),
+            func.coalesce(func.sum(Deal.value), 0).label('total_value')
+        ).join(
+            Deal, Deal.stage_id == DealStage.id
+        ).filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status == 'open'
+        ).group_by(
+            DealStage.id,
+            DealStage.name,
+            DealStage.order
+        ).order_by(
+            DealStage.order
+        ).all()
+        
+        stages = []
+        for stage_name, order, deal_count, total_value in results:
+            stages.append({
+                'stage_name': stage_name,
+                'order': order,
+                'deal_count': deal_count,
+                'total_value': float(total_value)
+            })
+        
+        return {'stages': stages}
         
     except Exception as e:
-        logger.error(f'Failed to get pipeline distribution: {e}')
-        return jsonify({'error': 'Failed to fetch pipeline distribution'}), 500
+        logger.error(f'Funnel data error: {e}')
+        return {'stages': []}
 
 
-@bp.route('/win-loss-ratio', methods=['GET'])
-@login_required
-def get_win_loss_ratio():
+def _get_conversion_rate(workspace_id):
+    """
+    Calculate conversion rate: (Won Deals / Total Closed Deals) * 100
+    """
+    try:
+        won_count = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status == 'won'
+        ).count()
+        
+        total_closed = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status.in_(['won', 'lost'])
+        ).count()
+        
+        if total_closed == 0:
+            return {
+                'won_count': 0,
+                'total_closed': 0,
+                'rate': 0.0
+            }
+        
+        rate = (won_count / total_closed) * 100
+        
+        return {
+            'won_count': won_count,
+            'total_closed': total_closed,
+            'rate': round(rate, 2)
+        }
+        
+    except Exception as e:
+        logger.error(f'Conversion rate error: {e}')
+        return {'won_count': 0, 'total_closed': 0, 'rate': 0.0}
+
+
+def _get_monthly_performance(workspace_id, months=6):
+    """
+    Get monthly won deal totals for the last N months
+    """
+    try:
+        now = datetime.now(UTC)
+        start_date = now - timedelta(days=months * 30)
+        
+        # Get all won deals in the period
+        deals = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status == 'won',
+            Deal.closed_at >= start_date
+        ).all()
+        
+        # Group by month
+        monthly_data = {}
+        for deal in deals:
+            if deal.closed_at:
+                month_key = deal.closed_at.strftime('%Y-%m')
+                if month_key not in monthly_data:
+                    monthly_data[month_key] = 0.0
+                monthly_data[month_key] += float(deal.value)
+        
+        # Fill in missing months with 0
+        result = []
+        current = start_date
+        while current <= now:
+            month_key = current.strftime('%Y-%m')
+            result.append({
+                'month': month_key,
+                'revenue': monthly_data.get(month_key, 0.0)
+            })
+            # Move to next month
+            if current.month == 12:
+                current = current.replace(year=current.year + 1, month=1)
+            else:
+                current = current.replace(month=current.month + 1)
+        
+        return {'months': result}
+        
+    except Exception as e:
+        logger.error(f'Monthly performance error: {e}')
+        return {'months': []}
+
+
+def _get_win_loss_ratio(workspace_id):
     """
     Get win/loss ratio for closed deals
-    
-    Returns:
-        JSON: {
-            'won_count': int,
-            'lost_count': int,
-            'won_value': float,
-            'lost_value': float,
-            'win_rate': float,
-            'total_closed': int
-        }
     """
     try:
-        workspace_id = session.get('workspace_id')
-        ratio = AnalyticsService.get_win_loss_ratio(workspace_id)
-        return jsonify(ratio), 200
+        won_count = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status == 'won'
+        ).count()
+        
+        lost_count = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status == 'lost'
+        ).count()
+        
+        return {
+            'won': won_count,
+            'lost': lost_count
+        }
         
     except Exception as e:
-        logger.error(f'Failed to get win/loss ratio: {e}')
-        return jsonify({'error': 'Failed to fetch win/loss ratio'}), 500
+        logger.error(f'Win/loss ratio error: {e}')
+        return {'won': 0, 'lost': 0}
 
 
-@bp.route('/revenue-trend', methods=['GET'])
-@login_required
-def get_revenue_trend():
+def _get_average_sales_cycle(workspace_id):
     """
-    Get revenue trend over time
-    
-    Query params:
-        days: Number of days to look back (default: 30)
-    
-    Returns:
-        JSON: {
-            'dates': [str],
-            'revenue': [float]
-        }
+    Calculate average sales cycle duration in days for won deals
     """
     try:
-        workspace_id = session.get('workspace_id')
-        days = int(request.args.get('days', 30))
+        # Get won deals from last 90 days
+        ninety_days_ago = datetime.now(UTC) - timedelta(days=90)
         
-        if days < 1 or days > 365:
-            return jsonify({'error': 'Days must be between 1 and 365'}), 400
+        deals = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.status == 'won',
+            Deal.closed_at.isnot(None),
+            Deal.closed_at >= ninety_days_ago
+        ).all()
         
-        trend = AnalyticsService.get_revenue_trend(workspace_id, days)
-        return jsonify(trend), 200
+        if not deals:
+            return 0
         
-    except ValueError:
-        return jsonify({'error': 'Invalid days parameter'}), 400
-    except Exception as e:
-        logger.error(f'Failed to get revenue trend: {e}')
-        return jsonify({'error': 'Failed to fetch revenue trend'}), 500
-
-
-@bp.route('/top-performers', methods=['GET'])
-@login_required
-def get_top_performers():
-    """
-    Get top performing users by deal value
-    
-    Query params:
-        limit: Number of top performers to return (default: 5)
-    
-    Returns:
-        JSON: {
-            'performers': [
-                {
-                    'user_name': str,
-                    'deals_won': int,
-                    'total_value': float
-                }
-            ]
-        }
-    """
-    try:
-        workspace_id = session.get('workspace_id')
-        limit = int(request.args.get('limit', 5))
+        total_days = 0
+        count = 0
         
-        if limit < 1 or limit > 20:
-            return jsonify({'error': 'Limit must be between 1 and 20'}), 400
+        for deal in deals:
+            if deal.closed_at and deal.created_at:
+                duration = (deal.closed_at - deal.created_at).days
+                if duration >= 0:
+                    total_days += duration
+                    count += 1
         
-        performers = AnalyticsService.get_top_performers(workspace_id, limit)
-        return jsonify(performers), 200
+        if count == 0:
+            return 0
         
-    except ValueError:
-        return jsonify({'error': 'Invalid limit parameter'}), 400
-    except Exception as e:
-        logger.error(f'Failed to get top performers: {e}')
-        return jsonify({'error': 'Failed to fetch top performers'}), 500
-
-
-@bp.route('/task-completion', methods=['GET'])
-@login_required
-def get_task_completion():
-    """
-    Get task completion statistics
-    
-    Returns:
-        JSON: {
-            'total_tasks': int,
-            'completed_tasks': int,
-            'completion_rate': float,
-            'overdue_tasks': int
-        }
-    """
-    try:
-        workspace_id = session.get('workspace_id')
-        stats = AnalyticsService.get_task_completion_rate(workspace_id)
-        return jsonify(stats), 200
+        return round(total_days / count, 1)
         
     except Exception as e:
-        logger.error(f'Failed to get task completion stats: {e}')
-        return jsonify({'error': 'Failed to fetch task completion stats'}), 500
+        logger.error(f'Average sales cycle error: {e}')
+        return 0
 
 
 @bp.route('/dashboard', methods=['GET'])
-@login_required
+@login_required_api
 def get_dashboard_data():
     """
-    Get all dashboard data in one request (optimized)
-    
-    Returns:
-        JSON: {
-            'kpis': {...},
-            'pipeline_distribution': {...},
-            'win_loss_ratio': {...},
-            'task_completion': {...}
-        }
+    Dashboard endpoint combining all analytics data
+    Used by analytics_dashboard.html
     """
     try:
+        from services.analytics_service import AnalyticsService
+        
         workspace_id = session.get('workspace_id')
-
-        cache_key = f'dashboard:{workspace_id}'
-        now = time.time()
-        cached = _DASHBOARD_CACHE.get(cache_key)
-        if cached and (now - cached['ts']) <= _DASHBOARD_CACHE_TTL_SECONDS:
-            return jsonify(cached['payload']), 200
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
         
-        # Fetch all data
-        dashboard_data = {
-            'kpis': AnalyticsService.get_kpi_metrics(workspace_id),
-            'pipeline_distribution': AnalyticsService.get_pipeline_distribution(workspace_id),
-            'win_loss_ratio': AnalyticsService.get_win_loss_ratio(workspace_id),
-            'task_completion': AnalyticsService.get_task_completion_rate(workspace_id)
-        }
-
-        _DASHBOARD_CACHE[cache_key] = {
-            'ts': now,
-            'payload': dashboard_data,
-        }
+        # Get KPIs
+        kpis = AnalyticsService.get_kpi_metrics(workspace_id)
         
-        return jsonify(dashboard_data), 200
+        # Get pipeline distribution
+        pipeline_distribution = AnalyticsService.get_pipeline_distribution(workspace_id)
+        
+        # Get win/loss ratio
+        win_loss_ratio = AnalyticsService.get_win_loss_ratio(workspace_id)
+        
+        # Get task completion
+        task_completion = AnalyticsService.get_task_completion_rate(workspace_id)
+        
+        return jsonify({
+            'success': True,
+            'kpis': kpis,
+            'pipeline_distribution': pipeline_distribution,
+            'win_loss_ratio': win_loss_ratio,
+            'task_completion': task_completion
+        }), 200
         
     except Exception as e:
-        logger.error(f'Failed to get dashboard data: {e}')
+        logger.error(f'Dashboard data error: {e}', exc_info=True)
         return jsonify({'error': 'Failed to fetch dashboard data'}), 500
 
-
-@bp.route('/reports', methods=['GET'])
-@login_required
-def list_reports():
-    """List saved reports and report schedules."""
-    try:
-        workspace_id = session.get('workspace_id')
-        return jsonify({
-            'reports': ReportService.list_reports(workspace_id),
-            'schedules': ReportService.list_schedules(workspace_id),
-        }), 200
-    except Exception as e:
-        logger.error(f'Failed to list reports: {e}')
-        return jsonify({'error': 'Failed to list reports'}), 500
-
-
-@bp.route('/reports', methods=['POST'])
-@login_required
-def create_report():
-    """Create a saved report definition."""
-    try:
-        data = request.get_json() or {}
-        workspace_id = session.get('workspace_id')
-        user_id = session.get('user_id')
-
-        report = ReportService.create_report(
-            workspace_id=workspace_id,
-            created_by=user_id,
-            name=data.get('name'),
-            report_type=data.get('report_type'),
-            config=data.get('config') or {},
-        )
-        return jsonify({'report': ReportService.serialize_report(report)}), 201
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f'Failed to create report: {e}')
-        return jsonify({'error': 'Failed to create report'}), 500
-
-
-@bp.route('/reports/custom-query', methods=['POST'])
-@login_required
-def run_custom_query():
-    """Run custom report builder query preview."""
-    try:
-        workspace_id = session.get('workspace_id')
-        data = request.get_json() or {}
-        result = ReportService.run_custom_report(workspace_id, data)
-        return jsonify(result), 200
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f'Failed to run custom report: {e}')
-        return jsonify({'error': 'Failed to run custom report'}), 500
-
-
-@bp.route('/reports/<int:report_id>/run', methods=['GET'])
-@login_required
-def run_saved_report(report_id):
-    """Run a saved report and return output."""
-    try:
-        workspace_id = session.get('workspace_id')
-        report = ReportService.get_report(report_id, workspace_id)
-        if not report:
-            return jsonify({'error': 'Report not found'}), 404
-
-        output = ReportService.run_report(report, workspace_id)
-        return jsonify(output), 200
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f'Failed to run report {report_id}: {e}')
-        return jsonify({'error': 'Failed to run report'}), 500
-
-
-@bp.route('/reports/<int:report_id>/export', methods=['GET'])
-@login_required
-def export_report(report_id):
-    """Export a saved report as Excel or PDF."""
-    try:
-        workspace_id = session.get('workspace_id')
-        export_format = (request.args.get('format', 'excel') or 'excel').lower()
-
-        report = ReportService.get_report(report_id, workspace_id)
-        if not report:
-            return jsonify({'error': 'Report not found'}), 404
-
-        output = ReportService.run_report(report, workspace_id)
-
-        if export_format == 'pdf':
-            payload = ReportService.export_pdf(report.name, output)
-            return send_file(
-                io.BytesIO(payload),
-                as_attachment=True,
-                download_name=f'report_{report.id}.pdf',
-                mimetype='application/pdf',
-            )
-
-        payload = ReportService.export_excel(report.name, output)
-        return send_file(
-            io.BytesIO(payload),
-            as_attachment=True,
-            download_name=f'report_{report.id}.xlsx',
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
-
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f'Failed to export report {report_id}: {e}')
-        return jsonify({'error': 'Failed to export report'}), 500
-
-
-@bp.route('/report-schedules', methods=['POST'])
-@login_required
-def create_report_schedule():
-    """Create report schedule metadata."""
-    try:
-        workspace_id = session.get('workspace_id')
-        data = request.get_json() or {}
-
-        schedule = ReportService.create_schedule(
-            workspace_id=workspace_id,
-            report_id=data.get('report_id'),
-            frequency=data.get('frequency'),
-            delivery_channel=data.get('delivery_channel', 'email'),
-            delivery_target=data.get('delivery_target'),
-        )
-        return jsonify({'schedule': {
-            'id': schedule.id,
-            'report_id': schedule.report_id,
-            'frequency': schedule.frequency,
-            'delivery_channel': schedule.delivery_channel,
-            'delivery_target': schedule.delivery_target,
-            'is_active': schedule.is_active,
-        }}), 201
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f'Failed to create report schedule: {e}')
-        return jsonify({'error': 'Failed to create report schedule'}), 500

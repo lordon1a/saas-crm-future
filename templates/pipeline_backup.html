@@ -42,65 +42,6 @@
             background-color: rgba(124, 58, 237, 0.05);
             border: 2px dashed #7c3aed;
         }
-        
-        /* Rotting Deal Styles - Red Alert */
-        .deal-card-rotting {
-            border-color: #ef4444 !important;
-            border-width: 2px !important;
-            background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%) !important;
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
-        }
-        
-        .deal-card-rotting .deal-rotting-badge {
-            display: flex !important;
-        }
-        
-        @keyframes pulse-red {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        
-        .deal-rotting-badge {
-            animation: pulse-red 2s ease-in-out infinite;
-        }
-        
-        /* Edit Mode Styles */
-        .is-editing .deal-card {
-            display: none !important;
-        }
-        
-        .is-editing .stage-edit-form {
-            display: block !important;
-        }
-        
-        .is-editing .stage-header-view {
-            display: none !important;
-        }
-        
-        .is-editing .stage-header-edit {
-            display: flex !important;
-        }
-        
-        .is-editing .stage-delete-btn {
-            display: flex !important;
-        }
-        
-        .stage-edit-form {
-            display: none;
-            transition: all 0.3s ease;
-        }
-        
-        .stage-header-edit {
-            display: none;
-        }
-        
-        .stage-delete-btn {
-            display: none;
-        }
-        
-        .stage-column.dragging-stage {
-            opacity: 0.5;
-        }
     </style>
 </head>
 
@@ -156,119 +97,40 @@
             </div>
         </header>
         <!-- Header -->
-        <header class="h-14 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
+        <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
             <div class="flex items-center gap-3">
-                <h1 class="text-lg font-semibold text-slate-800">Sales Pipeline</h1>
+                <h1 class="text-xl font-semibold text-slate-800">Sales Pipeline</h1>
                 <div class="flex items-center gap-2 ml-4">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span class="text-xs font-semibold text-slate-500" id="dealCount">0 Deals</span>
                 </div>
             </div>
-            <div class="flex items-center gap-3" id="headerActions">
-                <button id="autoTaskBtn" onclick="createAutoTasksForRottingDeals()" class="relative px-3.5 py-2 text-amber-600 hover:bg-amber-50 rounded-xl text-xs font-semibold transition-all flex items-center gap-2" title="Create reminder tasks for stale deals">
-                    <i class="fas fa-bell"></i> Auto-Tasks
-                    <span id="rottingDealsBadge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">0</span>
-                </button>
-                <button id="editModeBtn" onclick="toggleEditMode()" class="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
-                    <i class="fas fa-cog"></i> Düzenle
-                </button>
-                <button id="cancelEditBtn" onclick="cancelEditMode()" class="hidden px-3.5 py-2 text-red-600 hover:bg-red-50 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
-                    <i class="fas fa-times"></i> İptal
-                </button>
-                <button id="saveEditBtn" onclick="saveStageSettings()" class="hidden px-3.5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
-                    <i class="fas fa-check"></i> Değişiklikleri Kaydet
-                </button>
-                <button id="refreshBtn" onclick="loadPipeline()" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+            <div class="flex items-center gap-3">
+                <button onclick="loadPipeline()" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
                     <i class="fas fa-sync-alt text-sm"></i>
                 </button>
-                <button id="addDealBtn" onclick="openAddDealModal()" class="px-3.5 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
+                <button onclick="openAddDealModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
                     <i class="fas fa-plus"></i> New Deal
                 </button>
             </div>
         </header>
 
         <!-- Forecast Panel -->
-        <div class="bg-white border-b border-slate-200/80 px-8 py-3.5 flex-shrink-0">
-            <div class="flex items-center gap-6">
+        <div class="bg-white border-b border-slate-200/80 px-8 py-5 flex-shrink-0">
+            <div class="flex items-center gap-8">
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Weighted Forecast</p>
-                    <p class="text-2xl font-bold text-emerald-600" id="forecastValue">$0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Weighted Forecast</p>
+                    <p class="text-3xl font-bold text-emerald-600" id="forecastValue">$0</p>
                 </div>
-                <div class="h-10 w-px bg-slate-200"></div>
+                <div class="h-12 w-px bg-slate-200"></div>
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Open Deals</p>
-                    <p class="text-2xl font-bold text-slate-800" id="openDealsCount">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Open Deals</p>
+                    <p class="text-3xl font-bold text-slate-800" id="openDealsCount">0</p>
                 </div>
-                <div class="h-10 w-px bg-slate-200"></div>
+                <div class="h-12 w-px bg-slate-200"></div>
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Value</p>
-                    <p class="text-2xl font-bold text-slate-800" id="totalValue">$0</p>
-                </div>
-                <div class="ml-auto">
-                    <button onclick="toggleAnalytics()" class="px-3 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 rounded-lg transition-all flex items-center gap-2">
-                        <i class="fas fa-chart-bar"></i>
-                        <span id="analyticsToggleText">Show Analytics</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics Section (Collapsible) -->
-        <div id="analyticsSection" class="hidden bg-slate-50 border-b border-slate-200/80 px-8 py-6 flex-shrink-0">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <!-- Win Rate Card -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-percentage text-green-600"></i>
-                        </div>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Win Rate</span>
-                    </div>
-                    <h3 class="text-2xl font-bold text-slate-900 mb-1" id="analyticsWinRate">0%</h3>
-                    <p class="text-xs text-slate-500"><span id="analyticsWonCount">0</span> won / <span id="analyticsTotalClosed">0</span> closed</p>
-                </div>
-
-                <!-- Avg Sales Cycle Card -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-clock text-blue-600"></i>
-                        </div>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sales Cycle</span>
-                    </div>
-                    <h3 class="text-2xl font-bold text-slate-900 mb-1" id="analyticsAvgCycle">0</h3>
-                    <p class="text-xs text-slate-500">Average days to close</p>
-                </div>
-
-                <!-- Total Contacts Card -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-users text-purple-600"></i>
-                        </div>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Contacts</span>
-                    </div>
-                    <h3 class="text-2xl font-bold text-slate-900 mb-1" id="analyticsTotalContacts">0</h3>
-                    <p class="text-xs text-slate-500">Total contacts</p>
-                </div>
-            </div>
-
-            <!-- Charts Row -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <!-- Win/Loss Chart -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <h3 class="text-sm font-bold text-slate-900 mb-4">Win/Loss Ratio</h3>
-                    <div class="h-48 flex items-center justify-center">
-                        <canvas id="pipelineWinLossChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Stage Distribution Chart -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <h3 class="text-sm font-bold text-slate-900 mb-4">Stage Distribution</h3>
-                    <div class="h-48">
-                        <canvas id="pipelineStageChart"></canvas>
-                    </div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Total Value</p>
+                    <p class="text-3xl font-bold text-slate-800" id="totalValue">$0</p>
                 </div>
             </div>
         </div>
@@ -297,17 +159,9 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 ml-4">
-                    <button onclick="openEditDealModal()" class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 hover:text-brand-700 hover:bg-brand-100 transition-all flex items-center justify-center" title="Düzenle">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="confirmDeleteDeal()" class="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:text-red-600 hover:bg-red-100 transition-all flex items-center justify-center" title="Sil">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <button onclick="closeDealModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+                <button onclick="closeDealModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center ml-4">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
             <!-- Tabs -->
@@ -424,227 +278,53 @@
             </div>
 
             <!-- Form Content -->
-            <div class="flex-1 overflow-y-auto">
-                <div class="grid grid-cols-2 gap-0">
-                    <!-- Left Column - Contact Info -->
-                    <div class="p-6 border-r border-slate-200 space-y-4">
-                        <form id="addDealForm">
-                            <!-- İrtibat Kişisi -->
-                            <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-2">
-                                    İrtibat kişisi <i class="fas fa-info-circle text-slate-400 text-[10px]"></i>
-                                </label>
-                                <div class="relative">
-                                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                                    <input type="text" id="dealContactSearch" placeholder="Kişi seçin" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500 transition-all" autocomplete="off">
-                                    <input type="hidden" id="dealContactId" required>
-                                    <div id="dealContactResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-10"></div>
-                                </div>
-                            </div>
-
-                            <!-- Kuruluş -->
-                            <div class="mt-4">
-                                <label class="block text-xs font-medium text-slate-600 mb-2">
-                                    Kuruluş <i class="fas fa-info-circle text-slate-400 text-[10px]"></i>
-                                </label>
-                                <div class="relative">
-                                    <i class="fas fa-building absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                                    <input type="text" id="dealCompanySearch" placeholder="Şirket seçin" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500 transition-all" autocomplete="off">
-                                    <input type="hidden" id="dealCompanyId" required>
-                                    <div id="dealCompanyResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-10"></div>
-                                </div>
-                            </div>
-
-                            <!-- Contact Details (Right Side) -->
-                            <div class="mt-6 pt-6 border-t border-slate-200">
-                                <h4 class="text-sm font-semibold text-slate-700 mb-3">kişi</h4>
-                                
-                                <!-- Telefon -->
-                                <div class="mb-3">
-                                    <label class="block text-xs text-slate-500 mb-1.5">Telefon</label>
-                                    <div class="flex gap-2">
-                                        <input type="tel" id="dealContactPhone" placeholder="" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-brand-500">
-                                        <select id="dealContactPhoneType" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">
-                                            <option>İş</option>
-                                            <option>Cep</option>
-                                            <option>Ev</option>
-                                        </select>
-                                    </div>
-                                    <button type="button" class="text-xs text-brand-600 mt-1.5 hover:text-brand-700">+ Telefon ekle</button>
-                                </div>
-
-                                <!-- E-posta -->
-                                <div>
-                                    <label class="block text-xs text-slate-500 mb-1.5">E-posta</label>
-                                    <div class="flex gap-2">
-                                        <input type="email" id="dealContactEmail" placeholder="" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-brand-500">
-                                        <select id="dealContactEmailType" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">
-                                            <option>İş</option>
-                                            <option>Kişisel</option>
-                                        </select>
-                                    </div>
-                                    <button type="button" class="text-xs text-brand-600 mt-1.5 hover:text-brand-700">+ E-posta ekle</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Right Column - Deal Info -->
-                    <div class="p-6 space-y-4">
-                        <!-- Başlık -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Başlık</label>
-                            <input type="text" id="dealTitle" placeholder="Anlaşma başlığı" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" required>
-                        </div>
-
-                        <!-- Değer & Para Birimi -->
-                        <div class="grid grid-cols-[1fr_140px] gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-2">
-                                    Değer <i class="fas fa-info-circle text-slate-400 text-[10px]"></i>
-                                </label>
-                                <input type="number" id="dealValue" placeholder="0" min="0" step="0.01" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" required>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-2">&nbsp;</label>
-                                <select id="dealCurrency" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                                    <option value="TRY">Turkish Lira (TRY)</option>
-                                    <option value="USD">US Dollar (USD)</option>
-                                    <option value="EUR">Euro (EUR)</option>
-                                    <option value="GBP">British Pound (GBP)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Ürün ekle -->
-                        <div>
-                            <button type="button" class="text-sm text-brand-600 hover:text-brand-700 font-medium">
-                                Ürün ekle
-                            </button>
-                        </div>
-
-                        <!-- Satış Süreci Aşaması -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-3">Satış Süreci Aşaması</label>
-                            <div id="dealStageSelector" class="space-y-2">
-                                <!-- Stages will be loaded dynamically -->
-                            </div>
-                            <input type="hidden" id="dealStageId" required>
-                        </div>
-
-                        <!-- Etiket -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">
-                                Etiket <i class="fas fa-info-circle text-slate-400 text-[10px]"></i>
-                            </label>
-                            <select id="dealTags" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                                <option value="">Etiket ekle</option>
-                                <option value="hot">🔥 Hot Lead</option>
-                                <option value="new">🆕 Yeni Müşteri</option>
-                                <option value="priority">⭐ Öncelikli</option>
-                            </select>
-                        </div>
-
-                        <!-- Beklenen kapanış tarihi -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">
-                                Beklenen kapanış tarihi <i class="fas fa-info-circle text-slate-400 text-[10px]"></i>
-                            </label>
-                            <input type="date" id="dealCloseDate" placeholder="DD.MM.YYYY" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                        </div>
-
-                        <!-- Sorumlu kişi -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Sorumlu kişi</label>
-                            <select id="dealOwner" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                                <option value="">Yiğit Güldal (Siz)</option>
-                            </select>
-                        </div>
-
-                        <!-- Kaynak kanalı -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Kaynak kanalı</label>
-                            <select id="dealSourceChannel" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                                <option value="">Seçiniz</option>
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="telegram">Telegram</option>
-                                <option value="email">E-posta</option>
-                                <option value="phone">Telefon</option>
-                                <option value="website">Web Sitesi</option>
-                            </select>
-                        </div>
-
-                        <!-- Kaynak kanal kimliği -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Kaynak kanal kimliği</label>
-                            <input type="text" id="dealSourceId" placeholder="" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                        </div>
-
-                        <!-- Görünürlük -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Görünürlük</label>
-                            <select id="dealVisibility" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                                <option value="owner">👤 Öğe sorumlu kişisinin görünürlü...</option>
-                                <option value="team">👥 Takım</option>
-                                <option value="everyone">🌐 Herkes</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0 bg-slate-50">
-                <div class="flex items-center gap-2 text-xs text-slate-500">
-                    <i class="fas fa-download"></i>
-                    <span>İçe aktarma</span>
-                    <span class="font-semibold">7/15.000</span>
-                    <i class="fas fa-info-circle text-slate-400"></i>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="closeAddDealModal()" class="px-5 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all">
-                        İptal
-                    </button>
-                    <button onclick="submitAddDeal()" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all">
-                        Kaydet
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Deal Modal -->
-    <div id="editDealModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <!-- Modal Header -->
-            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-                <div>
-                    <h3 class="font-bold text-slate-800 text-xl">Anlaşmayı Düzenle</h3>
-                    <p class="text-xs text-slate-400 mt-1">Anlaşma bilgilerini güncelleyin</p>
-                </div>
-                <button onclick="closeEditDealModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <!-- Form Content -->
             <div class="flex-1 overflow-y-auto p-8">
-                <form id="editDealForm" class="space-y-5">
+                <form id="addDealForm" class="space-y-6">
+                    <!-- Contact & Company Row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                İrtibat Kişisi <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="dealContactSearch" placeholder="Kişi ara..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" autocomplete="off">
+                                <input type="hidden" id="dealContactId" required>
+                                <div id="dealContactResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-10"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Kuruluş <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="dealCompanySearch" placeholder="Şirket ara..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" autocomplete="off">
+                                <input type="hidden" id="dealCompanyId" required>
+                                <div id="dealCompanyResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-10"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Deal Title -->
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-2">Başlık <span class="text-red-500">*</span></label>
-                        <input type="text" id="editDealTitle" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" required>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Başlık <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="dealTitle" placeholder="Örn: Q1 2024 Lisans Anlaşması" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" required>
                     </div>
 
-                    <!-- Value & Currency -->
-                    <div class="grid grid-cols-[1fr_140px] gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Değer <span class="text-red-500">*</span></label>
-                            <input type="number" id="editDealValue" min="0" step="0.01" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" required>
+                    <!-- Value & Currency Row -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Değer <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" id="dealValue" placeholder="0" min="0" step="0.01" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-2">Para Birimi</label>
-                            <select id="editDealCurrency" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Para Birimi
+                            </label>
+                            <select id="dealCurrency" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all">
                                 <option value="TRY">TRY</option>
                                 <option value="USD">USD</option>
                                 <option value="EUR">EUR</option>
@@ -653,33 +333,52 @@
                         </div>
                     </div>
 
+                    <!-- Stage Selection -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                            Aşama <span class="text-red-500">*</span>
+                        </label>
+                        <div id="dealStageSelector" class="flex gap-2 flex-wrap">
+                            <!-- Stages will be loaded dynamically -->
+                        </div>
+                        <input type="hidden" id="dealStageId" required>
+                    </div>
+
                     <!-- Expected Close Date -->
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-2">Beklenen Kapanış Tarihi</label>
-                        <input type="date" id="editDealCloseDate" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Tahmini Kapanış Tarihi
+                        </label>
+                        <input type="date" id="dealCloseDate" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all">
                     </div>
 
                     <!-- Tags -->
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-2">Etiket</label>
-                        <select id="editDealTags" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
-                            <option value="">Etiket ekle</option>
-                            <option value="hot">🔥 Hot Lead</option>
-                            <option value="new">🆕 Yeni Müşteri</option>
-                            <option value="priority">⭐ Öncelikli</option>
-                        </select>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Etiketler
+                        </label>
+                        <input type="text" id="dealTags" placeholder="Etiketleri virgülle ayırın" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all">
+                        <p class="text-xs text-slate-400 mt-1.5">Örn: yeni_müşteri, öncelikli, q1_2024</p>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Notlar
+                        </label>
+                        <textarea id="dealNotes" rows="3" placeholder="Anlaşma hakkında notlar..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all resize-none"></textarea>
                     </div>
                 </form>
             </div>
 
             <!-- Modal Footer -->
             <div class="px-8 py-6 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0">
-                <button onclick="closeEditDealModal()" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">
+                <button onclick="closeAddDealModal()" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">
                     İptal
                 </button>
-                <button onclick="submitEditDeal()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
+                <button onclick="submitAddDeal()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
                     <i class="fas fa-check"></i>
-                    Güncelle
+                    Anlaşma Oluştur
                 </button>
             </div>
         </div>
@@ -691,16 +390,6 @@
     <script>
         let currentPipeline = null;
         let deals = [];
-
-        // Analytics render function
-        function renderAnalytics(analytics) {
-            document.getElementById('forecastValue').textContent = 
-                `$${analytics.weighted_forecast.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
-            document.getElementById('openDealsCount').textContent = analytics.open_deals;
-            document.getElementById('dealCount').textContent = `${analytics.open_deals} Deal${analytics.open_deals !== 1 ? 's' : ''}`;
-            document.getElementById('totalValue').textContent = 
-                `$${analytics.total_value.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
-        }
 
         async function loadPipeline() {
             try {
@@ -721,11 +410,11 @@
                 const dealsData = await dealsRes.json();
                 deals = Array.isArray(dealsData) ? dealsData : (dealsData.deals || dealsData.data || []);
                 
-                // Load analytics (KPI metrics)
-                const analyticsRes = await fetch(`/api/v1/deals/analytics?pipeline_id=${currentPipeline.id}`);
-                const analytics = await analyticsRes.json();
+                // Load forecast
+                const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
+                const forecast = await forecastRes.json();
                 
-                renderAnalytics(analytics);
+                renderForecast(forecast);
                 renderPipeline();
             } catch (error) {
                 console.error('Error loading pipeline:', error);
@@ -762,104 +451,32 @@
             });
             
             // Render each stage
-            currentPipeline.stages.forEach((stage, index) => {
+            currentPipeline.stages.forEach(stage => {
                 const stageDeals = dealsByStage[stage.id] || [];
                 const totalValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
                 const stageEl = document.createElement('div');
-                stageEl.className = 'flex-shrink-0 w-80 flex flex-col stage-column';
-                stageEl.dataset.stageId = stage.id;
-                stageEl.dataset.stageOrder = index;
-                stageEl.draggable = false;
-                
+                stageEl.className = 'flex-shrink-0 w-80 flex flex-col';
                 stageEl.innerHTML = `
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full hover:shadow-lg transition-all">
-                        <!-- Normal View Header -->
-                        <div class="stage-header-view px-4 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div class="px-4 py-4 border-b border-slate-100 flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <h3 class="text-sm font-bold text-slate-700">${stage.name}</h3>
                                 <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">${stageDeals.length}</span>
                             </div>
                             <div class="flex flex-col items-end">
-                                <span class="text-xs text-slate-400">${stage.probability}%</span>
+                                <span class="text-xs text-slate-400">${Math.round(stage.probability * 100)}%</span>
                                 <span class="text-xs font-bold text-emerald-600">${totalValue.toLocaleString('en-US')}</span>
                             </div>
                         </div>
-                        
-                        <!-- Edit Mode Header -->
-                        <div class="stage-header-edit px-4 py-3 border-b border-slate-100 items-center gap-2">
-                            <i class="fas fa-grip-vertical text-slate-400 cursor-move stage-drag-handle"></i>
-                            <input type="text" 
-                                   value="${stage.name}" 
-                                   data-stage-field="name"
-                                   data-stage-id="${stage.id}"
-                                   class="flex-1 px-2 py-1 text-sm font-bold text-slate-700 border border-slate-300 rounded focus:outline-none focus:border-brand-500"
-                                   placeholder="Aşama adı" />
-                        </div>
-                        
-                        <!-- Deals Container -->
                         <div class="flex-1 overflow-y-auto p-3 space-y-2.5 drop-zone" 
                              id="stage-${stage.id}" 
                              data-stage-id="${stage.id}">
                             ${stageDeals.length > 0 ? stageDeals.map(deal => renderDealCard(deal)).join('') : '<div class="flex flex-col items-center justify-center py-12 text-center"><div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3"><i class="fas fa-inbox text-slate-300 text-xl"></i></div><p class="text-xs text-slate-400">No deals in this stage</p></div>'}
                         </div>
-                        
-                        <!-- Edit Form (Hidden by default) -->
-                        <div class="stage-edit-form p-4 border-t border-slate-200 bg-slate-50 space-y-3">
-                            <div>
-                                <label class="block text-xs text-slate-600 mb-1.5">Olasılık (%)</label>
-                                <input type="number" 
-                                       min="0" 
-                                       max="100" 
-                                       value="${stage.probability}" 
-                                       data-stage-field="probability"
-                                       data-stage-id="${stage.id}"
-                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" />
-                            </div>
-                            
-                            <div>
-                                <div class="flex items-center justify-between mb-1.5">
-                                    <label class="text-xs text-slate-600">Eskime süresi (gün)</label>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" 
-                                               ${stage.rotting_days !== null ? 'checked' : ''}
-                                               onchange="toggleRottingDays(${stage.id}, this.checked)"
-                                               class="sr-only peer" />
-                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
-                                </div>
-                                <input type="number" 
-                                       min="1" 
-                                       value="${stage.rotting_days || 7}"
-                                       ${stage.rotting_days === null ? 'disabled' : ''}
-                                       data-stage-field="rotting_days"
-                                       data-stage-id="${stage.id}"
-                                       id="rotting-input-${stage.id}"
-                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500 disabled:bg-gray-100 disabled:cursor-not-allowed" />
-                            </div>
-                            
-                            <button onclick="deleteStage(${stage.id})" 
-                                    class="stage-delete-btn w-full items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition text-sm font-medium">
-                                <i class="fas fa-trash"></i>
-                                <span>Aşamayı Sil</span>
-                            </button>
-                        </div>
                     </div>
                 `;
                 container.appendChild(stageEl);
             });
-            
-            // Add "New Stage" button at the end (only visible in edit mode)
-            const addStageBtn = document.createElement('div');
-            addStageBtn.id = 'addStageBtn';
-            addStageBtn.className = 'flex-shrink-0 w-80 hidden';
-            addStageBtn.innerHTML = `
-                <button onclick="addNewStage()" 
-                        class="h-full min-h-[200px] w-full border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 hover:border-brand-500 hover:text-brand-600 transition-all flex flex-col items-center justify-center gap-3">
-                    <i class="fas fa-plus text-3xl"></i>
-                    <span class="text-sm font-semibold">Yeni Aşama Ekle</span>
-                </button>
-            `;
-            container.appendChild(addStageBtn);
             
             // Setup event listeners after rendering
             setupDragAndDropListeners();
@@ -1006,124 +623,6 @@
             document.getElementById('dealModal').classList.add('hidden');
             document.getElementById('dealModal').classList.remove('flex');
             currentDeal = null;
-        }
-
-        async function confirmDeleteDeal() {
-            if (!currentDeal) {
-                showToast('Lütfen önce bir anlaşma seçin', 'error');
-                return;
-            }
-            
-            const dealName = currentDeal.name;
-            const dealId = currentDeal.id;
-            
-            const confirmed = confirm(`"${dealName}" anlaşmasını silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz.`);
-            if (!confirmed) return;
-            
-            try {
-                const response = await fetch(`/api/v1/deals/${dealId}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Anlaşma silinemedi');
-                }
-                
-                // Close modal
-                closeDealModal();
-                
-                // Reload pipeline
-                await loadPipeline();
-                
-                // Show success message
-                showToast(`✓ "${dealName}" anlaşması silindi`, 'success');
-            } catch (error) {
-                console.error('Error deleting deal:', error);
-                showToast(`✗ ${error.message}`, 'error');
-            }
-        }
-
-        function openEditDealModal() {
-            if (!currentDeal) {
-                showToast('Lütfen önce bir anlaşma seçin', 'error');
-                return;
-            }
-            
-            // Populate form with current deal data
-            document.getElementById('editDealTitle').value = currentDeal.name || '';
-            document.getElementById('editDealValue').value = currentDeal.value || 0;
-            document.getElementById('editDealCurrency').value = currentDeal.currency || 'TRY';
-            document.getElementById('editDealCloseDate').value = currentDeal.expected_close_date || '';
-            document.getElementById('editDealTags').value = currentDeal.tags || '';
-            
-            // Show edit modal
-            const modal = document.getElementById('editDealModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            
-            // Close detail modal
-            closeDealModal();
-        }
-
-        function closeEditDealModal() {
-            const modal = document.getElementById('editDealModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            
-            // Reset form
-            document.getElementById('editDealForm').reset();
-        }
-
-        async function submitEditDeal() {
-            if (!currentDeal) {
-                showToast('Anlaşma bilgisi bulunamadı', 'error');
-                return;
-            }
-            
-            const title = document.getElementById('editDealTitle').value.trim();
-            const value = document.getElementById('editDealValue').value;
-            
-            if (!title) {
-                showToast('Lütfen anlaşma başlığı girin', 'error');
-                return;
-            }
-            
-            if (!value || value <= 0) {
-                showToast('Lütfen geçerli bir değer girin', 'error');
-                return;
-            }
-            
-            const payload = {
-                name: title,
-                value: parseFloat(value),
-                expected_close_date: document.getElementById('editDealCloseDate').value || null
-            };
-            
-            try {
-                const response = await fetch(`/api/v1/deals/${currentDeal.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Anlaşma güncellenemedi');
-                }
-                
-                // Close modal
-                closeEditDealModal();
-                
-                // Reload pipeline
-                await loadPipeline();
-                
-                // Show success message
-                showToast(`✓ "${title}" anlaşması güncellendi!`, 'success');
-            } catch (error) {
-                console.error('Error updating deal:', error);
-                showToast(`✗ ${error.message}`, 'error');
-            }
         }
 
         function switchDealTab(tabName) {
@@ -1480,50 +979,28 @@
             if (!currentPipeline || !currentPipeline.stages) return;
             
             const container = document.getElementById('dealStageSelector');
-            const stages = currentPipeline.stages;
-            
-            // Progress bar style
-            container.innerHTML = `
-                <div class="flex items-center gap-1">
-                    ${stages.map((stage, index) => `
-                        <button type="button" 
-                                onclick="selectDealStage(${stage.id}, ${index})" 
-                                data-stage-index="${index}"
-                                class="deal-stage-btn flex-1 h-8 rounded-sm transition-all ${index === 0 ? 'bg-emerald-500' : 'bg-slate-200'}"
-                                title="${stage.name}">
-                        </button>
-                    `).join('')}
-                </div>
-                <div class="flex items-center justify-between mt-2 text-xs text-slate-500">
-                    <span id="selectedStageName">${stages[0].name}</span>
-                    <span>${stages[0].probability || 0}%</span>
-                </div>
-            `;
+            container.innerHTML = currentPipeline.stages.map((stage, index) => `
+                <button type="button" onclick="selectDealStage(${stage.id}, this)" class="px-4 py-2 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:border-brand-500 hover:text-brand-600 transition-all ${index === 0 ? 'border-brand-500 text-brand-600 bg-brand-50' : ''}" data-stage-id="${stage.id}">
+                    ${stage.name}
+                </button>
+            `).join('');
             
             // Select first stage by default
-            if (stages.length > 0) {
-                document.getElementById('dealStageId').value = stages[0].id;
+            if (currentPipeline.stages.length > 0) {
+                document.getElementById('dealStageId').value = currentPipeline.stages[0].id;
             }
         }
 
-        function selectDealStage(stageId, stageIndex) {
-            const stages = currentPipeline.stages;
-            const stage = stages[stageIndex];
-            
-            // Update progress bar
-            document.querySelectorAll('.deal-stage-btn').forEach((btn, index) => {
-                if (index <= stageIndex) {
-                    btn.classList.remove('bg-slate-200');
-                    btn.classList.add('bg-emerald-500');
-                } else {
-                    btn.classList.remove('bg-emerald-500');
-                    btn.classList.add('bg-slate-200');
-                }
+        function selectDealStage(stageId, button) {
+            // Remove active class from all buttons
+            document.querySelectorAll('#dealStageSelector button').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'text-brand-600', 'bg-brand-50');
+                btn.classList.add('border-slate-200', 'text-slate-600');
             });
             
-            // Update stage name and probability
-            document.getElementById('selectedStageName').textContent = stage.name;
-            document.getElementById('selectedStageName').nextElementSibling.textContent = `${stage.probability || 0}%`;
+            // Add active class to selected button
+            button.classList.remove('border-slate-200', 'text-slate-600');
+            button.classList.add('border-brand-500', 'text-brand-600', 'bg-brand-50');
             
             // Set hidden input value
             document.getElementById('dealStageId').value = stageId;
@@ -1680,7 +1157,7 @@
                 return;
             }
             
-            // Prepare payload with new fields
+            // Prepare payload
             const payload = {
                 name: title,
                 contact_id: parseInt(contactId),
@@ -1690,11 +1167,9 @@
                 stage_id: parseInt(stageId),
                 pipeline_id: currentPipeline.id,
                 expected_close_date: document.getElementById('dealCloseDate').value || null,
-                tags: document.getElementById('dealTags').value || null,
+                tags: document.getElementById('dealTags').value.trim() || null,
+                notes: document.getElementById('dealNotes').value.trim() || null,
                 status: 'open'
-                // owner_id will be set by backend from session
-                // New fields for future use (not in DB yet):
-                // contact_phone, contact_email, source_channel, source_id, visibility
             };
             
             try {
@@ -1807,12 +1282,6 @@
 
         // FAZ 3 & 4: DROP ZONE - drop event with Optimistic UI & Rollback
         async function handleDrop(event) {
-            // Prevent drop in edit mode
-            if (isEditMode) {
-                event.preventDefault();
-                return;
-            }
-            
             event.preventDefault();
             event.stopPropagation();
 
@@ -2104,282 +1573,8 @@
                 showToast('✗ Kaydetme başarısız', 'error');
             }
         }
-        
-        // ========== EDIT MODE FUNCTIONS ==========
-        let isEditMode = false;
-        let stageEditData = [];
-        
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            const container = document.getElementById('pipelineContainer');
-            const editBtn = document.getElementById('editModeBtn');
-            const cancelBtn = document.getElementById('cancelEditBtn');
-            const saveBtn = document.getElementById('saveEditBtn');
-            const refreshBtn = document.getElementById('refreshBtn');
-            const addDealBtn = document.getElementById('addDealBtn');
-            const addStageBtn = document.getElementById('addStageBtn');
-            
-            if (isEditMode) {
-                // Enter edit mode
-                container.classList.add('is-editing');
-                editBtn.classList.add('hidden');
-                cancelBtn.classList.remove('hidden');
-                saveBtn.classList.remove('hidden');
-                refreshBtn.classList.add('hidden');
-                addDealBtn.classList.add('hidden');
-                addStageBtn.classList.remove('hidden');
-                
-                // Initialize edit data from current pipeline
-                stageEditData = currentPipeline.stages.map((stage, index) => ({
-                    id: stage.id,
-                    name: stage.name,
-                    probability: stage.probability,
-                    rotting_days: stage.rotting_days,
-                    order: index,
-                    is_active: true
-                }));
-                
-                // Enable stage column dragging
-                setupStageDragAndDrop();
-            } else {
-                // Exit edit mode
-                container.classList.remove('is-editing');
-                editBtn.classList.remove('hidden');
-                cancelBtn.classList.add('hidden');
-                saveBtn.classList.add('hidden');
-                refreshBtn.classList.remove('hidden');
-                addDealBtn.classList.remove('hidden');
-                addStageBtn.classList.add('hidden');
-            }
-        }
-        
-        function cancelEditMode() {
-            if (confirm('Değişiklikler kaydedilmedi. Çıkmak istediğinizden emin misiniz?')) {
-                isEditMode = false;
-                loadPipeline(); // Reload to discard changes
-            }
-        }
-        
-        async function saveStageSettings() {
-            try {
-                // Collect all stage data from inputs
-                const stages = [];
-                const stageColumns = document.querySelectorAll('.stage-column');
-                
-                stageColumns.forEach((col, index) => {
-                    const stageId = col.dataset.stageId;
-                    const nameInput = col.querySelector(`input[data-stage-field="name"][data-stage-id="${stageId}"]`);
-                    const probInput = col.querySelector(`input[data-stage-field="probability"][data-stage-id="${stageId}"]`);
-                    const rottingInput = col.querySelector(`input[data-stage-field="rotting_days"][data-stage-id="${stageId}"]`);
-                    
-                    if (nameInput) {
-                        const stageData = {
-                            name: nameInput.value,
-                            probability: parseInt(probInput.value) || 100,
-                            rotting_days: rottingInput.disabled ? null : parseInt(rottingInput.value),
-                            order: index,
-                            is_active: true
-                        };
-                        
-                        // Only add id if it's not a new stage
-                        if (!stageId.startsWith('new-')) {
-                            stageData.id = parseInt(stageId);
-                        }
-                        
-                        stages.push(stageData);
-                    }
-                });
-                
-                // Send to backend
-                const response = await fetch('/api/v1/pipeline/settings', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        pipeline_name: currentPipeline.name,
-                        stages: stages
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Failed to save settings');
-                
-                showToast('✓ Değişiklikler kaydedildi', 'success');
-                
-                // Exit edit mode and reload pipeline
-                isEditMode = false;
-                const container = document.getElementById('pipelineContainer');
-                const editBtn = document.getElementById('editModeBtn');
-                const cancelBtn = document.getElementById('cancelEditBtn');
-                const saveBtn = document.getElementById('saveEditBtn');
-                const refreshBtn = document.getElementById('refreshBtn');
-                const addDealBtn = document.getElementById('addDealBtn');
-                const addStageBtn = document.getElementById('addStageBtn');
-                
-                container.classList.remove('is-editing');
-                editBtn.classList.remove('hidden');
-                cancelBtn.classList.add('hidden');
-                saveBtn.classList.add('hidden');
-                refreshBtn.classList.remove('hidden');
-                addDealBtn.classList.remove('hidden');
-                addStageBtn.classList.add('hidden');
-                
-                // Reload pipeline to show updated data
-                await loadPipeline();
-                
-            } catch (error) {
-                console.error('Error saving stage settings:', error);
-                showToast('✗ Kaydetme başarısız', 'error');
-            }
-        }
-        
-        function toggleRottingDays(stageId, enabled) {
-            const input = document.getElementById(`rotting-input-${stageId}`);
-            if (input) {
-                input.disabled = !enabled;
-                if (!enabled) {
-                    input.value = 7;
-                }
-            }
-        }
-        
-        function deleteStage(stageId) {
-            if (confirm('Bu aşamayı silmek istediğinizden emin misiniz?')) {
-                const col = document.querySelector(`.stage-column[data-stage-id="${stageId}"]`);
-                if (col) {
-                    col.remove();
-                    showToast('Aşama silindi (kaydetmeyi unutmayın)', 'info');
-                }
-            }
-        }
-        
-        function addNewStage() {
-            const container = document.getElementById('pipelineContainer');
-            const addBtn = document.getElementById('addStageBtn');
-            const newStageId = 'new-' + Date.now();
-            const stageCount = document.querySelectorAll('.stage-column').length;
-            
-            const stageEl = document.createElement('div');
-            stageEl.className = 'flex-shrink-0 w-80 flex flex-col stage-column';
-            stageEl.dataset.stageId = newStageId;
-            stageEl.dataset.stageOrder = stageCount;
-            
-            stageEl.innerHTML = `
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full">
-                    <div class="stage-header-edit px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-                        <i class="fas fa-grip-vertical text-slate-400 cursor-move stage-drag-handle"></i>
-                        <input type="text" 
-                               value="Yeni Aşama" 
-                               data-stage-field="name"
-                               data-stage-id="${newStageId}"
-                               class="flex-1 px-2 py-1 text-sm font-bold text-slate-700 border border-slate-300 rounded focus:outline-none focus:border-brand-500"
-                               placeholder="Aşama adı" />
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto p-3">
-                        <div class="flex flex-col items-center justify-center py-12 text-center">
-                            <div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3">
-                                <i class="fas fa-inbox text-slate-300 text-xl"></i>
-                            </div>
-                            <p class="text-xs text-slate-400">Yeni aşama</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stage-edit-form p-4 border-t border-slate-200 bg-slate-50 space-y-3">
-                        <div>
-                            <label class="block text-xs text-slate-600 mb-1.5">Olasılık (%)</label>
-                            <input type="number" 
-                                   min="0" 
-                                   max="100" 
-                                   value="100" 
-                                   data-stage-field="probability"
-                                   data-stage-id="${newStageId}"
-                                   class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" />
-                        </div>
-                        
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="text-xs text-slate-600">Eskime süresi (gün)</label>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" 
-                                           onchange="toggleRottingDays('${newStageId}', this.checked)"
-                                           class="sr-only peer" />
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
-                            </div>
-                            <input type="number" 
-                                   min="1" 
-                                   value="7"
-                                   disabled
-                                   data-stage-field="rotting_days"
-                                   data-stage-id="${newStageId}"
-                                   id="rotting-input-${newStageId}"
-                                   class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500 disabled:bg-gray-100 disabled:cursor-not-allowed" />
-                        </div>
-                        
-                        <button onclick="deleteStage('${newStageId}')" 
-                                class="stage-delete-btn w-full flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition text-sm font-medium">
-                            <i class="fas fa-trash"></i>
-                            <span>Aşamayı Sil</span>
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            container.insertBefore(stageEl, addBtn);
-            setupStageDragAndDrop();
-            showToast('Yeni aşama eklendi (kaydetmeyi unutmayın)', 'info');
-        }
-        
-        function setupStageDragAndDrop() {
-            const stageColumns = document.querySelectorAll('.stage-column');
-            
-            stageColumns.forEach(col => {
-                col.draggable = true;
-                
-                col.addEventListener('dragstart', (e) => {
-                    col.classList.add('dragging-stage');
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/html', col.innerHTML);
-                });
-                
-                col.addEventListener('dragend', (e) => {
-                    col.classList.remove('dragging-stage');
-                });
-                
-                col.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    const draggingCol = document.querySelector('.dragging-stage');
-                    if (draggingCol && draggingCol !== col) {
-                        const container = col.parentElement;
-                        const afterElement = getDragAfterElement(container, e.clientX);
-                        if (afterElement == null) {
-                            container.appendChild(draggingCol);
-                        } else {
-                            container.insertBefore(draggingCol, afterElement);
-                        }
-                    }
-                });
-            });
-        }
-        
-        function getDragAfterElement(container, x) {
-            const draggableElements = [...container.querySelectorAll('.stage-column:not(.dragging-stage)')];
-            
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = x - box.left - box.width / 2;
-                
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="/static/topbar-global.js"></script>
-    <script src="/static/pipeline-enhancements.js"></script>
-    <script src="/static/pipeline-analytics.js"></script>
 </body>
 </html>
 

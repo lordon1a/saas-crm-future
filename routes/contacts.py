@@ -339,8 +339,9 @@ def get_contacts():
             filters['search'] = request.args.get('search')
         
         # Get paginated contacts
-        from models_crm import Contact
+        from models_crm import Contact, Deal
         from models import db
+        from sqlalchemy import func
         
         query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
@@ -368,6 +369,36 @@ def get_contacts():
             page=page, per_page=per_page, error_out=False
         )
         
+        # Load custom field values for all contacts in one go
+        contact_ids = [c.id for c in pagination.items]
+        company_ids = [c.company_id for c in pagination.items if c.company_id]
+        custom_field_values_map = {}
+        open_deals_count_map = {}
+        
+        if contact_ids:
+            from services.custom_field_service import CustomFieldService
+            for contact_id in contact_ids:
+                try:
+                    values = CustomFieldService.get_values('contact', contact_id, workspace_id)
+                    custom_field_values_map[contact_id] = values
+                except:
+                    custom_field_values_map[contact_id] = {}
+
+            # Count open deals per company and map to contacts by company_id
+            open_deals_counts = db.session.query(
+                Deal.company_id,
+                func.count(Deal.id)
+            ).filter(
+                Deal.workspace_id == workspace_id,
+                Deal.company_id.in_(company_ids),
+                Deal.is_deleted == False,
+                Deal.status == 'open'
+            ).group_by(Deal.company_id).all()
+
+            open_deals_count_map = {
+                company_id: deal_count for company_id, deal_count in open_deals_counts
+            }
+        
         return jsonify({
             'contacts': [
                 {
@@ -383,6 +414,8 @@ def get_contacts():
                     'lead_score': c.lead_score,
                     'company_id': c.company_id,
                     'company_name': c.company.name if c.company else None,
+                    'open_deals_count': open_deals_count_map.get(c.company_id, 0) if c.company_id else 0,
+                    'customFieldValues': custom_field_values_map.get(c.id, {}),
                     'created_at': c.created_at.isoformat() if c.created_at else None,
                     'updated_at': c.updated_at.isoformat() if c.updated_at else None
                 }
@@ -1549,23 +1582,28 @@ def get_contacts_column_preferences():
 @login_required
 def save_contacts_column_preferences():
     """Save user's column preferences for contacts table"""
+    user_id = session.get('user_id')
+    workspace_id = session.get('workspace_id')
+    
+    logger.info(f"Saving column preferences for user {user_id}, workspace {workspace_id}")
+    
+    if not user_id or not workspace_id:
+        logger.error("User or workspace not found in session")
+        return jsonify({'error': 'User or workspace not found'}), 400
+    
+    data = request.get_json()
+    if not data or 'columns' not in data:
+        logger.error(f"Invalid data received: {data}")
+        return jsonify({'error': 'No columns provided'}), 400
+    
+    columns = data['columns']
+    logger.info(f"Columns to save: {columns}")
+    
+    from models import db
+    from sqlalchemy import text
+    import json
+    
     try:
-        user_id = session.get('user_id')
-        workspace_id = session.get('workspace_id')
-        
-        if not user_id or not workspace_id:
-            return jsonify({'error': 'User or workspace not found'}), 400
-        
-        data = request.get_json()
-        if not data or 'columns' not in data:
-            return jsonify({'error': 'No columns provided'}), 400
-        
-        columns = data['columns']
-        
-        from models import db
-        from sqlalchemy import text
-        import json
-        
         # Check if preference exists
         result = db.session.execute(
             text("SELECT id FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_visible_columns'"),
@@ -1573,12 +1611,14 @@ def save_contacts_column_preferences():
         ).fetchone()
         
         if result:
+            logger.info(f"Updating existing preference (id: {result[0]})")
             # Update existing
             db.session.execute(
                 text("UPDATE user_preferences SET preference_value = :value, updated_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_visible_columns'"),
                 {'value': json.dumps(columns), 'user_id': user_id, 'workspace_id': workspace_id}
             )
         else:
+            logger.info("Creating new preference")
             # Insert new
             db.session.execute(
                 text("INSERT INTO user_preferences (user_id, workspace_id, preference_key, preference_value, created_at, updated_at) VALUES (:user_id, :workspace_id, 'contacts_visible_columns', :value, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
@@ -1586,12 +1626,13 @@ def save_contacts_column_preferences():
             )
         
         db.session.commit()
-        
+        logger.info("Column preferences saved successfully")
         return jsonify({'success': True}), 200
         
     except Exception as e:
-        logger.error(f"Error saving column preferences: {str(e)}")
-        return jsonify({'error': 'Internal Server Error'}), 500
+        db.session.rollback()
+        logger.error(f"Error saving column preferences: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Internal Server Error: {str(e)}'}), 500
 
 
 @contacts_bp.route('/api/v1/user-preferences/contacts-column-widths', methods=['GET'])
@@ -1628,23 +1669,23 @@ def get_contacts_column_widths():
 @login_required
 def save_contacts_column_widths():
     """Save user's column width preferences for contacts table"""
+    user_id = session.get('user_id')
+    workspace_id = session.get('workspace_id')
+    
+    if not user_id or not workspace_id:
+        return jsonify({'error': 'User or workspace not found'}), 400
+    
+    data = request.get_json()
+    if not data or 'widths' not in data:
+        return jsonify({'error': 'No widths provided'}), 400
+    
+    widths = data['widths']
+    
+    from models import db
+    from sqlalchemy import text
+    import json
+    
     try:
-        user_id = session.get('user_id')
-        workspace_id = session.get('workspace_id')
-        
-        if not user_id or not workspace_id:
-            return jsonify({'error': 'User or workspace not found'}), 400
-        
-        data = request.get_json()
-        if not data or 'widths' not in data:
-            return jsonify({'error': 'No widths provided'}), 400
-        
-        widths = data['widths']
-        
-        from models import db
-        from sqlalchemy import text
-        import json
-        
         # Check if preference exists
         result = db.session.execute(
             text("SELECT id FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_column_widths'"),
@@ -1665,9 +1706,9 @@ def save_contacts_column_widths():
             )
         
         db.session.commit()
-        
         return jsonify({'success': True}), 200
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Error saving column widths: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500

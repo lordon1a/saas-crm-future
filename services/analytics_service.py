@@ -5,7 +5,7 @@ Advanced reporting and analytics for CRM data
 from models import db
 from models_crm import Deal, Contact, Company, Task, Activity, Pipeline, DealStage
 from sqlalchemy import func, case
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import logging
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class AnalyticsService:
             ).count()
             
             # Completed tasks this month
-            start_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            start_of_month = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             completed_tasks_this_month = Task.query.filter(
                 Task.workspace_id == workspace_id,
                 Task.status == 'completed',
@@ -212,7 +212,7 @@ class AnalyticsService:
             }
         """
         try:
-            start_date = datetime.utcnow() - timedelta(days=days)
+            start_date = datetime.now(UTC) - timedelta(days=days)
             
             # Get deals closed in the period
             deals = Deal.query.filter(
@@ -234,7 +234,7 @@ class AnalyticsService:
             dates = []
             revenue = []
             current_date = start_date.date()
-            end_date = datetime.utcnow().date()
+            end_date = datetime.now(UTC).date()
             
             while current_date <= end_date:
                 date_key = current_date.strftime('%Y-%m-%d')
@@ -323,7 +323,7 @@ class AnalyticsService:
             ).count()
             
             # Overdue tasks (due_date passed and not completed)
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             overdue_tasks = Task.query.filter(
                 Task.workspace_id == workspace_id,
                 Task.status != 'completed',
@@ -350,7 +350,7 @@ class AnalyticsService:
         Duration is measured as closed_at - created_at in days.
         """
         try:
-            start_date = datetime.utcnow() - timedelta(days=days)
+            start_date = datetime.now(UTC) - timedelta(days=days)
             deals = Deal.query.filter(
                 Deal.workspace_id == workspace_id,
                 Deal.is_deleted == False,

@@ -163,7 +163,7 @@
         <div class="flex-1 overflow-auto">
             <div class="min-w-full inline-block align-middle">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-300">
+                    <table class="min-w-full table-fixed divide-y divide-gray-300">
                         <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th scope="col" class="w-12 px-4 py-3">
@@ -571,6 +571,52 @@
         </div>
     </div>
 
+    <!-- Edit Column Modal -->
+    <div id="editColumnModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800" id="editColumnModalTitle">Sütunu Düzenle</h3>
+                <button onclick="closeEditColumnModal()" class="w-10 h-10 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editColumnForm" class="p-6 space-y-4">
+                <input type="hidden" id="editColumnId">
+                <input type="hidden" id="editColumnIsCustom">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alan Adı *</label>
+                    <input type="text" id="editColumnName" required placeholder="Alan adı" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
+                </div>
+                <div id="editColumnTypeDiv" class="hidden">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alan Tipi *</label>
+                    <select id="editColumnType" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        <option value="text">Metin</option>
+                        <option value="number">Sayı</option>
+                        <option value="date">Tarih</option>
+                        <option value="checkbox">Onay Kutusu</option>
+                        <option value="dropdown">Açılır Liste</option>
+                    </select>
+                </div>
+                <div id="editColumnOptionsDiv" class="hidden">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Seçenekler (virgülle ayırın)</label>
+                    <input type="text" id="editColumnOptions" placeholder="Seçenek1, Seçenek2, Seçenek3" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div id="editColumnRequiredDiv" class="hidden flex items-center gap-2">
+                    <input type="checkbox" id="editColumnRequired" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                    <label for="editColumnRequired" class="text-sm text-gray-700">Zorunlu alan</label>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeEditColumnModal()" class="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-all">
+                        İptal
+                    </button>
+                    <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 transition-all shadow-md">
+                        Güncelle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- New Contact Modal -->
     <div id="newContactModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -637,6 +683,10 @@
         let columnWidths = {}; // Store column widths
         let isResizing = false;
         let currentResizeColumn = null;
+        const COLUMN_MIN_WIDTH_DEFAULT = 40;
+        const COLUMN_MIN_WIDTH_NAME = 72;
+        const COLUMN_DEFAULT_WIDTH_DEFAULT = 120;
+        const COLUMN_DEFAULT_WIDTH_NAME = 160;
 
         // Get company_id from URL if present
         const urlParams = new URLSearchParams(window.location.search);
@@ -860,7 +910,7 @@
         // COLUMN MANAGEMENT
         // ============================================================================
 
-        let availableColumns = [
+        const defaultColumns = [
             { id: 'name', label: 'Ad Soyad', required: true },
             { id: 'company', label: 'Kuruluş', required: false },
             { id: 'email', label: 'E-posta', required: false },
@@ -870,10 +920,28 @@
             { id: 'deals', label: 'Açık Anlaşmalar', required: false }
         ];
 
+        let availableColumns = defaultColumns.map(col => ({ ...col }));
+
         let draggedElement = null;
+
+        function resolveColumnLabel(columnId) {
+            const col = availableColumns.find(c => c.id === columnId);
+            return col ? col.label : '';
+        }
+
+        function getColumnMinWidth(columnId) {
+            return columnId === 'name' ? COLUMN_MIN_WIDTH_NAME : COLUMN_MIN_WIDTH_DEFAULT;
+        }
+
+        function getColumnDefaultWidth(columnId) {
+            return columnId === 'name' ? COLUMN_DEFAULT_WIDTH_NAME : COLUMN_DEFAULT_WIDTH_DEFAULT;
+        }
 
         async function loadColumnPreferences() {
             try {
+                // Rebuild base columns to prevent stale custom entries.
+                availableColumns = defaultColumns.map(col => ({ ...col }));
+
                 // Load custom fields first
                 const fieldsRes = await fetch('/api/v1/custom-fields?entity_type=contact');
                 if (fieldsRes.ok) {
@@ -893,13 +961,18 @@
                             availableColumns.push(customCol);
                         }
                     });
+
                 }
                 
                 // Load user preferences
                 const response = await fetch('/api/v1/user-preferences/contacts-columns');
                 if (response.ok) {
                     const data = await response.json();
-                    visibleColumns = data.columns || ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'];
+                    const savedColumns = data.columns || ['name', 'company', 'email', 'phone', 'role', 'lead_score', 'deals'];
+                    visibleColumns = savedColumns.filter(colId => availableColumns.some(c => c.id === colId));
+                    if (!visibleColumns.includes('name')) {
+                        visibleColumns.unshift('name');
+                    }
                 }
             } catch (error) {
                 console.error('Error loading column preferences:', error);
@@ -934,7 +1007,7 @@
 
         function createColumnItem(col, isVisible) {
             const div = document.createElement('div');
-            div.className = 'column-item flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all';
+            div.className = 'column-item flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all';
             div.draggable = !col.required;
             div.dataset.columnId = col.id;
             
@@ -946,13 +1019,19 @@
             // Check if this is a custom field
             const isCustomField = col.id.startsWith('custom_');
             
+            // All non-required fields are editable and deletable
+            const isEditable = !col.required;
+            
             div.innerHTML = `
                 <i class="fas fa-grip-vertical text-gray-400 ${col.required ? 'invisible' : ''}" style="pointer-events: none;"></i>
                 <input type="checkbox" value="${col.id}" class="column-checkbox w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" 
                     ${isVisible ? 'checked' : ''} ${col.required ? 'disabled' : ''} style="pointer-events: auto;">
                 <span class="text-sm font-medium text-gray-700 flex-1" style="pointer-events: none;">${col.label}</span>
                 ${col.required ? '<span class="text-xs text-gray-400" style="pointer-events: none;">(Zorunlu)</span>' : ''}
-                ${isCustomField ? `<button onclick="deleteCustomField('${col.id}')" class="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-all" title="Sütunu Sil" style="pointer-events: auto;"><i class="fas fa-trash"></i></button>` : ''}
+                ${isEditable ? `
+                    <button onclick="event.stopPropagation(); openEditColumnModal('${col.id}', '${col.label.replace(/'/g, "\\'")}', ${isCustomField})" class="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-all" title="Düzenle" style="pointer-events: auto;"><i class="fas fa-edit"></i></button>
+                    <button onclick="event.stopPropagation(); ${isCustomField ? `deleteCustomField('${col.id}')` : `deleteStandardColumn('${col.id}')`}" class="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-all" title="Sil" style="pointer-events: auto;"><i class="fas fa-trash"></i></button>
+                ` : ''}
             `;
             
             // Drag and drop events
@@ -964,7 +1043,7 @@
                 
                 // Change cursor on drag
                 div.addEventListener('mousedown', function(e) {
-                    // Only if not clicking on checkbox or delete button
+                    // Only if not clicking on checkbox or buttons
                     if (!e.target.classList.contains('column-checkbox') && !e.target.closest('button')) {
                         this.style.cursor = 'grabbing';
                     }
@@ -1065,31 +1144,35 @@
                 selectedColumns.unshift('name'); // Always include name
             }
             
+            console.log('Saving columns:', selectedColumns);
+            
             // Auto-adjust column widths when columns change
             const tableWidth = document.querySelector('table')?.offsetWidth || 1200;
             const checkboxWidth = 56; // 14 * 4
             const menuWidth = 64; // 16 * 4
             const availableWidth = tableWidth - checkboxWidth - menuWidth;
             const columnCount = selectedColumns.length;
-            const autoWidth = Math.max(120, Math.floor(availableWidth / columnCount));
+            const autoWidth = Math.max(COLUMN_MIN_WIDTH_DEFAULT, Math.floor(availableWidth / columnCount));
             
             // Reset column widths to auto-calculated values
             selectedColumns.forEach(col => {
-                if (col === 'name') {
-                    columnWidths[col] = Math.max(200, autoWidth);
-                } else {
-                    columnWidths[col] = autoWidth;
-                }
+                columnWidths[col] = Math.max(getColumnMinWidth(col), autoWidth);
             });
             
             try {
                 // Save both column order and widths
-                await fetch('/api/v1/user-preferences/contacts-column-widths', {
+                console.log('Saving column widths...');
+                const widthsResponse = await fetch('/api/v1/user-preferences/contacts-column-widths', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ widths: columnWidths })
                 });
                 
+                if (!widthsResponse.ok) {
+                    console.error('Failed to save widths:', await widthsResponse.text());
+                }
+                
+                console.log('Saving column preferences...');
                 const response = await fetch('/api/v1/user-preferences/contacts-columns', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1097,21 +1180,37 @@
                 });
                 
                 if (response.ok) {
+                    console.log('Columns saved successfully');
                     visibleColumns = selectedColumns;
                     showToast('Sütun tercihleri kaydedildi', 'success');
                     closeColumnManager();
                     renderContacts(allContacts);
                 } else {
-                    throw new Error('Kayıt başarısız');
+                    const errorText = await response.text();
+                    console.error('Failed to save columns:', errorText);
+                    throw new Error('Kayıt başarısız: ' + errorText);
                 }
             } catch (error) {
                 console.error('Error saving column preferences:', error);
-                showToast('Sütun tercihleri kaydedilemedi', 'error');
+                showToast('Sütun tercihleri kaydedilemedi: ' + error.message, 'error');
             }
         }
 
         function isColumnVisible(column) {
             return visibleColumns.includes(column);
+        }
+
+        async function persistVisibleColumnsPreference(columnsToSave) {
+            const response = await fetch('/api/v1/user-preferences/contacts-columns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ columns: columnsToSave })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error('Kayıt başarısız: ' + errorText);
+            }
         }
 
         // Custom Field Management
@@ -1150,9 +1249,11 @@
                     
                     // Remove from availableColumns
                     availableColumns = availableColumns.filter(c => c.id !== columnId);
-                    
+
                     // Remove from visibleColumns if present
                     visibleColumns = visibleColumns.filter(c => c !== columnId);
+
+                    await persistVisibleColumnsPreference(visibleColumns);
                     
                     // Refresh column manager
                     closeColumnManager();
@@ -1169,10 +1270,187 @@
             }
         }
 
+        // Delete Standard Column (just hide it from view)
+        function deleteStandardColumn(columnId) {
+            const col = availableColumns.find(c => c.id === columnId);
+            if (!col) return;
+            
+            if (!confirm(`"${col.label}" sütununu gizlemek istediğinizden emin misiniz? Sütun gizlenecek ancak veriler korunacaktır.`)) {
+                return;
+            }
+            
+            // Remove from visibleColumns
+            visibleColumns = visibleColumns.filter(c => c !== columnId);
+
+            persistVisibleColumnsPreference(visibleColumns)
+                .then(() => {
+                    showToast('Sütun gizlendi', 'success');
+
+                    // Refresh column manager
+                    closeColumnManager();
+                    openColumnManager();
+
+                    // Refresh contacts display
+                    loadContacts();
+                })
+                .catch(error => {
+                    console.error('Error hiding standard column:', error);
+                    showToast('Sütun gizlenemedi', 'error');
+                });
+        }
+
+        // Edit Column Functions
+        function openEditColumnModal(columnId, columnLabel, isCustom) {
+            document.getElementById('editColumnId').value = columnId;
+            document.getElementById('editColumnName').value = columnLabel;
+            document.getElementById('editColumnIsCustom').value = isCustom;
+            
+            const typeDiv = document.getElementById('editColumnTypeDiv');
+            const optionsDiv = document.getElementById('editColumnOptionsDiv');
+            const requiredDiv = document.getElementById('editColumnRequiredDiv');
+            
+            if (isCustom) {
+                // For custom fields, show all options
+                const fieldId = parseInt(columnId.replace('custom_', ''));
+                const field = customFields.find(f => f.id === fieldId);
+                
+                if (field) {
+                    typeDiv.classList.remove('hidden');
+                    requiredDiv.classList.remove('hidden');
+                    
+                    document.getElementById('editColumnType').value = field.field_type;
+                    document.getElementById('editColumnRequired').checked = field.is_required;
+                    
+                    if (field.field_type === 'dropdown' && field.field_options) {
+                        optionsDiv.classList.remove('hidden');
+                        document.getElementById('editColumnOptions').value = field.field_options.join(', ');
+                    } else {
+                        optionsDiv.classList.add('hidden');
+                    }
+                }
+                
+                document.getElementById('editColumnModalTitle').textContent = 'Özel Sütunu Düzenle';
+            } else {
+                // For standard fields, only show name
+                typeDiv.classList.add('hidden');
+                optionsDiv.classList.add('hidden');
+                requiredDiv.classList.add('hidden');
+                document.getElementById('editColumnModalTitle').textContent = 'Sütun Adını Düzenle';
+            }
+            
+            const modal = document.getElementById('editColumnModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEditColumnModal() {
+            document.getElementById('editColumnModal').classList.add('hidden');
+            document.getElementById('editColumnModal').classList.remove('flex');
+        }
+
+        // Handle edit column type change
+        document.getElementById('editColumnType')?.addEventListener('change', function() {
+            const optionsDiv = document.getElementById('editColumnOptionsDiv');
+            if (this.value === 'dropdown') {
+                optionsDiv.classList.remove('hidden');
+            } else {
+                optionsDiv.classList.add('hidden');
+            }
+        });
+
+        // Edit Column Form Submit
+        document.getElementById('editColumnForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const columnId = document.getElementById('editColumnId').value;
+            const columnName = document.getElementById('editColumnName').value.trim();
+            const isCustom = document.getElementById('editColumnIsCustom').value === 'true';
+            
+            if (!columnName) {
+                showToast('Alan adı boş olamaz', 'error');
+                return;
+            }
+            
+            if (isCustom) {
+                // Update custom field via API
+                const fieldId = parseInt(columnId.replace('custom_', ''));
+                const fieldType = document.getElementById('editColumnType').value;
+                const isRequired = document.getElementById('editColumnRequired').checked;
+                
+                let fieldOptions = null;
+                if (fieldType === 'dropdown') {
+                    const optionsStr = document.getElementById('editColumnOptions').value.trim();
+                    if (optionsStr) {
+                        fieldOptions = optionsStr.split(',').map(opt => opt.trim()).filter(opt => opt);
+                    }
+                }
+                
+                try {
+                    const response = await fetch(`/api/v1/custom-fields/${fieldId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            field_name: columnName,
+                            field_type: fieldType,
+                            options: fieldOptions,
+                            is_required: isRequired
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const updatedField = await response.json();
+                        
+                        // Update in customFields array
+                        const index = customFields.findIndex(f => f.id === fieldId);
+                        if (index !== -1) {
+                            customFields[index] = {
+                                id: updatedField.id,
+                                field_name: updatedField.field_name,
+                                field_type: updatedField.field_type,
+                                field_options: updatedField.field_options || updatedField.options,
+                                is_required: updatedField.is_required
+                            };
+                        }
+                        
+                        // Update in availableColumns
+                        const colIndex = availableColumns.findIndex(c => c.id === columnId);
+                        if (colIndex !== -1) {
+                            availableColumns[colIndex].label = columnName;
+                        }
+
+                        showToast('Sütun güncellendi', 'success');
+                        closeEditColumnModal();
+                        closeColumnManager();
+                        openColumnManager();
+                        await loadContacts();
+                    } else {
+                        throw new Error('Güncelleme başarısız');
+                    }
+                } catch (error) {
+                    console.error('Error updating custom field:', error);
+                    showToast('Sütun güncellenemedi', 'error');
+                }
+            } else {
+                // Update standard field label (local only)
+                const colIndex = availableColumns.findIndex(c => c.id === columnId);
+                if (colIndex !== -1) {
+                    availableColumns[colIndex].label = columnName;
+                }
+
+                showToast('Sütun adı güncellendi', 'success');
+                closeEditColumnModal();
+                closeColumnManager();
+                openColumnManager();
+                await loadContacts();
+            }
+        });
+
         // Show/hide options field based on field type
         document.getElementById('customFieldType')?.addEventListener('change', function() {
             const optionsDiv = document.getElementById('customFieldOptionsDiv');
-            if (this.value === 'dropdown') {
+            if (this.value === 'dropdown' || this.value === 'multi_select') {
                 optionsDiv.classList.remove('hidden');
             } else {
                 optionsDiv.classList.add('hidden');
@@ -1186,6 +1464,29 @@
             const fieldType = document.getElementById('customFieldType').value;
             const isRequired = document.getElementById('customFieldRequired').checked;
             const options = document.getElementById('customFieldOptions').value.trim();
+
+            if (!fieldName) {
+                showToast('Alan adı zorunludur', 'error');
+                return;
+            }
+
+            const normalizedNewName = fieldName.toLocaleLowerCase('tr-TR');
+            const nameExists = customFields.some(f =>
+                String(f.field_name || '').toLocaleLowerCase('tr-TR') === normalizedNewName
+            );
+            if (nameExists) {
+                showToast('Bu isimde bir özel sütun zaten var', 'error');
+                return;
+            }
+
+            const parsedOptions = options
+                ? options.split(',').map(o => o.trim()).filter(Boolean)
+                : null;
+
+            if ((fieldType === 'dropdown' || fieldType === 'multi_select') && (!parsedOptions || parsedOptions.length === 0)) {
+                showToast('Açılır liste için en az bir seçenek girin', 'error');
+                return;
+            }
             
             try {
                 const response = await fetch('/api/v1/custom-fields', {
@@ -1196,33 +1497,62 @@
                         field_name: fieldName,
                         field_type: fieldType,
                         is_required: isRequired,
-                        options: options ? options.split(',').map(o => o.trim()) : null
+                        options: parsedOptions
                     })
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
+                    const newColumnId = `custom_${data.id}`;
+                    const newColumnLabel = data.field_name || fieldName;
+
+                    // Keep custom field cache in sync for table rendering.
+                    customFields.push({
+                        id: data.id,
+                        field_name: newColumnLabel,
+                        field_type: data.field_type || fieldType,
+                        field_options: data.field_options || data.options || null,
+                        is_required: (data.is_required !== undefined && data.is_required !== null) ? data.is_required : isRequired
+                    });
                     
                     // Add to available columns
                     availableColumns.push({
-                        id: `custom_${data.id}`,
-                        label: fieldName,
+                        id: newColumnId,
+                        label: newColumnLabel,
                         required: false,
                         custom: true
                     });
+
+                    // Make the new column immediately visible.
+                    if (!visibleColumns.includes(newColumnId)) {
+                        visibleColumns.push(newColumnId);
+                    }
+
+                    await persistVisibleColumnsPreference(visibleColumns);
                     
                     showToast('Özel sütun eklendi', 'success');
                     closeAddCustomFieldModal();
                     closeColumnManager();
+
+                    renderContacts(allContacts);
                     
                     // Reopen column manager to show new field
                     setTimeout(() => openColumnManager(), 300);
                 } else {
-                    throw new Error('Ekleme başarısız');
+                    let errorMessage = 'Ekleme başarısız';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData && errorData.error) {
+                            errorMessage = errorData.error;
+                        }
+                    } catch (parseError) {
+                        // Keep generic message if response body is not JSON
+                    }
+                    throw new Error(errorMessage);
                 }
             } catch (error) {
                 console.error('Error adding custom field:', error);
-                showToast('Özel sütun eklenemedi', 'error');
+                showToast(`Özel sütun eklenemedi: ${error.message}`, 'error');
             }
         });
 
@@ -1258,11 +1588,13 @@
                 if (companyIdFilter) url += `company_id=${companyIdFilter}&`;
                 
                 const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`Contacts API failed: ${res.status}`);
+                }
                 const data = await res.json();
-                allContacts = data.contacts;
+                allContacts = Array.isArray(data.contacts) ? data.contacts : [];
                 
-                // Load custom field values for all contacts
-                await loadCustomFieldValues();
+                // Custom field values are now included in the contacts response
                 
                 renderContacts(allContacts);
                 document.getElementById('contactCount').textContent = allContacts.length;
@@ -1279,20 +1611,7 @@
             }
         }
 
-        async function loadCustomFieldValues() {
-            // Load custom field values for all contacts
-            for (const contact of allContacts) {
-                try {
-                    const res = await fetch(`/api/v1/custom-fields/values/contact/${contact.id}`);
-                    if (res.ok) {
-                        const values = await res.json();
-                        contact.customFieldValues = values;
-                    }
-                } catch (e) {
-                    console.error(`Error loading custom fields for contact ${contact.id}:`, e);
-                }
-            }
-        }
+        // loadCustomFieldValues function removed - values now come with contacts API
 
         function renderContacts(contacts) {
             const tbody = document.getElementById('contactsTableBody');
@@ -1316,14 +1635,14 @@
             
             visibleColumns.forEach((col, index) => {
                 if (col === 'name') {
-                    const width = columnWidths['name'] || 200;
+                    const width = columnWidths['name'] || getColumnDefaultWidth('name');
                     headerHtml += `
                         <th scope="col" data-column="name" 
-                            class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none border-r-2 border-gray-300 bg-gray-50"
-                            style="min-width: ${width}px; width: ${width}px;">
-                            <div class="flex items-center justify-between">
-                                <span>Ad Soyad</span>
-                                <span class="text-[10px] text-gray-400 font-normal ml-2">(Zorunlu)</span>
+                            class="px-2 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none border-r-2 border-gray-300 bg-gray-50"
+                                style="min-width: ${width}px; width: ${width}px; max-width: ${width}px;">
+                            <div class="flex items-center justify-between gap-2 overflow-hidden">
+                                <span class="truncate">Ad Soyad</span>
+                                    <span class="text-[10px] text-gray-400 font-normal ml-2">(Zorunlu)</span>
                             </div>
                             <div class="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-brand-500/20 active:bg-brand-500/30 resize-handle group/resize z-10" data-column="name" style="transform: translateX(50%);">
                                 <div class="absolute left-1/2 top-0 bottom-0 w-[2px] bg-gray-400 group-hover/resize:bg-brand-600 transition-colors" style="transform: translateX(-50%);"></div>
@@ -1333,32 +1652,22 @@
                     return;
                 }
                 
-                let label = '';
-                let colId = col;
-                
-                if (col === 'company') label = 'Kuruluş';
-                else if (col === 'email') label = 'E-posta';
-                else if (col === 'phone') label = 'Telefon';
-                else if (col === 'role') label = 'Rol';
-                else if (col === 'lead_score') label = 'Lead Score';
-                else if (col === 'deals') label = 'Açık Anlaşmalar';
-                else if (col.startsWith('custom_')) {
-                    const fieldId = parseInt(col.replace('custom_', ''));
-                    const field = customFields.find(f => f.id === fieldId);
-                    if (field) {
-                        label = field.field_name;
-                    } else {
-                        return; // Skip if field not found
+                const colId = col;
+                const label = resolveColumnLabel(colId);
+                if (!label) {
+                    if (col.startsWith('custom_')) {
+                        return; // Skip orphan custom columns
                     }
+                    return;
                 }
                 
-                const width = columnWidths[colId] || 150;
+                const width = columnWidths[colId] || getColumnDefaultWidth(colId);
                 headerHtml += `
                     <th scope="col" data-column="${colId}" 
-                        class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none hover:bg-gray-100 transition-colors border-r-2 border-gray-300 bg-gray-50"
-                        style="min-width: ${width}px; width: ${width}px;">
-                        <div class="flex items-center gap-2">
-                            <span>${label}</span>
+                        class="px-2 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap relative cursor-default select-none hover:bg-gray-100 transition-colors border-r-2 border-gray-300 bg-gray-50"
+                        style="min-width: ${width}px; width: ${width}px; max-width: ${width}px;">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <span class="truncate">${label}</span>
                         </div>
                         <div class="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-brand-500/20 active:bg-brand-500/30 resize-handle group/resize z-10" data-column="${colId}" style="transform: translateX(50%);">
                             <div class="absolute left-1/2 top-0 bottom-0 w-[2px] bg-gray-400 group-hover/resize:bg-brand-600 transition-colors" style="transform: translateX(-50%);"></div>
@@ -1408,8 +1717,8 @@
                 `;
                 
                 visibleColumns.forEach(col => {
-                    const width = columnWidths[col] || (col === 'name' ? 200 : 150);
-                    const style = `style="min-width: ${width}px; width: ${width}px;"`;
+                    const width = columnWidths[col] || getColumnDefaultWidth(col);
+                    const style = `style="min-width: ${width}px; width: ${width}px; max-width: ${width}px;"`;
                     
                     if (col === 'name') {
                         html += `
@@ -1423,12 +1732,22 @@
                             </td>
                         `;
                     } else if (col === 'company') {
+                        const companyOptions = allCompanies.map(company => ({
+                            value: String(company.id),
+                            label: company.name
+                        }));
                         html += `
-                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style}>
+                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle editable-cell" ${style} 
+                                data-contact-id="${c.id}" 
+                                data-field="company_id" 
+                                data-value="${c.company_id || ''}"
+                                data-options='${JSON.stringify(companyOptions)}'
+                                ondblclick="makeEditable(this, 'select')" 
+                                title="Çift tıklayarak düzenle">
                                 <div class="flex items-center justify-between gap-2 h-full">
-                                    <span class="text-sm text-gray-700 truncate">${c.company_name || '-'}</span>
+                                    <span class="cell-value text-sm text-gray-700 truncate">${c.company_name || '-'}</span>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0 rounded hover:bg-gray-100" 
-                                        onclick="openEditModal(${c.id}, 'company_name', '${(c.company_name || '').replace(/'/g, "\\'")}', 'Kuruluş')" 
+                                        onclick="event.stopPropagation(); makeEditable(this.closest('td'), 'select')" 
                                         title="Düzenle">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
@@ -1437,14 +1756,19 @@
                         `;
                     } else if (col === 'email') {
                         html += `
-                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style}>
+                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle editable-cell" ${style} 
+                                data-contact-id="${c.id}" 
+                                data-field="email" 
+                                data-value="${(c.email || '').replace(/"/g, '&quot;')}"
+                                ondblclick="makeEditable(this, 'email')" 
+                                title="Çift tıklayarak düzenle">
                                 <div class="flex items-center justify-between gap-2 h-full">
                                     <div class="flex items-center gap-2 min-w-0">
-                                        <span class="text-sm text-gray-700 truncate">${c.email || '-'}</span>
+                                        <span class="cell-value text-sm text-gray-700 truncate">${c.email || '-'}</span>
                                         ${c.email ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-semibold flex-shrink-0">İş</span>' : ''}
                                     </div>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0 rounded hover:bg-gray-100" 
-                                        onclick="openEditModal(${c.id}, 'email', '${(c.email || '').replace(/'/g, "\\'")}', 'E-posta', 'email')" 
+                                        onclick="event.stopPropagation(); makeEditable(this.closest('td'), 'email')" 
                                         title="Düzenle">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
@@ -1453,11 +1777,16 @@
                         `;
                     } else if (col === 'phone') {
                         html += `
-                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style}>
+                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle editable-cell" ${style} 
+                                data-contact-id="${c.id}" 
+                                data-field="phone" 
+                                data-value="${(c.phone || '').replace(/"/g, '&quot;')}"
+                                ondblclick="makeEditable(this, 'tel')" 
+                                title="Çift tıklayarak düzenle">
                                 <div class="flex items-center justify-between gap-2 h-full">
-                                    <span class="text-sm text-gray-700 truncate">${c.phone || '-'}</span>
+                                    <span class="cell-value text-sm text-gray-700 truncate">${c.phone || '-'}</span>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0 rounded hover:bg-gray-100" 
-                                        onclick="openEditModal(${c.id}, 'phone', '${(c.phone || '').replace(/'/g, "\\'")}', 'Telefon', 'tel')" 
+                                        onclick="event.stopPropagation(); makeEditable(this.closest('td'), 'tel')" 
                                         title="Düzenle">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
@@ -1465,12 +1794,19 @@
                             </td>
                         `;
                     } else if (col === 'role') {
+                        const roleOptions = ['Decision Maker','Champion','Influencer','Blocker','User'];
                         html += `
-                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style}>
+                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle editable-cell" ${style} 
+                                data-contact-id="${c.id}" 
+                                data-field="role" 
+                                data-value="${(c.role || '').replace(/"/g, '&quot;')}"
+                                data-options='${JSON.stringify(roleOptions)}'
+                                ondblclick="makeEditable(this, 'select')" 
+                                title="Çift tıklayarak düzenle">
                                 <div class="flex items-center justify-between gap-2 h-full">
-                                    <span class="px-2 py-0.5 rounded-md text-xs font-semibold ${roleColor} truncate inline-block">${c.role || '-'}</span>
+                                    <span class="cell-value px-2 py-0.5 rounded-md text-xs font-semibold ${roleColor} truncate inline-block">${c.role || '-'}</span>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0 rounded hover:bg-gray-100" 
-                                        onclick="openEditModal(${c.id}, 'role', '${(c.role || '').replace(/'/g, "\\'")}', 'Rol', 'select', ['Decision Maker','Champion','Influencer','Blocker','User'])" 
+                                        onclick="event.stopPropagation(); makeEditable(this.closest('td'), 'select')" 
                                         title="Düzenle">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
@@ -1479,14 +1815,19 @@
                         `;
                     } else if (col === 'lead_score') {
                         html += `
-                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style}>
+                            <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle editable-cell" ${style} 
+                                data-contact-id="${c.id}" 
+                                data-field="lead_score" 
+                                data-value="${c.lead_score}"
+                                ondblclick="makeEditable(this, 'number')" 
+                                title="Çift tıklayarak düzenle">
                                 <div class="flex items-center justify-between gap-2 h-full">
                                     <div class="flex items-center gap-2">
                                         <span class="w-2 h-2 rounded-full ${scoreColor} flex-shrink-0"></span>
-                                        <span class="text-sm font-semibold text-gray-800">${c.lead_score}</span>
+                                        <span class="cell-value text-sm font-semibold text-gray-800">${c.lead_score}</span>
                                     </div>
                                     <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0 rounded hover:bg-gray-100" 
-                                        onclick="openEditModal(${c.id}, 'lead_score', '${c.lead_score}', 'Lead Score', 'number')" 
+                                        onclick="event.stopPropagation(); makeEditable(this.closest('td'), 'number')" 
                                         title="Düzenle">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
@@ -1494,22 +1835,26 @@
                             </td>
                         `;
                     } else if (col === 'deals') {
+                        const openDealsCount = c.open_deals_count || 0;
                         html += `
                             <td class="px-4 py-2.5 whitespace-nowrap border-r-2 border-gray-300 align-middle" ${style}>
-                                <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded-md text-xs font-semibold inline-block">0 açık</span>
+                                <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded-md text-xs font-semibold inline-block">${openDealsCount} açık</span>
                             </td>
                         `;
                     } else if (col.startsWith('custom_')) {
                         const fieldId = parseInt(col.replace('custom_', ''));
                         const field = customFields.find(f => f.id === fieldId);
                         if (field && c.customFieldValues) {
-                            const value = c.customFieldValues[field.field_name] || '-';
+                            const rawValue = c.customFieldValues[field.field_name];
+                            const value = getCustomFieldDisplayValue(field.field_type, rawValue);
                             html += `
-                                <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style}>
+                                <td class="px-4 py-2.5 whitespace-nowrap group/cell border-r-2 border-gray-300 align-middle" ${style} 
+                                    ondblclick="openCustomFieldEditModal(${c.id}, ${field.id})" 
+                                    style="cursor: pointer;" title="Çift tıklayarak düzenle">
                                     <div class="flex items-center justify-between gap-2 h-full">
                                         <span class="text-sm text-gray-700 truncate">${value}</span>
                                         <button class="opacity-0 group-hover/cell:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 p-1 flex-shrink-0 rounded hover:bg-gray-100" 
-                                            onclick="viewContact(${c.id})" 
+                                            onclick="event.stopPropagation(); openCustomFieldEditModal(${c.id}, ${field.id})" 
                                             title="Düzenle">
                                             <i class="fas fa-pen text-xs"></i>
                                         </button>
@@ -1616,42 +1961,61 @@
                     isResizing = true;
                     currentResizeColumn = this.dataset.column;
                     const th = this.parentElement;
-                    const startX = e.pageX;
+                    const startX = e.clientX;
                     const startWidth = th.offsetWidth;
+                    const columnIndex = Array.from(th.parentElement.children).indexOf(th);
+                    const rows = document.querySelectorAll('#contactsTableBody tr');
+                    const columnCells = Array.from(rows)
+                        .map(row => row.children[columnIndex])
+                        .filter(Boolean);
+                    let latestWidth = startWidth;
+                    let rafPending = false;
+                    let hasResized = false;
                     
                     // Visual feedback during resize
                     this.style.backgroundColor = 'rgba(139, 92, 246, 0.3)';
                     document.body.style.cursor = 'col-resize';
                     document.body.style.userSelect = 'none';
+
+                    const applyWidth = (width) => {
+                        th.style.width = width + 'px';
+                        th.style.minWidth = width + 'px';
+                        th.style.maxWidth = width + 'px';
+
+                        columnCells.forEach(cell => {
+                            cell.style.width = width + 'px';
+                            cell.style.minWidth = width + 'px';
+                            cell.style.maxWidth = width + 'px';
+                        });
+
+                        columnWidths[currentResizeColumn] = width;
+                    };
                     
                     const onMouseMove = (e) => {
                         if (!isResizing) return;
                         
-                        const diff = e.pageX - startX;
-                        const newWidth = Math.max(80, startWidth + diff);
-                        
-                        // Update header width
-                        th.style.width = newWidth + 'px';
-                        th.style.minWidth = newWidth + 'px';
-                        
-                        // Update all cells in this column
-                        const columnIndex = Array.from(th.parentElement.children).indexOf(th);
-                        const rows = document.querySelectorAll('#contactsTableBody tr');
-                        rows.forEach(row => {
-                            const cell = row.children[columnIndex];
-                            if (cell) {
-                                cell.style.width = newWidth + 'px';
-                                cell.style.minWidth = newWidth + 'px';
-                            }
-                        });
-                        
-                        // Store width
-                        columnWidths[currentResizeColumn] = newWidth;
+                        const diff = e.clientX - startX;
+                        const minWidth = getColumnMinWidth(currentResizeColumn);
+                        latestWidth = Math.max(minWidth, startWidth + diff);
+                        hasResized = true;
+
+                        if (!rafPending) {
+                            rafPending = true;
+                            requestAnimationFrame(() => {
+                                applyWidth(latestWidth);
+                                rafPending = false;
+                            });
+                        }
                     };
                     
                     const onMouseUp = () => {
                         isResizing = false;
                         currentResizeColumn = null;
+
+                        if (rafPending) {
+                            applyWidth(latestWidth);
+                            rafPending = false;
+                        }
                         
                         // Reset visual feedback
                         this.style.backgroundColor = '';
@@ -1662,7 +2026,9 @@
                         document.removeEventListener('mouseup', onMouseUp);
                         
                         // Save widths to preferences
-                        saveColumnWidths();
+                        if (hasResized) {
+                            saveColumnWidths();
+                        }
                     };
                     
                     document.addEventListener('mousemove', onMouseMove);
@@ -1695,8 +2061,335 @@
             }
         }
         
+        // ============================================================================
+        // Excel-Style Inline Editing System
+        // ============================================================================
+        
+        let currentlyEditingCell = null;
+        
+        function makeEditable(cell, inputType = 'text') {
+            // Prevent multiple edits at once
+            if (currentlyEditingCell && currentlyEditingCell !== cell) {
+                cancelEdit(currentlyEditingCell);
+            }
+            
+            currentlyEditingCell = cell;
+            const contactId = cell.dataset.contactId;
+            const field = cell.dataset.field;
+            const currentValue = cell.dataset.value || '';
+            const options = cell.dataset.options ? JSON.parse(cell.dataset.options) : null;
+            
+            // Store original HTML
+            cell.dataset.originalHtml = cell.innerHTML;
+            
+            // Create input based on type
+            let inputHtml = '';
+            
+            if (inputType === 'select' && options) {
+                const normalizedOptions = options.map(opt => {
+                    if (opt && typeof opt === 'object') {
+                        return {
+                            value: String(opt.value ?? ''),
+                            label: String(opt.label ?? opt.value ?? '')
+                        };
+                    }
+                    return { value: String(opt ?? ''), label: String(opt ?? '') };
+                });
+
+                inputHtml = `
+                    <select class="inline-edit-input w-full px-2 py-1 border-2 border-blue-500 rounded text-sm focus:outline-none bg-white" 
+                        onblur="saveInlineEdit(this.closest('td'))" 
+                        onkeydown="handleInlineEditKeydown(event, this.closest('td'))">
+                        <option value="">-</option>
+                        ${normalizedOptions.map(opt => `<option value="${opt.value}" ${String(currentValue) === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    </select>
+                `;
+            } else {
+                const type = inputType === 'number' ? 'number' : inputType === 'email' ? 'email' : inputType === 'tel' ? 'tel' : 'text';
+                inputHtml = `
+                    <input type="${type}" 
+                        class="inline-edit-input w-full px-2 py-1 border-2 border-blue-500 rounded text-sm focus:outline-none" 
+                        value="${currentValue.replace(/"/g, '&quot;')}"
+                        onblur="saveInlineEdit(this.closest('td'))" 
+                        onkeydown="handleInlineEditKeydown(event, this.closest('td'))"
+                        ${inputType === 'number' ? 'min="0" max="100"' : ''}>
+                `;
+            }
+            
+            cell.innerHTML = inputHtml;
+            
+            // Focus the input
+            const input = cell.querySelector('.inline-edit-input');
+            if (input) {
+                input.focus();
+                if (inputType !== 'select') {
+                    input.select();
+                }
+            }
+        }
+        
+        function handleInlineEditKeydown(event, cell) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveInlineEdit(cell);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelEdit(cell);
+            }
+        }
+        
+        async function saveInlineEdit(cell) {
+            if (!cell || !currentlyEditingCell) return;
+            
+            const input = cell.querySelector('.inline-edit-input');
+            if (!input) return;
+            
+            const contactId = cell.dataset.contactId;
+            const field = cell.dataset.field;
+            const newValue = input.value.trim();
+            const oldValue = cell.dataset.value || '';
+
+            let payloadValue = newValue || null;
+            if (field === 'company_id') {
+                payloadValue = newValue ? parseInt(newValue, 10) : null;
+            }
+
+            const normalizedOldValue = String(oldValue || '');
+            const normalizedNewValue = String(newValue || '');
+            
+            // If value hasn't changed, just cancel
+            if (normalizedNewValue === normalizedOldValue) {
+                cancelEdit(cell);
+                return;
+            }
+            
+            // Show loading state
+            cell.innerHTML = '<div class="flex items-center justify-center"><i class="fas fa-spinner fa-spin text-gray-400"></i></div>';
+            
+            try {
+                // Update via API
+                const response = await fetch(`/api/v1/contacts/${contactId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        [field]: payloadValue
+                    })
+                });
+                
+                if (response.ok) {
+                    // Update the cell's data
+                    cell.dataset.value = newValue;
+                    
+                    // Restore original HTML structure with new value
+                    cell.innerHTML = cell.dataset.originalHtml;
+                    
+                    // Update the displayed value
+                    const valueSpan = cell.querySelector('.cell-value');
+                    if (valueSpan) {
+                        if (field === 'company_id') {
+                            const selectedOption = input.options[input.selectedIndex];
+                            valueSpan.textContent = selectedOption ? selectedOption.textContent : '-';
+                        } else {
+                            valueSpan.textContent = newValue || '-';
+                        }
+                    }
+                    
+                    showToast('Güncellendi', 'success');
+                    currentlyEditingCell = null;
+                    
+                    // Reload to update any dependent fields (like lead score color)
+                    await loadContacts();
+                } else {
+                    throw new Error('Güncelleme başarısız');
+                }
+            } catch (error) {
+                console.error('Error saving inline edit:', error);
+                showToast('Kaydedilemedi', 'error');
+                cancelEdit(cell);
+            }
+        }
+        
+        function cancelEdit(cell) {
+            if (!cell || !cell.dataset.originalHtml) return;
+            
+            cell.innerHTML = cell.dataset.originalHtml;
+            delete cell.dataset.originalHtml;
+            currentlyEditingCell = null;
+        }
+        
+        // Close inline edit when clicking outside
+        document.addEventListener('click', function(e) {
+            if (currentlyEditingCell && !currentlyEditingCell.contains(e.target)) {
+                saveInlineEdit(currentlyEditingCell);
+            }
+        });
+        
+        // ============================================================================
         // Edit Modal System
+        // ============================================================================
+        
         let currentEditData = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function parseCustomFieldOptions(field) {
+            const rawOptions = field?.options ?? field?.field_options;
+            if (!rawOptions) return [];
+            if (Array.isArray(rawOptions)) return rawOptions;
+
+            try {
+                const parsed = JSON.parse(rawOptions);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function normalizeCustomFieldValue(fieldType, value) {
+            if (value === null || value === undefined || value === '-') {
+                return fieldType === 'checkbox' ? false : '';
+            }
+
+            if (fieldType === 'checkbox') {
+                return value === true || value === 'true' || value === '1' || value === 1;
+            }
+
+            if (fieldType === 'multi_select') {
+                if (Array.isArray(value)) {
+                    return value;
+                }
+                try {
+                    const parsed = JSON.parse(value);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (_) {
+                    return [];
+                }
+            }
+
+            return value;
+        }
+
+        function getCustomFieldDisplayValue(fieldType, value) {
+            if (value === null || value === undefined || value === '' || value === '-') {
+                return '-';
+            }
+
+            if (fieldType === 'checkbox') {
+                return (value === true || value === 'true' || value === '1' || value === 1) ? 'Evet' : 'Hayır';
+            }
+
+            if (fieldType === 'multi_select') {
+                if (Array.isArray(value)) {
+                    return value.length ? value.join(', ') : '-';
+                }
+                try {
+                    const parsed = JSON.parse(value);
+                    return Array.isArray(parsed) && parsed.length ? parsed.join(', ') : '-';
+                } catch (_) {
+                    return value;
+                }
+            }
+
+            return value;
+        }
+
+        function openCustomFieldEditModal(contactId, customFieldId) {
+            const contact = allContacts.find(c => c.id === contactId);
+            const field = customFields.find(f => f.id === customFieldId);
+
+            if (!contact || !field) {
+                showToast('Alan bilgisi bulunamadı', 'error');
+                return;
+            }
+
+            const rawValue = contact.customFieldValues ? contact.customFieldValues[field.field_name] : '';
+            const normalizedValue = normalizeCustomFieldValue(field.field_type, rawValue);
+            const options = parseCustomFieldOptions(field);
+
+            currentEditData = {
+                mode: 'custom_field',
+                contactId,
+                customFieldId,
+                fieldName: field.field_name,
+                fieldType: field.field_type,
+                currentValue: normalizedValue,
+                options
+            };
+
+            const modal = document.getElementById('editFieldModal');
+            const modalTitle = document.getElementById('editModalTitle');
+            const modalContent = document.getElementById('editModalContent');
+            modalTitle.textContent = `Alan Duzenle: ${field.field_name}`;
+
+            let inputHtml = '';
+            if (field.field_type === 'dropdown') {
+                inputHtml = `
+                    <select id="editFieldInput" class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
+                        <option value="">Seciniz</option>
+                        ${options.map(opt => {
+                            const escaped = escapeHtml(opt);
+                            return `<option value="${escaped}" ${String(normalizedValue) === String(opt) ? 'selected' : ''}>${escaped}</option>`;
+                        }).join('')}
+                    </select>
+                `;
+            } else if (field.field_type === 'checkbox') {
+                inputHtml = `
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                        <input type="checkbox" id="editFieldInput" ${normalizedValue ? 'checked' : ''} class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                        <span class="text-sm text-gray-700">Isaretli ise Evet olarak kaydedilir</span>
+                    </label>
+                `;
+            } else if (field.field_type === 'multi_select') {
+                inputHtml = `
+                    <div id="editFieldInput" class="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-56 overflow-y-auto">
+                        ${options.map(opt => {
+                            const escaped = escapeHtml(opt);
+                            const checked = Array.isArray(normalizedValue) && normalizedValue.includes(opt) ? 'checked' : '';
+                            return `
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="edit-multi-option w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" value="${escaped}" ${checked}>
+                                    <span class="text-sm text-gray-700">${escaped}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } else if (field.field_type === 'date') {
+                inputHtml = `
+                    <input type="date" id="editFieldInput" class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" value="${escapeHtml(normalizedValue || '')}">
+                `;
+            } else if (field.field_type === 'number') {
+                inputHtml = `
+                    <input type="number" id="editFieldInput" class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" value="${escapeHtml(normalizedValue || '')}">
+                `;
+            } else {
+                inputHtml = `
+                    <input type="text" id="editFieldInput" class="w-full px-4 py-3 border-2 border-blue-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" value="${escapeHtml(normalizedValue || '')}" placeholder="Deger girin">
+                `;
+            }
+
+            modalContent.innerHTML = inputHtml;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            setTimeout(() => {
+                const input = document.getElementById('editFieldInput');
+                if (!input) return;
+                if (field.field_type !== 'multi_select' && field.field_type !== 'checkbox') {
+                    input.focus();
+                    if (input.select) input.select();
+                }
+            }, 100);
+        }
         
         function openEditModal(contactId, field, currentValue, fieldLabel, fieldType = 'text', options = null) {
             currentEditData = { contactId, field, currentValue, fieldLabel, fieldType, options };
@@ -1778,6 +2471,87 @@
         
         async function saveFieldEdit() {
             if (!currentEditData) return;
+
+            if (currentEditData.mode === 'custom_field') {
+                const { contactId, customFieldId, fieldName, fieldType, currentValue } = currentEditData;
+                let newValue;
+
+                if (fieldType === 'checkbox') {
+                    newValue = document.getElementById('editFieldInput')?.checked || false;
+                } else if (fieldType === 'multi_select') {
+                    const checkedOptions = document.querySelectorAll('.edit-multi-option:checked');
+                    newValue = Array.from(checkedOptions).map(opt => opt.value);
+                } else {
+                    newValue = document.getElementById('editFieldInput')?.value?.trim() || '';
+                }
+
+                if (JSON.stringify(newValue) === JSON.stringify(currentValue)) {
+                    closeEditModal();
+                    return;
+                }
+
+                const saveBtn = document.getElementById('saveFieldBtn');
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Kaydediliyor...';
+                saveBtn.disabled = true;
+
+                try {
+                    const response = await fetch('/api/v1/custom-fields/values', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            custom_field_id: customFieldId,
+                            entity_id: contactId,
+                            value: newValue
+                        })
+                    });
+
+                    if (!response.ok) {
+                        let errorMessage = 'Ozel alan kaydedilemedi';
+                        try {
+                            const errorData = await response.json();
+                            if (errorData?.error) {
+                                errorMessage = errorData.error;
+                            }
+                        } catch (_) {
+                            // Keep fallback message
+                        }
+                        throw new Error(errorMessage);
+                    }
+
+                    const contact = allContacts.find(c => c.id === contactId);
+                    if (contact) {
+                        if (!contact.customFieldValues) {
+                            contact.customFieldValues = {};
+                        }
+                        contact.customFieldValues[fieldName] = newValue;
+                    }
+
+                    saveBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Kaydedildi';
+                    saveBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                    saveBtn.classList.add('bg-green-600');
+
+                    setTimeout(() => {
+                        closeEditModal();
+                        renderContacts(allContacts);
+                        showToast('Ozel alan guncellendi', 'success');
+                    }, 350);
+                } catch (error) {
+                    console.error('Custom field save error:', error);
+                    saveBtn.innerHTML = '<i class="fas fa-times mr-2"></i> Hata';
+                    saveBtn.classList.remove('bg-emerald-600');
+                    saveBtn.classList.add('bg-red-600');
+                    showToast(error.message || 'Ozel alan kaydedilemedi', 'error');
+
+                    setTimeout(() => {
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.classList.remove('bg-red-600');
+                        saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                        saveBtn.disabled = false;
+                    }, 1500);
+                }
+                return;
+            }
             
             const input = document.getElementById('editFieldInput');
             const newValue = input.value.trim();
@@ -1840,8 +2614,22 @@
             if (!currentEditData) return;
             
             if (confirm('Bu alanı silmek istediğinizden emin misiniz?')) {
-                const input = document.getElementById('editFieldInput');
-                input.value = '';
+                if (currentEditData.mode === 'custom_field') {
+                    if (currentEditData.fieldType === 'checkbox') {
+                        const input = document.getElementById('editFieldInput');
+                        if (input) input.checked = false;
+                    } else if (currentEditData.fieldType === 'multi_select') {
+                        document.querySelectorAll('.edit-multi-option').forEach(opt => {
+                            opt.checked = false;
+                        });
+                    } else {
+                        const input = document.getElementById('editFieldInput');
+                        if (input) input.value = '';
+                    }
+                } else {
+                    const input = document.getElementById('editFieldInput');
+                    if (input) input.value = '';
+                }
                 saveFieldEdit();
             }
         }

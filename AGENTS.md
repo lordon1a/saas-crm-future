@@ -1,82 +1,42 @@
-# AI Agent Kural Kitapcigi
+# AGENTS.md
 
-Bu dokuman, bu repoda calisan AI coding agent'lar icin zorunlu calisma kurallarini tanimlar.
+## Must-follow Constraints
 
-## 1) Temel Ilke
-- Once var olan kodu oku, sonra degisiklik yap.
-- Gorev kapsami disina cikma; istenmeyen refactor yapma.
-- Mevcut route, API ve davranislari bozma.
-- Geriye donuk uyumlulugu koru.
+- **Auth required**: All new endpoints must use `@login_required` decorator
+- **DB rollback**: All `db.session.commit()` must be wrapped in try/except with rollback
+- **No new HTML**: Do not create new HTML pages unless explicitly requested
+- **No breaking changes**: Never delete or modify existing API routes
+- **Migration required**: Schema changes require migration script in `migrations/` folder
 
-## 2) UI/Frontend Kurallari
-- Acikca istenmedikce yeni HTML sayfasi olusturma.
-- Mevcut Tailwind tasarim dilini, sidebar/topbar yapisini ve renk dilini koru.
-- JS selector'lari (id/class/data-*) ile template ogeleri birebir eslesmeli.
-- Gorsel duzeltmelerde yalnizca gerekli siniflari degistir; toplu stil dagitma yapma.
-- Topbar tum uygulama sayfalarinda ayni duzende ve sabit olmali: solda sidebar offseti korunur, arama ortada, yardim/hesap sagda.
-- Yeni sayfa eklerken sidebar ikon seti eksiksiz olmali; kisa versiyon kullanma.
+## Validation Before Finishing
 
-### Sidebar Zorunlu Ikon Sirasi
-- / (Gelen Kutusu)
-- /analytics (Raporlar)
-- /contacts (Kisiler)
-- /companies (Sirketler)
-- /broadcast (Toplu Mesaj)
-- /automation (Otomasyon)
-- /pipeline (Pipeline)
-- /tasks (Gorevler)
-- /documents (Dokumanlar)
-- /channels (Kanallar)
-- /settings (Ayarlar)
-- Alt bolum: /logout (Cikis Yap)
+- Run syntax check on modified Python files
+- Test the affected endpoint/page if possible
 
-### Topbar Zorunlu Davranis
-- Topbar her zaman ustte sabit/fixed davranmali; sayfa scroll'unda yer degistirmemeli.
-- Topbar satiri yeni sayfalarda bolunmemeli; arama + sag aksiyonlar tek satirda kalmali.
+## Repo-specific Conventions
 
-## 3) Backend ve Veri Butunlugu
-- Mevcut endpoint'leri silme veya davranisini kirma.
-- Yeni endpoint eklerken uygun auth decorator kullan.
-- DB write islemlerinde commit adimi try/except ile korunmali:
-  - Hata durumunda rollback yap.
-  - Hata logu kaydet.
-- Iliski/cascade/orphan etkilerini kontrol etmeden model iliskisi degistirme.
+- Service layer: Put business logic in `services/` not routes
+- Use existing service functions before writing new DB code
+- Tailwind CSS only - do not add custom CSS unless necessary
+- Global JS in `static/app.js` or `static/topbar-global.js`
 
-## 4) Dosya ve Medya Islemleri
-- Dosya adlarini guvenli hale getir (secure filename).
-- Path traversal riskini engelle.
-- Boyut limiti gibi is kurallari hem backend hem UI tarafinda net gorunsun.
+## Important Locations
 
-## 5) Hata Yonetimi ve Loglama
-- Kullaniciya anlasilir hata mesaji don.
-- Sunucu tarafinda detayli ama guvenli log tut (hassas veri yazma).
-- Sessizce yutulan exception birakma.
+- Models: `models_crm.py`, `models_automation.py`, `models_contact_timeline.py`
+- Key routes: `routes/api.py`, `routes/contacts.py`, `routes/automation.py`, `routes/pipeline.py`, `routes/tasks.py`
+- Key services: `services/automation_engine.py`, `services/contact_service.py`, `services/pipeline_service.py`, `services/task_service.py`
 
-## 6) Test ve Dogrulama
-- Degisiklikten sonra ilgili dosyalarda syntax/lint/runtime kontrolu yap.
-- Mumkunse ilgili endpoint veya UI akisini hizli smoke test ile dogrula.
-- Kritik akislarda regressions kontrolu yapmadan gorevi kapatma.
+## Change Safety Rules
 
-## 7) Git ve Teslim
-- Kucuk, anlamli commit'ler at.
-- Commit mesaji degisikligin amacini net anlatmali.
-- Push oncesi `git status` ve `git diff` kontrolu yap.
-- Kullanici acikca istemedikce destruktif git komutlari kullanma.
+- Never modify model relationships without checking cascade/orphan effects
+- Never expose sensitive data (passwords, tokens, API keys) in logs or responses
+- Never store passwords in plain text - use hashed passwords
+- Never add unauthenticated API endpoints
 
-## 8) Iletisim Standarti
-- Kullanici Turkce istiyorsa Turkce devam et.
-- Durum guncellemelerini kisa ve net ver.
-- Blokaj varsa erken bildir, alternatif oneri sun.
+## Known Gotchas
 
-## 9) Bu Repo Icin Ozel Kirmizi Cizgiler
-- Yeni HTML sayfasi acma (ozel istek yoksa).
-- Mevcut API route'larini kirma/silme.
-- Auth'suz yeni API birakma.
-- DB commit'i rollback/log korumasi olmadan birakma.
-
-## 10) Oncelik Sirasi
-1. Guvenlik
-2. Veri butunlugu
-3. Mevcut davranisi koruma
-4. Kullanici istegine birebir uyum
-5. Kod sadeligi
+- Sidebar icon order is fixed: Inbox → Analytics → Contacts → Companies → Broadcast → Automation → Pipeline → Tasks → Documents → Channels → Settings → Logout
+- Topbar must stay fixed at top - do not make it scrollable
+- Custom field updates require both `models_crm.py` and `routes/custom_fields.py` changes
+- Pipeline stage changes affect `services/pipeline_service.py` logic
+- WhatsApp webhook processing is in `services/webhook_service.py`
