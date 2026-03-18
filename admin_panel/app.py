@@ -128,6 +128,10 @@ def get_tenants():
 def index():
     return send_from_directory('.', 'index.html')
 
+@app.route('/dashboard')
+def dashboard():
+    return send_from_directory('templates', 'dashboard.html')
+
 @app.route('/<path:path>')
 def serve_file(path):
     return send_from_directory('.', path)
