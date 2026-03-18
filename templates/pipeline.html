@@ -713,18 +713,20 @@
                 
                 const pipelines = await pipelinesRes.json();
                 
-                if (!Array.isArray(pipelines) || pipelines.length === 0) {
+                // Check if pipelines is valid and has data
+                if (!pipelines || !Array.isArray(pipelines) || pipelines.length === 0) {
                     console.warn('No pipelines found');
                     showToast('No pipeline found. Please create a pipeline first.', 'error');
                     return;
                 }
                 
-                // Use first (default) pipeline
-                currentPipeline = pipelines[0];
-                
-                if (!currentPipeline || !currentPipeline.id) {
-                    throw new Error('Invalid pipeline data');
+                // Use first (default) pipeline with null check
+                const pipeline = pipelines && pipelines.length > 0 ? pipelines[0] : null;
+                if (!pipeline || !pipeline.id) {
+                    throw new Error('Invalid pipeline data - pipeline or pipeline.id is missing');
                 }
+                
+                currentPipeline = pipeline;
                 
                 // Load deals
                 const dealsRes = await fetch(`/api/v1/deals?pipeline_id=${currentPipeline.id}`);

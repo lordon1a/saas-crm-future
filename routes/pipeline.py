@@ -65,8 +65,11 @@ def get_pipelines():
         
         return jsonify(result), 200
     except Exception as e:
+        import traceback
         logger.error(f"Error getting pipelines: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        logger.error(traceback.format_exc())
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/pipelines/<int:pipeline_id>', methods=['GET'])
