@@ -982,11 +982,13 @@ function initRealtimeSocket() {
     if (socketClient || typeof io === 'undefined') return;
 
     socketClient = io({
-        transports: ['websocket'],
+        // Server tarafi threading async mode kullandigi icin websocket yerine polling daha stabil.
+        transports: ['polling'],
         upgrade: false,
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
+        timeout: 20000,
         withCredentials: true
     });
 
@@ -1678,11 +1680,13 @@ loadNotifications();
 function cleanupConnections() {
     console.log('Cleaning up socket and refresh timers...');
     
-    if (socketClient) {
+    // Disconnect only when there is an established socket.
+    // Disconnecting during initial handshake can trigger noisy console errors.
+    if (socketClient && socketClient.connected) {
         socketClient.disconnect();
-        socketClient = null;
         console.log('Socket connection closed');
     }
+    socketClient = null;
     
     if (conversationsRefreshTimer) {
         clearTimeout(conversationsRefreshTimer);
@@ -1693,6 +1697,7 @@ function cleanupConnections() {
 
 // Cleanup when user navigates away (prevents worker starvation)
 window.addEventListener('beforeunload', cleanupConnections);
+window.addEventListener('pagehide', cleanupConnections);
 
 // Cleanup when user clicks on navigation links
 document.addEventListener('click', function(e) {
@@ -1701,10 +1706,6 @@ document.addEventListener('click', function(e) {
     if (dropdown && bell && !dropdown.contains(e.target) && !bell.contains(e.target)) {
         dropdown.classList.add('hidden');
     }
-
-    const link = e.target.closest('a');
-    if (link && link.href && !link.href.includes('#') && link.href !== window.location.href) {
-        // User is navigating to a different page
-        cleanupConnections();
-    }
+    // Intentionally avoid forcing socket cleanup on click.
+    // Actual navigation is already handled by beforeunload/pagehide.
 });
