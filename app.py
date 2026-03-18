@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from flask_cors import CORS
