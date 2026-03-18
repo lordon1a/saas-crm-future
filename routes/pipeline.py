@@ -36,24 +36,36 @@ def login_required_api(f):
 def get_pipelines():
     """Get all pipelines for the workspace"""
     workspace_id = session.get('workspace_id')
-    pipelines = Pipeline.query.filter_by(workspace_id=workspace_id).all()
     
-    result = []
-    for pipeline in pipelines:
-        result.append({
-            'id': pipeline.id,
-            'name': pipeline.name,
-            'is_default': pipeline.is_default,
-            'stages': [{
-                'id': stage.id,
-                'name': stage.name,
-                'order': stage.order,
-                'probability': stage.probability
-            } for stage in pipeline.stages if stage.is_active],
-            'created_at': pipeline.created_at.isoformat()
-        })
-    
-    return jsonify(result), 200
+    try:
+        # Eager load stages to avoid lazy loading issues
+        pipelines = Pipeline.query.filter_by(workspace_id=workspace_id).options(
+            db.joinedload(Pipeline.stages)
+        ).all()
+        
+        result = []
+        for pipeline in pipelines:
+            try:
+                result.append({
+                    'id': pipeline.id,
+                    'name': pipeline.name,
+                    'is_default': pipeline.is_default,
+                    'stages': [{
+                        'id': stage.id,
+                        'name': stage.name,
+                        'order': stage.order,
+                        'probability': stage.probability
+                    } for stage in sorted(pipeline.stages, key=lambda s: s.order) if stage.is_active],
+                    'created_at': pipeline.created_at.isoformat()
+                })
+            except Exception as e:
+                logger.error(f"Error processing pipeline {pipeline.id}: {e}")
+                continue
+        
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error getting pipelines: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @bp.route('/pipelines/<int:pipeline_id>', methods=['GET'])
