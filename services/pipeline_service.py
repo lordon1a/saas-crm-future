@@ -581,6 +581,8 @@ class PipelineService:
         Returns:
             List of rotting deals with metadata
         """
+        from models import db
+        
         query = Deal.query.filter_by(
             workspace_id=workspace_id,
             status='open',
@@ -590,20 +592,30 @@ class PipelineService:
         if pipeline_id:
             query = query.filter_by(pipeline_id=pipeline_id)
         
+        # Eager load relationships to avoid lazy loading issues
+        query = query.options(
+            db.joinedload(Deal.stage),
+            db.joinedload(Deal.company)
+        )
+        
         deals = query.all()
         rotting_deals = []
         
         for deal in deals:
-            if deal.is_rotting():
-                rotting_deals.append({
-                    'deal_id': deal.id,
-                    'deal_name': deal.name,
-                    'stage_name': deal.stage.name,
-                    'days_in_stage': deal.days_in_current_stage(),
-                    'rotting_threshold': deal.stage.rotting_days,
-                    'owner_id': deal.owner_id,
-                    'company_name': deal.company.name if deal.company else None
-                })
+            try:
+                if deal.is_rotting():
+                    rotting_deals.append({
+                        'deal_id': deal.id,
+                        'deal_name': deal.name,
+                        'stage_name': deal.stage.name if deal.stage else 'Unknown',
+                        'days_in_stage': deal.days_in_current_stage(),
+                        'rotting_threshold': deal.stage.rotting_days if deal.stage else 0,
+                        'owner_id': deal.owner_id,
+                        'company_name': deal.company.name if deal.company else None
+                    })
+            except Exception as e:
+                logger.warning(f"Error processing rotting deal {deal.id}: {e}")
+                continue
         
         return rotting_deals
     
