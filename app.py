@@ -174,6 +174,7 @@ def run_migrations():
             conn = psycopg2.connect(database_url)
             cur = conn.cursor()
             
+            # === DEAL_STAGES TABLE MIGRATIONS ===
             # Check if rotting_days column exists
             cur.execute("""
                 SELECT column_name 
@@ -205,6 +206,103 @@ def run_migrations():
                 """)
                 conn.commit()
                 logger.info("✓ Added is_active column")
+            
+            # === DEALS TABLE MIGRATIONS ===
+            # Check if stage_entered_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='stage_entered_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add stage_entered_at column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN stage_entered_at TIMESTAMP DEFAULT NOW() NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added stage_entered_at column")
+            
+            # Check if is_deleted column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='is_deleted'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add is_deleted column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added is_deleted column")
+            
+            # Check if deleted_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='deleted_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add deleted_at column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added deleted_at column")
+            
+            # Check if updated_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='updated_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add updated_at column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN updated_at TIMESTAMP DEFAULT NOW()
+                """)
+                conn.commit()
+                logger.info("✓ Added updated_at column")
+            
+            # Check if version column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='version'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add version column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN version INTEGER DEFAULT 0 NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added version column")
+            
+            # Check if closed_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='closed_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add closed_at column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN closed_at TIMESTAMP DEFAULT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added closed_at column")
             
             cur.close()
             conn.close()
