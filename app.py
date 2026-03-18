@@ -155,6 +155,72 @@ from utils.exceptions import (
 
 db.init_app(app)
 
+# Auto-run migrations on startup (for Render free tier without shell access)
+def run_migrations():
+    """Run pending database migrations automatically on startup"""
+    try:
+        # Only run on PostgreSQL (production)
+        if not str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('sqlite'):
+            logger.info("Checking for pending migrations...")
+            
+            # Import here to avoid circular imports
+            import psycopg2
+            from urllib.parse import urlparse
+            
+            database_url = app.config.get('SQLALCHEMY_DATABASE_URI')
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            
+            conn = psycopg2.connect(database_url)
+            cur = conn.cursor()
+            
+            # Check if rotting_days column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deal_stages' AND column_name='rotting_days'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add rotting_days column...")
+                cur.execute("""
+                    ALTER TABLE deal_stages 
+                    ADD COLUMN rotting_days INTEGER DEFAULT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added rotting_days column")
+            
+            # Check if is_active column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deal_stages' AND column_name='is_active'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add is_active column...")
+                cur.execute("""
+                    ALTER TABLE deal_stages 
+                    ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added is_active column")
+            
+            cur.close()
+            conn.close()
+            logger.info("✓ All migrations completed")
+            
+    except Exception as e:
+        logger.warning(f"Migration check failed (may be normal if already applied): {e}")
+
+# Run migrations with app context
+with app.app_context():
+    try:
+        run_migrations()
+    except Exception as e:
+        logger.error(f"Failed to run migrations: {e}")
+
+
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
