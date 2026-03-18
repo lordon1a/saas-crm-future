@@ -1451,10 +1451,15 @@
         // ADD DEAL MODAL FUNCTIONS (Pipedrive-7 Implementation)
         // ═══════════════════════════════════════════════════════════════
 
-        function openAddDealModal() {
+        async function openAddDealModal() {
             const modal = document.getElementById('addDealModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            
+            // Ensure pipeline is loaded before rendering stages
+            if (!currentPipeline || !currentPipeline.stages || currentPipeline.stages.length === 0) {
+                await loadPipeline();
+            }
             
             // Load stages for selection
             renderDealStages();
@@ -1477,7 +1482,16 @@
         }
 
         function renderDealStages() {
-            if (!currentPipeline || !currentPipeline.stages) return;
+            if (!currentPipeline || !currentPipeline.stages || currentPipeline.stages.length === 0) {
+                const container = document.getElementById('dealStageSelector');
+                container.innerHTML = `
+                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Pipeline aşamaları yüklenemedi. Lütfen sayfayı yenileyin.
+                    </div>
+                `;
+                return;
+            }
             
             const container = document.getElementById('dealStageSelector');
             const stages = currentPipeline.stages;
@@ -1556,17 +1570,23 @@
                             return;
                         }
                         
-                        results.innerHTML = contacts.map(contact => `
-                            <div class="p-3 hover:bg-brand-50 cursor-pointer transition-colors flex items-center gap-3" onclick='selectContact(${JSON.stringify({id: contact.id, name: contact.name, phone: contact.phone})})'>
-                                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold">
-                                    ${contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
+                        results.innerHTML = contacts.map(contact => {
+                            const displayName = contact.full_name || contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'İsimsiz';
+                            const displayPhone = contact.phone || contact.whatsapp_phone || contact.email || '';
+                            const initial = displayName.charAt(0).toUpperCase();
+                            
+                            return `
+                                <div class="p-3 hover:bg-brand-50 cursor-pointer transition-colors flex items-center gap-3" onclick='selectContact(${JSON.stringify({id: contact.id, name: displayName, phone: displayPhone})})'>
+                                    <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold">
+                                        ${initial}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-slate-800 truncate">${displayName}</p>
+                                        <p class="text-xs text-slate-500">${displayPhone}</p>
+                                    </div>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-slate-800 truncate">${contact.name || 'İsimsiz'}</p>
-                                    <p class="text-xs text-slate-500">${contact.phone || contact.email || ''}</p>
-                                </div>
-                            </div>
-                        `).join('');
+                            `;
+                        }).join('');
                         results.classList.remove('hidden');
                     } catch (error) {
                         console.error('Contact search error:', error);

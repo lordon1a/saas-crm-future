@@ -315,7 +315,7 @@ def restore_company(company_id):
 @contacts_bp.route('/api/v1/contacts', methods=['GET'])
 @login_required
 def get_contacts():
-    """Get all contacts with optional filters and pagination"""
+    """Get all contacts with optional filters and pagination - includes both CRM Contacts and Customers"""
     try:
         workspace_id = session.get('workspace_id')
         if not workspace_id:
@@ -337,12 +337,18 @@ def get_contacts():
             filters['role'] = request.args.get('role')
         if request.args.get('search'):
             filters['search'] = request.args.get('search')
+        if request.args.get('limit'):
+            try:
+                per_page = min(int(request.args.get('limit')), 100)
+            except (TypeError, ValueError):
+                pass
         
         # Get paginated contacts
         from models_crm import Contact, Deal
-        from models import db
+        from models import db, Customer
         from sqlalchemy import func
         
+        # Get CRM Contacts
         query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
         # Apply filters
@@ -357,21 +363,47 @@ def get_contacts():
                     Contact.first_name.ilike(search_term),
                     Contact.last_name.ilike(search_term),
                     Contact.email.ilike(search_term),
-                    Contact.phone.ilike(search_term)
+                    Contact.phone.ilike(search_term),
+                    Contact.whatsapp_phone.ilike(search_term)
                 )
             )
         
         # Eager load company
         query = query.options(db.joinedload(Contact.company))
         
-        # Paginate
-        pagination = query.order_by(Contact.first_name, Contact.last_name).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        # Get CRM contacts
+        crm_contacts = query.order_by(Contact.first_name, Contact.last_name).limit(per_page).all()
         
-        # Load custom field values for all contacts in one go
-        contact_ids = [c.id for c in pagination.items]
-        company_ids = [c.company_id for c in pagination.items if c.company_id]
+        # Also get Customers that are NOT linked to CRM Contacts (for Telegram/WhatsApp users)
+        customer_query = Customer.query.filter_by(workspace_id=workspace_id)
+        
+        # Exclude customers that are already linked to CRM contacts
+        linked_customer_ids = db.session.query(Contact.customer_id).filter(
+            Contact.workspace_id == workspace_id,
+            Contact.customer_id.isnot(None)
+        ).all()
+        linked_customer_ids = [cid[0] for cid in linked_customer_ids]
+        
+        if linked_customer_ids:
+            customer_query = customer_query.filter(~Customer.id.in_(linked_customer_ids))
+        
+        if filters.get('search'):
+            search_term = f"%{filters['search']}%"
+            customer_query = customer_query.filter(
+                db.or_(
+                    Customer.profile_name.ilike(search_term),
+                    Customer.phone_number.ilike(search_term),
+                    Customer.email.ilike(search_term)
+                )
+            )
+        
+        # Get customers (limit to remaining slots)
+        remaining_slots = per_page - len(crm_contacts)
+        customers = customer_query.order_by(Customer.profile_name).limit(max(remaining_slots, 0)).all() if remaining_slots > 0 else []
+        
+        # Load custom field values for CRM contacts
+        contact_ids = [c.id for c in crm_contacts]
+        company_ids = [c.company_id for c in crm_contacts if c.company_id]
         custom_field_values_map = {}
         open_deals_count_map = {}
         
@@ -384,50 +416,79 @@ def get_contacts():
                 except:
                     custom_field_values_map[contact_id] = {}
 
-            # Count open deals per company and map to contacts by company_id
-            open_deals_counts = db.session.query(
-                Deal.company_id,
-                func.count(Deal.id)
-            ).filter(
-                Deal.workspace_id == workspace_id,
-                Deal.company_id.in_(company_ids),
-                Deal.is_deleted == False,
-                Deal.status == 'open'
-            ).group_by(Deal.company_id).all()
+            # Count open deals per company
+            if company_ids:
+                open_deals_counts = db.session.query(
+                    Deal.company_id,
+                    func.count(Deal.id)
+                ).filter(
+                    Deal.workspace_id == workspace_id,
+                    Deal.company_id.in_(company_ids),
+                    Deal.is_deleted == False,
+                    Deal.status == 'open'
+                ).group_by(Deal.company_id).all()
 
-            open_deals_count_map = {
-                company_id: deal_count for company_id, deal_count in open_deals_counts
-            }
+                open_deals_count_map = {
+                    company_id: deal_count for company_id, deal_count in open_deals_counts
+                }
+        
+        # Build result combining CRM contacts and customers
+        result = []
+        
+        # Add CRM contacts
+        for c in crm_contacts:
+            result.append({
+                'id': c.id,
+                'first_name': c.first_name,
+                'last_name': c.last_name,
+                'full_name': c.full_name,
+                'email': c.email,
+                'phone': c.phone,
+                'whatsapp_phone': c.whatsapp_phone,
+                'role': c.role,
+                'job_title': c.job_title,
+                'lead_score': c.lead_score,
+                'company_id': c.company_id,
+                'company_name': c.company.name if c.company else None,
+                'open_deals_count': open_deals_count_map.get(c.company_id, 0) if c.company_id else 0,
+                'customFieldValues': custom_field_values_map.get(c.id, {}),
+                'created_at': c.created_at.isoformat() if c.created_at else None,
+                'updated_at': c.updated_at.isoformat() if c.updated_at else None,
+                'source': 'crm'
+            })
+        
+        # Add customers (Telegram/WhatsApp users not yet in CRM)
+        for customer in customers:
+            result.append({
+                'id': customer.id,
+                'first_name': customer.profile_name or 'Unknown',
+                'last_name': '',
+                'full_name': customer.profile_name or 'Unknown',
+                'email': customer.email,
+                'phone': customer.phone_number,
+                'whatsapp_phone': customer.phone_number,
+                'role': None,
+                'job_title': customer.job_title,
+                'lead_score': 0,
+                'company_id': None,
+                'company_name': customer.company,
+                'open_deals_count': 0,
+                'customFieldValues': {},
+                'created_at': customer.created_at.isoformat() if customer.created_at else None,
+                'updated_at': None,
+                'source': 'customer',
+                'customer_id': customer.id
+            })
         
         return jsonify({
-            'contacts': [
-                {
-                    'id': c.id,
-                    'first_name': c.first_name,
-                    'last_name': c.last_name,
-                    'full_name': c.full_name,
-                    'email': c.email,
-                    'phone': c.phone,
-                    'whatsapp_phone': c.whatsapp_phone,
-                    'role': c.role,
-                    'job_title': c.job_title,
-                    'lead_score': c.lead_score,
-                    'company_id': c.company_id,
-                    'company_name': c.company.name if c.company else None,
-                    'open_deals_count': open_deals_count_map.get(c.company_id, 0) if c.company_id else 0,
-                    'customFieldValues': custom_field_values_map.get(c.id, {}),
-                    'created_at': c.created_at.isoformat() if c.created_at else None,
-                    'updated_at': c.updated_at.isoformat() if c.updated_at else None
-                }
-                for c in pagination.items
-            ],
+            'contacts': result,
             'pagination': {
                 'page': page,
                 'per_page': per_page,
-                'total': pagination.total,
-                'pages': pagination.pages,
-                'has_next': pagination.has_next,
-                'has_prev': pagination.has_prev
+                'total': len(result),
+                'pages': 1,
+                'has_next': False,
+                'has_prev': False
             }
         }), 200
         

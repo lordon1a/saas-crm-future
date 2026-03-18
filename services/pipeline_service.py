@@ -55,7 +55,7 @@ class PipelineService:
         if not company:
             raise ValueError(f"Company {data['company_id']} not found in workspace")
         
-        # Get pipeline and first stage
+        # Get pipeline
         pipeline = Pipeline.query.filter_by(
             id=data['pipeline_id'],
             workspace_id=workspace_id
@@ -64,13 +64,30 @@ class PipelineService:
         if not pipeline:
             raise ValueError(f"Pipeline {data['pipeline_id']} not found")
         
-        # Get first stage (lowest order number)
-        first_stage = DealStage.query.filter_by(
-            pipeline_id=pipeline.id
-        ).order_by(DealStage.order.asc()).first()
+        # Determine stage_id: use provided stage_id or default to first stage
+        stage_id = data.get('stage_id')
         
-        if not first_stage:
-            raise ValueError(f"Pipeline {pipeline.id} has no stages")
+        if stage_id:
+            # Validate provided stage belongs to the pipeline
+            stage = DealStage.query.filter_by(
+                id=stage_id,
+                pipeline_id=pipeline.id,
+                is_active=True
+            ).first()
+            
+            if not stage:
+                raise ValueError(f"Stage {stage_id} not found in pipeline {pipeline.id}")
+        else:
+            # Get first stage (lowest order number)
+            stage = DealStage.query.filter_by(
+                pipeline_id=pipeline.id,
+                is_active=True
+            ).order_by(DealStage.order.asc()).first()
+            
+            if not stage:
+                raise ValueError(f"Pipeline {pipeline.id} has no active stages")
+            
+            stage_id = stage.id
         
         try:
             # Create deal
@@ -79,7 +96,7 @@ class PipelineService:
                 name=data['name'],
                 company_id=data['company_id'],
                 pipeline_id=data['pipeline_id'],
-                stage_id=first_stage.id,
+                stage_id=stage_id,
                 value=data.get('value', 0),
                 expected_close_date=data.get('expected_close_date'),
                 owner_id=data['owner_id'],
@@ -96,7 +113,7 @@ class PipelineService:
                 user_id=data['owner_id'],
                 activity_type='system',
                 subject=f'Deal created: {deal.name}',
-                body=f'Deal created in stage "{first_stage.name}" with value ${deal.value}'
+                body=f'Deal created in stage "{stage.name}" with value ${deal.value}'
             )
             
             db.session.commit()

@@ -244,8 +244,12 @@ def get_deal(deal_id):
 def create_deal():
     """
     Create a new deal.
-    Required: name, company_id, pipeline_id, owner_id
-    Optional: value, expected_close_date
+    Required: name, contact_id, pipeline_id
+    Optional: company_id, value, expected_close_date, stage_id
+    
+    If contact_id is provided but company_id is not:
+    - If contact is a CRM Contact with company, use that company
+    - If contact is a Customer (Telegram/WhatsApp), create a company from customer data
     """
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
@@ -259,6 +263,80 @@ def create_deal():
         # Set owner_id to current user if not provided
         if 'owner_id' not in data:
             data['owner_id'] = user_id
+        
+        # Handle contact_id -> company_id resolution
+        if 'contact_id' in data and not data.get('company_id'):
+            from models_crm import Contact, Company
+            from models import Customer
+            
+            contact_id = data['contact_id']
+            
+            # Try to find CRM Contact first
+            crm_contact = Contact.query.filter_by(
+                id=contact_id,
+                workspace_id=workspace_id,
+                is_deleted=False
+            ).first()
+            
+            if crm_contact:
+                # CRM Contact found
+                if crm_contact.company_id:
+                    data['company_id'] = crm_contact.company_id
+                else:
+                    # Create a company for this contact
+                    company_name = f"{crm_contact.full_name}'s Company"
+                    company = Company(
+                        workspace_id=workspace_id,
+                        name=company_name,
+                        phone=crm_contact.phone or crm_contact.whatsapp_phone
+                    )
+                    db.session.add(company)
+                    db.session.flush()
+                    
+                    # Link contact to company
+                    crm_contact.company_id = company.id
+                    data['company_id'] = company.id
+            else:
+                # Try to find Customer (Telegram/WhatsApp user)
+                customer = Customer.query.filter_by(
+                    id=contact_id,
+                    workspace_id=workspace_id
+                ).first()
+                
+                if customer:
+                    # Create company from customer data
+                    company_name = customer.company or f"{customer.profile_name or 'Unknown'}'s Company"
+                    company = Company(
+                        workspace_id=workspace_id,
+                        name=company_name,
+                        phone=customer.phone_number
+                    )
+                    db.session.add(company)
+                    db.session.flush()
+                    
+                    # Create CRM Contact from Customer
+                    crm_contact = Contact(
+                        workspace_id=workspace_id,
+                        company_id=company.id,
+                        customer_id=customer.id,
+                        first_name=customer.profile_name or 'Unknown',
+                        last_name='',
+                        phone=customer.phone_number,
+                        whatsapp_phone=customer.phone_number,
+                        email=customer.email,
+                        job_title=customer.job_title
+                    )
+                    db.session.add(crm_contact)
+                    db.session.flush()
+                    
+                    data['company_id'] = company.id
+                    logger.info(f"Created CRM Contact {crm_contact.id} and Company {company.id} from Customer {customer.id}")
+                else:
+                    raise ValueError(f"Contact {contact_id} not found")
+        
+        # Validate company_id is set
+        if not data.get('company_id'):
+            raise ValueError("company_id is required or could not be determined from contact_id")
         
         deal = PipelineService.create_deal(workspace_id, data)
         
@@ -278,6 +356,11 @@ def create_deal():
     except ValueError as e:
         logger.error(f"Error creating deal: {e}")
         db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Unexpected error creating deal: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Unexpected error creating deal: {e}")
