@@ -55,7 +55,8 @@ def get_pipelines():
                         'id': stage.id,
                         'name': stage.name,
                         'order': stage.order,
-                        'probability': stage.probability
+                        'probability': stage.probability,
+                        'rotting_days': stage.rotting_days
                     } for stage in sorted(pipeline.stages, key=lambda s: s.order) if stage.is_active],
                     'created_at': pipeline.created_at.isoformat()
                 })
@@ -90,7 +91,8 @@ def get_pipeline(pipeline_id):
             'id': stage.id,
             'name': stage.name,
             'order': stage.order,
-            'probability': stage.probability
+            'probability': stage.probability,
+            'rotting_days': stage.rotting_days
         } for stage in pipeline.stages if stage.is_active],
         'created_at': pipeline.created_at.isoformat()
     }), 200
