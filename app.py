@@ -551,6 +551,9 @@ with app.app_context():
     @event.listens_for(db.engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         """SQLite bağlantılarında WAL mode ve timeout ayarlarını etkinleştirir"""
+        # Render/production ortaminda PostgreSQL kullanilir; PRAGMA sadece SQLite icindir.
+        if db.engine.url.get_backend_name() != 'sqlite':
+            return
         cursor = dbapi_connection.cursor()
         try:
             # Write-Ahead Logging: Eşzamanlı okuma/yazma desteği
