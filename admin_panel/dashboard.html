@@ -109,8 +109,10 @@
     <script>
         checkAuth();
         
-        const user = JSON.parse(localStorage.getItem('super_admin_user'));
-        document.getElementById('userEmail').textContent = user.email;
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
+            window.location.href = '/';
+        }
         
         loadAnalytics();
         loadTenants();

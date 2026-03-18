@@ -80,12 +80,11 @@
                     throw new Error(data.error || 'Login failed');
                 }
                 
-                // Store token and user info
-                localStorage.setItem('super_admin_token', data.token);
-                localStorage.setItem('super_admin_user', JSON.stringify(data.super_admin));
+                // Store token
+                localStorage.setItem('admin_token', data.token);
                 
                 // Redirect to dashboard
-                window.location.href = 'dashboard.html';
+                window.location.href = '/dashboard';
                 
             } catch (error) {
                 errorDiv.textContent = error.message;
