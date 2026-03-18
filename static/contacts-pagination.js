@@ -149,16 +149,11 @@ function updatePaginationUI() {
 
 // Go to specific page
 function goToPage(page) {
-    if (page < 1 || page > (window.totalPages || 1) || page === (window.currentPage || 1)) return;
-    
-    // Clear selections on page change
+    if (page < 1 || page > (window.totalPages || 1)) return;
+    window.currentPage = page;
     selectedContactIds.clear();
     updateBulkActionsBar();
-    
-    // Call the original loadContacts function with page parameter
-    if (typeof loadContacts === 'function') {
-        loadContacts(page);
-    }
+    loadContacts(page);
 }
 
 // Bulk delete selected contacts
