@@ -304,6 +304,52 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added closed_at column")
             
+            # === SUPER_ADMINS TABLE MIGRATION ===
+            # Check if super_admins table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='super_admins'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create super_admins table...")
+                cur.execute("""
+                    CREATE TABLE super_admins (
+                        id SERIAL PRIMARY KEY,
+                        email VARCHAR(255) UNIQUE NOT NULL,
+                        password_hash VARCHAR(255) NOT NULL,
+                        name VARCHAR(100) NOT NULL,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        last_login TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """)
+                conn.commit()
+                logger.info("✓ Created super_admins table")
+            
+            # Check if impersonate_logs table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='impersonate_logs'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create impersonate_logs table...")
+                cur.execute("""
+                    CREATE TABLE impersonate_logs (
+                        id SERIAL PRIMARY KEY,
+                        super_admin_id INTEGER REFERENCES super_admins(id),
+                        workspace_id INTEGER REFERENCES workspaces(id),
+                        started_at TIMESTAMP DEFAULT NOW(),
+                        ended_at TIMESTAMP,
+                        ip_address VARCHAR(50)
+                    )
+                """)
+                conn.commit()
+                logger.info("✓ Created impersonate_logs table")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")

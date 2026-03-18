@@ -108,3 +108,22 @@ class MessageTemplate(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     workspace = db.relationship('Workspace', backref=db.backref('templates', lazy=True), foreign_keys=[workspace_id])
+
+class SuperAdmin(db.Model):
+    __tablename__ = 'super_admins'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ImpersonateLog(db.Model):
+    __tablename__ = 'impersonate_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    super_admin_id = db.Column(db.Integer, db.ForeignKey('super_admins.id'))
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'))
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ended_at = db.Column(db.DateTime)
+    ip_address = db.Column(db.String(50))
