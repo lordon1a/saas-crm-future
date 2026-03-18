@@ -54,13 +54,6 @@ Kontrol listesi — her model değişikliğinde sor:
 4. Yalnızca hatalı satırı değiştir, etrafındaki koda dokunma
 5. Aynı hatayı iki kez yaparsan dur ve kullanıcıya açıkla
 
-## TOKEN TASARRUFU KURALLARI
-- Tüm dosyayı okuma — sadece ilgili fonksiyonu/sınıfı oku
-- Gereksiz açıklama yazma, direkt değişikliği göster
-- "Her şey doğru" deme — değişiklik yoksa tek cümleyle belirt
-- Onay almadan commit etme
-- Bir görevde maksimum 2 dosya değiştir
-
 ## GIT KURALLARI
 - Her commit TEK bir konuyu kapsamalı
 - Commit öncesi ne değiştiğini kullanıcıya söyle
