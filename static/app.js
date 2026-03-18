@@ -17,6 +17,7 @@ let socketClient = null;
 let currentSocketContactId = null;
 let socketConnectErrorCount = 0;
 let socketDisabled = false;
+let fallbackRefreshInterval = null;
 let quickReplies = [];
 let emailTemplates = [];
 let notifications = [];
@@ -1019,6 +1020,7 @@ function initRealtimeSocket() {
             }
             socketClient = null;
             console.warn('Realtime disabled after repeated connection failures. Falling back to API polling.');
+            startFallbackPolling();
         }
     });
 
@@ -1038,10 +1040,30 @@ function initRealtimeSocket() {
         console.log('WebSocket event received:', data);
         handleInboxUpdatedEvent(data);
     });
-    socketClient.on('disconnect', () => {
-        console.warn('WebSocket disconnected');
-        // Socket.IO will auto-reconnect, so no manual retry timer is needed.
+    socketClient.on('disconnect', (reason) => {
+        console.warn('WebSocket disconnected', reason || 'unknown');
+
+        // Transport/server disconnects can cause noisy reconnect loops in some environments.
+        if (reason && reason !== 'io client disconnect') {
+            socketDisabled = true;
+            try {
+                socketClient.io.opts.reconnection = false;
+            } catch (_) {
+                // no-op
+            }
+            socketClient = null;
+            startFallbackPolling();
+        }
     });
+}
+
+function startFallbackPolling() {
+    if (fallbackRefreshInterval) return;
+
+    fallbackRefreshInterval = setInterval(() => {
+        loadConversations();
+        refreshActiveConversationMessages();
+    }, 8000);
 }
 
 async function refreshActiveConversationMessages() {

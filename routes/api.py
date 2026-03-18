@@ -730,15 +730,13 @@ def send_message():
                 channel=channel,
             )
 
-            message.is_read = True
-            ConversationManager.update_last_message_time(conversation_id)
-
+            # Non-critical post-processing: message is already persisted by MessageManager.
             try:
-                db.session.commit()
-            except Exception as commit_exc:
+                message.is_read = True
+                ConversationManager.update_last_message_time(conversation_id)
+            except Exception as post_exc:
                 db.session.rollback()
-                logger.error('Failed to commit outgoing message: %s', commit_exc)
-                return jsonify({'error': 'Mesaj kaydedilemedi'}), 500
+                logger.warning('Post-send metadata update failed (non-blocking): %s', post_exc)
 
             _emit_realtime_message(workspace_id, conversation, message)
 
