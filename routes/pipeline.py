@@ -107,116 +107,123 @@ def get_deals():
     """
     workspace_id = session.get('workspace_id')
     
-    # Pagination parameters
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    per_page = min(per_page, 100)  # Max 100 items per page
-    
-    # Build filters from query params
-    filters = {}
-    if request.args.get('stage_id'):
-        try:
-            filters['stage_id'] = int(request.args.get('stage_id'))
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
-    if request.args.get('owner_id'):
-        try:
-            filters['owner_id'] = int(request.args.get('owner_id'))
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
-    if request.args.get('status'):
-        filters['status'] = request.args.get('status')
-    if request.args.get('company_id'):
-        try:
-            filters['company_id'] = int(request.args.get('company_id'))
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
-    if request.args.get('contact_id'):
-        try:
-            filters['contact_id'] = int(request.args.get('contact_id'))
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
-    if request.args.get('pipeline_id'):
-        try:
-            filters['pipeline_id'] = int(request.args.get('pipeline_id'))
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
-    
-    # Build query
-    query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
-    
-    # Apply filters
-    if filters.get('stage_id'):
-        query = query.filter_by(stage_id=filters['stage_id'])
-    if filters.get('owner_id'):
-        query = query.filter_by(owner_id=filters['owner_id'])
-    if filters.get('status'):
-        query = query.filter_by(status=filters['status'])
-    if filters.get('company_id'):
-        query = query.filter_by(company_id=filters['company_id'])
-    if filters.get('contact_id'):
-        query = query.join(Contact, Contact.company_id == Deal.company_id).filter(
-            Contact.id == filters['contact_id'],
-            Contact.workspace_id == workspace_id,
-            Contact.is_deleted == False,
+    try:
+        # Pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        per_page = min(per_page, 100)  # Max 100 items per page
+        
+        # Build filters from query params
+        filters = {}
+        if request.args.get('stage_id'):
+            try:
+                filters['stage_id'] = int(request.args.get('stage_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+        if request.args.get('owner_id'):
+            try:
+                filters['owner_id'] = int(request.args.get('owner_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+        if request.args.get('status'):
+            filters['status'] = request.args.get('status')
+        if request.args.get('company_id'):
+            try:
+                filters['company_id'] = int(request.args.get('company_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+        if request.args.get('contact_id'):
+            try:
+                filters['contact_id'] = int(request.args.get('contact_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+        if request.args.get('pipeline_id'):
+            try:
+                filters['pipeline_id'] = int(request.args.get('pipeline_id'))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+        
+        # Build query
+        query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
+        
+        # Apply filters
+        if filters.get('stage_id'):
+            query = query.filter_by(stage_id=filters['stage_id'])
+        if filters.get('owner_id'):
+            query = query.filter_by(owner_id=filters['owner_id'])
+        if filters.get('status'):
+            query = query.filter_by(status=filters['status'])
+        if filters.get('company_id'):
+            query = query.filter_by(company_id=filters['company_id'])
+        if filters.get('contact_id'):
+            query = query.join(Contact, Contact.company_id == Deal.company_id).filter(
+                Contact.id == filters['contact_id'],
+                Contact.workspace_id == workspace_id,
+                Contact.is_deleted == False,
+            )
+        if filters.get('pipeline_id'):
+            query = query.filter_by(pipeline_id=filters['pipeline_id'])
+        
+        # Eager load relationships
+        from models import db
+        query = query.options(
+            db.joinedload(Deal.company),
+            db.joinedload(Deal.pipeline),
+            db.joinedload(Deal.stage)
         )
-    if filters.get('pipeline_id'):
-        query = query.filter_by(pipeline_id=filters['pipeline_id'])
-    
-    # Eager load relationships
-    from models import db
-    query = query.options(
-        db.joinedload(Deal.company),
-        db.joinedload(Deal.pipeline),
-        db.joinedload(Deal.stage)
-    )
-    
-    # Paginate
-    pagination = query.order_by(Deal.created_at.desc()).paginate(
-        page=page, per_page=per_page, error_out=False
-    )
-    
-    result = []
-    for deal in pagination.items:
-        result.append({
-            'id': deal.id,
-            'name': deal.name,
-            'company': {
-                'id': deal.company.id,
-                'name': deal.company.name
-            } if deal.company else None,
-            'pipeline_id': deal.pipeline_id,
-            'pipeline_name': deal.pipeline.name,
-            'stage': {
-                'id': deal.stage.id,
-                'name': deal.stage.name,
-                'order': deal.stage.order,
-                'probability': deal.stage.probability
-            },
-            'value': float(deal.value),
-            'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
-            'owner_id': deal.owner_id,
-            'status': deal.status,
-            'win_loss_reason': deal.win_loss_reason,
-            'created_at': deal.created_at.isoformat(),
-            'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
-            'closed_at': deal.closed_at.isoformat() if deal.closed_at else None,
-            'stage_entered_at': deal.stage_entered_at.isoformat() if deal.stage_entered_at else None,
-            'days_in_stage': deal.days_in_current_stage(),
-            'is_rotting': deal.is_rotting()
-        })
-    
-    return jsonify({
-        'deals': result,
-        'pagination': {
-            'page': page,
-            'per_page': per_page,
-            'total': pagination.total,
-            'pages': pagination.pages,
-            'has_next': pagination.has_next,
-            'has_prev': pagination.has_prev
-        }
-    }), 200
+        
+        # Paginate
+        pagination = query.order_by(Deal.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        result = []
+        for deal in pagination.items:
+            result.append({
+                'id': deal.id,
+                'name': deal.name,
+                'company': {
+                    'id': deal.company.id,
+                    'name': deal.company.name
+                } if deal.company else None,
+                'pipeline_id': deal.pipeline_id,
+                'pipeline_name': deal.pipeline.name,
+                'stage': {
+                    'id': deal.stage.id,
+                    'name': deal.stage.name,
+                    'order': deal.stage.order,
+                    'probability': deal.stage.probability
+                },
+                'value': float(deal.value),
+                'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
+                'owner_id': deal.owner_id,
+                'status': deal.status,
+                'win_loss_reason': deal.win_loss_reason,
+                'created_at': deal.created_at.isoformat(),
+                'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
+                'closed_at': deal.closed_at.isoformat() if deal.closed_at else None,
+                'stage_entered_at': deal.stage_entered_at.isoformat() if deal.stage_entered_at else None,
+                'days_in_stage': deal.days_in_current_stage(),
+                'is_rotting': deal.is_rotting()
+            })
+        
+        return jsonify({
+            'deals': result,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': pagination.total,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev
+            }
+        }), 200
+    except Exception as e:
+        import traceback
+        logger.error(f"Error getting deals: {e}")
+        logger.error(traceback.format_exc())
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/deals/<int:deal_id>', methods=['GET'])
@@ -387,14 +394,12 @@ def create_deal():
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
+        import traceback
         logger.error(f"Unexpected error creating deal: {e}")
+        logger.error(traceback.format_exc())
+        print(traceback.format_exc())
         db.session.rollback()
-        return jsonify({'error': 'Internal server error'}), 500
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Unexpected error creating deal: {e}")
-        db.session.rollback()
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/deals/<int:deal_id>', methods=['PATCH'])
@@ -663,8 +668,11 @@ def get_analytics():
         }), 200
         
     except Exception as e:
+        import traceback
         logger.error(f"Error calculating analytics: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        logger.error(traceback.format_exc())
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/deals/forecast', methods=['GET'])
