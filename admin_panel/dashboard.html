@@ -110,8 +110,8 @@
         checkAuth();
         
         const token = localStorage.getItem('admin_token');
-        if (!token) {
-            window.location.href = '/';
+        if (!token && window.location.pathname !== '/') {
+            window.location.replace('/');
         }
         
         loadAnalytics();

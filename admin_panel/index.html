@@ -50,11 +50,6 @@
 
     <script src="static/admin.js"></script>
     <script>
-        // Check if already logged in
-        if (localStorage.getItem('super_admin_token')) {
-            window.location.href = 'dashboard.html';
-        }
-
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
