@@ -46,7 +46,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 realtime.socketio = SocketIO(
     app,
     cors_allowed_origins=Config.CORS_ORIGINS,
-    async_mode='threading',
+    async_mode='gevent',
     engineio_logger=False,
     logger=False,
     always_connect=True,

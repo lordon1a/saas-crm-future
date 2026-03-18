@@ -982,9 +982,8 @@ function initRealtimeSocket() {
     if (socketClient || typeof io === 'undefined') return;
 
     socketClient = io({
-        // Server tarafi threading async mode kullandigi icin websocket yerine polling daha stabil.
-        transports: ['polling'],
-        upgrade: false,
+        transports: ['websocket', 'polling'],
+        upgrade: true,
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
@@ -1697,7 +1696,6 @@ function cleanupConnections() {
 
 // Cleanup when user navigates away (prevents worker starvation)
 window.addEventListener('beforeunload', cleanupConnections);
-window.addEventListener('pagehide', cleanupConnections);
 
 // Cleanup when user clicks on navigation links
 document.addEventListener('click', function(e) {
