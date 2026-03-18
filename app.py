@@ -213,10 +213,65 @@ def run_migrations():
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 
+def create_default_pipelines():
+    """Create default pipeline for workspaces that don't have one"""
+    try:
+        from models_crm import Pipeline, DealStage
+        from sqlalchemy import text
+        
+        # Get all workspaces
+        workspaces = db.session.execute(text("SELECT id FROM workspaces")).fetchall()
+        
+        for workspace in workspaces:
+            workspace_id = workspace[0]
+            
+            # Check if workspace already has a pipeline
+            existing = Pipeline.query.filter_by(workspace_id=workspace_id).first()
+            if existing:
+                continue
+            
+            # Create default pipeline
+            pipeline = Pipeline(
+                workspace_id=workspace_id,
+                name='Sales Pipeline',
+                is_default=True
+            )
+            db.session.add(pipeline)
+            db.session.flush()
+            
+            # Create default stages
+            stages = [
+                {'name': 'Lead', 'order': 1, 'probability': 10, 'rotting_days': 7},
+                {'name': 'Qualified', 'order': 2, 'probability': 25, 'rotting_days': 7},
+                {'name': 'Proposal', 'order': 3, 'probability': 50, 'rotting_days': 14},
+                {'name': 'Negotiation', 'order': 4, 'probability': 75, 'rotting_days': 14},
+                {'name': 'Closed Won', 'order': 5, 'probability': 100, 'rotting_days': None},
+                {'name': 'Closed Lost', 'order': 6, 'probability': 0, 'rotting_days': None}
+            ]
+            
+            for stage_data in stages:
+                stage = DealStage(
+                    pipeline_id=pipeline.id,
+                    name=stage_data['name'],
+                    order=stage_data['order'],
+                    probability=stage_data['probability'],
+                    rotting_days=stage_data['rotting_days'],
+                    is_active=True
+                )
+                db.session.add(stage)
+            
+            db.session.commit()
+            logger.info(f"✓ Created default pipeline for workspace {workspace_id}")
+            
+    except Exception as e:
+        logger.warning(f"Failed to create default pipelines: {e}")
+        db.session.rollback()
+
 # Run migrations with app context
 with app.app_context():
     try:
         run_migrations()
+        create_default_pipelines()
     except Exception as e:
         logger.error(f"Failed to run migrations: {e}")
 
