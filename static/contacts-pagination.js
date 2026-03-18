@@ -14,6 +14,12 @@ function initPagination() {
             toggleSelectAll(this.checked);
         });
     }
+    
+    // Initialize global variables
+    window.currentPage = 1;
+    window.totalPages = 1;
+    window.totalContacts = 0;
+    window.perPage = 50;
 }
 
 // Toggle select all contacts on current page
@@ -62,63 +68,6 @@ function updateBulkActionsBar() {
     }
 }
 
-// Load contacts with pagination
-async function loadContactsWithPagination(page = 1) {
-    currentPage = page;
-    const loading = document.getElementById('loadingState');
-    loading.classList.remove('hidden');
-    
-    try {
-        const search = document.getElementById('contactsSearchInput')?.value.trim() || '';
-        const role = document.getElementById('roleFilter')?.value || '';
-        
-        let url = `/api/v1/contacts?page=${page}&per_page=${perPage}`;
-        if (search) url += `&search=${encodeURIComponent(search)}`;
-        if (role) url += `&role=${encodeURIComponent(role)}`;
-        if (window.companyIdFilter) url += `&company_id=${window.companyIdFilter}`;
-        
-        const res = await fetch(url);
-        if (!res.ok) {
-            throw new Error(`Contacts API failed: ${res.status}`);
-        }
-        const data = await res.json();
-        
-        // Update pagination info
-        if (data.pagination) {
-            totalPages = data.pagination.pages || 1;
-            totalContacts = data.pagination.total || 0;
-            currentPage = data.pagination.page || 1;
-        }
-        
-        // Render contacts
-        window.allContacts = Array.isArray(data.contacts) ? data.contacts : [];
-        if (typeof window.renderContacts === 'function') {
-            window.renderContacts(window.allContacts);
-        }
-        
-        // Update pagination UI
-        updatePaginationUI();
-        
-        // Update contact count
-        const contactCount = document.getElementById('contactCount');
-        if (contactCount) {
-            contactCount.textContent = totalContacts;
-        }
-        
-        // Clear selections on page change
-        selectedContactIds.clear();
-        updateBulkActionsBar();
-        
-    } catch (e) {
-        console.error(e);
-        if (typeof window.showToast === 'function') {
-            window.showToast('Kişiler yüklenirken bir hata oluştu.', 'error');
-        }
-    } finally {
-        loading.classList.add('hidden');
-    }
-}
-
 // Update pagination UI
 function updatePaginationUI() {
     const paginationBar = document.getElementById('paginationBar');
@@ -128,6 +77,12 @@ function updatePaginationUI() {
     const nextBtn = document.getElementById('nextPageBtn');
     
     if (!paginationBar) return;
+    
+    // Use global variables
+    currentPage = window.currentPage || 1;
+    totalPages = window.totalPages || 1;
+    totalContacts = window.totalContacts || 0;
+    perPage = window.perPage || 50;
     
     // Show/hide pagination bar
     if (totalContacts > 0) {
@@ -194,8 +149,16 @@ function updatePaginationUI() {
 
 // Go to specific page
 function goToPage(page) {
-    if (page < 1 || page > totalPages || page === currentPage) return;
-    loadContactsWithPagination(page);
+    if (page < 1 || page > (window.totalPages || 1) || page === (window.currentPage || 1)) return;
+    
+    // Clear selections on page change
+    selectedContactIds.clear();
+    updateBulkActionsBar();
+    
+    // Call the original loadContacts function with page parameter
+    if (typeof loadContacts === 'function') {
+        loadContacts(page);
+    }
 }
 
 // Bulk delete selected contacts
@@ -215,25 +178,28 @@ async function bulkDeleteContacts() {
         const successCount = results.filter(r => r.ok).length;
         
         if (successCount > 0) {
-            if (typeof window.showToast === 'function') {
-                window.showToast(`${successCount} kişi başarıyla silindi.`, 'success');
+            if (typeof showToast === 'function') {
+                showToast(`${successCount} kişi başarıyla silindi.`, 'success');
             }
             selectedContactIds.clear();
-            loadContactsWithPagination(currentPage);
+            if (typeof loadContacts === 'function') {
+                loadContacts(window.currentPage || 1);
+            }
         } else {
             throw new Error('Hiçbir kişi silinemedi');
         }
     } catch (e) {
         console.error(e);
-        if (typeof window.showToast === 'function') {
-            window.showToast('Kişiler silinirken bir hata oluştu.', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Kişiler silinirken bir hata oluştu.', 'error');
         }
     }
 }
 
 // Delete all contacts
 async function deleteAllContacts() {
-    const confirmed = confirm(`TÜM KİŞİLERİ (${totalContacts} adet) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz kaybolacak!`);
+    const totalCount = window.totalContacts || 0;
+    const confirmed = confirm(`TÜM KİŞİLERİ (${totalCount} adet) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz kaybolacak!`);
     if (!confirmed) return;
     
     const doubleConfirm = confirm('Bu işlem GERİ ALINAMAZ! Devam etmek istediğinizden EMİN MİSİNİZ?');
@@ -250,25 +216,21 @@ async function deleteAllContacts() {
         }
         
         const data = await res.json();
-        if (typeof window.showToast === 'function') {
-            window.showToast(`${data.deleted_count || totalContacts} kişi başarıyla silindi.`, 'success');
+        if (typeof showToast === 'function') {
+            showToast(`${data.deleted_count || totalCount} kişi başarıyla silindi.`, 'success');
         }
         
         selectedContactIds.clear();
-        loadContactsWithPagination(1);
+        if (typeof loadContacts === 'function') {
+            loadContacts(1);
+        }
     } catch (e) {
         console.error(e);
-        if (typeof window.showToast === 'function') {
-            window.showToast('Tüm kişiler silinirken bir hata oluştu.', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Tüm kişiler silinirken bir hata oluştu.', 'error');
         }
     }
 }
-
-// Override original loadContacts function
-if (typeof window.loadContacts !== 'undefined') {
-    window.originalLoadContacts = window.loadContacts;
-}
-window.loadContacts = loadContactsWithPagination;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {

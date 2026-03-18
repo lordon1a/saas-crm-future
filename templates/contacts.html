@@ -1610,7 +1610,7 @@
             }
         }
 
-        async function loadContacts() {
+        async function loadContacts(page = 1) {
             const loading = document.getElementById('loadingState');
             loading.classList.remove('hidden');
             
@@ -1618,10 +1618,10 @@
                 const search = document.getElementById('contactsSearchInput').value.trim();
                 const role = document.getElementById('roleFilter').value;
                 
-                let url = '/api/v1/contacts?';
-                if (search) url += `search=${encodeURIComponent(search)}&`;
-                if (role) url += `role=${encodeURIComponent(role)}&`;
-                if (companyIdFilter) url += `company_id=${companyIdFilter}&`;
+                let url = `/api/v1/contacts?page=${page}&per_page=50`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (role) url += `&role=${encodeURIComponent(role)}`;
+                if (companyIdFilter) url += `&company_id=${companyIdFilter}`;
                 
                 const res = await fetch(url);
                 if (!res.ok) {
@@ -1630,10 +1630,25 @@
                 const data = await res.json();
                 allContacts = Array.isArray(data.contacts) ? data.contacts : [];
                 
+                // Update pagination info
+                if (data.pagination) {
+                    window.currentPage = data.pagination.page || 1;
+                    window.totalPages = data.pagination.pages || 1;
+                    window.totalContacts = data.pagination.total || 0;
+                    window.perPage = data.pagination.per_page || 50;
+                }
+                
                 // Custom field values are now included in the contacts response
                 
                 renderContacts(allContacts);
-                document.getElementById('contactCount').textContent = allContacts.length;
+                
+                // Update contact count with total (not just current page)
+                document.getElementById('contactCount').textContent = window.totalContacts || allContacts.length;
+                
+                // Update pagination UI
+                if (typeof updatePaginationUI === 'function') {
+                    updatePaginationUI();
+                }
                 
                 // Update header if filtering by company
                 if (companyIdFilter && allContacts.length > 0 && allContacts[0].company_name) {
