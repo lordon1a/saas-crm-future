@@ -1667,13 +1667,6 @@ def bulk_delete_all_companies():
     except Exception as e:
         logger.error(f"Error deleting all companies: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500
-            'deleted_count': deleted_count,
-            'message': f'{deleted_count} şirket başarıyla silindi'
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error deleting all companies: {str(e)}")
-        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 # ============================================================================
