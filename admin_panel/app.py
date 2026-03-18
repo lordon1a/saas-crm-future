@@ -16,13 +16,25 @@ CORS(app,
      methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
 
 # Database setup
-import sys
-sys.path.append('..')
-from models import SuperAdmin, db
+from flask_sqlalchemy import SQLAlchemy
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', '').replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
+
+db = SQLAlchemy(app)
+
+class SuperAdmin(db.Model):
+    __tablename__ = 'super_admins'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+with app.app_context():
+    db.create_all()
 
 @app.route('/setup-admin', methods=['POST'])
 def setup_admin():
