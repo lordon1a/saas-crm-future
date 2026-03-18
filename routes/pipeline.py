@@ -10,6 +10,7 @@ from services.quickbooks_service import QuickBooksService
 from services.collaboration_service import CollaborationService
 from functools import wraps
 from datetime import datetime, date
+from sqlalchemy.orm import joinedload
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def get_pipelines():
     try:
         # Eager load stages to avoid lazy loading issues
         pipelines = Pipeline.query.filter_by(workspace_id=workspace_id).options(
-            db.joinedload(Pipeline.stages)
+            joinedload(Pipeline.stages)
         ).all()
         
         result = []
