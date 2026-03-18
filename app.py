@@ -155,6 +155,11 @@ from utils.exceptions import (
 
 db.init_app(app)
 
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
+
 app.register_blueprint(webhook.bp)
 app.register_blueprint(api.bp)
 app.register_blueprint(auth_route.bp)
