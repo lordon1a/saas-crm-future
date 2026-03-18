@@ -691,6 +691,8 @@ def send_message():
         result = {'success': False, 'error': 'Gönderilemedi', 'message_id': None}
 
         if channel == 'whatsapp':
+            if not workspace or not workspace.whatsapp_access_token or not workspace.whatsapp_phone_number_id:
+                return jsonify({'error': 'WhatsApp kanalı yapılandırılmamış'}), 400
             token = (workspace and workspace.whatsapp_access_token) or None
             phone_id = (workspace and workspace.whatsapp_phone_number_id) or None
             meta_client = MetaAPIClient(access_token=token, phone_number_id=phone_id)

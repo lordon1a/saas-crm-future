@@ -15,6 +15,8 @@ let currentLastMessageId = 0;
 let currentWorkspaceId = null;
 let socketClient = null;
 let currentSocketContactId = null;
+let socketConnectErrorCount = 0;
+let socketDisabled = false;
 let quickReplies = [];
 let emailTemplates = [];
 let notifications = [];
@@ -979,7 +981,7 @@ function handleIncomingSocketMessage(payload) {
 }
 
 function initRealtimeSocket() {
-    if (socketClient || typeof io === 'undefined') return;
+    if (socketClient || socketDisabled || typeof io === 'undefined') return;
 
     socketClient = io({
         transports: ['polling'],
@@ -992,6 +994,7 @@ function initRealtimeSocket() {
     });
 
     socketClient.on('connect', () => {
+        socketConnectErrorCount = 0;
         console.log('✅ WebSocket Connected Successfully!');
         if (currentWorkspaceId) {
             socketClient.emit('join_workspace', { workspace_id: currentWorkspaceId });
@@ -1002,7 +1005,21 @@ function initRealtimeSocket() {
     });
 
     socketClient.on('connect_error', (error) => {
+        socketConnectErrorCount += 1;
         console.error('❌ Connection Error:', error);
+
+        // If realtime endpoint is unstable (502/xhr post error), stop retry storm.
+        if (socketConnectErrorCount >= 3) {
+            socketDisabled = true;
+            try {
+                socketClient.io.opts.reconnection = false;
+                socketClient.disconnect();
+            } catch (_) {
+                // no-op
+            }
+            socketClient = null;
+            console.warn('Realtime disabled after repeated connection failures. Falling back to API polling.');
+        }
     });
 
     socketClient.off('new_message');
