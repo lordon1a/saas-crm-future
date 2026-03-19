@@ -525,7 +525,8 @@ def validate_import():
                 if email:
                     existing = Contact.query.filter_by(
                         workspace_id=workspace_id,
-                        email=email
+                        email=email,
+                        is_deleted=False
                     ).first()
                     if existing:
                         existing_contacts.append({
@@ -544,7 +545,8 @@ def validate_import():
                     existing = Contact.query.filter_by(
                         workspace_id=workspace_id,
                         first_name=first_name,
-                        last_name=last_name
+                        last_name=last_name,
+                        is_deleted=False
                     ).first()
                     if existing:
                         existing_contacts.append({
@@ -760,14 +762,16 @@ def execute_import():
                     if email:
                         existing_contact = Contact.query.filter_by(
                             workspace_id=workspace_id,
-                            email=email
+                            email=email,
+                            is_deleted=False
                         ).first()
                     
                     if not existing_contact and first_name:
                         existing_contact = Contact.query.filter_by(
                             workspace_id=workspace_id,
                             first_name=first_name,
-                            last_name=last_name
+                            last_name=last_name,
+                            is_deleted=False
                         ).first()
                     
                     # Handle duplicate based on action
