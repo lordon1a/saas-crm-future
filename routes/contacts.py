@@ -1633,7 +1633,7 @@ def bulk_delete_all_contacts():
         
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
+        traceback.print_exc()
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
