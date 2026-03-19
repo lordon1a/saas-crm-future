@@ -1436,6 +1436,7 @@ def import_contacts():
         csv_content = file.read().decode('utf-8')
         
         # Import contacts
+        logger.info(f"Import request - workspace_id: {workspace_id}, user_id: {user_id}")
         created_count, skipped_count, errors = ContactService.import_contacts_csv(
             workspace_id, csv_content, user_id
         )

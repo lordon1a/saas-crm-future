@@ -342,6 +342,8 @@ class ContactService:
         Returns:
             List[Contact]: List of potential duplicates
         """
+        logger.info(f"Checking duplicates for workspace_id: {workspace_id}, email: {email}, phone: {phone}")
+        
         if not email and not phone:
             return []
         
