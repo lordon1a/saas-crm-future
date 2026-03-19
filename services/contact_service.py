@@ -342,6 +342,7 @@ class ContactService:
         Returns:
             List[Contact]: List of potential duplicates
         """
+        logger.info(f"find_duplicates called - workspace_id: {workspace_id}, email: {email}, phone: {phone}, results: will show below")
         logger.info(f"Checking duplicates for workspace_id: {workspace_id}, email: {email}, phone: {phone}")
         
         if not email and not phone:
@@ -361,7 +362,9 @@ class ContactService:
             )
         )
         
-        return query.all()
+        results = query.all()
+        logger.info(f"find_duplicates results: {[(r.id, r.workspace_id, r.email, r.phone) for r in results]}")
+        return results
     
     @staticmethod
     def calculate_lead_score(contact: Contact) -> int:
