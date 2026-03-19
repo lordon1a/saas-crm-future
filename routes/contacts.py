@@ -1612,17 +1612,19 @@ def bulk_delete_all_contacts():
         from models_crm import Contact
         from models import db
         
-        # Count before delete
         count = Contact.query.filter_by(
             workspace_id=workspace_id,
             is_deleted=False
         ).count()
         
-        # Hard delete all non-deleted contacts
+        # Önce soft delete yap (foreign key sorununu önler)
         Contact.query.filter_by(
             workspace_id=workspace_id,
             is_deleted=False
-        ).delete(synchronize_session=False)
+        ).update({
+            'is_deleted': True,
+            'deleted_at': datetime.utcnow()
+        }, synchronize_session=False)
         
         db.session.commit()
         
@@ -1633,7 +1635,7 @@ def bulk_delete_all_contacts():
         
     except Exception as e:
         import traceback
-        traceback.print_exc()
+        logger.error(f"bulk_delete_all error: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
