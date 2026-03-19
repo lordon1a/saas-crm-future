@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sleek CRM - Onboarding</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            blue: '#e6f0ff',
+                            darkblue: '#4a72ff',
+                            lightbtn: '#c6ddff',
+                            btnhq: '#2563eb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .input-glass {
+            border: 1px solid #eaebf0;
+            border-radius: 6px;
+            padding: 12px 14px;
+            width: 100%;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
+        }
+
+        .input-glass:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .input-label {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .illustration-card {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .glass-badge {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+        }
+
+        .tag-btn {
+            border: 1px solid #eaebf0;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b5563;
+            background: #fff;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .tag-btn:hover {
+            border-color: #93c5fd;
+            background: #f0fdfa;
+        }
+
+        .tag-btn.active {
+            border-color: #3b82f6;
+            color: #2563eb;
+            background: #eff6ff;
+            box-shadow: inset 0 0 0 1px #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="h-full font-sans antialiased overflow-hidden">
+
+    <div class="flex h-screen w-full">
+
+        <!-- ── SOL PANEL (Görsel / İllüstrasyon) ── -->
+        <div class="hidden lg:flex w-1/2 bg-[#e8f1ff] relative items-center justify-center overflow-hidden">
+
+            <!-- Grafik Konteyner -->
+            <div class="relative w-[500px] h-[600px] mt-10">
+
+                <!-- Sol Menü (Mavi Kutu) -->
+                <div class="absolute left-6 top-32 w-48 bg-[#4871ff] rounded-2xl p-2 shadow-2xl z-20">
+                    <div
+                        class="flex items-center gap-3 bg-white text-[#4871ff] text-xs font-bold px-3 py-2.5 rounded-xl mb-1 shadow-sm cursor-pointer">
+                        <i class="fas fa-bullhorn w-4 text-center"></i> Ads
+                    </div>
+                    <div
+                        class="flex items-center gap-3 text-white/90 text-xs font-semibold px-3 py-2.5 hover:bg-white/10 rounded-xl cursor-pointer transition">
+                        <i class="fab fa-instagram w-4 text-center"></i> Social Media
+                    </div>
+                    <div
+                        class="flex items-center gap-3 text-white/90 text-xs font-semibold px-3 py-2.5 hover:bg-white/10 rounded-xl cursor-pointer transition">
+                        <i class="fas fa-qrcode w-4 text-center"></i> QR Codes
+                    </div>
+                    <div
+                        class="flex items-center gap-3 text-white/90 text-xs font-semibold px-3 py-2.5 hover:bg-white/10 rounded-xl cursor-pointer transition">
+                        <i class="fas fa-desktop w-4 text-center"></i> Website
+                    </div>
+
+                    <!-- Alt AI Butonu -->
+                    <div
+                        class="absolute -bottom-16 left-0 right-0 h-10 bg-gradient-to-r from-emerald-400 to-indigo-500 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg ring-4 ring-[#e8f1ff]">
+                        SleekFlow AI
+                    </div>
+                    <!-- Bağlantı Çizgisi -->
+                    <div class="absolute -bottom-24 left-1/2 w-[2px] h-8 bg-[#8ba6ff] -translate-x-1/2"></div>
+                </div>
+
+                <!-- Sağ Beyaz Mesaj Kutusu -->
+                <div
+                    class="absolute right-6 top-20 w-64 bg-white rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.06)] z-10 border border-white/50">
+                    <div class="bg-gray-50 rounded-xl p-3 text-[11px] text-gray-600 leading-relaxed mb-3">
+                        Hi there! 👋 Thanks for reaching out to Creative Minds Education Center. Which course are you
+                        interested in exploring? ✨
+                    </div>
+                    <div
+                        class="border border-blue-100 text-blue-500 text-[11px] font-semibold text-center py-2 rounded-lg mb-2 cursor-pointer hover:bg-blue-50">
+                        Graphic Design
+                    </div>
+                    <div
+                        class="border border-blue-100 text-blue-500 text-[11px] font-semibold text-center py-2 rounded-lg cursor-pointer hover:bg-blue-50">
+                        Web Development
+                    </div>
+                    <!-- Seçilmiş baloncuk -->
+                    <div
+                        class="absolute -right-8 top-[140px] bg-[#dcfce7] text-[#166534] text-[10px] font-bold px-3 py-1.5 rounded-2xl rounded-tr-sm shadow-sm">
+                        Graphic Design
+                    </div>
+                </div>
+
+                <!-- Alt Orta Profil Kartı -->
+                <div class="absolute left-0 bottom-40 w-[280px] bg-white rounded-2xl p-4 shadow-2xl z-30">
+                    <div class="text-sm font-bold text-gray-800 mb-3">Magret Bailey</div>
+                    <div class="flex gap-2">
+                        <span
+                            class="bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">String
+                            Value</span>
+                        <span
+                            class="bg-emerald-50 text-emerald-600 border border-emerald-100 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">String
+                            Value</span>
+                    </div>
+                    <div
+                        class="absolute right-[-6px] top-1/2 w-3 h-3 bg-white shadow flex items-center justify-center rounded-full -translate-y-1/2">
+                        <div class="w-1.5 h-1.5 bg-blue-300 rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- Portre Fotoğraf -->
+                <div
+                    class="absolute bottom-[-20px] left-1/2 -translate-x-1/3 w-[350px] h-[350px] overflow-hidden z-20 flex items-end">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?fm=jpg&q=80&w=400&fit=crop"
+                        alt="Woman holding phone"
+                        class="w-full object-cover object-top mask-image-bottom pb-4 drop-shadow-2xl"
+                        style="mask-image: radial-gradient(circle at bottom, black 40%, transparent 100%); -webkit-mask-image: radial-gradient(circle at bottom, black 40%, transparent 100%);">
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── SAĞ PANEL (Kayıt Formu / Multi-step) ── -->
+        <div class="w-full lg:w-1/2 h-full bg-white flex flex-col relative overflow-y-auto">
+
+            <!-- Üst Bar -->
+            <div class="flex items-center justify-between p-8 xl:px-14">
+                <div class="flex items-baseline gap-1">
+                    <span class="text-[#2563eb] text-xl font-bold tracking-tighter">_sleekflow</span>
+                    <div class="w-1.5 h-1.5 bg-[#2563eb]"></div>
+                </div>
+                <!-- Pagination Dots -->
+                <div class="flex items-center gap-2" id="pagination">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#2563eb] transition-all" id="dot1"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-200 transition-all" id="dot2"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-200 transition-all" id="dot3"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-200 transition-all" id="dot4"></div>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col pt-6 px-8 sm:px-16 xl:px-32 max-w-[800px]">
+                <form id="multiStepForm" novalidate class="flex flex-col h-full relative">
+
+                    <!-- ── ADIM 1: Company Info ── -->
+                    <div id="step1" class="transition-opacity duration-300">
+                        <p class="text-[13px] text-gray-500 font-medium mb-10">Welcome! Let's confirm your company info.
+                        </p>
+                        <div class="flex flex-col gap-8">
+                            <div>
+                                <label class="input-label">What's your company name?</label>
+                                <input type="text" id="company_name" class="input-glass" placeholder="e.g. Acme Corp"
+                                    required autofocus>
+                            </div>
+                            <div>
+                                <label class="input-label">Your company website</label>
+                                <input type="text" id="website" class="input-glass" placeholder="https://">
+                            </div>
+                            <div class="flex items-center gap-4 mt-2">
+                                <button type="button" onclick="nextStep(2)" id="btnNext1"
+                                    class="bg-[#c6ddff] text-white font-semibold text-[14px] px-8 py-2 rounded-full transition-colors flex items-center justify-center min-w-[100px]">
+                                    Next
+                                </button>
+                                <span class="text-xs text-gray-400 font-medium tracking-wide">or press <strong
+                                        class="text-gray-500 font-bold">Enter</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── ADIM 2: Industry ── -->
+                    <div id="step2" class="hidden transition-opacity duration-300">
+                        <div class="mb-6">
+                            <button type="button" onclick="goToStep(1)"
+                                class="text-[11px] font-bold text-gray-400 hover:text-gray-700 uppercase tracking-widest flex items-center gap-1.5"><i
+                                    class="fas fa-chevron-left text-[10px]"></i> Back</button>
+                        </div>
+                        <h2 class="text-[20px] font-bold text-[#111827] mb-6">What best describes your company?</h2>
+
+                        <div class="flex flex-wrap gap-2.5 text-gray-600">
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-shopping-bag text-gray-400"></i> E-commerce</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-gem text-gray-400"></i> Beauty and wellness</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-briefcase text-gray-400"></i> Professional services</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-stethoscope text-gray-400"></i> Healthcare</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-book-open text-gray-400"></i> Education</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-crown text-gray-400"></i> Luxury and lifestyle retail</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-car text-gray-400"></i> Automotive</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-building text-gray-400"></i> Real estate</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-plane text-gray-400"></i> Travel and hospitality</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this); goToStep(3)"><i
+                                    class="fas fa-ellipsis-h text-gray-400"></i> Others</button>
+                        </div>
+                    </div>
+
+                    <!-- ── ADIM 3: Channels & Goals ── -->
+                    <div id="step3" class="hidden transition-opacity duration-300">
+                        <div class="mb-6">
+                            <button type="button" onclick="goToStep(2)"
+                                class="text-[11px] font-bold text-gray-400 hover:text-gray-700 uppercase tracking-widest flex items-center gap-1.5"><i
+                                    class="fas fa-chevron-left text-[10px]"></i> Back</button>
+                        </div>
+
+                        <h2 class="text-[16px] font-bold text-[#111827] mb-4">Which channel does your business mainly
+                            use?</h2>
+                        <div class="flex flex-wrap gap-2.5 mb-8">
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fab fa-whatsapp text-green-500 text-base"></i> WhatsApp</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fab fa-facebook-messenger text-blue-500 text-base"></i> Facebook
+                                Messenger</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fab fa-instagram text-pink-500 text-base"></i> Instagram</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fas fa-comment-alt text-green-500 text-base"></i> SMS</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fab fa-tiktok text-black text-base"></i> TikTok</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fab fa-line text-green-500 text-base"></i> LINE</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fab fa-weixin text-green-500 text-base"></i> WeChat</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)">Others</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)">I don't have a channel
+                                yet</button>
+                        </div>
+
+                        <h2 class="text-[16px] font-bold text-[#111827] mb-4">What do you want to achieve with
+                            SleekFlow?</h2>
+                        <div class="flex flex-wrap gap-2.5 mb-6">
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fas fa-inbox text-blue-500"></i> Manage conversations in one inbox</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fas fa-bolt text-blue-500"></i> Capture and qualify leads</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fas fa-chart-line text-blue-500"></i> Increase sales conversion</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fas fa-headset text-blue-500"></i> Improve customer support</button>
+                            <button type="button" class="tag-btn" onclick="toggleTag(this)"><i
+                                    class="fas fa-bullhorn text-blue-500"></i> Run marketing broadcasts and
+                                campaigns</button>
+                        </div>
+
+                        <div class="flex items-center gap-4 mt-2">
+                            <button type="button" onclick="goToStep(4)"
+                                class="bg-[#2563eb] text-white hover:bg-blue-700 font-semibold text-[14px] px-8 py-2 rounded-full transition-colors flex items-center justify-center min-w-[100px]">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ── ADIM 4: Personal Info ── -->
+                    <div id="step4" class="hidden transition-opacity duration-300 pb-10">
+                        <div class="mb-6">
+                            <button type="button" onclick="goToStep(3)"
+                                class="text-[11px] font-bold text-gray-400 hover:text-gray-700 uppercase tracking-widest flex items-center gap-1.5"><i
+                                    class="fas fa-chevron-left text-[10px]"></i> Back</button>
+                        </div>
+                        <h2 class="text-[20px] font-bold text-[#111827] mb-8">One last step. Tell us about yourself</h2>
+
+                        <div class="flex flex-col gap-6">
+                            <div>
+                                <label
+                                    class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">NAME
+                                    (Required)</label>
+                                <input type="text" id="full_name" class="input-glass" required>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">WORK
+                                    EMAIL (Required)</label>
+                                <input type="email" id="email" class="input-glass" required>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">PASSWORD
+                                    (Required)</label>
+                                <input type="password" id="password" class="input-glass" required>
+                            </div>
+
+                            <label class="flex items-center gap-3 cursor-pointer mt-1 text-[13px] text-gray-500">
+                                <input type="checkbox"
+                                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                I prefer not to receive newsletters
+                            </label>
+
+                            <div class="mt-2 text-left">
+                                <button type="submit" id="submitBtn"
+                                    class="bg-[#c6ddff] text-white hover:bg-[#2563eb] font-semibold text-[14px] px-8 py-2.5 rounded-full transition-colors flex items-center justify-center min-w-[120px] w-max">
+                                    Get started
+                                </button>
+                            </div>
+                            <div id="alert"
+                                class="hidden text-sm font-medium p-3 rounded-lg border border-red-200 bg-red-50 text-red-600 mt-2">
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Alt Bar -->
+            <div
+                class="p-8 xl:px-14 flex items-center justify-end gap-6 text-[11px] text-gray-500 font-bold mt-auto pointer-events-none">
+                <a href="/login" class="hover:text-gray-800 flex items-center gap-2 transition pointer-events-auto">
+                    <i class="fas fa-sign-in-alt"></i> Sign in
+                </a>
+                <div
+                    class="flex items-center gap-1.5 cursor-pointer hover:text-gray-800 transition pointer-events-auto">
+                    <i class="fas fa-globe"></i> English <i class="fas fa-chevron-down text-[9px] ml-0.5"></i>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        // Adım 1 input kontrolü
+        const companyInput = document.getElementById('company_name');
+        const btnNext1 = document.getElementById('btnNext1');
+        companyInput.addEventListener('input', () => {
+            if (companyInput.value.trim().length > 0) {
+                btnNext1.classList.remove('bg-[#c6ddff]');
+                btnNext1.classList.add('bg-[#2563eb]', 'hover:bg-blue-700');
+            } else {
+                btnNext1.classList.add('bg-[#c6ddff]');
+                btnNext1.classList.remove('bg-[#2563eb]', 'hover:bg-blue-700');
+            }
+        });
+
+        // Adım 4 input kontrolü
+        const step4Inputs = ['full_name', 'email', 'password'].map(id => document.getElementById(id));
+        const submitBtn = document.getElementById('submitBtn');
+
+        function checkStep4() {
+            if (step4Inputs.every(i => i.value.trim().length > 0)) {
+                submitBtn.classList.remove('bg-[#c6ddff]');
+                submitBtn.classList.add('bg-[#2563eb]', 'hover:bg-blue-700');
+            } else {
+                submitBtn.classList.add('bg-[#c6ddff]');
+                submitBtn.classList.remove('bg-[#2563eb]', 'hover:bg-blue-700');
+            }
+        }
+        step4Inputs.forEach(i => i.addEventListener('input', checkStep4));
+
+        // Enter ile ileri gitme (Inputlarda)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentStep === 1 && companyInput.value.trim()) nextStep(2);
+                else if (currentStep === 4) document.getElementById('multiStepForm').requestSubmit();
+            }
+        });
+
+        // Adım değiştirme fonksiyonu
+        function goToStep(step) {
+            if (step > totalSteps || step < 1) return;
+
+            // Hide all steps
+            for (let i = 1; i <= totalSteps; i++) {
+                document.getElementById('step' + i).classList.add('hidden');
+                // Update dots
+                const dot = document.getElementById('dot' + i);
+                if (i === step) {
+                    dot.classList.add('bg-[#2563eb]');
+                    dot.classList.remove('bg-gray-200');
+                } else {
+                    dot.classList.remove('bg-[#2563eb]');
+                    dot.classList.add('bg-gray-200');
+                }
+            }
+
+            // Show target step
+            document.getElementById('step' + step).classList.remove('hidden');
+            currentStep = step;
+
+            // Focus first input if exists
+            const firstInput = document.getElementById('step' + step).querySelector('input');
+            if (firstInput) firstInput.focus();
+        }
+
+        function nextStep(step) {
+            if (currentStep === 1 && !companyInput.value.trim()) {
+                companyInput.focus();
+                return;
+            }
+            goToStep(step);
+        }
+
+        // Tag tıklama efekti
+        function toggleTag(btn) {
+            btn.classList.toggle('active');
+            // Eğer tekil seçim olmasını isteseydik aktif classını diğerlerinden sildirebilirdik, 
+            // şu an toggle yapısı uygun.
+        }
+
+        // Form işlemleri (Son adım)
+        document.getElementById('multiStepForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const company_name = companyInput.value.trim();
+            const full_name = document.getElementById('full_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const alertBox = document.getElementById('alert');
+
+            if (!company_name || !full_name || !email || !password) {
+                alertBox.textContent = "Please fill in all required fields.";
+                alertBox.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 8) {
+                alertBox.textContent = "Password must be at least 8 characters.";
+                alertBox.classList.remove('hidden');
+                return;
+            }
+
+            alertBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Starting...';
+
+            try {
+                const res = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company_name, full_name, email, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Created';
+                    setTimeout(() => window.location.href = data.redirect || '/', 1200);
+                } else {
+                    alertBox.textContent = data.error || 'An error occurred.';
+                    alertBox.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Get started';
+                }
+            } catch {
+                alertBox.textContent = 'Connection error. Try again.';
+                alertBox.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Get started';
+            }
+        });
+    </script>
+
+</body>
+
+</html>

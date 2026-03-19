@@ -1,0 +1,2 @@
+web: gunicorn app:app --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --workers 1 --timeout 120 --bind 0.0.0.0:$PORT
+worker: python google_sync_worker.py

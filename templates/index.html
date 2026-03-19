@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Gelen Kutusu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+                            400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+                            800: '#5b21b6', 900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           PREMIUM UI/UX - ZENDESK/INTERCOM TIER ANIMATIONS & STYLES
+           ═══════════════════════════════════════════════════════════════ */
+        
+        /* 0. GLOBAL LAYOUT (3-Column Architecture) */
+        body {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        /* 1. CUSTOM SCROLLBAR (Premium Webkit) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        
+        /* 2. KEYFRAME ANIMATIONS */
+        
+        /* Mesaj Giriş Animasyonu (Slide Up & Fade In) */
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Yazıyor... (Typing Indicator) Bounce */
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-6px);
+            }
+        }
+        
+        /* Fade In (Genel) */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Slide In From Right (Sağ Panel) */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* 3. ANIMATION CLASSES */
+        .animate-slide-up-fade {
+            animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        
+        .animate-slide-in-right {
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        /* Typing Indicator Dots */
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+        
+        /* 4. MESSAGE BUBBLES (Premium Gradients & Shadows) */
+        .message-bubble-agent {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
+            border-radius: 16px 16px 4px 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .message-bubble-agent:hover {
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .message-bubble-customer {
+            background: #ffffff;
+            color: #1f2937;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            border: 1px solid #f3f4f6;
+            border-radius: 16px 16px 16px 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .message-bubble-customer:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transform: translateY(-1px);
+        }
+        
+        /* 5. CONTACT CARD HOVER (Mikro-etkileşim) */
+        .contact-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .contact-card:hover {
+            background-color: #f3f4f6;
+            transform: translateY(-1px);
+        }
+        
+        /* 6. CHAT BACKGROUND (Premium Dotted Pattern) */
+        .chat-background-premium {
+            background-color: #f9fafb;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        /* 7. FLOATING INPUT BOX */
+        .floating-input-container {
+            position: relative;
+            margin: 24px;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            padding: 12px 16px;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        
+        .floating-input-container:focus-within {
+            box-shadow: 0 8px 40px rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+        }
+        
+        /* 8. RIGHT PANEL SHADOW */
+        .right-panel-shadow {
+            box-shadow: -4px 0 15px rgba(0,0,0,0.02);
+        }
+        
+        /* 9. SMOOTH TRANSITIONS */
+        .smooth-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* 10. LEGACY SUPPORT */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">🐧</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardim">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Ipuclari">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+
+    <!-- Filters Column -->
+    <aside class="w-64 bg-white/80 border-r border-slate-200/70 flex flex-col z-20 flex-shrink-0">
+        <div class="p-5 pb-3">
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Gelen Kutusu</h2>
+        </div>
+        <nav class="flex-1 overflow-y-auto px-4 space-y-6">
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Görünümler</p>
+                <div class="space-y-1">
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab active bg-white shadow-sm text-brand-600" data-status="">
+                        <div class="flex items-center gap-2"><i class="fas fa-inbox w-4"></i> Tümü</div>
+                        <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold" id="allCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab text-slate-600 hover:bg-white/50" data-status="open">
+                        <div class="flex items-center gap-2"><i class="fas fa-envelope-open w-4"></i> Açıklar</div>
+                        <span class="bg-brand-50 text-brand-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="openCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab text-slate-600 hover:bg-white/50" data-status="pending">
+                        <div class="flex items-center gap-2"><i class="fas fa-clock w-4"></i> Bekleyenler</div>
+                        <span class="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="pendingCount">0</span>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Kanal</p>
+                <div class="space-y-1">
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all channel-tab active bg-white shadow-sm text-brand-600" data-channel="all">
+                        <div class="flex items-center gap-2"><i class="fas fa-layer-group w-4"></i> Tümü</div>
+                        <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold" id="channelAllCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all channel-tab text-slate-600 hover:bg-white/50" data-channel="whatsapp">
+                        <div class="flex items-center gap-2"><i class="fab fa-whatsapp w-4"></i> WhatsApp</div>
+                        <span class="bg-emerald-50 text-emerald-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="channelWhatsappCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all channel-tab text-slate-600 hover:bg-white/50" data-channel="telegram">
+                        <div class="flex items-center gap-2"><i class="fab fa-telegram-plane w-4"></i> Telegram</div>
+                        <span class="bg-sky-50 text-sky-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="channelTelegramCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all channel-tab text-slate-600 hover:bg-white/50" data-channel="email">
+                        <div class="flex items-center gap-2"><i class="fas fa-envelope w-4"></i> Email</div>
+                        <span class="bg-blue-50 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="channelEmailCount">0</span>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Aşamalar</p>
+                <div class="space-y-1">
+                    <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="yeni_siparis">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Yeni Sipariş
+                    </button>
+                    <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="odeme_bekliyor">
+                        <span class="w-2 h-2 rounded-full bg-red-400"></span> Ödeme Bekliyor
+                    </button>
+                    <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="kargolandi">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Kargolandı
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div class="p-4 border-t border-slate-100 bg-white/90">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center font-bold text-xs" id="topbarAvatar">?</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 truncate" id="topbarName">...</p>
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider" id="userRole">...</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contacts Column (Premium 320px) -->
+    <aside class="w-80 bg-white border-r border-slate-100 flex flex-col z-10 flex-shrink-0" style="width: 320px;">
+        <div class="p-4 border-b border-slate-100/80">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                <input type="text" id="searchInput" placeholder="Kişi ara..." class="w-full bg-slate-50 text-sm rounded-xl pl-10 pr-3 py-2.5 outline-none focus:bg-white border border-slate-200/80 focus:border-brand-300 focus:ring-2 focus:ring-brand-500/10 transition-all placeholder:text-slate-400">
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-2 space-y-1" id="conversationList">
+            <!-- Dynamicly loaded -->
+        </div>
+    </aside>
+
+    <!-- Main Chat Area (Premium Background) -->
+    <main class="flex-1 flex flex-col bg-slate-50/80 relative overflow-hidden chat-background-premium">
+        <!-- Empty State -->
+        <div id="emptyChat" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 p-12">
+            <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-6 text-brand-500 text-2xl">
+                <i class="fas fa-comment-dots"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Hoş Geldiniz</h2>
+            <p class="text-slate-500 text-center mb-8 text-sm max-w-xs">Sohbetlerinizi yönetmek için sol listeden bir kişi seçin veya kanallarınızı bağlayın.</p>
+            
+            <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
+                <a href="/channels" class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-3 hover:border-brand-300 transition-all group">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><i class="fab fa-whatsapp"></i></div>
+                    <span class="font-bold text-xs text-slate-700">WhatsApp Bağla</span>
+                </a>
+                <a href="/contacts" class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-3 hover:border-brand-300 transition-all group">
+                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><i class="fas fa-user-plus"></i></div>
+                    <span class="font-bold text-xs text-slate-700">Kişi Ekle</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Chat Header -->
+        <div id="chatContent" class="flex-1 flex flex-col hidden min-h-0">
+            <header class="min-h-[74px] px-5 md:px-6 border-b border-slate-200/80 flex items-center justify-between bg-white/95 backdrop-blur z-30 gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-50 to-violet-100 text-brand-700 flex items-center justify-center font-bold border border-brand-100 shadow-sm" id="customerInitials">?</div>
+                    <div>
+                        <h2 class="text-sm md:text-base font-bold text-slate-800 leading-none" id="customerName">...</h2>
+                        <span class="text-[11px] text-slate-500 font-medium mt-1 block" id="customerPhone">...</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap justify-end">
+                    <div class="relative">
+                        <button id="notificationBellBtn" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-brand-600 transition-all flex items-center justify-center" title="Bildirimler">
+                            <i class="fas fa-bell text-xs"></i>
+                        </button>
+                        <span id="notificationBellCount" class="hidden absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">0</span>
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-xl z-[85]">
+                            <div class="p-3 border-b border-slate-100 flex items-center justify-between">
+                                <p class="text-xs font-bold text-slate-600 uppercase tracking-wider">Bildirimler</p>
+                                <button id="markAllNotificationsReadBtn" class="text-[10px] font-bold text-brand-600 hover:text-brand-700">Tümünü Okundu</button>
+                            </div>
+                            <div id="notificationList" class="divide-y divide-slate-100"></div>
+                        </div>
+                    </div>
+                    <button id="openEmailComposerBtn" class="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fas fa-envelope"></i> Email Gönder
+                    </button>
+                    <select id="tagSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:border-brand-500" onchange="updateTag(this.value)">
+                        <option value="">Aşama Seç...</option>
+                        <option value="yeni_siparis">📦 Yeni Sipariş</option>
+                        <option value="odeme_bekliyor">💳 Ödeme Bekliyor</option>
+                        <option value="kargolandi">🚀 Kargolandı</option>
+                    </select>
+                    <button onclick="toggleCustomerInfo()" class="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-brand-600 transition-all flex items-center justify-center">
+                        <i class="fas fa-id-card text-xs"></i>
+                    </button>
+                    <button id="closeConvBtn" onclick="closeConversation()" class="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fas fa-check-circle"></i> Kapat
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Area (Premium Background) -->
+            <div class="flex-1 overflow-y-auto px-4 md:px-6 py-5 md:py-6 bg-white relative min-h-0" id="messagesContainer" style="background-color: #f9fafb; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px;">
+                <!-- Messages dynamicly added -->
+                
+                <!-- New Message Notification Button (Hidden by default) -->
+                <button id="newMessageNotification" class="hidden fixed bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-brand-600 text-white rounded-2xl shadow-xl hover:bg-brand-700 transition-all z-30 flex items-center gap-2 animate-bounce" onclick="scrollToBottomAndHideNotification()">
+                    <i class="fas fa-arrow-down"></i>
+                    <span class="text-sm font-semibold">Yeni Mesaj</span>
+                </button>
+            </div>
+
+            <!-- Chat Input Area (Floating Premium Design) -->
+            <div id="chatInputArea" class="sticky bottom-0 z-20 bg-transparent">
+                <div class="floating-input-container">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 text-[11px] font-bold tracking-wide uppercase">Canlı Sohbet</span>
+                        <div class="h-px flex-1 bg-slate-100"></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-all rounded-lg hover:bg-brand-50 hover:scale-105" id="quickRepliesBtn" title="Hızlı Yanıtlar">
+                            <i class="fas fa-bolt text-sm"></i>
+                        </button>
+                        <select id="sendChannelSelect" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-slate-600 outline-none focus:border-brand-500 transition-all">
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="email">Email</option>
+                            <option value="telegram">Telegram</option>
+                        </select>
+                        <input type="text" id="messageInput" placeholder="Mesajınızı yazın... (/ ile hızlı yanıtlar)" class="flex-1 bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400">
+                        <input type="file" id="mediaFileInput" accept="image/*,.pdf,.doc,.docx" class="hidden">
+                        <button type="button" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-600 transition-all rounded-lg hover:bg-brand-50 hover:scale-105" id="attachMediaBtn" title="Görsel veya belge gönder">
+                            <i class="fas fa-paperclip text-sm"></i>
+                        </button>
+                        <button class="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-xl hover:scale-105 transition-all shadow-md hover:shadow-lg" id="sendBtn" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Replies Dropdown -->
+                    <div id="quickRepliesModal" class="hidden absolute bottom-full mb-4 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <h4 class="font-bold text-slate-700 text-xs">Hızlı Yanıtlar</h4>
+                            <input type="text" id="qrSearchInput" placeholder="Ara..." class="bg-white text-[10px] px-2 py-1 rounded border border-slate-200 outline-none">
+                        </div>
+                        <div id="quickRepliesList" class="max-h-48 overflow-y-auto p-1 space-y-0.5">
+                            <!-- Dynamicly added -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Customer Profile Drawer (Premium 380px) -->
+        <div id="customerInfoPanel" class="border-l border-slate-200 bg-white hidden flex-col absolute right-0 top-0 bottom-0 z-50 shadow-xl smooth-transition translate-x-full right-panel-shadow" style="width: 380px;">
+            <div class="p-6 border-b border-slate-100">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Müşteri Profili</h3>
+                    <button onclick="closeCustomerInfo()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-xl bg-brand-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg mb-3" id="infoInitials">?</div>
+                    <h4 class="text-sm font-bold text-slate-800" id="infoCustomerName">...</h4>
+                    <p class="text-[10px] text-slate-400 font-medium mt-1" id="infoCustomerPhone">...</p>
+                </div>
+                <div class="flex gap-1 mt-6 bg-slate-100 rounded-lg p-1">
+                    <button onclick="switchProfileTab('summary')" id="ptab-summary" class="flex-1 py-1.5 text-[10px] font-bold rounded bg-white shadow-sm text-brand-600">ÖZET</button>
+                    <button onclick="switchProfileTab('history')" id="ptab-history" class="flex-1 py-1.5 text-[10px] font-bold rounded text-slate-500">GEÇMİŞ</button>
+                    <button onclick="switchProfileTab('notes')" id="ptab-notes" class="flex-1 py-1.5 text-[10px] font-bold rounded text-slate-500">NOTLAR</button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="ppanel-summary" class="space-y-6">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
+                            <p class="text-lg font-bold text-slate-800" id="statTotal">-</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Toplam</p>
+                        </div>
+                        <div class="bg-brand-50 p-3 rounded-lg text-center border border-brand-100">
+                            <p class="text-lg font-bold text-brand-600" id="statOpen">-</p>
+                            <p class="text-[9px] font-bold text-brand-500 uppercase tracking-wider">Açık</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">E-posta</p>
+                        <input id="customerEmailInput" type="email" placeholder="Ekle..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium outline-none focus:border-brand-500" onblur="saveCustomerEmail(this.value)" />
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Sık Kullanılan Etiketler</p>
+                        <div id="tagFrequency" class="flex flex-wrap gap-1"></div>
+                    </div>
+                </div>
+                
+                <div id="ppanel-history" class="hidden space-y-3">
+                    <div id="convHistoryList" class="space-y-2"></div>
+                </div>
+                
+                <div id="ppanel-notes" class="hidden">
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                        <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-3">Takım Notları</p>
+                        <textarea id="privateNotesInput" placeholder="Notunuzu buraya yazın..." class="w-full bg-white border border-amber-200 rounded-lg p-3 text-xs font-medium text-slate-700 outline-none focus:border-amber-400 h-32 mb-3 resize-none"></textarea>
+                        <button onclick="savePrivateNote()" class="w-full py-2 bg-amber-600 text-white font-bold rounded-lg text-xs hover:bg-amber-700 transition-all">Notu Kaydet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="emailComposerModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-800">Email Composer</h3>
+                    <button id="closeEmailComposerBtn" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input id="emailToInput" type="email" placeholder="Alıcı email" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                        <select id="emailTemplateSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                            <option value="">Template seç (opsiyonel)</option>
+                        </select>
+                    </div>
+                    <input id="emailSubjectInput" type="text" placeholder="Konu" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                    <textarea id="emailBodyInput" rows="8" placeholder="Email içeriği" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500"></textarea>
+                    <div class="flex justify-end gap-2">
+                        <button id="previewEmailTemplateBtn" class="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">Template Önizle</button>
+                        <button id="sendEmailBtn" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">Gönder</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSE Toast Notification -->
+        <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
+    </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/app.js"></script>
+    <script src="/static/topbar-global.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch profile role for header
+            fetch('/api/settings/profile').then(r => r.json()).then(data => {
+                document.getElementById('topbarName').textContent = data.name;
+                document.getElementById('topbarAvatar').textContent = data.name.charAt(0).toUpperCase();
+                document.getElementById('userRole').textContent = data.role;
+            });
+        });
+    </script>
+    <style>
+        @keyframes bounce-in {
+            0% { transform: translateX(100%); opacity: 0; }
+            60% { transform: translateX(-5%); }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounce-in 0.4s ease-out forwards; }
+    </style>
+</body>
+
+</html>

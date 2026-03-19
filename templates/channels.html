@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Kanallar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">g���</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg"></i>
+            </a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg"></i>
+            </a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="�?irketler">
+                <i class="fas fa-building text-lg"></i>
+            </a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
+                <i class="fas fa-bullhorn text-lg"></i>
+            </a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
+                <i class="fas fa-robot text-lg"></i>
+            </a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg"></i>
+            </a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokumanlar">
+                <i class="fas fa-file-lines text-lg"></i>
+            </a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Kanallar">
+                <i class="fas fa-plug text-lg"></i>
+            </a>        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">        </div>
+    </aside>
+
+    <!-- Channels Sub-Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col z-20 flex-shrink-0">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-slate-800">Kanallar</h2>
+            <p class="text-xs text-slate-400 font-medium mt-1">İletişim Kaynakları</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto px-4 space-y-1">
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-white text-brand-600 shadow-sm border border-slate-200">
+                <i class="fab fa-whatsapp text-emerald-500 text-lg"></i>
+                <div class="text-left">
+                    <p class="leading-none">WhatsApp API</p>
+                    <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mt-1 inline-block">Aktif</span>
+                </div>
+            </button>
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-white/50 transition-all opacity-60">
+                <i class="fab fa-facebook-messenger text-blue-500 text-lg"></i>
+                <p class="leading-none">Messenger</p>
+            </button>
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-white/50 transition-all opacity-60">
+                <i class="fab fa-instagram text-rose-500 text-lg"></i>
+                <p class="leading-none">Instagram</p>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Main Detail Area -->
+                <main class="flex-1 overflow-y-auto bg-slate-50">
+<header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardim">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Ipuclari">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="max-w-3xl mx-auto px-8 py-10">
+            <!-- Channel Header Card -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8 flex items-center justify-between">
+                <div class="flex items-center gap-5">
+                    <div class="w-14 h-14 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fab fa-whatsapp text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-800">WhatsApp Official API</h1>
+                        <p class="text-xs text-slate-500 font-medium">Meta Cloud API üzerinden resmi işletme hesabı bağlantısı.</p>
+                    </div>
+                </div>
+                <div id="connectionStatus" class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-slate-400"></div> Kontrol Ediliyor...
+                </div>
+            </div>
+
+            <!-- Settings Form Area -->
+            <div class="space-y-8">
+                <section class="space-y-4">
+                    <div class="flex items-center justify-between px-1">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Entegrasyon Ayarları</h3>
+                        <button onclick="testConnection()" id="testBtn" class="text-brand-600 hover:text-brand-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all">
+                            <i class="fas fa-plug"></i> Test Et
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <form id="whatsappSettingsForm" class="p-6 space-y-6">
+                            <div class="grid grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Phone Number ID</label>
+                                    <input type="text" id="phoneId" placeholder="106xxxxxxxxxxxx" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">WABA ID</label>
+                                    <input type="text" id="wabaId" placeholder="987xxxxxxxxxxxx" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Permanent Access Token</label>
+                                <div class="relative">
+                                    <input type="password" id="accessToken" placeholder="EAABw..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all pr-12">
+                                    <button type="button" onclick="togglePassword('accessToken')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                                        <i class="fas fa-eye text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end pt-2">
+                                <button type="submit" id="saveBtn" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                    <i class="fas fa-save"></i> Ayarları Kaydet
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Webhook Info -->
+                <section class="space-y-4">
+                    <div class="px-1">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Webhook Yapılandırması</h3>
+                        <p class="text-[10px] text-slate-400 font-medium mt-1">Meta Geliştirici Paneli Ayarları</p>
+                    </div>
+
+                    <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-xl">
+                        <div class="space-y-6">
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Callback URL</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="webhookUrl" readonly value="..." class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 outline-none">
+                                    <button onclick="copyToClipboard('webhookUrl')" class="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-slate-400 transition-all">
+                                        <i class="fas fa-copy text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Verify Token (Doğrulama Anahtarı)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="verifyToken" readonly value="sleek_crm_verify_token_2024" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 outline-none">
+                                    <button onclick="copyToClipboard('verifyToken')" class="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-slate-400 transition-all">
+                                        <i class="fas fa-copy text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-y-24 opacity-0 bg-slate-800 text-white"></div>
+
+    <script>
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings/workspace');
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('phoneId').value = data.whatsapp_phone_number_id || '';
+                document.getElementById('wabaId').value = data.waba_id || '';
+                document.getElementById('accessToken').value = data.whatsapp_access_token === '***' ? '' : data.whatsapp_access_token;
+                document.getElementById('webhookUrl').value = `${window.location.origin}/webhook`;
+                if (data.whatsapp_phone_number_id && data.whatsapp_access_token) testConnection(true);
+                else updateStatusUI('not_configured');
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('whatsappSettingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('saveBtn');
+            const originalHTML = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor...';
+            const payload = {
+                whatsapp_phone_number_id: document.getElementById('phoneId').value.trim(),
+                waba_id: document.getElementById('wabaId').value.trim(),
+                whatsapp_access_token: document.getElementById('accessToken').value.trim() || '***'
+            };
+            try {
+                const res = await fetch('/api/settings/workspace', {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if (res.ok) { showToast('Ayarlar başarıyla güncellendi.', 'success'); testConnection(); }
+                else showToast('Güncelleme başarısız.', 'error');
+            } finally { saveBtn.disabled = false; saveBtn.innerHTML = originalHTML; }
+        });
+
+        async function testConnection(silent = false) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (!silent) {
+                statusEl.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></div> Test Ediliyor...';
+                statusEl.className = 'px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-2';
+            }
+            try {
+                const res = await fetch('/api/settings/workspace/test-whatsapp', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) updateStatusUI('connected');
+                else updateStatusUI('error', data.error);
+            } catch (e) { updateStatusUI('error'); }
+        }
+
+        function updateStatusUI(status, errorMsg = '') {
+            const el = document.getElementById('connectionStatus');
+            if (status === 'connected') {
+                el.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div> Bağlı';
+                el.className = 'px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-2';
+            } else if (status === 'not_configured') {
+                el.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div> Yapılandırılmamış';
+                el.className = 'px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-2';
+            } else {
+                el.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></div> Hata';
+                el.className = 'px-3 py-1.5 bg-red-50 text-red-600 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-2';
+            }
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function copyToClipboard(id) {
+            const input = document.getElementById(id);
+            input.select();
+            document.execCommand('copy');
+            showToast('Panoya kopyalandı.', 'success');
+        }
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-y-0 opacity-100 ${type === 'success' ? 'bg-slate-800' : 'bg-red-600'} text-white`;
+            setTimeout(() => {
+                t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-y-24 opacity-0 bg-slate-800 text-white';
+            }, 3000);
+        }
+
+        loadSettings();
+    </script>
+    <script src="/static/topbar-global.js"></script>
+</body>
+
+</html>
+

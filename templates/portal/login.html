@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Portal - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --portal-primary: {{ (portal_branding.primary_color or '#7c3aed')|e }};
+            --portal-secondary: {{ (portal_branding.secondary_color or '#8b5cf6')|e }};
+        }
+        .bg-violet-600 { background-color: var(--portal-primary) !important; }
+        .hover\:bg-violet-700:hover { background-color: var(--portal-secondary) !important; }
+        .text-violet-700 { color: var(--portal-primary) !important; }
+        .text-violet-600 { color: var(--portal-primary) !important; }
+        .border-violet-600 { border-color: var(--portal-primary) !important; }
+        .border-violet-100 { border-color: var(--portal-secondary) !important; }
+        .bg-violet-50 { background-color: color-mix(in srgb, var(--portal-primary) 10%, white) !important; }
+        .bg-violet-100 { background-color: color-mix(in srgb, var(--portal-primary) 16%, white) !important; }
+        .focus\:border-violet-500:focus { border-color: var(--portal-primary) !important; }
+        .focus\:ring-violet-200:focus { --tw-ring-color: color-mix(in srgb, var(--portal-primary) 24%, white) !important; }
+        .focus\:ring-violet-300:focus { --tw-ring-color: color-mix(in srgb, var(--portal-primary) 30%, white) !important; }
+    </style>
+</head>
+<body data-portal-page="login" class="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center p-6">
+    <script id="portalBrandingData" type="application/json">{{ portal_branding|tojson }}</script>
+    <div class="w-full max-w-md">
+        <div class="text-center mb-6">
+            {% if portal_branding.logo_url %}
+            <img src="{{ portal_branding.logo_url }}" alt="Portal Logo" class="h-12 mx-auto mb-3 rounded-lg object-contain">
+            {% endif %}
+            <h1 class="text-2xl font-bold">Customer Portal</h1>
+            <p class="text-sm text-slate-500 mt-2">Projeni ve görevlerini takip et</p>
+            {% if portal_branding.custom_domain %}
+            <p class="text-[11px] text-slate-400 mt-1">{{ portal_branding.custom_domain }}</p>
+            {% endif %}
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+            <div id="portalLoginError" class="hidden mb-4 px-4 py-3 rounded-xl bg-rose-50 text-rose-700 text-sm"></div>
+            <form id="portalLoginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email</label>
+                    <input id="portalEmail" type="email" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-brand-500" placeholder="customer@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Password</label>
+                    <input id="portalPassword" type="password" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-brand-500" placeholder="••••••••">
+                </div>
+                <button id="portalLoginBtn" type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='portal.js') }}"></script>
+</body>
+</html>

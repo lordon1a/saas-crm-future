@@ -1,0 +1,2563 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp CRM - Ayarlar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .tab-btn.active {
+            @apply bg-brand-50 text-brand-600 shadow-sm ring-1 ring-brand-100;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Custom scrollbar for content area */
+        .settings-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .settings-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .settings-content::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .settings-content::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Main Sidebar (Global) -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">g���</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="�?irketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">        </div>
+    </aside>
+
+                <main class="flex-1 flex flex-col overflow-hidden">
+<header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardim">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Ipuclari">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-semibold text-slate-800 tracking-tight">Ayarlar</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="userProfile" class="flex items-center gap-3 bg-slate-50 pl-4 pr-1.5 py-1.5 rounded-2xl border border-slate-200/80">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-xs font-bold text-slate-800 leading-none" id="userName">Yükleniyor...</p>
+                        <p class="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-wider" id="userRole">...</p>
+                    </div>
+                    <div class="w-8 h-8 bg-brand-100 text-brand-600 rounded-xl flex items-center justify-center font-bold text-sm border border-brand-200" id="userInitial">?</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Settings Sub-Sidebar -->
+            <aside class="w-64 bg-white border-r border-slate-200/80 flex flex-col z-10 flex-shrink-0">
+                <div class="p-6">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 ml-2">Sistem Ayarları</p>
+                    <nav class="space-y-1">
+                        <button onclick="switchTab('workspace')" id="tab-workspace" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-building w-4 text-center group-hover:scale-110 transition-transform"></i> Çalışma Alanı
+                        </button>
+                        <button onclick="switchTab('import-export')" id="tab-import-export" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-file-import w-4 text-center group-hover:scale-110 transition-transform"></i> İçe/Dışa Aktar
+                        </button>
+                        <button onclick="switchTab('branding')" id="tab-branding" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-palette w-4 text-center group-hover:scale-110 transition-transform"></i> Portal Branding
+                        </button>
+                        <button onclick="switchTab('webhooks')" id="tab-webhooks" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-link w-4 text-center group-hover:scale-110 transition-transform"></i> Webhooklar
+                        </button>
+                        <button onclick="switchTab('team')" id="tab-team" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-user-group w-4 text-center group-hover:scale-110 transition-transform"></i> Takım Üyeleri
+                        </button>
+                        <button onclick="switchTab('templates')" id="tab-templates" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-message w-4 text-center group-hover:scale-110 transition-transform"></i> Mesaj �?ablonları
+                        </button>
+                        <button onclick="switchTab('replies')" id="tab-replies" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-bolt w-4 text-center group-hover:scale-110 transition-transform"></i> Hızlı Yanıtlar
+                        </button>
+                        <button onclick="switchTab('custom-fields')" id="tab-custom-fields" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-list-check w-4 text-center group-hover:scale-110 transition-transform"></i> Özel Alanlar
+                        </button>
+                        <button onclick="switchTab('google')" id="tab-google" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fab fa-google w-4 text-center group-hover:scale-110 transition-transform"></i> Google Workspace
+                        </button>
+                        <button onclick="switchTab('security')" id="tab-security" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group overflow-hidden" title="Security & Compliance">
+                            <i class="fas fa-shield w-4 text-center group-hover:scale-110 transition-transform"></i><span class="truncate">Security</span>
+                        </button>
+                    </nav>
+
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-8 mb-4 ml-2">Hesap</p>
+                    <nav class="space-y-1">
+                        <button onclick="switchTab('profile')" id="tab-profile" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-user-circle w-4 text-center group-hover:scale-110 transition-transform"></i> Profilim
+                        </button>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto bg-slate-50 settings-content">
+                <div class="max-w-4xl mx-auto px-8 py-10">
+                    
+                    <!-- ═══ WORKSPACE TAB ═══ -->
+                    <div id="panel-workspace" class="tab-panel active space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Çalışma Alanı</h2>
+                            <p class="text-sm text-slate-500">Sistem yapılandırması ve WhatsApp entegrasyonu.</p>
+                        </div>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Genel Bilgiler</h3>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?irket Adı</label>
+                                    <input type="text" id="ws_company_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Sleek CRM">
+                                </div>
+                                <div class="flex justify-end pt-2">
+                                    <button onclick="saveWorkspace()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">Değişiklikleri Kaydet</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">WhatsApp API Entegrasyonu</h3>
+                                <div id="apiStatus" class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-white px-2.5 py-1 rounded-full border border-slate-200">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                    <span>Kontrol edilmedi</span>
+                                </div>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Phone Number ID</label>
+                                        <input type="text" id="ws_phone_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Meta Dashboard'dan alabilirsiniz">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">WABA ID (Opsiyonel)</label>
+                                        <input type="text" id="ws_waba_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="WhatsApp Business Account ID">
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Access Token</label>
+                                    <input type="password" id="ws_token" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Süresiz sistem token'ı kullanılması önerilir">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Telegram Bot Token</label>
+                                    <div class="flex gap-2">
+                                        <input type="password" id="ws_telegram_token" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Telegram bot token girin">
+                                        <button onclick="setupTelegramWebhook()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all whitespace-nowrap">Bağla/Webhook Kur</button>
+                                    </div>
+                                </div>
+                                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                                            <i class="fas fa-link text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Webhook URL</p>
+                                            <p class="text-xs font-mono text-blue-600 mt-0.5" id="webhookUrl">...</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="copyWebhook()" class="px-3 py-1.5 bg-white text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-50 transition-all shadow-sm border border-blue-100">Kopyala</button>
+                                </div>
+                                <div class="flex justify-end gap-3 pt-2">
+                                    <button onclick="testWhatsApp()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">Bağlantıyı Test Et</button>
+                                    <button onclick="saveAPI()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">API Bilgilerini Kaydet</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Analytics Görünüm Tercihi</h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">Dashboard Insights bölümü</p>
+                                        <p class="text-xs text-slate-500 mt-1">
+                                            Bu ayar açıksa, <span class="font-semibold text-slate-600">Analytics</span> sayfasında
+                                            gelişmiş dashboard kartları, pipeline/win-loss grafikleri ve task completion bölümü görünür.
+                                            Kapalıysa bu bölüm tamamen gizlenir.
+                                        </p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer select-none mt-1">
+                                        <input id="pref_dashboard_insights" type="checkbox" class="sr-only peer">
+                                        <div class="relative w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-brand-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                                    </label>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button onclick="saveWorkspacePreferences()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
+                                        Tercihi Kaydet
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ IMPORT/EXPORT TAB ═══ -->
+                    <div id="panel-import-export" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">İçe ve Dışa Aktarma</h2>
+                            <p class="text-sm text-slate-500">Verilerinizi içe veya dışa aktarın. Excel, CSV formatlarını destekler.</p>
+                        </div>
+
+                        <!-- Import Section -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Veri İçe Aktarma</h3>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <!-- Contacts Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-users text-blue-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">Kişileri İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından kişi verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-blue-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Companies Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-purple-400 hover:bg-purple-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-building text-purple-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">�?irketleri İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından şirket verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-purple-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Deals Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-green-400 hover:bg-green-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-handshake text-green-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">Anlaşmaları İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından anlaşma verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-green-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Products Import -->
+                                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-orange-400 hover:bg-orange-50/50 transition-all cursor-pointer group" onclick="window.location.href='/import'">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <i class="fas fa-box text-orange-600 text-xl"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-bold text-slate-800 mb-1">Ürünleri İçe Aktar</h4>
+                                                <p class="text-xs text-slate-500 mb-3">Excel veya CSV dosyasından ürün verilerini içe aktarın</p>
+                                                <div class="flex items-center gap-2 text-xs text-orange-600 font-semibold">
+                                                    <span>İçe Aktar</span>
+                                                    <i class="fas fa-arrow-right text-[10px]"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                                    <i class="fas fa-info-circle text-blue-600 text-lg mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-bold text-slate-800 mb-1">İçe aktarma hakkında</h4>
+                                        <p class="text-xs text-slate-600">Sistem otomatik olarak sütunları eşleştirir ve %95'e kadar doğrulukla alan tanıma yapar. Maksimum 100.000 satır ve 50MB dosya boyutu desteklenir.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Export Section -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Veri Dışa Aktarma</h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <button onclick="exportData('contacts')" class="flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50/50 transition-all group">
+                                        <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <i class="fas fa-users text-emerald-600"></i>
+                                        </div>
+                                        <div class="flex-1 text-left">
+                                            <div class="text-sm font-bold text-slate-800">Kişiler</div>
+                                            <div class="text-xs text-slate-500">CSV olarak indir</div>
+                                        </div>
+                                        <i class="fas fa-download text-gray-400 group-hover:text-emerald-600"></i>
+                                    </button>
+
+                                    <button onclick="exportData('companies')" class="flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/50 transition-all group">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <i class="fas fa-building text-blue-600"></i>
+                                        </div>
+                                        <div class="flex-1 text-left">
+                                            <div class="text-sm font-bold text-slate-800">�?irketler</div>
+                                            <div class="text-xs text-slate-500">CSV olarak indir</div>
+                                        </div>
+                                        <i class="fas fa-download text-gray-400 group-hover:text-blue-600"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ PORTAL BRANDING TAB ═══ -->
+                    <div id="panel-branding" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Portal Branding</h2>
+                            <p class="text-sm text-slate-500">Müşteri portalı için logo, renk, domain ve özel CSS ayarları.</p>
+                        </div>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Beyaz Etiket Ayarları</h3>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Logo URL</label>
+                                    <input type="text" id="pb_logo_url" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="https://cdn.example.com/logo.png">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Primary Color</label>
+                                        <input type="color" id="pb_primary_color" class="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 cursor-pointer">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Secondary Color</label>
+                                        <input type="color" id="pb_secondary_color" class="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 cursor-pointer">
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Custom Domain</label>
+                                    <input type="text" id="pb_custom_domain" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="portal.example.com">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Custom CSS Override</label>
+                                    <textarea id="pb_custom_css" rows="7" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all font-mono" placeholder=".portal-brand-button { border-radius: 20px; }"></textarea>
+                                </div>
+                                <div class="flex justify-end pt-2">
+                                    <button onclick="savePortalBranding()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">Branding Kaydet</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ WEBHOOKS TAB ═══ -->
+                    <div id="panel-webhooks" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Webhook Abonelikleri</h2>
+                            <p class="text-sm text-slate-500">Public API eventlerini dış sistemlere iletmek için webhook yönetimi.</p>
+                        </div>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Yeni Abonelik</h3>
+                            </div>
+                            <div class="p-6 space-y-5">
+                                <input type="hidden" id="wh_id">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Webhook Adı</label>
+                                        <input type="text" id="wh_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="CRM Sync Listener">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Target URL</label>
+                                        <input type="url" id="wh_target_url" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="https://example.com/webhooks/crm">
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Event Türleri</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
+                                        <label class="flex items-center gap-2"><input id="wh_evt_deal_created" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"> deal.created</label>
+                                        <label class="flex items-center gap-2"><input id="wh_evt_deal_updated" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"> deal.updated</label>
+                                        <label class="flex items-center gap-2"><input id="wh_evt_task_completed" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"> task.completed</label>
+                                        <label class="flex items-center gap-2"><input id="wh_evt_contact_created" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"> contact.created</label>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end gap-3 pt-2">
+                                    <button onclick="resetWebhookForm()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">Temizle</button>
+                                    <button onclick="saveWebhook()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">Webhook Kaydet</button>
+                                </div>
+                                <p id="wh_secret_note" class="hidden text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2"></p>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Abonelik Listesi</h3>
+                            </div>
+                            <div class="p-6">
+                                <div id="webhookList" class="space-y-3"></div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Delivery Geçmişi</h3>
+                                <span id="wh_delivery_title" class="text-[10px] font-semibold text-slate-400">Abonelik seçin</span>
+                            </div>
+                            <div class="p-6">
+                                <div id="webhookDeliveries" class="space-y-3 text-sm text-slate-600">Henüz veri yok.</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ TEAM TAB ═══ -->
+                    <div id="panel-team" class="tab-panel space-y-8">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Takım Üyeleri</h2>
+                                <p class="text-sm text-slate-500">Çalışma alanına erişimi olan kullanıcılar.</p>
+                            </div>
+                            <button onclick="openModal('memberModal')" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Üye Ekle
+                            </button>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50/50 border-b border-slate-100">
+                                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kullanıcı</th>
+                                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">E-Posta</th>
+                                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rol</th>
+                                            <th class="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teamTable" class="divide-y divide-slate-100">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="teamEmpty" class="hidden p-16 text-center text-slate-400">
+                                <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-users text-2xl opacity-20"></i>
+                                </div>
+                                <p class="text-sm font-semibold text-slate-600">Henüz takım üyesi bulunmuyor.</p>
+                                <p class="text-xs text-slate-400 mt-1">Yeni bir üye ekleyerek başlayın.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ TEMPLATES TAB ═══ -->
+                    <div id="panel-templates" class="tab-panel space-y-8">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Mesaj �?ablonları</h2>
+                                <p class="text-sm text-slate-500">Hızlı ve tutarlı iletişim için hazır metinler.</p>
+                            </div>
+                            <button onclick="openModal('templateModal')" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni �?ablon
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="templateGrid">
+                            <!-- Dynamic -->
+                        </div>
+                        <div id="templatesEmpty" class="hidden p-16 text-center bg-white border border-slate-200 rounded-2xl shadow-sm">
+                            <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-message text-2xl opacity-20"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-600">Henüz şablon oluşturulmamış.</p>
+                            <p class="text-xs text-slate-400 mt-1">Sık kullandığınız mesajları şablon olarak kaydedin.</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══ QUICK REPLIES TAB ═══ -->
+                    <div id="panel-replies" class="tab-panel space-y-8">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Hızlı Yanıtlar</h2>
+                                <p class="text-sm text-slate-500">Klavye kısayolları ile anında yanıt verin.</p>
+                            </div>
+                            <button onclick="openModal('replyModal')" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Kısayol
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="replyGrid">
+                            <!-- Dynamic -->
+                        </div>
+                        <div id="repliesEmpty" class="hidden p-16 text-center bg-white border border-slate-200 rounded-2xl shadow-sm">
+                            <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-bolt text-2xl opacity-20"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-600">Henüz hızlı yanıt oluşturulmamış.</p>
+                            <p class="text-xs text-slate-400 mt-1">/kısayol şeklinde hızlı yanıtlar tanımlayın.</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══ CUSTOM FIELDS TAB ═══ -->
+                    <div id="panel-custom-fields" class="tab-panel space-y-8">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Özel Alanlar</h2>
+                                <p class="text-sm text-slate-500">Kişiler, şirketler ve fırsatlar için özel alanlar oluşturun.</p>
+                            </div>
+                            <button onclick="openCustomFieldModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Özel Alan
+                            </button>
+                        </div>
+
+                        <div id="customFieldsList">
+                            <!-- Dynamic content from custom-fields.js -->
+                        </div>
+                    </div>
+
+                    <!-- ═══ SECURITY TAB ═══ -->
+                    <div id="panel-security" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Security & Compliance</h2>
+                            <p class="text-sm text-slate-500">RBAC, 2FA, IP whitelist, audit ve GDPR operasyonları.</p>
+                        </div>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">2FA</h3>
+                                <span id="sec2faStatus" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">Bilinmiyor</span>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="flex flex-wrap gap-3">
+                                    <button onclick="setup2FA()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">Kurulum Oluştur</button>
+                                    <button onclick="enable2FA()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">2FA Aktifleştir</button>
+                                    <button onclick="disable2FA()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">2FA Kapat</button>
+                                </div>
+                                <p id="sec2faInfo" class="text-xs text-slate-500"></p>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">RBAC</h3>
+                                <button onclick="loadSecurityRoles()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Yenile</button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <select id="secUserSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"></select>
+                                    <select id="secRoleSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"></select>
+                                    <button onclick="assignSecurityRole()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">Rol Ata</button>
+                                </div>
+                                <div id="secRoleList" class="space-y-2"></div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">IP Whitelist</h3>
+                                <button onclick="loadIPWhitelist()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Yenile</button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <input id="secIpAddress" type="text" placeholder="IP Address" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                                    <input id="secIpLabel" type="text" placeholder="Label" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                                    <button onclick="addIPWhitelist()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">IP Ekle</button>
+                                </div>
+                                <div id="secIpList" class="space-y-2"></div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Compliance & Audit</h3>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="loadComplianceReport()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Compliance</button>
+                                    <button onclick="loadAuditLogs()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">Audit</button>
+                                </div>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div id="secCompliance" class="text-xs text-slate-600 bg-slate-50 rounded-xl border border-slate-200 p-3">Rapor bekleniyor...</div>
+                                <div id="secAuditList" class="space-y-2"></div>
+                                <div class="flex flex-wrap gap-3 pt-2">
+                                    <button onclick="runGDPRExport()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">GDPR Export</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ PROFILE TAB ═══ -->
+                    <div id="panel-profile" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Profilim</h2>
+                            <p class="text-sm text-slate-500">Kişisel bilgilerinizi ve güvenliğinizi yönetin.</p>
+                        </div>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Kişisel Bilgiler</h3>
+                            </div>
+                            <div class="p-8">
+                                <div class="flex items-center gap-6 mb-10">
+                                    <div class="relative">
+                                        <div class="w-24 h-24 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center text-4xl font-bold border border-brand-200 shadow-sm" id="profileInitial">?</div>
+                                        <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">
+                                            <i class="fas fa-camera text-xs"></i>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <p class="text-xl font-bold text-slate-800 leading-tight" id="profileFullName">Yükleniyor...</p>
+                                        <p class="text-sm text-slate-500 font-medium" id="profileEmail">...</p>
+                                        <div class="pt-1" id="profileRoleBadge"></div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Ad Soyad</label>
+                                        <input type="text" id="prof_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">E-Posta (Değiştirilemez)</label>
+                                        <input type="text" id="prof_email" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-400 cursor-not-allowed" disabled>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end pt-8">
+                                    <button onclick="saveProfile()" class="px-8 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">Profil Güncelle</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">�?ifre İşlemleri</h3>
+                            </div>
+                            <div class="p-8">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Mevcut �?ifre</label>
+                                        <input type="password" id="pass_current" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Yeni �?ifre</label>
+                                        <input type="password" id="pass_new" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?ifre (Tekrar)</label>
+                                        <input type="password" id="pass_confirm" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                </div>
+                                <div class="flex justify-end pt-8">
+                                    <button onclick="changePassword()" class="px-8 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">�?ifreyi Güncelle</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ═══ GOOGLE WORKSPACE TAB ═══ -->
+                    <div id="panel-google" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Google Workspace Entegrasyonu</h2>
+                            <p class="text-sm text-slate-500">Gmail ve Google Calendar'ı CRM'e bağlayın.</p>
+                        </div>
+
+                        <!-- Connection Status -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Bağlantı Durumu</h3>
+                                <div id="googleConnectionStatus" class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-white px-2.5 py-1 rounded-full border border-slate-200">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                    <span>Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div id="googleNotConnected" class="hidden">
+                                    <div class="flex items-center gap-4 p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
+                                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                                            <i class="fab fa-google text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-blue-900">Google hesabınızı bağlayın</p>
+                                            <p class="text-xs text-blue-600 mt-0.5">Gmail ve Calendar verilerinizi otomatik olarak senkronize edin.</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="connectGoogle()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                        <i class="fab fa-google"></i> Google'a Bağlan
+                                    </button>
+                                </div>
+
+                                <div id="googleConnected" class="hidden space-y-4">
+                                    <div class="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                        <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                                            <i class="fas fa-check-circle text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-emerald-900">Bağlantı aktif</p>
+                                            <p class="text-xs text-emerald-600 mt-0.5" id="googleEmail">...</p>
+                                        </div>
+                                        <button onclick="disconnectGoogle()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">
+                                            Bağlantıyı Kes
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <i class="fas fa-envelope text-slate-400"></i>
+                                                    <span class="text-xs font-bold text-slate-600">Gmail Sync</span>
+                                                </div>
+                                                <button onclick="syncGmail()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                                    <i class="fas fa-sync-alt"></i> Senkronize Et
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-slate-500" id="gmailSyncStatus">Henüz senkronize edilmedi</p>
+                                        </div>
+
+                                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <i class="fas fa-calendar text-slate-400"></i>
+                                                    <span class="text-xs font-bold text-slate-600">Calendar Sync</span>
+                                                </div>
+                                                <button onclick="syncCalendar()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                                    <i class="fas fa-sync-alt"></i> Senkronize Et
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-slate-500" id="calendarSyncStatus">Henüz senkronize edilmedi</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- QuickBooks Integration -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">QuickBooks Entegrasyonu</h3>
+                                <div id="quickbooksConnectionStatus" class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-white px-2.5 py-1 rounded-full border border-slate-200">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                    <span>Kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div id="quickbooksNotConnected" class="hidden">
+                                    <div class="flex items-center gap-4 p-4 bg-green-50 border border-green-100 rounded-xl mb-4">
+                                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
+                                            <i class="fas fa-receipt text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-green-900">QuickBooks hesabınızı bağlayın</p>
+                                            <p class="text-xs text-green-700 mt-0.5">Kazanan deal'ler için otomatik fatura oluşturun ve ödeme durumunu CRM'e yansıtın.</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="connectQuickBooks()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                        <i class="fas fa-link"></i> QuickBooks'a Bağlan
+                                    </button>
+                                </div>
+
+                                <div id="quickbooksConnected" class="hidden space-y-4">
+                                    <div class="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                        <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                                            <i class="fas fa-check-circle text-xl"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-emerald-900">QuickBooks bağlantısı aktif</p>
+                                            <p class="text-xs text-emerald-700 mt-0.5 truncate" id="quickbooksCompanyName">Bağlı</p>
+                                        </div>
+                                        <button onclick="disconnectQuickBooks()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">
+                                            Bağlantıyı Kes
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-bold text-slate-600">Fatura Sync</span>
+                                                <button onclick="syncQuickBooksInvoices()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                                    <i class="fas fa-sync-alt"></i> Senkronize Et
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-slate-500" id="quickbooksSyncStatus">Henüz senkronize edilmedi</p>
+                                        </div>
+                                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-bold text-slate-600">Son Hatalar</span>
+                                                <button onclick="loadQuickBooksErrors()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                                    <i class="fas fa-triangle-exclamation"></i> Yenile
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-slate-500" id="quickbooksErrorSummary">Hata yok</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="quickbooksInvoicesList" class="space-y-2"></div>
+                                    <div id="quickbooksErrorsList" class="space-y-2"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Synced Emails -->
+                        <section id="googleEmailsSection" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Senkronize Edilen E-postalar</h3>
+                            </div>
+                            <div class="p-6">
+                                <div id="googleEmailsList" class="space-y-3"></div>
+                            </div>
+                        </section>
+
+                        <!-- Synced Events -->
+                        <section id="googleEventsSection" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Senkronize Edilen Etkinlikler</h3>
+                            </div>
+                            <div class="p-6">
+                                <div id="googleEventsList" class="space-y-3"></div>
+                            </div>
+                        </section>
+
+                        <!-- Google Drive File Picker -->
+                        <section id="googleDriveSection" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Google Drive Dosyaları</h3>
+                                <button onclick="refreshDriveFiles()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                    <i class="fas fa-sync-alt"></i> Yenile
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                <!-- Search -->
+                                <div class="mb-4">
+                                    <div class="relative">
+                                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                        <input type="text" id="driveSearchInput" placeholder="Dosya ara..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                </div>
+                                
+                                <!-- Files List -->
+                                <div id="driveFilesList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                                
+                                <!-- Load More -->
+                                <div id="driveLoadMore" class="hidden mt-4 text-center">
+                                    <button onclick="loadMoreDriveFiles()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all">
+                                        Daha Fazla Yükle
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Email Tracking Dashboard -->
+                        <section id="emailTrackingSection" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">E-posta Takibi</h3>
+                                <button onclick="refreshEmailTracking()" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all">
+                                    <i class="fas fa-sync-alt"></i> Yenile
+                                </button>
+                            </div>
+                            
+                            <!-- Stats Cards -->
+                            <div class="p-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Gönderilen</span>
+                                            <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-paper-plane text-blue-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800" id="statTotalSent">0</div>
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Açılan</span>
+                                            <div class="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-envelope-open text-emerald-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800" id="statTotalOpened">0</div>
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Açılma Oranı</span>
+                                            <div class="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-percentage text-purple-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800"><span id="statOpenRate">0</span>%</div>
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">Tıklama Oranı</span>
+                                            <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-mouse-pointer text-orange-500 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-slate-800"><span id="statClickRate">0</span>%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tracked Emails List -->
+                            <div class="p-6">
+                                <div id="emailTrackingList" class="space-y-3"></div>
+                                <div id="emailTrackingEmpty" class="hidden text-center py-12">
+                                    <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-envelope text-slate-400 text-2xl"></i>
+                                    </div>
+                                    <p class="text-sm font-semibold text-slate-600">Henüz takip edilen e-posta yok</p>
+                                    <p class="text-xs text-slate-400 mt-1">Gmail sync ile gönderilen e-postalar otomatik olarak takip edilir</p>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <!-- Team Modal -->
+        <div id="memberModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn">
+                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Yeni Takım Üyesi</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Davet edilecek üyenin bilgilerini girin.</p>
+                    </div>
+                    <button onclick="closeModal('memberModal')" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-8 space-y-5">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Ad Soyad</label>
+                        <input type="text" id="m_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Mehmet Can">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">E-Posta</label>
+                        <input type="email" id="m_email" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="mehmet@sirket.com">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Geçici �?ifre</label>
+                        <input type="password" id="m_pass" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="En az 8 karakter">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Rol</label>
+                        <select id="m_role" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all appearance-none">
+                            <option value="agent">Agent (Temsilci)</option>
+                            <option value="admin">Admin (Yönetici)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                    <button onclick="closeModal('memberModal')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                    <button onclick="inviteMember()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Üye Oluştur</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Modal -->
+        <div id="templateModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn">
+                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg" id="tmplModalTitle">Yeni �?ablon</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Mesaj içeriğini ve kategorisini belirleyin.</p>
+                    </div>
+                    <button onclick="closeModal('templateModal')" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+                <input type="hidden" id="tmpl_id">
+                <div class="p-8 space-y-5">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?ablon Adı</label>
+                            <input type="text" id="tmpl_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Sipariş Onayı">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Kategori</label>
+                            <select id="tmpl_cat" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all appearance-none">
+                                <option value="custom">Özel</option>
+                                <option value="utility">Bilgilendirme</option>
+                                <option value="marketing">Pazarlama</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Mesaj İçeriği</label>
+                        <textarea id="tmpl_body" rows="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all resize-none" placeholder="Merhaba {{isim}}, ..."></textarea>
+                        <div class="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                            <i class="fas fa-info-circle text-blue-500 text-xs"></i>
+                            <p class="text-[10px] text-blue-600 font-medium">Müşteri adı için <code class="bg-blue-100 px-1 rounded">{{isim}}</code> parametresini kullanabilirsiniz.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                    <button onclick="closeModal('templateModal')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                    <button onclick="saveTemplate()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">�?ablonu Kaydet</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reply Modal -->
+        <div id="replyModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn">
+                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg" id="replyModalTitle">Yeni Hızlı Yanıt</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Klavye kısayolu ile hızlıca erişin.</p>
+                    </div>
+                    <button onclick="closeModal('replyModal')" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+                <input type="hidden" id="reply_id">
+                <div class="p-8 space-y-5">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Kısayol Başlığı (Örn: /merhaba)</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">/</span>
+                            <input type="text" id="reply_title" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="merhaba">
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Yanıt İçeriği</label>
+                        <textarea id="reply_body" rows="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all resize-none" placeholder="Merhaba! Size nasıl yardımcı olabilirim?"></textarea>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                    <button onclick="closeModal('replyModal')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                    <button onclick="saveReply()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Kaydet</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Field Modal -->
+        <div id="customFieldModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn">
+                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg" id="customFieldModalTitle">Yeni Özel Alan</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Kişiler, şirketler veya fırsatlar için özel alan oluşturun.</p>
+                    </div>
+                    <button onclick="closeCustomFieldModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+                <input type="hidden" id="customFieldId">
+                <div class="p-8 space-y-5">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Varlık Türü</label>
+                        <select id="cfEntityType" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                            <option value="contact">Kişiler</option>
+                            <option value="company">�?irketler</option>
+                            <option value="deal">Fırsatlar</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Alan Adı</label>
+                        <input type="text" id="cfFieldName" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Doğum Tarihi">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Alan Türü</label>
+                        <select id="cfFieldType" onchange="onFieldTypeChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                            <option value="text">Metin</option>
+                            <option value="number">Sayı</option>
+                            <option value="date">Tarih</option>
+                            <option value="dropdown">Açılır Liste</option>
+                            <option value="checkbox">Onay Kutusu</option>
+                            <option value="multi_select">Çoklu Seçim</option>
+                        </select>
+                    </div>
+                    <div id="cfOptionsContainer" class="space-y-1.5 hidden">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Seçenekler (virgülle ayırın)</label>
+                        <input type="text" id="cfOptions" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Seçenek 1, Seçenek 2, Seçenek 3">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="cfIsRequired" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <label for="cfIsRequired" class="text-sm text-slate-700 font-medium">Bu alan zorunlu</label>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50/50 flex gap-3 border-t border-slate-100">
+                    <button onclick="closeCustomFieldModal()" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">İptal</button>
+                    <button onclick="saveCustomField()" class="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20">Kaydet</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-[150%]"></div>
+
+        <script>
+            // State
+            let currentUser = null;
+            let team = [];
+            let templates = [];
+            let webhookSubscriptions = [];
+            let securityRoles = [];
+
+            // Utils
+            function showToast(msg, type = 'success') {
+                const t = document.getElementById('toast');
+                t.textContent = msg;
+                t.className = `fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-0 ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} text-white`;
+                setTimeout(() => t.className = 'fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-[150%]', 3000);
+            }
+
+            async function api(url, method = 'GET', body = null) {
+                const opts = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) opts.body = JSON.stringify(body);
+                try {
+                    const res = await fetch(url, opts);
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Bir hata oluştu');
+                    return data;
+                } catch (e) {
+                    showToast(e.message, 'error');
+                    throw e;
+                }
+            }
+
+            function openModal(id) {
+                document.getElementById(id).classList.remove('hidden');
+                document.getElementById(id).classList.add('flex');
+            }
+
+            function closeModal(id) {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(id).classList.remove('flex');
+                if (id === 'templateModal') {
+                    document.getElementById('tmpl_id').value = '';
+                    document.getElementById('tmpl_name').value = '';
+                    document.getElementById('tmpl_body').value = '';
+                    document.getElementById('tmplModalTitle').textContent = 'Yeni �?ablon';
+                }
+                if (id === 'replyModal') {
+                    document.getElementById('reply_id').value = '';
+                    document.getElementById('reply_title').value = '';
+                    document.getElementById('reply_body').value = '';
+                    document.getElementById('replyModalTitle').textContent = 'Yeni Hızlı Yanıt';
+                }
+            }
+
+            function copyWebhook() {
+                const url = document.getElementById('webhookUrl').textContent;
+                navigator.clipboard.writeText(url);
+                showToast('Webhook URL kopyalandı');
+            }
+
+            // Tabs
+            function switchTab(name) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                document.getElementById('tab-' + name).classList.add('active');
+                document.getElementById('panel-' + name).classList.add('active');
+                
+                if (name === 'branding') loadPortalBranding();
+                if (name === 'webhooks') loadWebhooks();
+                if (name === 'team') loadTeam();
+                if (name === 'templates') loadTemplates();
+                if (name === 'replies') loadReplies();
+                if (name === 'custom-fields') loadCustomFields();
+                if (name === 'profile') loadProfile();
+                if (name === 'google') loadGoogleStatus();
+                if (name === 'security') loadSecurityTab();
+            }
+
+            // ═══ IMPORT/EXPORT ═══
+            async function exportData(type) {
+                try {
+                    showToast('Dışa aktarma başlatılıyor...', 'info');
+                    
+                    const response = await fetch(`/api/v1/export/${type}`, {
+                        method: 'GET'
+                    });
+                    
+                    if (!response.ok) throw new Error('Export failed');
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showToast('Dışa aktarma tamamlandı', 'success');
+                } catch (error) {
+                    showToast('Dışa aktarma hatası: ' + error.message, 'error');
+                }
+            }
+
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-semibold z-50 ${
+                    type === 'success' ? 'bg-emerald-500' : 
+                    type === 'error' ? 'bg-red-500' : 
+                    'bg-blue-500'
+                }`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            // ═══ WORKSPACE ═══
+            async function loadWorkspace() {
+                const data = await api('/api/settings/workspace');
+                document.getElementById('ws_company_name').value = data.company_name;
+                document.getElementById('ws_phone_id').value = data.whatsapp_phone_number_id || '';
+                document.getElementById('ws_token').value = data.whatsapp_access_token === '***' ? '' : data.whatsapp_access_token;
+                document.getElementById('ws_telegram_token').value = data.telegram_bot_token === '***' ? '' : data.telegram_bot_token;
+                document.getElementById('ws_waba_id').value = data.waba_id || '';
+                document.getElementById('webhookUrl').textContent = window.location.origin + '/webhook';
+
+                await loadWorkspacePreferences();
+                
+                if (data.whatsapp_phone_number_id) {
+                    updateAPIStatus(true, 'Bağlı');
+                }
+            }
+
+            async function loadWorkspacePreferences() {
+                try {
+                    const prefs = await api('/api/settings/workspace/preferences');
+                    document.getElementById('pref_dashboard_insights').checked = !!prefs.show_dashboard_insights;
+                } catch (e) {
+                    console.error('Workspace preferences load error:', e);
+                }
+            }
+
+            async function saveWorkspacePreferences() {
+                const showDashboardInsights = document.getElementById('pref_dashboard_insights').checked;
+                await api('/api/settings/workspace/preferences', 'PUT', {
+                    show_dashboard_insights: showDashboardInsights,
+                });
+                showToast('Analytics görünüm tercihi kaydedildi');
+            }
+
+            function updateAPIStatus(ok, text) {
+                const status = document.getElementById('apiStatus');
+                status.querySelector('div').className = `w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500 animate-pulse'}`;
+                status.querySelector('span').textContent = text;
+                status.querySelector('span').className = ok ? 'text-emerald-600' : 'text-red-600';
+            }
+
+            async function saveWorkspace() {
+                const name = document.getElementById('ws_company_name').value.trim();
+                await api('/api/settings/workspace', 'PUT', { company_name: name });
+                showToast('�?irket bilgileri güncellendi');
+            }
+
+            async function saveAPI() {
+                const body = {
+                    whatsapp_phone_number_id: document.getElementById('ws_phone_id').value.trim(),
+                    whatsapp_access_token: document.getElementById('ws_token').value.trim() || '***',
+                    telegram_bot_token: document.getElementById('ws_telegram_token').value.trim() || '***',
+                    waba_id: document.getElementById('ws_waba_id').value.trim()
+                };
+                await api('/api/settings/workspace', 'PUT', body);
+                showToast('API bilgileri kaydedildi');
+                updateAPIStatus(true, 'Bağlı');
+            }
+
+            async function setupTelegramWebhook() {
+                try {
+                    const token = document.getElementById('ws_telegram_token').value.trim();
+                    if (!token) {
+                        showToast('Önce Telegram Bot Token girin', 'error');
+                        return;
+                    }
+                    await api('/api/settings/telegram/config', 'PUT', { telegram_bot_token: token });
+                    const res = await api('/api/settings/telegram/set-webhook', 'POST', { base_url: window.location.origin });
+                    showToast('Telegram webhook kuruldu');
+                    console.log('Telegram webhook:', res.webhook_url);
+                } catch (e) {
+                    showToast('Telegram webhook kurulamadı', 'error');
+                }
+            }
+
+            async function testWhatsApp() {
+                try {
+                    updateAPIStatus(false, 'Test ediliyor...');
+                    const res = await api('/api/settings/workspace/test-whatsapp', 'POST');
+                    if (res.success) {
+                        showToast(`Bağlantı başarılı: ${res.data.verified_name}`);
+                        updateAPIStatus(true, 'Aktif: ' + res.data.display_phone_number);
+                    }
+                } catch (e) {
+                    updateAPIStatus(false, 'Hatalı');
+                }
+            }
+
+            // ═══ PORTAL BRANDING ═══
+            async function loadPortalBranding() {
+                const data = await api('/api/settings/portal-branding');
+                document.getElementById('pb_logo_url').value = data.logo_url || '';
+                document.getElementById('pb_primary_color').value = data.primary_color || '#7c3aed';
+                document.getElementById('pb_secondary_color').value = data.secondary_color || '#8b5cf6';
+                document.getElementById('pb_custom_domain').value = data.custom_domain || '';
+                document.getElementById('pb_custom_css').value = data.custom_css || '';
+            }
+
+            async function savePortalBranding() {
+                const body = {
+                    logo_url: document.getElementById('pb_logo_url').value.trim(),
+                    primary_color: document.getElementById('pb_primary_color').value,
+                    secondary_color: document.getElementById('pb_secondary_color').value,
+                    custom_domain: document.getElementById('pb_custom_domain').value.trim(),
+                    custom_css: document.getElementById('pb_custom_css').value
+                };
+
+                await api('/api/settings/portal-branding', 'PUT', body);
+                showToast('Portal branding ayarları güncellendi');
+            }
+
+            // ═══ WEBHOOKS ═══
+            function selectedWebhookEvents() {
+                const values = [];
+                if (document.getElementById('wh_evt_deal_created').checked) values.push('deal.created');
+                if (document.getElementById('wh_evt_deal_updated').checked) values.push('deal.updated');
+                if (document.getElementById('wh_evt_task_completed').checked) values.push('task.completed');
+                if (document.getElementById('wh_evt_contact_created').checked) values.push('contact.created');
+                return values;
+            }
+
+            function setWebhookEvents(values) {
+                const set = new Set(values || []);
+                document.getElementById('wh_evt_deal_created').checked = set.has('deal.created');
+                document.getElementById('wh_evt_deal_updated').checked = set.has('deal.updated');
+                document.getElementById('wh_evt_task_completed').checked = set.has('task.completed');
+                document.getElementById('wh_evt_contact_created').checked = set.has('contact.created');
+            }
+
+            function resetWebhookForm() {
+                document.getElementById('wh_id').value = '';
+                document.getElementById('wh_name').value = '';
+                document.getElementById('wh_target_url').value = '';
+                setWebhookEvents([]);
+                const note = document.getElementById('wh_secret_note');
+                note.classList.add('hidden');
+                note.textContent = '';
+            }
+
+            async function loadWebhooks() {
+                const data = await api('/api/v1/public-auth/webhooks');
+                webhookSubscriptions = data.webhooks || [];
+
+                const list = document.getElementById('webhookList');
+                if (webhookSubscriptions.length === 0) {
+                    list.innerHTML = '<p class="text-sm text-slate-500">Henüz webhook aboneliği yok.</p>';
+                    return;
+                }
+
+                list.innerHTML = webhookSubscriptions.map(w => `
+                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">${w.name}</p>
+                                <p class="text-xs text-slate-500 mt-1">${w.target_url}</p>
+                                <p class="text-[11px] text-slate-500 mt-2">Events: ${(w.event_types || []).join(', ')}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${w.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200'}">${w.is_active ? 'active' : 'inactive'}</span>
+                                <button onclick="editWebhook(${w.id})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-brand-600"><i class="fas fa-pen text-xs"></i></button>
+                                <button onclick="testWebhook(${w.id})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-blue-600"><i class="fas fa-flask text-xs"></i></button>
+                                <button onclick="deleteWebhook(${w.id})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-red-600"><i class="fas fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async function saveWebhook() {
+                const id = document.getElementById('wh_id').value;
+                const body = {
+                    name: document.getElementById('wh_name').value.trim(),
+                    target_url: document.getElementById('wh_target_url').value.trim(),
+                    event_types: selectedWebhookEvents()
+                };
+
+                if (!body.name || !body.target_url || body.event_types.length === 0) {
+                    return showToast('Webhook adı, URL ve en az bir event zorunludur', 'error');
+                }
+
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/v1/public-auth/webhooks/${id}` : '/api/v1/public-auth/webhooks';
+                const data = await api(url, method, body);
+
+                const note = document.getElementById('wh_secret_note');
+                if (data.secret) {
+                    note.classList.remove('hidden');
+                    note.textContent = `Webhook secret: ${data.secret}`;
+                } else {
+                    note.classList.add('hidden');
+                    note.textContent = '';
+                }
+
+                showToast(id ? 'Webhook güncellendi' : 'Webhook oluşturuldu');
+                await loadWebhooks();
+                if (!id) resetWebhookForm();
+            }
+
+            async function editWebhook(id) {
+                const webhook = webhookSubscriptions.find(row => row.id === id);
+                if (!webhook) return;
+
+                document.getElementById('wh_id').value = webhook.id;
+                document.getElementById('wh_name').value = webhook.name || '';
+                document.getElementById('wh_target_url').value = webhook.target_url || '';
+                setWebhookEvents(webhook.event_types || []);
+
+                document.getElementById('wh_secret_note').classList.add('hidden');
+                document.getElementById('wh_secret_note').textContent = '';
+                await loadWebhookDeliveries(id);
+            }
+
+            async function deleteWebhook(id) {
+                if (!confirm('Bu webhook aboneliğini silmek istediğinize emin misiniz?')) return;
+                await api(`/api/v1/public-auth/webhooks/${id}`, 'DELETE');
+                showToast('Webhook silindi');
+                await loadWebhooks();
+                resetWebhookForm();
+            }
+
+            async function testWebhook(id) {
+                await api(`/api/v1/public-auth/webhooks/${id}/test`, 'POST');
+                showToast('Test delivery tetiklendi');
+                await loadWebhookDeliveries(id);
+            }
+
+            async function loadWebhookDeliveries(id) {
+                const target = document.getElementById('webhookDeliveries');
+                const title = document.getElementById('wh_delivery_title');
+                const webhook = webhookSubscriptions.find(row => row.id === id);
+                if (title) title.textContent = webhook ? webhook.name : `#${id}`;
+
+                const data = await api(`/api/v1/public-auth/webhooks/${id}/deliveries?limit=20`);
+                const deliveries = data.deliveries || [];
+
+                if (deliveries.length === 0) {
+                    target.innerHTML = '<p class="text-sm text-slate-500">Henüz delivery kaydı yok.</p>';
+                    return;
+                }
+
+                target.innerHTML = deliveries.map(d => `
+                    <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-slate-700">${d.event_type}</p>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${d.status === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : d.status === 'failed' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}">${d.status}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Attempt: ${d.attempt_count}/${d.max_attempts} • HTTP: ${d.response_status_code || '-'}</p>
+                        <p class="text-xs text-slate-500 mt-1">${d.created_at || ''}</p>
+                    </div>
+                `).join('');
+            }
+
+            // ═══ TEAM ═══
+            async function loadTeam() {
+                team = await api('/api/settings/team');
+                const tbody = document.getElementById('teamTable');
+                const empty = document.getElementById('teamEmpty');
+                
+                if (team.length === 0) {
+                    tbody.innerHTML = '';
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                empty.classList.add('hidden');
+                tbody.innerHTML = team.map(u => `
+                    <tr class="hover:bg-slate-50/50 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs border border-brand-100 shadow-sm">
+                                    ${u.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700">${u.name} ${u.id === currentUser.id ? '<span class="text-[10px] text-slate-400 font-normal ml-1 bg-slate-100 px-1.5 py-0.5 rounded-full">(Siz)</span>' : ''}</p>
+                                    <p class="text-[10px] text-slate-400 font-medium md:hidden">${u.email}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-500 font-medium hidden md:table-cell">${u.email}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${u.role === 'admin' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}">${u.role}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            ${(currentUser.role === 'admin' && u.id !== currentUser.id) ? `
+                                <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <select onchange="updateRole(${u.id}, this.value)" class="text-[10px] font-bold uppercase border border-slate-200 rounded-lg px-2 py-1 outline-none focus:border-brand-400 bg-white shadow-sm cursor-pointer">
+                                        <option value="agent" ${u.role === 'agent' ? 'selected' : ''}>Agent</option>
+                                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                    </select>
+                                    <button onclick="removeMember(${u.id})" class="w-8 h-8 flex items-center justify-center bg-white text-slate-300 hover:text-red-500 hover:border-red-200 border border-slate-200 rounded-lg transition-all shadow-sm" title="Üyeyi Çıkar">
+                                        <i class="fas fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            async function inviteMember() {
+                const body = {
+                    name: document.getElementById('m_name').value.trim(),
+                    email: document.getElementById('m_email').value.trim(),
+                    password: document.getElementById('m_pass').value,
+                    role: document.getElementById('m_role').value
+                };
+                if (!body.name || !body.email || !body.password) return showToast('Tüm alanları doldurun', 'error');
+                
+                await api('/api/settings/team', 'POST', body);
+                showToast('Yeni üye başarıyla eklendi');
+                closeModal('memberModal');
+                loadTeam();
+                
+                // Reset inputs
+                ['m_name', 'm_email', 'm_pass'].forEach(id => document.getElementById(id).value = '');
+            }
+
+            async function updateRole(userId, role) {
+                await api(`/api/settings/team/${userId}`, 'PUT', { role });
+                showToast('Kullanıcı rolü güncellendi');
+                loadTeam();
+            }
+
+            async function removeMember(userId) {
+                if (!confirm('Bu üyeyi takımdan çıkarmak istediğinize emin misiniz?')) return;
+                await api(`/api/settings/team/${userId}`, 'DELETE');
+                showToast('Üye başarıyla çıkarıldı');
+                loadTeam();
+            }
+
+            // ═══ TEMPLATES ═══
+            async function loadTemplates() {
+                templates = await api('/api/settings/templates');
+                const grid = document.getElementById('templateGrid');
+                const empty = document.getElementById('templatesEmpty');
+                
+                if (templates.length === 0) {
+                    grid.innerHTML = '';
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                empty.classList.add('hidden');
+                const catIcons = { marketing: 'fa-bullhorn', utility: 'fa-circle-info', custom: 'fa-message' };
+                const catColors = { marketing: 'text-orange-600 bg-orange-50 border-orange-100', utility: 'text-blue-600 bg-blue-50 border-blue-100', custom: 'text-brand-600 bg-brand-50 border-brand-100' };
+
+                grid.innerHTML = templates.map(t => `
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-brand-300 hover:shadow-md transition-all group relative">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center border ${catColors[t.category] || catColors.custom} shadow-sm">
+                                    <i class="fas ${catIcons[t.category] || catIcons.custom} text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-800 truncate max-w-[150px] tracking-tight">${t.name}</h4>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${t.category || 'Özel'}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick='editTemplate(${JSON.stringify(t)})' class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-brand-600 hover:bg-brand-50 flex items-center justify-center transition-all border border-transparent hover:border-brand-100 shadow-sm"><i class="fas fa-pen text-xs"></i></button>
+                                <button onclick="deleteTemplate(${t.id})" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all border border-transparent hover:border-red-100 shadow-sm"><i class="fas fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <p class="text-xs text-slate-600 font-medium line-clamp-3 leading-relaxed italic">"${t.body}"</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            function editTemplate(t) {
+                document.getElementById('tmpl_id').value = t.id;
+                document.getElementById('tmpl_name').value = t.name;
+                document.getElementById('tmpl_cat').value = t.category;
+                document.getElementById('tmpl_body').value = t.body;
+                document.getElementById('tmplModalTitle').textContent = '�?ablonu Düzenle';
+                openModal('templateModal');
+            }
+
+            async function saveTemplate() {
+                const id = document.getElementById('tmpl_id').value;
+                const body = {
+                    name: document.getElementById('tmpl_name').value.trim(),
+                    category: document.getElementById('tmpl_cat').value,
+                    body: document.getElementById('tmpl_body').value.trim()
+                };
+                
+                if (!body.name || !body.body) return showToast('Ad ve içerik zorunludur', 'error');
+                
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/settings/templates/${id}` : '/api/settings/templates';
+                
+                await api(url, method, body);
+                showToast(id ? '�?ablon güncellendi' : '�?ablon oluşturuldu');
+                closeModal('templateModal');
+                loadTemplates();
+            }
+
+            async function deleteTemplate(id) {
+                if (!confirm('Bu şablonu silmek istediğinize emin misiniz?')) return;
+                await api(`/api/settings/templates/${id}`, 'DELETE');
+                showToast('�?ablon silindi');
+                loadTemplates();
+            }
+
+            // ═══ QUICK REPLIES ═══
+            async function loadReplies() {
+                const data = await api('/api/quick-replies');
+                const grid = document.getElementById('replyGrid');
+                const empty = document.getElementById('repliesEmpty');
+                
+                if (data.length === 0) {
+                    grid.innerHTML = '';
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                empty.classList.add('hidden');
+                grid.innerHTML = data.map(r => `
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-brand-300 hover:shadow-md transition-all group">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 shadow-sm">
+                                    <i class="fas fa-bolt text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="px-2 py-0.5 bg-slate-800 text-white rounded text-[10px] font-black tracking-wider uppercase">/${r.title}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick='editReply(${JSON.stringify(r)})' class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-brand-600 hover:bg-brand-50 flex items-center justify-center transition-all border border-transparent hover:border-brand-100 shadow-sm"><i class="fas fa-pen text-xs"></i></button>
+                                <button onclick="deleteReply(${r.id})" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all border border-transparent hover:border-red-100 shadow-sm"><i class="fas fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <p class="text-xs text-slate-600 font-medium line-clamp-3 leading-relaxed">"${r.body}"</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            function editReply(r) {
+                document.getElementById('reply_id').value = r.id;
+                document.getElementById('reply_title').value = r.title;
+                document.getElementById('reply_body').value = r.body;
+                document.getElementById('replyModalTitle').textContent = 'Hızlı Yanıtı Düzenle';
+                openModal('replyModal');
+            }
+
+            async function saveReply() {
+                const id = document.getElementById('reply_id').value;
+                const body = {
+                    title: document.getElementById('reply_title').value.trim().replace(/^\//, ''),
+                    body: document.getElementById('reply_body').value.trim()
+                };
+                
+                if (!body.title || !body.body) return showToast('Başlık ve içerik zorunludur', 'error');
+                
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/quick-replies/${id}` : '/api/quick-replies';
+                
+                await api(url, method, body);
+                showToast(id ? 'Hızlı yanıt güncellendi' : 'Hızlı yanıt oluşturuldu');
+                closeModal('replyModal');
+                loadReplies();
+            }
+
+            async function deleteReply(id) {
+                if (!confirm('Bu hızlı yanıtı silmek istediğinize emin misiniz?')) return;
+                await api(`/api/quick-replies/${id}`, 'DELETE');
+                showToast('Hızlı yanıt silindi');
+                loadReplies();
+            }
+
+            // ═══ PROFILE ═══
+            async function loadProfile() {
+                const data = await api('/api/settings/profile');
+                currentUser = data; // Update local state
+                
+                // Profile page fields
+                document.getElementById('profileFullName').textContent = data.name;
+                document.getElementById('profileEmail').textContent = data.email;
+                document.getElementById('profileInitial').textContent = data.name.charAt(0).toUpperCase();
+                document.getElementById('profileRoleBadge').innerHTML = `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${data.role === 'admin' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}">${data.role}</span>`;
+                
+                document.getElementById('prof_name').value = data.name;
+                document.getElementById('prof_email').value = data.email;
+                
+                // Header fields
+                document.getElementById('userName').textContent = data.name;
+                document.getElementById('userRole').textContent = data.role;
+                document.getElementById('userInitial').textContent = data.name.charAt(0).toUpperCase();
+            }
+
+            async function saveProfile() {
+                const name = document.getElementById('prof_name').value.trim();
+                if (!name) return showToast('Ad soyad boş olamaz', 'error');
+                
+                await api('/api/settings/profile', 'PUT', { name });
+                showToast('Profil başarıyla güncellendi');
+                loadProfile();
+            }
+
+            async function changePassword() {
+                const current = document.getElementById('pass_current').value;
+                const newPass = document.getElementById('pass_new').value;
+                const confirmPass = document.getElementById('pass_confirm').value;
+                
+                if (!current || !newPass || !confirmPass) return showToast('Tüm alanları doldurun', 'error');
+                if (newPass !== confirmPass) return showToast('�?ifreler uyuşmuyor', 'error');
+                if (newPass.length < 8) return showToast('Yeni şifre en az 8 karakter olmalıdır', 'error');
+                
+                await api('/api/settings/profile/password', 'PUT', {
+                    current_password: current,
+                    new_password: newPass
+                });
+                
+                showToast('�?ifreniz başarıyla değiştirildi');
+                document.getElementById('pass_current').value = '';
+                document.getElementById('pass_new').value = '';
+                document.getElementById('pass_confirm').value = '';
+            }
+
+            // ═══ SECURITY ═══
+            async function loadSecurityTab() {
+                await loadSecurityOverview();
+                await loadSecurityRoles();
+                await loadIPWhitelist();
+                await loadComplianceReport();
+                await loadAuditLogs();
+            }
+
+            async function loadSecurityOverview() {
+                const data = await api('/api/settings/security/overview');
+                const badge = document.getElementById('sec2faStatus');
+                badge.textContent = data.two_factor_enabled ? 'Aktif' : 'Kapalı';
+                badge.className = `px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${data.two_factor_enabled ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`;
+                document.getElementById('sec2faInfo').textContent = `Yetkiler: ${(data.permissions || []).join(', ') || 'yok'} • IP whitelist: ${data.ip_whitelist_count || 0}`;
+            }
+
+            async function loadSecurityRoles() {
+                const rolesData = await api('/api/settings/security/roles');
+                securityRoles = rolesData.roles || [];
+
+                if (!team.length) {
+                    team = await api('/api/settings/team');
+                }
+
+                const userSelect = document.getElementById('secUserSelect');
+                userSelect.innerHTML = team.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+
+                const roleSelect = document.getElementById('secRoleSelect');
+                roleSelect.innerHTML = securityRoles.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+
+                const list = document.getElementById('secRoleList');
+                list.innerHTML = securityRoles.map(role => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p class="text-xs font-bold text-slate-700">${role.name}</p>
+                        <p class="text-[11px] text-slate-500 mt-1">${role.description || ''}</p>
+                        <p class="text-[11px] text-slate-500 mt-2">Üyeler: ${(role.members || []).map(m => m.name).join(', ') || 'Yok'}</p>
+                    </div>
+                `).join('');
+            }
+
+            async function assignSecurityRole() {
+                const userId = document.getElementById('secUserSelect').value;
+                const roleName = document.getElementById('secRoleSelect').value;
+                if (!userId || !roleName) return showToast('Kullanıcı ve rol seçin', 'error');
+                await api(`/api/settings/security/users/${userId}/role`, 'PUT', { role_name: roleName });
+                showToast('Rol atandı');
+                await loadSecurityRoles();
+            }
+
+            async function setup2FA() {
+                const data = await api('/api/settings/security/2fa/setup', 'POST');
+                document.getElementById('sec2faInfo').textContent = `Secret: ${data.secret} | Backup: ${(data.backup_codes || []).join(', ')}`;
+                showToast('2FA secret oluşturuldu');
+            }
+
+            async function enable2FA() {
+                const token = prompt('Authenticator kodunu girin:');
+                if (!token) return;
+                await api('/api/settings/security/2fa/enable', 'POST', { token });
+                showToast('2FA aktifleştirildi');
+                await loadSecurityOverview();
+            }
+
+            async function disable2FA() {
+                await api('/api/settings/security/2fa/disable', 'POST');
+                showToast('2FA kapatıldı');
+                await loadSecurityOverview();
+            }
+
+            async function loadIPWhitelist() {
+                const data = await api('/api/settings/security/ip-whitelist');
+                const list = document.getElementById('secIpList');
+                const items = data.items || [];
+                if (!items.length) {
+                    list.innerHTML = '<p class="text-xs text-slate-500">Whitelist kaydı bulunamadı.</p>';
+                    return;
+                }
+
+                list.innerHTML = items.map(row => `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-700">${row.ip_address}</p>
+                            <p class="text-[11px] text-slate-500">${row.label || '-'}</p>
+                        </div>
+                        <button onclick="deleteIPWhitelist(${row.id})" class="px-3 py-1 bg-white border border-slate-200 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-50 transition-all">Sil</button>
+                    </div>
+                `).join('');
+            }
+
+            async function addIPWhitelist() {
+                const ipAddress = document.getElementById('secIpAddress').value.trim();
+                const label = document.getElementById('secIpLabel').value.trim();
+                if (!ipAddress) return showToast('IP adresi gerekli', 'error');
+                await api('/api/settings/security/ip-whitelist', 'POST', { ip_address: ipAddress, label });
+                document.getElementById('secIpAddress').value = '';
+                document.getElementById('secIpLabel').value = '';
+                showToast('IP whitelist kaydedildi');
+                await loadIPWhitelist();
+            }
+
+            async function deleteIPWhitelist(rowId) {
+                await api(`/api/settings/security/ip-whitelist/${rowId}`, 'DELETE');
+                showToast('IP kaydı silindi');
+                await loadIPWhitelist();
+            }
+
+            async function loadComplianceReport() {
+                const data = await api('/api/settings/security/compliance-report?days=30');
+                document.getElementById('secCompliance').textContent = `Toplam event: ${data.total_events || 0} | Son ${data.days} gün | Aksiyonlar: ${Object.keys(data.by_action || {}).length}`;
+            }
+
+            async function loadAuditLogs() {
+                const data = await api('/api/settings/security/audit-logs?limit=30');
+                const list = document.getElementById('secAuditList');
+                const items = data.items || [];
+                if (!items.length) {
+                    list.innerHTML = '<p class="text-xs text-slate-500">Audit log bulunamadı.</p>';
+                    return;
+                }
+
+                list.innerHTML = items.map(row => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p class="text-xs font-semibold text-slate-700">${row.action} • ${row.entity_type}</p>
+                        <p class="text-[11px] text-slate-500 mt-1">User: ${row.user_id || '-'} | IP: ${row.ip_address || '-'} | ${row.created_at || ''}</p>
+                    </div>
+                `).join('');
+            }
+
+            async function runGDPRExport() {
+                const data = await api('/api/settings/security/gdpr/export', 'POST', {});
+                showToast(`GDPR export hazır (request #${data.id})`);
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // GOOGLE WORKSPACE
+            // ═══════════════════════════════════════════════════════════════
+
+            async function loadGoogleStatus() {
+                await loadQuickBooksStatus();
+                try {
+                    const data = await api('/api/settings/google/status');
+                    
+                    if (data.connected) {
+                        document.getElementById('googleNotConnected').classList.add('hidden');
+                        document.getElementById('googleConnected').classList.remove('hidden');
+                        document.getElementById('googleEmail').textContent = data.google_email || 'Bağlı';
+                        document.getElementById('googleConnectionStatus').innerHTML = `
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                            <span class="text-emerald-600">Bağlı</span>
+                        `;
+                        
+                        // Show synced data sections
+                        document.getElementById('googleEmailsSection').classList.remove('hidden');
+                        document.getElementById('googleEventsSection').classList.remove('hidden');
+                        document.getElementById('googleDriveSection').classList.remove('hidden');
+                        document.getElementById('emailTrackingSection').classList.remove('hidden');
+                        
+                        // Load synced data
+                        loadGoogleEmails();
+                        loadGoogleEvents();
+                        loadDriveFiles();
+                        loadEmailTracking();
+                    } else {
+                        document.getElementById('googleNotConnected').classList.remove('hidden');
+                        document.getElementById('googleConnected').classList.add('hidden');
+                        document.getElementById('googleConnectionStatus').innerHTML = `
+                            <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                            <span class="text-slate-400">Bağlı Değil</span>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Google status error:', e);
+                }
+            }
+
+            async function connectGoogle() {
+                try {
+                    const data = await api('/api/settings/google/connect', 'POST');
+                    if (data.authorization_url) {
+                        window.location.href = data.authorization_url;
+                    }
+                } catch (e) {
+                    showToast('Google bağlantısı başlatılamadı', 'error');
+                }
+            }
+
+            async function disconnectGoogle() {
+                if (!confirm('Google bağlantısını kesmek istediğinizden emin misiniz?')) return;
+                
+                try {
+                    await api('/api/settings/google/disconnect', 'DELETE');
+                    showToast('Google bağlantısı kesildi');
+                    loadGoogleStatus();
+                } catch (e) {
+                    showToast('Bağlantı kesilemedi', 'error');
+                }
+            }
+
+            async function loadQuickBooksStatus() {
+                try {
+                    const data = await api('/api/settings/quickbooks/status');
+                    const connected = !!data.connected;
+
+                    document.getElementById('quickbooksNotConnected').classList.toggle('hidden', connected);
+                    document.getElementById('quickbooksConnected').classList.toggle('hidden', !connected);
+
+                    if (connected) {
+                        document.getElementById('quickbooksCompanyName').textContent = data.company_name || data.realm_id || 'QuickBooks';
+                        document.getElementById('quickbooksConnectionStatus').innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span class="text-emerald-600">Bağlı</span>';
+                        await loadQuickBooksInvoices();
+                        await loadQuickBooksErrors();
+                    } else {
+                        document.getElementById('quickbooksConnectionStatus').innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div><span class="text-slate-400">Bağlı Değil</span>';
+                    }
+                } catch (e) {
+                    console.error('QuickBooks status error:', e);
+                }
+            }
+
+            async function connectQuickBooks() {
+                try {
+                    const data = await api('/api/settings/quickbooks/connect', 'POST');
+                    if (data.authorization_url) {
+                        window.location.href = data.authorization_url;
+                    }
+                } catch (e) {
+                    showToast('QuickBooks bağlantısı başlatılamadı', 'error');
+                }
+            }
+
+            async function disconnectQuickBooks() {
+                if (!confirm('QuickBooks bağlantısını kesmek istediğinizden emin misiniz?')) return;
+                try {
+                    await api('/api/settings/quickbooks/disconnect', 'DELETE');
+                    showToast('QuickBooks bağlantısı kesildi');
+                    await loadQuickBooksStatus();
+                } catch (e) {
+                    showToast('QuickBooks bağlantısı kesilemedi', 'error');
+                }
+            }
+
+            async function syncQuickBooksInvoices() {
+                try {
+                    const data = await api('/api/settings/quickbooks/sync/invoices', 'POST', {});
+                    const paid = (data.payments && data.payments.paid) || 0;
+                    const pushed = data.pushed || 0;
+                    document.getElementById('quickbooksSyncStatus').textContent = `Son sync: ${new Date().toLocaleString('tr-TR')} - ${pushed} invoice push, ${paid} paid update`;
+                    showToast('QuickBooks senkronizasyonu tamamlandı');
+                    await loadQuickBooksInvoices();
+                    await loadQuickBooksErrors();
+                } catch (e) {
+                    showToast('QuickBooks senkronizasyonu başarısız', 'error');
+                }
+            }
+
+            async function loadQuickBooksInvoices() {
+                try {
+                    const data = await api('/api/settings/quickbooks/invoices?limit=8');
+                    const rows = data.invoices || [];
+                    const container = document.getElementById('quickbooksInvoicesList');
+
+                    if (!rows.length) {
+                        container.innerHTML = '<p class="text-xs text-slate-500">Henüz QuickBooks invoice kaydı yok.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = rows.map(row => `
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-xs font-bold text-slate-700">Deal #${row.deal_id} • ${row.doc_number || row.quickbooks_invoice_id || 'Pending'}</p>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${row.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${row.payment_status}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1">Sync: ${row.sync_status} • $${Number(row.amount || 0).toLocaleString('en-US')}</p>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    console.error('QuickBooks invoices load error:', e);
+                }
+            }
+
+            async function loadQuickBooksErrors() {
+                try {
+                    const data = await api('/api/settings/quickbooks/errors?limit=5');
+                    const rows = data.errors || [];
+                    const summary = document.getElementById('quickbooksErrorSummary');
+                    const container = document.getElementById('quickbooksErrorsList');
+
+                    if (!rows.length) {
+                        summary.textContent = 'Hata yok';
+                        container.innerHTML = '';
+                        return;
+                    }
+
+                    summary.textContent = `${rows.length} hata kaydı`;
+                    container.innerHTML = rows.map(row => `
+                        <div class="p-3 bg-red-50 rounded-xl border border-red-100">
+                            <p class="text-xs font-bold text-red-700">${row.operation} • ${row.correlation_id}</p>
+                            <p class="text-[11px] text-red-600 mt-1">${row.error_message}</p>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    console.error('QuickBooks errors load error:', e);
+                }
+            }
+
+            async function syncGmail() {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Senkronize ediliyor...';
+                
+                try {
+                    const data = await api('/api/settings/google/sync/gmail', 'POST', { max_results: 50 });
+                    
+                    if (data.success) {
+                        showToast(`Gmail senkronize edildi: ${data.synced} yeni, ${data.skipped} atlandı`);
+                        document.getElementById('gmailSyncStatus').textContent = 
+                            `Son senkronizasyon: ${new Date().toLocaleString('tr-TR')} - ${data.synced} e-posta`;
+                        loadGoogleEmails();
+                    } else {
+                        showToast(data.error || 'Senkronizasyon başarısız', 'error');
+                    }
+                } catch (e) {
+                    showToast('Gmail senkronizasyonu başarısız', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Senkronize Et';
+                }
+            }
+
+            async function syncCalendar() {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Senkronize ediliyor...';
+                
+                try {
+                    const data = await api('/api/settings/google/sync/calendar', 'POST', { days_back: 7, days_forward: 30 });
+                    
+                    if (data.success) {
+                        showToast(`Calendar senkronize edildi: ${data.synced} yeni, ${data.skipped} atlandı`);
+                        document.getElementById('calendarSyncStatus').textContent = 
+                            `Son senkronizasyon: ${new Date().toLocaleString('tr-TR')} - ${data.synced} etkinlik`;
+                        loadGoogleEvents();
+                    } else {
+                        showToast(data.error || 'Senkronizasyon başarısız', 'error');
+                    }
+                } catch (e) {
+                    showToast('Calendar senkronizasyonu başarısız', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Senkronize Et';
+                }
+            }
+
+            async function loadGoogleEmails() {
+                try {
+                    const data = await api('/api/settings/google/emails?limit=10');
+                    const list = document.getElementById('googleEmailsList');
+                    
+                    if (!data.emails || data.emails.length === 0) {
+                        list.innerHTML = '<p class="text-sm text-slate-400">Henüz e-posta senkronize edilmedi.</p>';
+                        return;
+                    }
+                    
+                    list.innerHTML = data.emails.map(email => `
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-slate-800 truncate">${email.subject || 'Konu yok'}</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">Gönderen: ${email.from_email}</p>
+                                    <p class="text-xs text-slate-400 mt-1">${email.snippet || ''}</p>
+                                </div>
+                                <div class="text-[10px] text-slate-400 whitespace-nowrap">
+                                    ${email.received_at ? new Date(email.received_at).toLocaleDateString('tr-TR') : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    console.error('Load emails error:', e);
+                }
+            }
+
+            async function loadGoogleEvents() {
+                try {
+                    const data = await api('/api/settings/google/events?limit=10');
+                    const list = document.getElementById('googleEventsList');
+                    
+                    if (!data.events || data.events.length === 0) {
+                        list.innerHTML = '<p class="text-sm text-slate-400">Henüz etkinlik senkronize edilmedi.</p>';
+                        return;
+                    }
+                    
+                    list.innerHTML = data.events.map(event => `
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-slate-800 truncate">${event.summary || 'Başlık yok'}</p>
+                                    ${event.location ? `<p class="text-xs text-slate-500 mt-0.5"><i class="fas fa-map-marker-alt"></i> ${event.location}</p>` : ''}
+                                    <p class="text-xs text-slate-400 mt-1">
+                                        ${event.start_time ? new Date(event.start_time).toLocaleString('tr-TR') : ''}
+                                    </p>
+                                </div>
+                                <div class="px-2 py-1 bg-white rounded text-[10px] font-bold text-slate-600 border border-slate-200">
+                                    ${event.event_status || 'confirmed'}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    console.error('Load events error:', e);
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // GOOGLE DRIVE
+            // ═══════════════════════════════════════════════════════════════
+
+            let driveNextPageToken = null;
+            let driveSearchTimeout = null;
+
+            async function loadDriveFiles(pageToken = null) {
+                try {
+                    const searchTerm = document.getElementById('driveSearchInput').value.trim();
+                    let url = '/api/settings/google/drive/files';
+                    
+                    if (searchTerm) {
+                        url += `?search=${encodeURIComponent(searchTerm)}`;
+                    } else if (pageToken) {
+                        url += `?pageToken=${pageToken}`;
+                    }
+                    
+                    const data = await api(url);
+                    const list = document.getElementById('driveFilesList');
+                    
+                    if (!data.files || data.files.length === 0) {
+                        list.innerHTML = '<p class="text-sm text-slate-400">Dosya bulunamadı.</p>';
+                        document.getElementById('driveLoadMore').classList.add('hidden');
+                        return;
+                    }
+                    
+                    // If loading more, append; otherwise replace
+                    const html = data.files.map(file => `
+                        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:border-brand-300 transition-all group">
+                            <div class="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-slate-200 flex-shrink-0">
+                                ${file.thumbnailLink ? 
+                                    `<img src="${file.thumbnailLink}" class="w-8 h-8 object-cover rounded" />` :
+                                    `<i class="fas fa-file text-slate-400"></i>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-slate-800 truncate">${file.name}</p>
+                                <p class="text-xs text-slate-400">
+                                    ${file.size ? formatFileSize(file.size) : 'N/A'} • 
+                                    ${file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString('tr-TR') : ''}
+                                </p>
+                            </div>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href="${file.webViewLink}" target="_blank" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all">
+                                    <i class="fas fa-external-link-alt"></i> Aç
+                                </a>
+                                <button onclick='attachDriveFile(${JSON.stringify(file)})' class="px-3 py-1.5 bg-brand-600 text-white rounded-lg text-xs font-bold hover:bg-brand-700 transition-all">
+                                    <i class="fas fa-paperclip"></i> Ekle
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    if (pageToken) {
+                        list.innerHTML += html;
+                    } else {
+                        list.innerHTML = html;
+                    }
+                    
+                    // Show/hide load more button
+                    driveNextPageToken = data.nextPageToken;
+                    if (driveNextPageToken) {
+                        document.getElementById('driveLoadMore').classList.remove('hidden');
+                    } else {
+                        document.getElementById('driveLoadMore').classList.add('hidden');
+                    }
+                    
+                    // Show Drive section
+                    document.getElementById('googleDriveSection').classList.remove('hidden');
+                    document.getElementById('emailTrackingSection').classList.remove('hidden');
+                    
+                    // Load email tracking
+                    await loadEmailTracking();
+                    
+                } catch (e) {
+                    console.error('Load Drive files error:', e);
+                    showToast('Drive dosyaları yüklenemedi', 'error');
+                }
+            }
+
+            function loadMoreDriveFiles() {
+                if (driveNextPageToken) {
+                    loadDriveFiles(driveNextPageToken);
+                }
+            }
+
+            function refreshDriveFiles() {
+                driveNextPageToken = null;
+                loadDriveFiles();
+            }
+
+            function formatFileSize(bytes) {
+                if (!bytes) return 'N/A';
+                const kb = bytes / 1024;
+                if (kb < 1024) return kb.toFixed(1) + ' KB';
+                const mb = kb / 1024;
+                if (mb < 1024) return mb.toFixed(1) + ' MB';
+                const gb = mb / 1024;
+                return gb.toFixed(1) + ' GB';
+            }
+
+            async function attachDriveFile(file) {
+                // For demo: attach to a deal (you can customize this)
+                const entityType = prompt('Eklemek istediğiniz varlık türü (deal/task/contact/company):', 'deal');
+                if (!entityType) return;
+                
+                const entityId = prompt('Varlık ID:', '1');
+                if (!entityId) return;
+                
+                try {
+                    await api('/api/settings/google/drive/attach', 'POST', {
+                        driveFileId: file.id,
+                        fileName: file.name,
+                        mimeType: file.mimeType,
+                        fileSize: file.size,
+                        thumbnailUrl: file.thumbnailLink,
+                        webViewLink: file.webViewLink,
+                        entityType: entityType,
+                        entityId: parseInt(entityId),
+                        notes: ''
+                    });
+                    
+                    showToast(`"${file.name}" başarıyla eklendi!`);
+                } catch (e) {
+                    showToast('Dosya eklenemedi', 'error');
+                }
+            }
+
+            // Drive search with debounce
+            document.addEventListener('DOMContentLoaded', () => {
+                const searchInput = document.getElementById('driveSearchInput');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        clearTimeout(driveSearchTimeout);
+                        driveSearchTimeout = setTimeout(() => {
+                            driveNextPageToken = null;
+                            loadDriveFiles();
+                        }, 500);
+                    });
+                }
+            });
+
+            // ═══════════════════════════════════════════════════════════════
+            // EMAIL TRACKING
+            // ═══════════════════════════════════════════════════════════════
+
+            async function loadEmailTracking() {
+                try {
+                    const data = await api('/api/settings/google/email-tracking');
+                    
+                    // Update stats
+                    document.getElementById('statTotalSent').textContent = data.stats.total_sent;
+                    document.getElementById('statTotalOpened').textContent = data.stats.total_opened;
+                    document.getElementById('statOpenRate').textContent = data.stats.open_rate;
+                    document.getElementById('statClickRate').textContent = data.stats.click_rate;
+                    
+                    // Render emails list
+                    const list = document.getElementById('emailTrackingList');
+                    const empty = document.getElementById('emailTrackingEmpty');
+                    
+                    if (data.emails.length === 0) {
+                        list.classList.add('hidden');
+                        empty.classList.remove('hidden');
+                        return;
+                    }
+                    
+                    list.classList.remove('hidden');
+                    empty.classList.add('hidden');
+                    
+                    list.innerHTML = data.emails.map(email => {
+                        const sentDate = email.sent_at ? new Date(email.sent_at).toLocaleString('tr-TR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : 'Bilinmiyor';
+                        
+                        const openedDate = email.opened_at ? new Date(email.opened_at).toLocaleString('tr-TR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : null;
+                        
+                        return `
+                            <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-brand-300 transition-all group">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center ${email.opened ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}">
+                                    <i class="fas ${email.opened ? 'fa-envelope-open' : 'fa-envelope'}"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <p class="text-sm font-semibold text-slate-800 truncate">${email.subject || '(Konu yok)'}</p>
+                                        ${email.opened ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">Açıldı</span>' : ''}
+                                    </div>
+                                    <div class="flex items-center gap-3 text-xs text-slate-500">
+                                        <span><i class="fas fa-user text-[10px] mr-1"></i>${email.recipient_email}</span>
+                                        <span><i class="fas fa-clock text-[10px] mr-1"></i>${sentDate}</span>
+                                        ${email.opened ? `<span class="text-emerald-600"><i class="fas fa-eye text-[10px] mr-1"></i>${email.open_count}x açıldı</span>` : ''}
+                                        ${email.click_count > 0 ? `<span class="text-orange-600"><i class="fas fa-mouse-pointer text-[10px] mr-1"></i>${email.click_count}x tıklandı</span>` : ''}
+                                    </div>
+                                </div>
+                                <button onclick="viewEmailTrackingDetail('${email.tracking_id}')" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100">
+                                    <i class="fas fa-chart-line mr-1"></i> Detay
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                } catch (e) {
+                    console.error('Email tracking load error:', e);
+                }
+            }
+
+            async function refreshEmailTracking() {
+                await loadEmailTracking();
+                showToast('E-posta takibi yenilendi');
+            }
+
+            async function viewEmailTrackingDetail(trackingId) {
+                try {
+                    const data = await api(`/api/settings/google/email-tracking/${trackingId}`);
+                    
+                    let clicksHtml = '';
+                    if (data.clicks && data.clicks.length > 0) {
+                        clicksHtml = `
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <p class="text-xs font-bold text-slate-600 mb-2">Tıklanan Linkler:</p>
+                                <div class="space-y-2">
+                                    ${data.clicks.map(click => `
+                                        <div class="p-2 bg-slate-50 rounded-lg">
+                                            <p class="text-xs text-slate-700 truncate">${click.url}</p>
+                                            <p class="text-[10px] text-slate-400 mt-1">${new Date(click.clicked_at).toLocaleString('tr-TR')}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    const modalHtml = `
+                        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4" onclick="this.remove()">
+                            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden" onclick="event.stopPropagation()">
+                                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-slate-800 text-lg">E-posta Takip Detayı</h3>
+                                        <p class="text-xs text-slate-400 mt-0.5">${data.recipient_email}</p>
+                                    </div>
+                                    <button onclick="this.closest('.fixed').remove()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="p-8 space-y-4">
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">Konu</p>
+                                        <p class="text-sm text-slate-700">${data.subject || '(Konu yok)'}</p>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Gönderilme</p>
+                                            <p class="text-sm text-slate-700">${data.sent_at ? new Date(data.sent_at).toLocaleString('tr-TR') : 'Bilinmiyor'}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">İlk Açılma</p>
+                                            <p class="text-sm text-slate-700">${data.opened_at ? new Date(data.opened_at).toLocaleString('tr-TR') : 'Açılmadı'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                            <p class="text-xs font-bold text-emerald-600 uppercase mb-1">Açılma Sayısı</p>
+                                            <p class="text-2xl font-bold text-emerald-700">${data.open_count}</p>
+                                        </div>
+                                        <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                                            <p class="text-xs font-bold text-orange-600 uppercase mb-1">Tıklama Sayısı</p>
+                                            <p class="text-2xl font-bold text-orange-700">${data.click_count}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    ${clicksHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                } catch (e) {
+                    showToast('Detay yüklenemedi', 'error');
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // INIT
+            // ═══════════════════════════════════════════════════════════════
+
+            // Init
+            async function init() {
+                try {
+                    await loadProfile(); // This sets currentUser
+                    await loadWorkspace();
+                    await loadPortalBranding();
+                    await loadWebhooks();
+                    
+                    // Check for Google callback
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('google_connected') === '1') {
+                        showToast('Google başarıyla bağlandı!');
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        switchTab('google');
+                    } else if (urlParams.get('google_error')) {
+                        showToast('Google bağlantısı başarısız: ' + urlParams.get('google_error'), 'error');
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                    
+                    // Auto-load if coming from a specific hash
+                    const hash = window.location.hash.replace('#', '');
+                    if (['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'google', 'security'].includes(hash)) {
+                        switchTab(hash);
+                    }
+                } catch (e) {
+                    console.error('Init error:', e);
+                }
+            }
+
+            init();
+        </script>
+        <script src="/static/custom-fields.js"></script>
+    </main>
+    <script src="/static/topbar-global.js"></script>
+</body>
+
+</html>
+

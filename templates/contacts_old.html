@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Kişiler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar (Same as index.html) -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg"></i>
+            </a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg"></i>
+            </a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
+                <i class="fas fa-building text-lg"></i>
+            </a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
+                <i class="fas fa-bullhorn text-lg"></i>
+            </a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
+                <i class="fas fa-robot text-lg"></i>
+            </a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-chart-line text-lg"></i>
+            </a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg"></i>
+            </a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokumanlar">
+                <i class="fas fa-file-lines text-lg"></i>
+            </a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
+                <i class="fas fa-plug text-lg"></i>
+            </a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg"></i>
+            </a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap">
+                <i class="fas fa-sign-out-alt text-lg"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Bar -->
+        <header class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-bold text-slate-800">Kişiler</h1>
+                <div id="selectionCounter" class="hidden flex items-center gap-3 pl-4 border-l border-slate-200">
+                    <span class="text-sm font-semibold text-brand-600"><span id="selectedCount">0</span> seçildi</span>
+                    <button onclick="bulkDelete()" class="px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors">
+                        <i class="fas fa-trash-alt mr-1"></i> Seçilenleri Sil
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="openEditColumnsModal()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-columns mr-2"></i> Sütunları Düzenle
+                </button>
+                <button onclick="openNewContactModal()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-colors shadow-sm">
+                    <i class="fas fa-plus mr-2"></i> Yeni Kişi
+                </button>
+            </div>
+        </header>
+
+        <!-- Search and Filters Bar -->
+        <div class="bg-white border-b border-slate-200 px-8 py-4 flex items-center gap-4 flex-shrink-0">
+            <div class="relative flex-1 max-w-md">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" placeholder="İsim, telefon veya e-posta ile ara..." 
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Filtre:</label>
+                <select id="filterSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                    <option value="all">Tüm Kişiler</option>
+                    <option value="active">Aktif Konuşmalar</option>
+                    <option value="passive">Pasif Kişiler</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Etiket:</label>
+                <select id="labelFilter" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-500">
+                    <option value="">Tüm Etiketler</option>
+                    <option value="VIP">VIP</option>
+                    <option value="Potansiyel">Potansiyel</option>
+                    <option value="Kurumsal">Kurumsal</option>
+                    <option value="Bireysel">Bireysel</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="flex-1 overflow-auto p-8">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-200">
+                            <th class="px-6 py-4 w-12">
+                                <input type="checkbox" id="selectAllCheckbox" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            </th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-customer">Müşteri</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-labels">Etiketler</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-phone">Telefon</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-email">E-posta</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-company">Şirket</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-job_title">Unvan</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-created_at">Kayıt Tarihi</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-conversations text-center">Sohbetler</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider col-status">Durum</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contactsTableBody" class="divide-y divide-slate-200">
+                        <!-- JS ile doldurulacak -->
+                    </tbody>
+                </table>
+                <div id="loadingState" class="p-12 text-center hidden">
+                    <i class="fas fa-spinner fa-spin text-2xl text-brand-600 mb-2"></i>
+                    <p class="text-slate-500 text-sm">Yükleniyor...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Contact Modal -->
+    <div id="newContactModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800">Yeni Kişi Ekle</h3>
+                <button onclick="closeNewContactModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="newContactForm" class="p-8 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon Numarası *</label>
+                        <input type="tel" id="newPhone" required placeholder="+90 5xx xxx xxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Müşteri Adı</label>
+                        <input type="text" id="newName" placeholder="Ad Soyad" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">E-posta</label>
+                        <input type="email" id="newEmail" placeholder="ornek@mail.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Şirket</label>
+                        <input type="text" id="newCompany" placeholder="Şirket Adı" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Unvan</label>
+                        <input type="text" id="newJobTitle" placeholder="İş Unvanı" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Etiketler (Virgülle ayırın)</label>
+                        <input type="text" id="newLabels" placeholder="VIP, Potansiyel, Kurumsal" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeNewContactModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">İptal</button>
+                    <button type="submit" class="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">Kişiyi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Columns Modal -->
+    <div id="editColumnsModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-800">Sütun Görünürlüğü</h3>
+                <button onclick="closeEditColumnsModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-3" id="columnToggles">
+                <!-- Toggles will be added by JS -->
+            </div>
+            <div class="px-6 py-4 bg-slate-50">
+                <button onclick="closeEditColumnsModal()" class="w-full py-2 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allContacts = [];
+        let selectedIds = new Set();
+        let columnVisibility = JSON.parse(localStorage.getItem('contacts_column_visibility')) || {
+            labels: true,
+            phone: true,
+            email: true,
+            company: true,
+            job_title: true,
+            created_at: true,
+            conversations: true,
+            status: true
+        };
+
+        async function loadContacts(search = '') {
+            const loading = document.getElementById('loadingState');
+            loading.classList.remove('hidden');
+            
+            try {
+                const filter = document.getElementById('filterSelect').value;
+                const labelFilter = document.getElementById('labelFilter').value;
+                let url = '/api/contacts';
+                if (search) url += `?search=${encodeURIComponent(search)}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                allContacts = data.contacts;
+                
+                let filtered = allContacts;
+                if (filter === 'active') filtered = filtered.filter(c => c.has_open_conversation);
+                if (filter === 'passive') filtered = filtered.filter(c => !c.has_open_conversation);
+                if (labelFilter) filtered = filtered.filter(c => (c.labels || '').includes(labelFilter));
+
+                renderContacts(filtered);
+                updateSelectionUI();
+            } catch (e) {
+                console.error(e);
+                showToast('Kişiler yüklenirken bir hata oluştu.', 'error');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function renderContacts(contacts) {
+            const tbody = document.getElementById('contactsTableBody');
+            tbody.innerHTML = '';
+
+            contacts.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                const initials = (c.profile_name || c.phone_number).substring(0, 1).toUpperCase();
+                const isChecked = selectedIds.has(c.id);
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <input type="checkbox" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" 
+                               ${isChecked ? 'checked' : ''} onchange="toggleRowSelection(${c.id})">
+                    </td>
+                    <td class="px-6 py-4 col-customer">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs">
+                                ${initials}
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-800">${c.profile_name || 'İsimsiz'}</p>
+                                <p class="text-xs text-slate-400">${c.phone_number}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 col-labels">
+                        <div class="flex flex-wrap gap-1">
+                            ${(c.labels || '').split(',').filter(l => l.trim()).map(l => 
+                                `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold border border-slate-200">${l.trim()}</span>`
+                            ).join('') || '<span class="text-slate-300 text-xs">—</span>'}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 col-phone">${c.phone_number}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500 col-email">${c.email || '—'}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500 col-company">${c.company || '—'}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500 col-job_title">${c.job_title || '—'}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500 col-created_at">${new Date(c.created_at).toLocaleDateString('tr-TR')}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-slate-700 col-conversations text-center">${c.conversation_count || 0}</td>
+                    <td class="px-6 py-4 col-status">
+                        <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${c.has_open_conversation ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                            ${c.has_open_conversation ? 'Aktif' : 'Pasif'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <button onclick="window.location.href='/?customer=${c.id}'" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Mesaj Gönder">
+                                <i class="fas fa-comment-dots"></i>
+                            </button>
+                            <button onclick="deleteSingleContact(${c.id})" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Sil">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            applyColumnVisibility();
+        }
+
+        function toggleRowSelection(id) {
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+            } else {
+                selectedIds.add(id);
+            }
+            updateSelectionUI();
+        }
+
+        document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                allContacts.forEach(c => selectedIds.add(c.id));
+            } else {
+                selectedIds.clear();
+            }
+            renderContacts(allContacts);
+            updateSelectionUI();
+        });
+
+        function updateSelectionUI() {
+            const count = selectedIds.size;
+            const counter = document.getElementById('selectionCounter');
+            const countLabel = document.getElementById('selectedCount');
+            
+            if (count > 0) {
+                counter.classList.remove('hidden');
+                countLabel.textContent = count;
+            } else {
+                counter.classList.add('hidden');
+            }
+
+            const selectAll = document.getElementById('selectAllCheckbox');
+            selectAll.checked = allContacts.length > 0 && count === allContacts.length;
+            selectAll.indeterminate = count > 0 && count < allContacts.length;
+        }
+
+        function applyColumnVisibility() {
+            Object.keys(columnVisibility).forEach(col => {
+                const elements = document.querySelectorAll(`.col-${col}`);
+                elements.forEach(el => {
+                    if (columnVisibility[col]) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        function openEditColumnsModal() {
+            const container = document.getElementById('columnToggles');
+            container.innerHTML = '';
+            
+            const columns = [
+                { id: 'labels', label: 'Etiketler' },
+                { id: 'phone', label: 'Telefon' },
+                { id: 'email', label: 'E-posta' },
+                { id: 'company', label: 'Şirket' },
+                { id: 'job_title', label: 'Unvan' },
+                { id: 'created_at', label: 'Kayıt Tarihi' },
+                { id: 'conversations', label: 'Sohbetler' },
+                { id: 'status', label: 'Durum' }
+            ];
+
+            columns.forEach(col => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg cursor-pointer';
+                label.innerHTML = `
+                    <span class="text-sm font-medium text-slate-700">${col.label}</span>
+                    <input type="checkbox" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" 
+                           ${columnVisibility[col.id] ? 'checked' : ''} onchange="updateColumnVisibility('${col.id}', this.checked)">
+                `;
+                container.appendChild(label);
+            });
+
+            document.getElementById('editColumnsModal').classList.remove('hidden');
+            document.getElementById('editColumnsModal').classList.add('flex');
+        }
+
+        function closeEditColumnsModal() {
+            document.getElementById('editColumnsModal').classList.add('hidden');
+            document.getElementById('editColumnsModal').classList.remove('flex');
+        }
+
+        function updateColumnVisibility(colId, visible) {
+            columnVisibility[colId] = visible;
+            localStorage.setItem('contacts_column_visibility', JSON.stringify(columnVisibility));
+            applyColumnVisibility();
+        }
+
+        async function deleteSingleContact(id) {
+            if (!confirm('Bu müşteriyi ve tüm geçmişini silmek istediğinize emin misiniz?')) return;
+            
+            try {
+                const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Müşteri başarıyla silindi.', 'success');
+                    selectedIds.delete(id);
+                    loadContacts();
+                } else {
+                    showToast('Silme işlemi başarısız oldu.', 'error');
+                }
+            } catch (e) {
+                showToast('Bir hata oluştu.', 'error');
+            }
+        }
+
+        async function bulkDelete() {
+            const ids = Array.from(selectedIds);
+            if (!confirm(`${ids.length} seçili müşteriyi silmek istediğinize emin misiniz?`)) return;
+            
+            try {
+                const res = await fetch('/api/customers/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                });
+                
+                if (res.ok) {
+                    showToast(`${ids.length} müşteri silindi.`, 'success');
+                    selectedIds.clear();
+                    loadContacts();
+                } else {
+                    showToast('Toplu silme başarısız oldu.', 'error');
+                }
+            } catch (e) {
+                showToast('Bir hata oluştu.', 'error');
+            }
+        }
+
+        // Arama için debounce
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadContacts(e.target.value.trim());
+            }, 500);
+        });
+
+        // Filtre değişimi
+        document.getElementById('filterSelect').addEventListener('change', () => {
+            loadContacts(document.getElementById('searchInput').value.trim());
+        });
+        
+        document.getElementById('labelFilter').addEventListener('change', () => {
+            loadContacts(document.getElementById('searchInput').value.trim());
+        });
+
+        // Modal Fonksiyonları
+        function openNewContactModal() {
+            document.getElementById('newContactModal').classList.remove('hidden');
+            document.getElementById('newContactModal').classList.add('flex');
+            document.getElementById('newPhone').focus();
+        }
+
+        function closeNewContactModal() {
+            document.getElementById('newContactModal').classList.add('hidden');
+            document.getElementById('newContactModal').classList.remove('flex');
+            document.getElementById('newContactForm').reset();
+        }
+
+        document.getElementById('newContactForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                phone_number: document.getElementById('newPhone').value.trim(),
+                profile_name: document.getElementById('newName').value.trim(),
+                email: document.getElementById('newEmail').value.trim(),
+                company: document.getElementById('newCompany').value.trim(),
+                job_title: document.getElementById('newJobTitle').value.trim(),
+                labels: document.getElementById('newLabels').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showToast('Yeni müşteri başarıyla eklendi.', 'success');
+                    closeNewContactModal();
+                    loadContacts();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Hata oluştu.', 'error');
+                }
+            } catch (e) {
+                showToast('Bağlantı hatası.', 'error');
+            }
+        });
+
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} text-white px-6 py-3 rounded-xl shadow-lg z-[100] animate-fade-in-up`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Modal dışı tıklama
+        window.onclick = (e) => {
+            if (e.target.id === 'newContactModal') closeNewContactModal();
+            if (e.target.id === 'editColumnsModal') closeEditColumnsModal();
+        }
+
+        // Init
+        loadContacts();
+    </script>
+</body>
+
+</html>

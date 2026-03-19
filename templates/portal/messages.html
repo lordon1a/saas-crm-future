@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Portal - Messages</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --portal-primary: {{ (portal_branding.primary_color or '#7c3aed')|e }};
+            --portal-secondary: {{ (portal_branding.secondary_color or '#8b5cf6')|e }};
+        }
+        .bg-violet-600 { background-color: var(--portal-primary) !important; }
+        .hover\:bg-violet-700:hover { background-color: var(--portal-secondary) !important; }
+        .text-violet-700 { color: var(--portal-primary) !important; }
+        .text-violet-600 { color: var(--portal-primary) !important; }
+        .border-violet-600 { border-color: var(--portal-primary) !important; }
+        .border-violet-100 { border-color: var(--portal-secondary) !important; }
+        .bg-violet-50 { background-color: color-mix(in srgb, var(--portal-primary) 10%, white) !important; }
+        .bg-violet-100 { background-color: color-mix(in srgb, var(--portal-primary) 16%, white) !important; }
+        .focus\:border-violet-500:focus { border-color: var(--portal-primary) !important; }
+        .focus\:ring-violet-200:focus { --tw-ring-color: color-mix(in srgb, var(--portal-primary) 24%, white) !important; }
+        .focus\:ring-violet-300:focus { --tw-ring-color: color-mix(in srgb, var(--portal-primary) 30%, white) !important; }
+    </style>
+</head>
+<body data-portal-page="messages" class="min-h-screen bg-slate-50 font-sans text-slate-800">
+    <script id="portalBrandingData" type="application/json">{{ portal_branding|tojson }}</script>
+    <div class="min-h-screen flex">
+        <aside class="w-20 lg:w-64 bg-white border-r border-slate-200 shadow-sm flex flex-col">
+            <div class="h-16 flex items-center justify-center lg:justify-start lg:px-5 border-b border-slate-100">
+                {% if portal_branding.logo_url %}
+                <img id="portalSidebarLogo" src="{{ portal_branding.logo_url }}" alt="Portal Logo" class="h-9 w-9 rounded-xl object-contain border border-slate-200">
+                {% else %}
+                <div id="portalSidebarLogo" class="h-9 w-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-sm">CP</div>
+                {% endif %}
+                <span class="hidden lg:block ml-3 font-semibold text-slate-700">Customer Portal</span>
+            </div>
+
+            <nav class="p-2 lg:p-3 space-y-1 text-sm mt-2">
+                <a href="/portal/dashboard" class="group flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-3 py-3 rounded-xl border-l-4 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+                    <span class="hidden lg:inline">Dashboard</span>
+                </a>
+
+                <a href="/portal/documents" class="group flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-3 py-3 rounded-xl border-l-4 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M8 4h8l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                    <span class="hidden lg:inline">Documents</span>
+                </a>
+
+                <a href="/portal/messages" class="group flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-3 py-3 rounded-xl border-l-4 border-violet-600 bg-violet-50 text-violet-700 font-semibold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8m-8 4h5m8 4a2 2 0 01-2 2H5l-4 4V4a2 2 0 012-2h16a2 2 0 012 2v14z"/></svg>
+                    <span class="hidden lg:inline">Messages</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 lg:p-8">
+            <header class="mb-6 lg:mb-8 flex items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-xl lg:text-2xl font-bold">Project Messages</h1>
+                    <p class="text-sm text-slate-500 mt-1">Ekiple güncel konuşmaları tek akışta takip edin.</p>
+                </div>
+                <button id="portalLogoutBtn" class="px-4 py-2 rounded-xl border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 text-sm font-semibold shadow-sm">Logout</button>
+            </header>
+
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm lg:col-span-1">
+                    <h2 class="font-bold text-slate-800 mb-3">Conversations</h2>
+                    <div id="portalConversationList" class="space-y-2"></div>
+                </div>
+
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-md lg:col-span-2">
+                    <h2 id="portalConversationTitle" class="font-bold text-slate-800 mb-3">Mesajlar</h2>
+                    <div id="portalMessages" class="space-y-2 min-h-[320px] max-h-[460px] overflow-auto mb-4 pr-1"></div>
+                    <form id="portalSendForm" class="flex gap-2">
+                        <input id="portalMessageInput" type="text" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-500" placeholder="Mesaj yaz..." required>
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-violet-600 text-white font-semibold hover:bg-violet-700 shadow-sm">Gönder</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='portal.js') }}"></script>
+</body>
+</html>

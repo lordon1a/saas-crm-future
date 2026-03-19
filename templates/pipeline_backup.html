@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6',
+                            600: '#7c3aed', 900: '#4c1d95'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .deal-card {
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        /* Drag and Drop Styles */
+        .dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+            cursor: grabbing !important;
+        }
+        
+        .column-highlight {
+            background-color: rgba(124, 58, 237, 0.05);
+            border: 2px dashed #7c3aed;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">g���</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="�?irketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">        </div>
+    </aside>
+
+                <main class="flex-1 flex flex-col overflow-hidden">
+<header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
+                        <i class="fas fa-gift text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardim">
+                        <i class="fas fa-circle-question text-sm"></i>
+                    </button>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Ipuclari">
+                        <i class="fas fa-lightbulb text-sm"></i>
+                    </button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-semibold text-slate-800">Sales Pipeline</h1>
+                <div class="flex items-center gap-2 ml-4">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-semibold text-slate-500" id="dealCount">0 Deals</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="loadPipeline()" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+                    <i class="fas fa-sync-alt text-sm"></i>
+                </button>
+                <button onclick="openAddDealModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
+                    <i class="fas fa-plus"></i> New Deal
+                </button>
+            </div>
+        </header>
+
+        <!-- Forecast Panel -->
+        <div class="bg-white border-b border-slate-200/80 px-8 py-5 flex-shrink-0">
+            <div class="flex items-center gap-8">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Weighted Forecast</p>
+                    <p class="text-3xl font-bold text-emerald-600" id="forecastValue">$0</p>
+                </div>
+                <div class="h-12 w-px bg-slate-200"></div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Open Deals</p>
+                    <p class="text-3xl font-bold text-slate-800" id="openDealsCount">0</p>
+                </div>
+                <div class="h-12 w-px bg-slate-200"></div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Total Value</p>
+                    <p class="text-3xl font-bold text-slate-800" id="totalValue">$0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipeline Kanban -->
+        <div class="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50">
+            <div class="flex gap-4 p-6 h-full" id="pipelineContainer">
+                <!-- Stages will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Deal Detail Modal -->
+    <div id="dealModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-slate-800 text-xl truncate" id="dealModalTitle">Deal Name</h3>
+                    <div class="flex items-center gap-4 mt-2">
+                        <span class="text-sm text-slate-500"><i class="fas fa-building mr-1"></i><span id="dealModalCompany">Company</span></span>
+                        <span class="text-sm font-bold text-emerald-600"><span id="dealModalValue">$0</span></span>
+                        <span class="px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-bold border border-brand-100" id="dealModalStage">Stage</span>
+                        <button id="dealFollowBtn" onclick="toggleDealFollow()" class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+                            <i class="fas fa-bell mr-1"></i> Takip Et
+                        </button>
+                    </div>
+                </div>
+                <button onclick="closeDealModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center ml-4">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="px-8 border-b border-slate-200 flex gap-6 flex-shrink-0">
+                <button data-deal-tab="overview" onclick="switchDealTab('overview')" class="py-3 text-sm font-semibold border-b-2 border-brand-600 text-brand-600 transition-colors">
+                    <i class="fas fa-info-circle mr-1"></i> Genel Bakış
+                </button>
+                <button data-deal-tab="custom-fields" onclick="switchDealTab('custom-fields')" class="py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                    <i class="fas fa-sliders-h mr-1"></i> Özel Alanlar
+                </button>
+                <button data-deal-tab="drive" onclick="switchDealTab('drive')" class="py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                    <i class="fab fa-google-drive mr-1"></i> Ekli Dosyalar (Drive)
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- Overview Tab -->
+                <div data-deal-content="overview" class="p-8">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Tahmini Kapanış Tarihi</p>
+                            <p class="text-sm text-slate-700" id="dealModalCloseDate">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Durum</p>
+                            <p class="text-sm text-slate-700">Açık</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">QuickBooks Invoice</p>
+                            <span id="qbInvoiceBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">Yok</span>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-700" id="qbInvoiceRef">Henüz oluşturulmadı</p>
+                        <p class="text-xs text-slate-500 mt-1" id="qbInvoiceMeta">Deal won olduğunda otomatik oluşturulur.</p>
+                    </div>
+                    <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-600"><i class="fas fa-info-circle mr-1"></i> Daha fazla detay yakında eklenecek (notlar, aktiviteler, vb.)</p>
+                    </div>
+                </div>
+
+                <!-- Custom Fields Tab -->
+                <div data-deal-content="custom-fields" class="p-8 hidden">
+                    <div id="dealCustomFieldsContent" class="space-y-4"></div>
+                </div>
+
+                <!-- Drive Files Tab -->
+                <div data-deal-content="drive" class="p-8 hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <h4 class="text-sm font-bold text-slate-700">Google Drive Dosyaları</h4>
+                        <button onclick="openDriveFilePicker()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                            <i class="fab fa-google-drive"></i> Drive'dan Dosya Seç
+                        </button>
+                    </div>
+
+                    <!-- Attachments List -->
+                    <div id="driveAttachmentsList" class="space-y-2"></div>
+
+                    <!-- Empty State -->
+                    <div id="driveAttachmentsEmpty" class="hidden text-center py-12">
+                        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fab fa-google-drive text-slate-400 text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">Henüz ekli dosya yok</p>
+                        <p class="text-xs text-slate-400 mt-1">Google Drive'dan dosya eklemek için yukarıdaki butona tıklayın</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drive File Picker Modal -->
+    <div id="drivePickerModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <!-- Picker Header -->
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg">Google Drive'dan Dosya Seç</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Eklemek istediğiniz dosyaya tıklayın</p>
+                </div>
+                <button onclick="closeDrivePickerModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Search -->
+            <div class="px-8 py-4 border-b border-slate-100 flex-shrink-0">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="drivePickerSearch" placeholder="Dosya ara..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                </div>
+            </div>
+
+            <!-- Files List -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="drivePickerFilesList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Deal Modal (Pipedrive-7 Style) -->
+    <div id="addDealModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-xl">Anlaşma ekle</h3>
+                    <p class="text-xs text-slate-400 mt-1">Yeni bir satış fırsatı oluşturun</p>
+                </div>
+                <button onclick="closeAddDealModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Form Content -->
+            <div class="flex-1 overflow-y-auto p-8">
+                <form id="addDealForm" class="space-y-6">
+                    <!-- Contact & Company Row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                İrtibat Kişisi <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="dealContactSearch" placeholder="Kişi ara..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" autocomplete="off">
+                                <input type="hidden" id="dealContactId" required>
+                                <div id="dealContactResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-10"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Kuruluş <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="dealCompanySearch" placeholder="Şirket ara..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" autocomplete="off">
+                                <input type="hidden" id="dealCompanyId" required>
+                                <div id="dealCompanyResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-10"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deal Title -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Başlık <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="dealTitle" placeholder="Örn: Q1 2024 Lisans Anlaşması" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" required>
+                    </div>
+
+                    <!-- Value & Currency Row -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Değer <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" id="dealValue" placeholder="0" min="0" step="0.01" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Para Birimi
+                            </label>
+                            <select id="dealCurrency" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all">
+                                <option value="TRY">TRY</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Stage Selection -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                            Aşama <span class="text-red-500">*</span>
+                        </label>
+                        <div id="dealStageSelector" class="flex gap-2 flex-wrap">
+                            <!-- Stages will be loaded dynamically -->
+                        </div>
+                        <input type="hidden" id="dealStageId" required>
+                    </div>
+
+                    <!-- Expected Close Date -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Tahmini Kapanış Tarihi
+                        </label>
+                        <input type="date" id="dealCloseDate" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all">
+                    </div>
+
+                    <!-- Tags -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Etiketler
+                        </label>
+                        <input type="text" id="dealTags" placeholder="Etiketleri virgülle ayırın" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all">
+                        <p class="text-xs text-slate-400 mt-1.5">Örn: yeni_müşteri, öncelikli, q1_2024</p>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Notlar
+                        </label>
+                        <textarea id="dealNotes" rows="3" placeholder="Anlaşma hakkında notlar..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all resize-none"></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-8 py-6 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0">
+                <button onclick="closeAddDealModal()" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">
+                    İptal
+                </button>
+                <button onclick="submitAddDeal()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 hover:shadow-lg transition-all shadow-md flex items-center gap-2">
+                    <i class="fas fa-check"></i>
+                    Anlaşma Oluştur
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-6 right-6 z-[100] px-6 py-3 rounded-xl text-sm font-bold shadow-2xl transition-all duration-500 translate-x-[150%]"></div>
+
+    <script>
+        let currentPipeline = null;
+        let deals = [];
+
+        async function loadPipeline() {
+            try {
+                // Load pipelines
+                const pipelinesRes = await fetch('/api/v1/pipelines');
+                const pipelines = await pipelinesRes.json();
+                
+                if (pipelines.length === 0) {
+                    alert('No pipeline found. Please create a pipeline first.');
+                    return;
+                }
+                
+                // Use first (default) pipeline
+                currentPipeline = pipelines[0];
+                
+                // Load deals
+                const dealsRes = await fetch(`/api/v1/deals?pipeline_id=${currentPipeline.id}`);
+                const dealsData = await dealsRes.json();
+                deals = Array.isArray(dealsData) ? dealsData : (dealsData.deals || dealsData.data || []);
+                
+                // Load forecast
+                const forecastRes = await fetch(`/api/v1/deals/forecast?pipeline_id=${currentPipeline.id}`);
+                const forecast = await forecastRes.json();
+                
+                renderForecast(forecast);
+                renderPipeline();
+            } catch (error) {
+                console.error('Error loading pipeline:', error);
+                alert('Error loading pipeline data');
+            }
+        }
+
+        function renderForecast(forecast) {
+            document.getElementById('forecastValue').textContent = 
+                `$${forecast.total_forecast.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            document.getElementById('openDealsCount').textContent = forecast.total_deals;
+            document.getElementById('dealCount').textContent = `${forecast.total_deals} Deal${forecast.total_deals !== 1 ? 's' : ''}`;
+            
+            // Calculate total value
+            const totalValue = forecast.by_stage.reduce((sum, stage) => sum + stage.total_value, 0);
+            document.getElementById('totalValue').textContent = 
+                `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+        }
+
+        function renderPipeline() {
+            const container = document.getElementById('pipelineContainer');
+            container.innerHTML = '';
+            
+            // Group deals by stage
+            const dealsByStage = {};
+            currentPipeline.stages.forEach(stage => {
+                dealsByStage[stage.id] = [];
+            });
+            
+            deals.forEach(deal => {
+                if (deal.status === 'open' && dealsByStage[deal.stage.id]) {
+                    dealsByStage[deal.stage.id].push(deal);
+                }
+            });
+            
+            // Render each stage
+            currentPipeline.stages.forEach(stage => {
+                const stageDeals = dealsByStage[stage.id] || [];
+                const totalValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
+                const stageEl = document.createElement('div');
+                stageEl.className = 'flex-shrink-0 w-80 flex flex-col';
+                stageEl.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full hover:shadow-lg transition-all">
+                        <div class="px-4 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-slate-700">${stage.name}</h3>
+                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">${stageDeals.length}</span>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-xs text-slate-400">${Math.round(stage.probability * 100)}%</span>
+                                <span class="text-xs font-bold text-emerald-600">${totalValue.toLocaleString('en-US')}</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-3 space-y-2.5 drop-zone" 
+                             id="stage-${stage.id}" 
+                             data-stage-id="${stage.id}">
+                            ${stageDeals.length > 0 ? stageDeals.map(deal => renderDealCard(deal)).join('') : '<div class="flex flex-col items-center justify-center py-12 text-center"><div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3"><i class="fas fa-inbox text-slate-300 text-xl"></i></div><p class="text-xs text-slate-400">No deals in this stage</p></div>'}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(stageEl);
+            });
+            
+            // Setup event listeners after rendering
+            setupDragAndDropListeners();
+        }
+
+        function renderDealCard(deal) {
+            const closeDate = deal.expected_close_date ? 
+                new Date(deal.expected_close_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : 
+                'No date';
+            
+            return `
+                <div class="deal-card bg-white border border-slate-200 rounded-lg p-3 cursor-move hover:shadow-md hover:border-brand-300 transition-all group" 
+                     draggable="true" 
+                     data-deal-id="${deal.id}" 
+                     data-stage-id="${deal.stage.id}">
+                    <div class="flex items-start justify-between mb-2" onclick="showDealDetails(${deal.id})">
+                        <h4 class="text-sm font-semibold text-slate-800 group-hover:text-brand-600 transition-colors line-clamp-2">${deal.name}</h4>
+                    </div>
+                    <div class="flex items-center gap-1.5 mb-2" onclick="showDealDetails(${deal.id})">
+                        <i class="fas fa-building text-xs text-slate-400"></i>
+                        <p class="text-xs text-slate-500">${deal.company ? deal.company.name : 'No company'}</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100" onclick="showDealDetails(${deal.id})">
+                        <span class="text-sm font-bold text-emerald-600">$${deal.value.toLocaleString('en-US')}</span>
+                        <span class="text-xs text-slate-400 flex items-center gap-1">
+                            <i class="far fa-calendar"></i>
+                            ${closeDate}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        let currentDeal = null;
+        let driveAttachments = [];
+        let dealCustomFields = [];
+        let currentDealFollowed = false;
+
+        function showDealDetails(dealId) {
+            const deal = deals.find(d => d.id === dealId);
+            if (!deal) return;
+            
+            currentDeal = deal;
+            
+            // Show modal
+            const modal = document.getElementById('dealModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Populate deal info
+            document.getElementById('dealModalTitle').textContent = deal.name;
+            document.getElementById('dealModalCompany').textContent = deal.company ? deal.company.name : 'No company';
+            document.getElementById('dealModalValue').textContent = '$' + deal.value.toLocaleString('en-US');
+            document.getElementById('dealModalStage').textContent = deal.stage.name;
+            document.getElementById('dealModalCloseDate').textContent = deal.expected_close_date ? 
+                new Date(deal.expected_close_date).toLocaleDateString('tr-TR') : 'Belirtilmemiş';
+            
+            // Switch to overview tab
+            switchDealTab('overview');
+            
+            // Load drive attachments
+            loadDriveAttachments(dealId);
+            loadDealCustomFields(dealId);
+            loadDealQuickBooksInvoice(dealId);
+            loadDealFollowStatus(dealId);
+        }
+
+        async function loadDealFollowStatus(dealId) {
+            try {
+                const res = await fetch(`/api/collaboration/follows/status?entity_type=deal&entity_id=${dealId}`);
+                const data = await res.json();
+                currentDealFollowed = !!data.is_following;
+                renderDealFollowButton();
+            } catch (error) {
+                console.error('Error loading follow status:', error);
+            }
+        }
+
+        function renderDealFollowButton() {
+            const btn = document.getElementById('dealFollowBtn');
+            if (!btn) return;
+            if (currentDealFollowed) {
+                btn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all';
+                btn.innerHTML = '<i class="fas fa-bell mr-1"></i> Takiptesin';
+            } else {
+                btn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all';
+                btn.innerHTML = '<i class="fas fa-bell mr-1"></i> Takip Et';
+            }
+        }
+
+        async function toggleDealFollow() {
+            if (!currentDeal) return;
+            try {
+                if (currentDealFollowed) {
+                    await fetch('/api/collaboration/follows', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entity_type: 'deal', entity_id: currentDeal.id }),
+                    });
+                    currentDealFollowed = false;
+                } else {
+                    await fetch('/api/collaboration/follows', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entity_type: 'deal', entity_id: currentDeal.id }),
+                    });
+                    currentDealFollowed = true;
+                }
+                renderDealFollowButton();
+            } catch (error) {
+                console.error('Error toggling follow:', error);
+            }
+        }
+
+        async function loadDealQuickBooksInvoice(dealId) {
+            try {
+                const res = await fetch(`/api/v1/quickbooks/deals/${dealId}/invoice`);
+                const data = await res.json();
+                const invoice = data.invoice;
+
+                const badge = document.getElementById('qbInvoiceBadge');
+                const ref = document.getElementById('qbInvoiceRef');
+                const meta = document.getElementById('qbInvoiceMeta');
+
+                if (!invoice) {
+                    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600';
+                    badge.textContent = 'Yok';
+                    ref.textContent = 'Henüz oluşturulmadı';
+                    meta.textContent = 'Deal won olduğunda otomatik oluşturulur.';
+                    return;
+                }
+
+                const paid = invoice.payment_status === 'paid';
+                badge.className = `px-2 py-0.5 rounded-full text-[10px] font-bold ${paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`;
+                badge.textContent = paid ? 'Paid' : invoice.payment_status;
+                ref.textContent = invoice.doc_number || invoice.quickbooks_invoice_id || `Invoice #${invoice.id}`;
+                meta.textContent = `Sync: ${invoice.sync_status} • Amount: $${Number(invoice.amount || 0).toLocaleString('en-US')} ${invoice.currency || ''}`;
+            } catch (error) {
+                console.error('Error loading QuickBooks invoice:', error);
+            }
+        }
+
+        function closeDealModal() {
+            document.getElementById('dealModal').classList.add('hidden');
+            document.getElementById('dealModal').classList.remove('flex');
+            currentDeal = null;
+        }
+
+        function switchDealTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('[data-deal-tab]').forEach(btn => {
+                btn.classList.remove('border-brand-600', 'text-brand-600');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+            document.querySelector(`[data-deal-tab="${tabName}"]`).classList.remove('border-transparent', 'text-slate-500');
+            document.querySelector(`[data-deal-tab="${tabName}"]`).classList.add('border-brand-600', 'text-brand-600');
+            
+            // Update tab content
+            document.querySelectorAll('[data-deal-content]').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.querySelector(`[data-deal-content="${tabName}"]`).classList.remove('hidden');
+        }
+
+        async function loadDriveAttachments(dealId) {
+            try {
+                const res = await fetch(`/api/settings/google/drive/attachments?entityType=deal&entityId=${dealId}`);
+                const data = await res.json();
+                driveAttachments = data.attachments || [];
+                renderDriveAttachments();
+            } catch (error) {
+                console.error('Error loading drive attachments:', error);
+            }
+        }
+
+        function renderDriveAttachments() {
+            const container = document.getElementById('driveAttachmentsList');
+            const emptyState = document.getElementById('driveAttachmentsEmpty');
+            
+            if (driveAttachments.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            
+            container.innerHTML = driveAttachments.map(att => {
+                const date = new Date(att.attachedAt).toLocaleDateString('tr-TR', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                // Get file type icon
+                const fileIcon = getFileIcon(att.mimeType, att.fileName);
+                
+                return `
+                    <div class="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-brand-300 hover:shadow-sm transition-all group">
+                        <div class="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-200 flex-shrink-0">
+                            ${att.thumbnailUrl ? 
+                                `<img src="${att.thumbnailUrl}" class="w-10 h-10 object-cover rounded-lg" />` :
+                                `<i class="${fileIcon.icon} ${fileIcon.color} text-lg"></i>`
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <a href="${att.webViewLink}" target="_blank" class="text-sm font-semibold text-slate-800 hover:text-brand-600 truncate block mb-1 flex items-center gap-2">
+                                ${att.fileName}
+                                <i class="fas fa-external-link-alt text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                            </a>
+                            <div class="flex items-center gap-3 text-xs text-slate-500">
+                                <span class="flex items-center gap-1">
+                                    <i class="fas fa-hdd text-[10px]"></i>
+                                    <span class="font-semibold">${att.fileSize ? formatFileSize(att.fileSize) : 'N/A'}</span>
+                                </span>
+                                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                <span class="flex items-center gap-1">
+                                    <i class="far fa-clock text-[10px]"></i>
+                                    ${date}
+                                </span>
+                            </div>
+                        </div>
+                        <button onclick="removeDriveAttachment(${att.id})" class="px-3 py-2 bg-white border border-slate-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1.5">
+                            <i class="fas fa-unlink"></i>
+                            <span>Kaldır</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getFileIcon(mimeType, fileName) {
+            if (!mimeType && fileName) {
+                const ext = fileName.split('.').pop().toLowerCase();
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    return { icon: 'fas fa-image', color: 'text-blue-500' };
+                }
+                if (['pdf'].includes(ext)) {
+                    return { icon: 'fas fa-file-pdf', color: 'text-red-500' };
+                }
+                if (['doc', 'docx'].includes(ext)) {
+                    return { icon: 'fas fa-file-word', color: 'text-blue-600' };
+                }
+                if (['xls', 'xlsx'].includes(ext)) {
+                    return { icon: 'fas fa-file-excel', color: 'text-green-600' };
+                }
+                if (['ppt', 'pptx'].includes(ext)) {
+                    return { icon: 'fas fa-file-powerpoint', color: 'text-orange-600' };
+                }
+                if (['zip', 'rar', '7z'].includes(ext)) {
+                    return { icon: 'fas fa-file-archive', color: 'text-yellow-600' };
+                }
+            }
+            
+            if (mimeType) {
+                if (mimeType.startsWith('image/')) {
+                    return { icon: 'fas fa-image', color: 'text-blue-500' };
+                }
+                if (mimeType.startsWith('video/')) {
+                    return { icon: 'fas fa-video', color: 'text-purple-500' };
+                }
+                if (mimeType.includes('pdf')) {
+                    return { icon: 'fas fa-file-pdf', color: 'text-red-500' };
+                }
+                if (mimeType.includes('word') || mimeType.includes('document')) {
+                    return { icon: 'fas fa-file-word', color: 'text-blue-600' };
+                }
+                if (mimeType.includes('sheet') || mimeType.includes('excel')) {
+                    return { icon: 'fas fa-file-excel', color: 'text-green-600' };
+                }
+                if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+                    return { icon: 'fas fa-file-powerpoint', color: 'text-orange-600' };
+                }
+                if (mimeType.includes('zip') || mimeType.includes('compressed')) {
+                    return { icon: 'fas fa-file-archive', color: 'text-yellow-600' };
+                }
+                if (mimeType.includes('text/')) {
+                    return { icon: 'fas fa-file-alt', color: 'text-slate-500' };
+                }
+            }
+            
+            return { icon: 'fas fa-file', color: 'text-slate-400' };
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return 'N/A';
+            const kb = bytes / 1024;
+            if (kb < 1024) return kb.toFixed(1) + ' KB';
+            const mb = kb / 1024;
+            if (mb < 1024) return mb.toFixed(1) + ' MB';
+            const gb = mb / 1024;
+            return gb.toFixed(1) + ' GB';
+        }
+
+        async function openDriveFilePicker() {
+            if (!currentDeal) return;
+            
+            // Show drive picker modal
+            const modal = document.getElementById('drivePickerModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Load drive files
+            await loadDriveFilesForPicker();
+        }
+
+        function closeDrivePickerModal() {
+            document.getElementById('drivePickerModal').classList.add('hidden');
+            document.getElementById('drivePickerModal').classList.remove('flex');
+        }
+
+        async function loadDriveFilesForPicker() {
+            try {
+                const searchTerm = document.getElementById('drivePickerSearch').value.trim();
+                let url = '/api/settings/google/drive/files';
+                if (searchTerm) {
+                    url += `?search=${encodeURIComponent(searchTerm)}`;
+                }
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const list = document.getElementById('drivePickerFilesList');
+                
+                if (!data.files || data.files.length === 0) {
+                    list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">Dosya bulunamadı.</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.files.map(file => `
+                    <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:border-brand-300 transition-all group cursor-pointer" onclick='selectDriveFile(${JSON.stringify(file)})'>
+                        <div class="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-slate-200 flex-shrink-0">
+                            ${file.thumbnailLink ? 
+                                `<img src="${file.thumbnailLink}" class="w-8 h-8 object-cover rounded" />` :
+                                `<i class="fas fa-file text-slate-400"></i>`
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate">${file.name}</p>
+                            <p class="text-xs text-slate-400">
+                                ${file.size ? formatFileSize(file.size) : 'N/A'} • 
+                                ${file.modifiedTime ? new Date(file.modifiedTime).toLocaleDateString('tr-TR') : ''}
+                            </p>
+                        </div>
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="fas fa-plus-circle text-brand-600 text-xl"></i>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading drive files:', error);
+                alert('Drive dosyaları yüklenemedi');
+            }
+        }
+
+        async function selectDriveFile(file) {
+            if (!currentDeal) return;
+            
+            // Show loading toast with file info
+            const loadingToast = showLoadingToast(`"${file.name}" ekleniyor... (${formatFileSize(file.size)})`);
+            
+            try {
+                const response = await fetch('/api/settings/google/drive/attach', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        driveFileId: file.id,
+                        fileName: file.name,
+                        mimeType: file.mimeType,
+                        fileSize: file.size,
+                        thumbnailUrl: file.thumbnailLink,
+                        webViewLink: file.webViewLink,
+                        entityType: 'deal',
+                        entityId: currentDeal.id,
+                        notes: ''
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to attach file');
+                }
+                
+                // Close picker and reload attachments
+                closeDrivePickerModal();
+                await loadDriveAttachments(currentDeal.id);
+                
+                // Hide loading toast
+                hideLoadingToast(loadingToast);
+                
+                // Show success toast
+                showToast(`✓ "${file.name}" başarıyla eklendi! (${formatFileSize(file.size)})`, 'success');
+            } catch (error) {
+                console.error('Error attaching file:', error);
+                hideLoadingToast(loadingToast);
+                showToast('✗ Dosya eklenemedi', 'error');
+            }
+        }
+
+        async function removeDriveAttachment(attachmentId) {
+            if (!confirm('Bu dosyayı deal\'den kaldırmak istediğinizden emin misiniz?')) return;
+            
+            try {
+                await fetch(`/api/settings/google/drive/attachments/${attachmentId}`, {
+                    method: 'DELETE'
+                });
+                
+                await loadDriveAttachments(currentDeal.id);
+                showToast('Dosya kaldırıldı');
+            } catch (error) {
+                console.error('Error removing attachment:', error);
+                alert('Dosya kaldırılamadı');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('translate-x-[150%]', 'bg-emerald-500', 'bg-red-500', 'bg-blue-500');
+            
+            if (type === 'success') {
+                toast.classList.add('bg-emerald-500', 'text-white');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-500', 'text-white');
+            } else {
+                toast.classList.add('bg-blue-500', 'text-white');
+            }
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-[150%]');
+            }, 3000);
+        }
+
+        function showLoadingToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="animate-spin">
+                        <i class="fas fa-spinner"></i>
+                    </div>
+                    <span>${message}</span>
+                </div>
+            `;
+            toast.classList.remove('translate-x-[150%]', 'bg-emerald-500', 'bg-red-500');
+            toast.classList.add('bg-brand-600', 'text-white');
+            return toast;
+        }
+
+        function hideLoadingToast(toast) {
+            toast.classList.add('translate-x-[150%]');
+        }
+
+        // Drive picker search with debounce
+        let drivePickerSearchTimeout = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('drivePickerSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(drivePickerSearchTimeout);
+                    drivePickerSearchTimeout = setTimeout(() => {
+                        loadDriveFilesForPicker();
+                    }, 500);
+                });
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // ADD DEAL MODAL FUNCTIONS (Pipedrive-7 Implementation)
+        // ═══════════════════════════════════════════════════════════════
+
+        function openAddDealModal() {
+            const modal = document.getElementById('addDealModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Load stages for selection
+            renderDealStages();
+            
+            // Setup search listeners
+            setupContactSearch();
+            setupCompanySearch();
+        }
+
+        function closeAddDealModal() {
+            const modal = document.getElementById('addDealModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // Reset form
+            document.getElementById('addDealForm').reset();
+            document.getElementById('dealContactId').value = '';
+            document.getElementById('dealCompanyId').value = '';
+            document.getElementById('dealStageId').value = '';
+        }
+
+        function renderDealStages() {
+            if (!currentPipeline || !currentPipeline.stages) return;
+            
+            const container = document.getElementById('dealStageSelector');
+            container.innerHTML = currentPipeline.stages.map((stage, index) => `
+                <button type="button" onclick="selectDealStage(${stage.id}, this)" class="px-4 py-2 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:border-brand-500 hover:text-brand-600 transition-all ${index === 0 ? 'border-brand-500 text-brand-600 bg-brand-50' : ''}" data-stage-id="${stage.id}">
+                    ${stage.name}
+                </button>
+            `).join('');
+            
+            // Select first stage by default
+            if (currentPipeline.stages.length > 0) {
+                document.getElementById('dealStageId').value = currentPipeline.stages[0].id;
+            }
+        }
+
+        function selectDealStage(stageId, button) {
+            // Remove active class from all buttons
+            document.querySelectorAll('#dealStageSelector button').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'text-brand-600', 'bg-brand-50');
+                btn.classList.add('border-slate-200', 'text-slate-600');
+            });
+            
+            // Add active class to selected button
+            button.classList.remove('border-slate-200', 'text-slate-600');
+            button.classList.add('border-brand-500', 'text-brand-600', 'bg-brand-50');
+            
+            // Set hidden input value
+            document.getElementById('dealStageId').value = stageId;
+        }
+
+        // Contact Search with Debounce
+        let contactSearchTimeout = null;
+        function setupContactSearch() {
+            const input = document.getElementById('dealContactSearch');
+            const results = document.getElementById('dealContactResults');
+            
+            input.addEventListener('input', () => {
+                clearTimeout(contactSearchTimeout);
+                const query = input.value.trim();
+                
+                if (query.length < 2) {
+                    results.classList.add('hidden');
+                    return;
+                }
+                
+                contactSearchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(query)}&limit=10`);
+                        const data = await res.json();
+                        const contacts = Array.isArray(data) ? data : (data.contacts || data.data || []);
+                        
+                        if (contacts.length === 0) {
+                            results.innerHTML = '<div class="p-3 text-sm text-slate-400 text-center">Sonuç bulunamadı</div>';
+                            results.classList.remove('hidden');
+                            return;
+                        }
+                        
+                        results.innerHTML = contacts.map(contact => `
+                            <div class="p-3 hover:bg-brand-50 cursor-pointer transition-colors flex items-center gap-3" onclick='selectContact(${JSON.stringify({id: contact.id, name: contact.name, phone: contact.phone})})'>
+                                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold">
+                                    ${contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-slate-800 truncate">${contact.name || 'İsimsiz'}</p>
+                                    <p class="text-xs text-slate-500">${contact.phone || contact.email || ''}</p>
+                                </div>
+                            </div>
+                        `).join('');
+                        results.classList.remove('hidden');
+                    } catch (error) {
+                        console.error('Contact search error:', error);
+                    }
+                }, 300);
+            });
+            
+            // Close results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !results.contains(e.target)) {
+                    results.classList.add('hidden');
+                }
+            });
+        }
+
+        function selectContact(contact) {
+            document.getElementById('dealContactSearch').value = contact.name;
+            document.getElementById('dealContactId').value = contact.id;
+            document.getElementById('dealContactResults').classList.add('hidden');
+        }
+
+        // Company Search with Debounce
+        let companySearchTimeout = null;
+        function setupCompanySearch() {
+            const input = document.getElementById('dealCompanySearch');
+            const results = document.getElementById('dealCompanyResults');
+            
+            input.addEventListener('input', () => {
+                clearTimeout(companySearchTimeout);
+                const query = input.value.trim();
+                
+                if (query.length < 2) {
+                    results.classList.add('hidden');
+                    return;
+                }
+                
+                companySearchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/v1/companies?search=${encodeURIComponent(query)}&limit=10`);
+                        const data = await res.json();
+                        const companies = Array.isArray(data) ? data : (data.companies || data.data || []);
+                        
+                        if (companies.length === 0) {
+                            results.innerHTML = '<div class="p-3 text-sm text-slate-400 text-center">Sonuç bulunamadı</div>';
+                            results.classList.remove('hidden');
+                            return;
+                        }
+                        
+                        results.innerHTML = companies.map(company => `
+                            <div class="p-3 hover:bg-brand-50 cursor-pointer transition-colors flex items-center gap-3" onclick='selectCompany(${JSON.stringify({id: company.id, name: company.name})})'>
+                                <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                                    <i class="fas fa-building text-xs"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-slate-800 truncate">${company.name}</p>
+                                    ${company.industry ? `<p class="text-xs text-slate-500">${company.industry}</p>` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                        results.classList.remove('hidden');
+                    } catch (error) {
+                        console.error('Company search error:', error);
+                    }
+                }, 300);
+            });
+            
+            // Close results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !results.contains(e.target)) {
+                    results.classList.add('hidden');
+                }
+            });
+        }
+
+        function selectCompany(company) {
+            document.getElementById('dealCompanySearch').value = company.name;
+            document.getElementById('dealCompanyId').value = company.id;
+            document.getElementById('dealCompanyResults').classList.add('hidden');
+        }
+
+        async function submitAddDeal() {
+            // Validate required fields
+            const contactId = document.getElementById('dealContactId').value;
+            const companyId = document.getElementById('dealCompanyId').value;
+            const title = document.getElementById('dealTitle').value.trim();
+            const value = document.getElementById('dealValue').value;
+            const stageId = document.getElementById('dealStageId').value;
+            
+            if (!contactId) {
+                showToast('Lütfen bir irtibat kişisi seçin', 'error');
+                return;
+            }
+            
+            if (!companyId) {
+                showToast('Lütfen bir kuruluş seçin', 'error');
+                return;
+            }
+            
+            if (!title) {
+                showToast('Lütfen anlaşma başlığı girin', 'error');
+                return;
+            }
+            
+            if (!value || value <= 0) {
+                showToast('Lütfen geçerli bir değer girin', 'error');
+                return;
+            }
+            
+            if (!stageId) {
+                showToast('Lütfen bir aşama seçin', 'error');
+                return;
+            }
+            
+            // Prepare payload
+            const payload = {
+                name: title,
+                contact_id: parseInt(contactId),
+                company_id: parseInt(companyId),
+                value: parseFloat(value),
+                currency: document.getElementById('dealCurrency').value,
+                stage_id: parseInt(stageId),
+                pipeline_id: currentPipeline.id,
+                expected_close_date: document.getElementById('dealCloseDate').value || null,
+                tags: document.getElementById('dealTags').value.trim() || null,
+                notes: document.getElementById('dealNotes').value.trim() || null,
+                status: 'open'
+            };
+            
+            try {
+                const response = await fetch('/api/v1/deals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Anlaşma oluşturulamadı');
+                }
+                
+                const data = await response.json();
+                
+                // Close modal
+                closeAddDealModal();
+                
+                // Reload pipeline
+                await loadPipeline();
+                
+                // Show success message
+                showToast(`✓ "${title}" anlaşması başarıyla oluşturuldu!`, 'success');
+            } catch (error) {
+                console.error('Error creating deal:', error);
+                showToast(`✗ ${error.message}`, 'error');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // PHASE 2: DRAG AND DROP LOGIC (HTML5 Native API)
+        // ═══════════════════════════════════════════════════════════════
+
+        let draggedDealId = null;
+        let draggedDealElement = null;
+        let originalStageId = null;
+        let originalParentElement = null;
+        let originalNextSibling = null;
+
+        // Setup event listeners using event delegation
+        function setupDragAndDropListeners() {
+            // Setup drag listeners for all deal cards
+            document.querySelectorAll('.deal-card').forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dblclick', function() {
+                    const dealId = parseInt(this.dataset.dealId);
+                    showDealDetails(dealId);
+                });
+            });
+
+            // Setup drop zone listeners
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('dragleave', handleDragLeave);
+                zone.addEventListener('drop', handleDrop);
+            });
+        }
+
+        // FAZ 2: DRAGGABLE ELEMENTS - dragstart event
+        function handleDragStart(event) {
+            draggedDealElement = event.currentTarget;
+            draggedDealId = parseInt(draggedDealElement.dataset.dealId);
+            originalStageId = parseInt(draggedDealElement.dataset.stageId);
+            originalParentElement = draggedDealElement.parentElement;
+            originalNextSibling = draggedDealElement.nextElementSibling;
+
+            // Add dragging visual feedback
+            draggedDealElement.classList.add('dragging');
+
+            // Set data for transfer
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedDealId);
+
+            console.log('🎯 Drag started:', { dealId: draggedDealId, stageId: originalStageId });
+        }
+
+        function handleDragEnd(event) {
+            // Remove dragging visual feedback
+            if (draggedDealElement) {
+                draggedDealElement.classList.remove('dragging');
+            }
+
+            // Remove all column highlights
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.classList.remove('column-highlight');
+            });
+
+            console.log('🏁 Drag ended');
+        }
+
+        // FAZ 3: DROP ZONE - dragover event
+        function handleDragOver(event) {
+            event.preventDefault(); // Allow drop
+            event.dataTransfer.dropEffect = 'move';
+
+            const dropZone = event.currentTarget;
+            dropZone.classList.add('column-highlight');
+        }
+
+        function handleDragLeave(event) {
+            const dropZone = event.currentTarget;
+            
+            // Only remove highlight if actually leaving the drop zone
+            if (!dropZone.contains(event.relatedTarget)) {
+                dropZone.classList.remove('column-highlight');
+            }
+        }
+
+        // FAZ 3 & 4: DROP ZONE - drop event with Optimistic UI & Rollback
+        async function handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const dropZone = event.currentTarget;
+            dropZone.classList.remove('column-highlight');
+
+            const newStageId = parseInt(dropZone.dataset.stageId);
+
+            // Check if dropped in same stage
+            if (newStageId === originalStageId) {
+                console.log('⚠️ Dropped in same stage, no action needed');
+                return;
+            }
+
+            console.log('📦 Drop detected:', { dealId: draggedDealId, from: originalStageId, to: newStageId });
+
+            // OPTIMISTIC UI: Move card immediately in DOM
+            const emptyState = dropZone.querySelector('.flex.flex-col.items-center.justify-center');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            dropZone.appendChild(draggedDealElement);
+
+            // Update deal's stage in local data
+            const deal = deals.find(d => d.id === draggedDealId);
+            if (deal) {
+                const oldStage = deal.stage;
+                const newStage = currentPipeline.stages.find(s => s.id === newStageId);
+                deal.stage_id = newStageId;
+                deal.stage = newStage;
+                draggedDealElement.dataset.stageId = newStageId;
+            }
+
+            // Show loading toast
+            const loadingToast = showLoadingToast('Anlaşma taşınıyor...');
+
+            try {
+                // API REQUEST: PATCH /api/v1/deals/<id>/stage
+                const response = await fetch(`/api/v1/deals/${draggedDealId}/stage`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stage_id: newStageId })
+                });
+
+                hideLoadingToast(loadingToast);
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Taşıma işlemi başarısız');
+                }
+
+                const data = await response.json();
+                console.log('✅ Deal moved successfully:', data);
+
+                // Update stage counts and forecast without full reload
+                updatePipelineStats();
+
+                showToast('✓ Anlaşma başarıyla taşındı', 'success');
+
+            } catch (error) {
+                console.error('❌ Error moving deal:', error);
+                hideLoadingToast(loadingToast);
+
+                // FAZ 4: UI ROLLBACK - Revert DOM changes
+                console.log('🔄 Rolling back UI changes...');
+
+                // Safety check: ensure elements still exist
+                if (!draggedDealElement || !originalParentElement) {
+                    console.warn('⚠️ Cannot rollback: elements no longer exist');
+                    showToast(`✗ Taşıma işlemi başarısız`, 'error');
+                    return;
+                }
+
+                // Restore deal to original position
+                if (originalNextSibling && originalNextSibling.parentNode) {
+                    originalParentElement.insertBefore(draggedDealElement, originalNextSibling);
+                } else {
+                    originalParentElement.appendChild(draggedDealElement);
+                }
+
+                // Restore deal's stage in local data
+                if (deal) {
+                    deal.stage_id = originalStageId;
+                    deal.stage = currentPipeline.stages.find(s => s.id === originalStageId);
+                    draggedDealElement.dataset.stageId = originalStageId;
+                }
+
+                // Check if original column is now empty and needs empty state
+                if (originalParentElement.children.length === 0) {
+                    originalParentElement.innerHTML = '<div class="flex flex-col items-center justify-center py-12 text-center"><div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3"><i class="fas fa-inbox text-slate-300 text-xl"></i></div><p class="text-xs text-slate-400">No deals in this stage</p></div>';
+                }
+
+                // Check if new column needs empty state removed
+                const newEmptyState = dropZone.querySelector('.flex.flex-col.items-center.justify-center');
+                if (newEmptyState && dropZone.children.length > 1) {
+                    newEmptyState.remove();
+                }
+
+                showToast(`✗ ${error.message}`, 'error');
+            }
+
+            // Reset drag state
+            draggedDealId = null;
+            draggedDealElement = null;
+            originalStageId = null;
+            originalParentElement = null;
+            originalNextSibling = null;
+        }
+
+        // Update pipeline statistics without full reload
+        function updatePipelineStats() {
+            try {
+                // Update stage counts and values (synchronous, no API calls)
+                currentPipeline.stages.forEach(stage => {
+                    const stageContainer = document.getElementById(`stage-${stage.id}`);
+                    if (!stageContainer) return;
+
+                    const dealCards = stageContainer.querySelectorAll('.deal-card');
+                    const count = dealCards.length;
+                    
+                    // Calculate total value for this stage
+                    let totalValue = 0;
+                    dealCards.forEach(card => {
+                        const dealId = parseInt(card.dataset.dealId);
+                        const deal = deals.find(d => d.id === dealId);
+                        if (deal) totalValue += deal.value;
+                    });
+
+                    // Update count badge
+                    const countBadge = stageContainer.closest('.bg-white').querySelector('.px-2.py-0\\.5.bg-slate-100');
+                    if (countBadge) countBadge.textContent = count;
+
+                    // Update total value
+                    const valueSpan = stageContainer.closest('.bg-white').querySelector('.text-emerald-600');
+                    if (valueSpan) valueSpan.textContent = totalValue.toLocaleString('en-US');
+                });
+
+                // Note: Forecast will update on next page load
+                // Removed slow forecast API call for instant drag-and-drop
+
+            } catch (error) {
+                console.error('Error updating pipeline stats:', error);
+            }
+        }
+
+        // Load on page load
+        loadPipeline();
+
+        // Modal click outside handlers
+        window.onclick = (e) => {
+            if (e.target.id === 'dealModal') closeDealModal();
+            if (e.target.id === 'drivePickerModal') closeDrivePickerModal();
+            if (e.target.id === 'addDealModal') closeAddDealModal();
+        };
+
+        // Custom Fields for Deals
+        async function loadDealCustomFields(dealId) {
+            try {
+                // Load custom field definitions
+                const fieldsRes = await fetch('/api/v1/custom-fields?entity_type=deal');
+                const fields = await fieldsRes.json();
+                
+                // Load custom field values
+                const valuesRes = await fetch(`/api/v1/custom-fields/values/deal/${dealId}`);
+                const values = await valuesRes.json();
+                
+                dealCustomFields = fields;
+                renderDealCustomFields(values);
+            } catch (e) {
+                console.error(e);
+                renderDealCustomFields({});
+            }
+        }
+
+        function renderDealCustomFields(customFieldValues) {
+            const container = document.getElementById('dealCustomFieldsContent');
+            
+            if (dealCustomFields.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-sliders-h text-slate-400 text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">Henüz özel alan tanımlanmamış</p>
+                        <p class="text-xs text-slate-400 mt-1">Ayarlar > Özel Alanlar bölümünden deal için özel alan ekleyebilirsiniz</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="space-y-4">';
+            
+            dealCustomFields.forEach(field => {
+                const value = customFieldValues[field.field_name];
+                html += renderCustomFieldInput(field, value);
+            });
+            
+            html += `
+                <button onclick="saveDealCustomFields()" class="w-full mt-4 py-2.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors">
+                    <i class="fas fa-save mr-2"></i>Özel Alanları Kaydet
+                </button>
+            </div>`;
+            
+            container.innerHTML = html;
+        }
+
+        function renderCustomFieldInput(field, value) {
+            const fieldId = `custom_field_${field.id}`;
+            let input = '';
+            
+            if (field.field_type === 'text') {
+                input = `<input type="text" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'number') {
+                input = `<input type="number" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'date') {
+                input = `<input type="date" id="${fieldId}" value="${value || ''}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>`;
+            } else if (field.field_type === 'checkbox') {
+                const checked = value === true || value === 'true' ? 'checked' : '';
+                input = `<label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="${fieldId}" ${checked} class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                    <span class="text-sm text-slate-600">Evet</span>
+                </label>`;
+            } else if (field.field_type === 'dropdown') {
+                const options = field.options ? JSON.parse(field.options) : [];
+                input = `<select id="${fieldId}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500" ${field.is_required ? 'required' : ''}>
+                    <option value="">Seçiniz</option>
+                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>`;
+            } else if (field.field_type === 'multi_select') {
+                const options = field.options ? JSON.parse(field.options) : [];
+                const selectedValues = Array.isArray(value) ? value : [];
+                input = `<div class="space-y-2">
+                    ${options.map(opt => {
+                        const checked = selectedValues.includes(opt) ? 'checked' : '';
+                        return `<label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="${fieldId}" value="${opt}" ${checked} class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                            <span class="text-sm text-slate-600">${opt}</span>
+                        </label>`;
+                    }).join('')}
+                </div>`;
+            }
+            
+            return `
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        ${field.field_name}${field.is_required ? ' *' : ''}
+                    </label>
+                    ${input}
+                </div>
+            `;
+        }
+
+        async function saveDealCustomFields() {
+            if (!currentDeal) return;
+            
+            try {
+                const promises = [];
+                
+                for (const field of dealCustomFields) {
+                    const fieldId = `custom_field_${field.id}`;
+                    let value;
+                    
+                    if (field.field_type === 'checkbox') {
+                        value = document.getElementById(fieldId)?.checked || false;
+                    } else if (field.field_type === 'multi_select') {
+                        const checkboxes = document.querySelectorAll(`input[name="${fieldId}"]:checked`);
+                        value = Array.from(checkboxes).map(cb => cb.value);
+                    } else {
+                        value = document.getElementById(fieldId)?.value || '';
+                    }
+                    
+                    promises.push(
+                        fetch('/api/v1/custom-fields/values', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                custom_field_id: field.id,
+                                entity_id: currentDeal.id,
+                                value: value
+                            })
+                        })
+                    );
+                }
+                
+                await Promise.all(promises);
+                showToast('✓ Özel alanlar kaydedildi', 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('✗ Kaydetme başarısız', 'error');
+            }
+        }
+    </script>
+    <script src="/static/topbar-global.js"></script>
+</body>
+</html>
+
