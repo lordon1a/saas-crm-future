@@ -1036,6 +1036,54 @@
             document.getElementById('prevBtn').disabled = currentPage === 1;
             document.getElementById('nextBtn').disabled = end >= filteredCompanies.length;
             
+            // Sayfa numaralarını render et
+            const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
+            const paginationNumbers = document.getElementById('paginationNumbers');
+            paginationNumbers.innerHTML = '';
+            
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            // Adjust start if we're near the end
+            if (endPage - startPage < maxVisiblePages - 1) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // First page
+            if (startPage > 1) {
+                paginationNumbers.innerHTML += `
+                    <button onclick="currentPage = 1; renderCompanies();" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-all">
+                        1
+                    </button>
+                `;
+                if (startPage > 2) {
+                    paginationNumbers.innerHTML += `<span class="px-2 text-slate-400">...</span>`;
+                }
+            }
+            
+            // Page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                const isActive = i === currentPage;
+                paginationNumbers.innerHTML += `
+                    <button onclick="currentPage = ${i}; renderCompanies();" class="px-3 py-1.5 rounded-lg border ${isActive ? 'border-brand-600 bg-brand-50 text-brand-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'} text-sm transition-all">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            // Last page
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationNumbers.innerHTML += `<span class="px-2 text-slate-400">...</span>`;
+                }
+                paginationNumbers.innerHTML += `
+                    <button onclick="currentPage = ${totalPages}; renderCompanies();" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-all">
+                        ${totalPages}
+                    </button>
+                `;
+            }
+            
             // Re-initialize drag-drop after rendering
             setTimeout(() => {
                 initializeDragDrop();
