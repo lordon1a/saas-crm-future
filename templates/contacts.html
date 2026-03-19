@@ -1942,11 +1942,14 @@
                     e.dataTransfer.setData('text/html', this.innerHTML);
                 });
                 
+                let dragOverTimer = null;
                 tr.addEventListener('dragover', function(e) {
-                    if (e.preventDefault) {
-                        e.preventDefault();
-                    }
+                    if (e.preventDefault) e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
+                    
+                    // Throttle - her 50ms'de bir çalış
+                    if (dragOverTimer) return false;
+                    dragOverTimer = setTimeout(() => { dragOverTimer = null; }, 50);
                     
                     const draggingRow = document.querySelector('tr[draggable="true"][style*="opacity: 0.4"]');
                     if (draggingRow && draggingRow !== this) {
