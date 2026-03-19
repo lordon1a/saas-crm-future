@@ -304,6 +304,68 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added closed_at column")
             
+            # === CONTACTS TABLE MIGRATIONS ===
+            # Check if display_order column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='display_order'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add display_order column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN display_order INTEGER DEFAULT 0 NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_contacts_display_order 
+                    ON contacts(display_order)
+                """)
+                conn.commit()
+                logger.info("✓ Added display_order column to contacts")
+            
+            # Check if is_starred column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='is_starred'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add is_starred column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN is_starred BOOLEAN DEFAULT FALSE NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_contacts_is_starred 
+                    ON contacts(is_starred)
+                """)
+                conn.commit()
+                logger.info("✓ Added is_starred column to contacts")
+            
+            # === COMPANIES TABLE MIGRATIONS ===
+            # Check if display_order column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='companies' AND column_name='display_order'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add display_order column to companies...")
+                cur.execute("""
+                    ALTER TABLE companies 
+                    ADD COLUMN display_order INTEGER DEFAULT 0 NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_companies_display_order 
+                    ON companies(display_order)
+                """)
+                conn.commit()
+                logger.info("✓ Added display_order column to companies")
+            
             # === SUPER_ADMINS TABLE MIGRATION ===
             # Check if super_admins table exists
             cur.execute("""
