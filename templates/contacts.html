@@ -511,19 +511,19 @@
         </div>
 
         <!-- Pagination -->
-        <div class="bg-white border-t border-slate-200 px-6 py-3 flex-shrink-0">
+        <div id="paginationBar" class="bg-white border-t border-slate-200 px-6 py-3 flex-shrink-0">
             <div class="flex items-center justify-between">
                 <div class="text-sm text-slate-500">
-                    <span class="font-medium"><span id="showingFrom">0</span>-<span id="showingTo">0</span></span> arası gösteriliyor (toplam <span id="totalCount">0</span> kayıt)
+                    <span id="paginationInfo">0-0 / 0</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="changePage(-1)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" id="prevBtn">
+                    <button id="prevPageBtn" onclick="goToPage((window.currentPage || 1) - 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                         <i class="fas fa-chevron-left text-xs"></i>
                     </button>
-                    <div id="paginationNumbers" class="flex items-center gap-1">
+                    <div id="pageNumbers" class="flex items-center gap-1">
                         <!-- JS ile doldurulacak -->
                     </div>
-                    <button onclick="changePage(1)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" id="nextBtn">
+                    <button id="nextPageBtn" onclick="goToPage((window.currentPage || 1) + 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                         <i class="fas fa-chevron-right text-xs"></i>
                     </button>
                 </div>
