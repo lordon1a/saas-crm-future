@@ -1612,26 +1612,30 @@ def bulk_delete_all_contacts():
         from models_crm import Contact
         from models import db
         
+        # Count before delete
+        count = Contact.query.filter_by(
+            workspace_id=workspace_id,
+            is_deleted=False
+        ).count()
+        
         # Hard delete all non-deleted contacts
-        deleted_count = db.session.query(Contact).filter(
-            Contact.workspace_id == workspace_id,
-            Contact.is_deleted == False,
+        Contact.query.filter_by(
+            workspace_id=workspace_id,
+            is_deleted=False
         ).delete(synchronize_session=False)
-
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            raise e
+        
+        db.session.commit()
         
         return jsonify({
-            'deleted_count': deleted_count,
-            'message': f'{deleted_count} kişi başarıyla silindi'
+            'deleted_count': count,
+            'message': f'{count} kişi başarıyla silindi'
         }), 200
         
     except Exception as e:
-        logger.error(f"Error deleting all contacts: {str(e)}")
-        return jsonify({'error': 'Internal Server Error'}), 500
+        import traceback
+        print(traceback.format_exc())
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
 @contacts_bp.route('/api/v1/companies/bulk-delete-all', methods=['POST'])
