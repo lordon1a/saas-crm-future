@@ -505,6 +505,40 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Created team_invitations table")
             
+            # === COMPANIES TABLE - assigned_to column ===
+            # Check if assigned_to column exists in companies
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='companies' AND column_name='assigned_to'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add assigned_to column to companies...")
+                cur.execute("""
+                    ALTER TABLE companies 
+                    ADD COLUMN assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added assigned_to column to companies")
+            
+            # === CONTACTS TABLE - assigned_to column ===
+            # Check if assigned_to column exists in contacts (Customer table)
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='customers' AND column_name='assigned_to'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add assigned_to column to customers...")
+                cur.execute("""
+                    ALTER TABLE customers 
+                    ADD COLUMN assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added assigned_to column to customers")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
