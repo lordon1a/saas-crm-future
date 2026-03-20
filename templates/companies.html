@@ -372,10 +372,16 @@
             <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
                 <i class="fas fa-plug text-lg"></i>
             </a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg"></i>
+            </a>
+            <a href="/team" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Takım">
+                <i class="fas fa-users text-lg"></i>
+            </a>
         </nav>
         <div class="flex flex-col gap-3 w-full px-3 pb-4">
-            <a href="/account" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Hesap">
-                <i class="fas fa-user text-lg"></i>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap">
+                <i class="fas fa-sign-out-alt text-lg"></i>
             </a>
         </div>
     </aside>
@@ -500,6 +506,29 @@
                         <i class="fas fa-sort-amount-down text-slate-500"></i>
                         <span>Sırala: <span id="currentSortLabel">Ad (A-Z)</span></span>
                     </button>
+
+                    <!-- Assignee Filter -->
+                    <div class="relative" id="assigneeDropdown">
+                        <button onclick="toggleAssigneeDropdown()" class="quick-action">
+                            <i class="fas fa-user text-slate-500"></i>
+                            <span id="assigneeFilterLabel">Company owner</span>
+                            <i class="fas fa-chevron-down text-xs text-slate-400 ml-1"></i>
+                        </button>
+                        <div class="dropdown-menu" id="assigneeDropdownMenu">
+                            <div class="dropdown-item" onclick="applyAssigneeFilter('all')">
+                                <i class="fas fa-users text-slate-400"></i>
+                                All
+                            </div>
+                            <div class="dropdown-item" onclick="applyAssigneeFilter('unassigned')">
+                                <i class="fas fa-user-slash text-slate-400"></i>
+                                Unassigned
+                            </div>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <div id="assigneeTeamMembersList">
+                                <!-- Team members will be loaded here dynamically -->
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Advanced Filter -->
                     <button onclick="openAdvancedFilter()" class="quick-action relative">
@@ -859,10 +888,109 @@
         let selectedView = 'all';
         let selectedSort = 'name_asc';
 
+        // Load team members for assignee filter
+        async function loadTeamMembers() {
+            try {
+                const response = await fetch('/api/assignments/members');
+                const data = await response.json();
+                
+                if (data.status === 'ok' && data.members) {
+                    const membersList = document.getElementById('assigneeTeamMembersList');
+                    membersList.innerHTML = data.members.map(member => `
+                        <div class="dropdown-item" onclick="applyAssigneeFilter(${member.id})">
+                            <i class="fas fa-user text-slate-400"></i>
+                            ${member.name} (${formatRole(member.role)})
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading team members:', error);
+            }
+        }
+
+        // Format role names in Turkish
+        function formatRole(role) {
+            const roleMap = {
+                'owner': 'Sahip',
+                'admin': 'Yönetici',
+                'member': 'Üye',
+                'viewer': 'İzleyici'
+            };
+            return roleMap[role] || role;
+        }
+
+        // Toggle assignee dropdown
+        function toggleAssigneeDropdown() {
+            const menu = document.getElementById('assigneeDropdownMenu');
+            menu.classList.toggle('active');
+        }
+
+        // Apply assignee filter
+        async function applyAssigneeFilter(assigneeValue) {
+            // Close dropdown
+            document.getElementById('assigneeDropdownMenu').classList.remove('active');
+            
+            // Update label
+            const label = document.getElementById('assigneeFilterLabel');
+            if (assigneeValue === 'all') {
+                label.textContent = 'Company owner';
+            } else if (assigneeValue === 'unassigned') {
+                label.textContent = 'Unassigned';
+            } else {
+                // Find member name
+                const response = await fetch('/api/assignments/members');
+                const data = await response.json();
+                const member = data.members.find(m => m.id === assigneeValue);
+                if (member) {
+                    label.textContent = `${member.name} (${formatRole(member.role)})`;
+                }
+            }
+            
+            // Save to session
+            try {
+                await fetch('/api/v1/user-preferences/companies-assignee-filter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assignee_filter: assigneeValue })
+                });
+            } catch (error) {
+                console.error('Error saving filter preference:', error);
+            }
+            
+            // Reload companies with filter
+            loadCompanies();
+        }
+
+        // Load assignee filter from session
+        async function loadAssigneeFilterFromSession() {
+            try {
+                const response = await fetch('/api/v1/user-preferences/companies-assignee-filter');
+                const data = await response.json();
+                
+                if (data.assignee_filter && data.assignee_filter !== 'all') {
+                    await applyAssigneeFilter(data.assignee_filter);
+                }
+            } catch (error) {
+                console.error('Error loading filter preference:', error);
+            }
+        }
+
         // Load companies from API
         async function loadCompanies() {
             try {
-                const response = await fetch('/api/v1/companies?per_page=100');
+                // Get current assignee filter from session
+                let assignedToParam = '';
+                try {
+                    const filterResponse = await fetch('/api/v1/user-preferences/companies-assignee-filter');
+                    const filterData = await filterResponse.json();
+                    if (filterData.assignee_filter && filterData.assignee_filter !== 'all') {
+                        assignedToParam = `&assigned_to=${filterData.assignee_filter}`;
+                    }
+                } catch (e) {
+                    // Ignore filter errors
+                }
+                
+                const response = await fetch(`/api/v1/companies?per_page=100${assignedToParam}`);
                 const data = await response.json();
                 
                 if (data.companies) {
@@ -1209,6 +1337,10 @@
                             <p class="text-xs text-slate-400 mb-1">Çalışan Sayısı</p>
                             <p class="text-sm text-slate-700">${company.size || '-'}</p>
                         </div>
+                        <div class="col-span-2">
+                            <p class="text-xs text-slate-400 mb-1">Atanan</p>
+                            <div id="company-assignment-selector-${company.id}"></div>
+                        </div>
                         ${company.address ? `
                         <div class="col-span-2">
                             <p class="text-xs text-slate-400 mb-1">Adres</p>
@@ -1248,6 +1380,43 @@
                     <p class="text-2xl font-bold text-slate-800">${company.deals} Aktif Fırsat</p>
                 </div>
             `;
+            
+            // Initialize team member selector for company assignment
+            setTimeout(async () => {
+                const selector = new TeamMemberSelector(`company-assignment-selector-${company.id}`, {
+                    includeUnassigned: true,
+                    selectedValue: company.assigned_to,
+                    placeholder: 'Atama yapın'
+                });
+                
+                await selector.init();
+                
+                // Handle assignment changes
+                document.getElementById(`company-assignment-selector-${company.id}`).addEventListener('memberSelected', async (e) => {
+                    const memberId = e.detail.memberId;
+                    
+                    try {
+                        const response = await fetch(`/api/assignments/company/${company.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ assigned_to: memberId })
+                        });
+                        
+                        if (response.ok) {
+                            showToast('Atama başarıyla güncellendi', 'success');
+                            company.assigned_to = memberId;
+                        } else {
+                            const data = await response.json();
+                            showToast(data.error || 'Atama güncellenemedi', 'error');
+                            selector.setValue(company.assigned_to);
+                        }
+                    } catch (error) {
+                        console.error('Error updating assignment:', error);
+                        showToast('Bağlantı hatası', 'error');
+                        selector.setValue(company.assigned_to);
+                    }
+                });
+            }, 100);
         }
 
         function closeCompanyDetailModal() {
@@ -1548,6 +1717,8 @@
 
         // Sayfa yüklendiğinde
         loadCompanies();
+        loadTeamMembers();
+        loadAssigneeFilterFromSession();
         
         // Initialize drag-drop after rendering
         setTimeout(() => {
@@ -1555,5 +1726,6 @@
         }, 100);
     </script>
     <script src="/static/topbar-global.js"></script>
+    <script src="/static/team-selector.js"></script>
 </body>
 </html>

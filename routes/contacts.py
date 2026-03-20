@@ -46,36 +46,162 @@ def get_companies():
     """Get all companies with optional filters and pagination"""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        # Validate authentication
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         # Pagination parameters
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 50, type=int)
-        per_page = min(per_page, 100)  # Max 100 items per page
+        per_page = min(request.args.get('per_page', 50, type=int), 100)
         
-        # Get filters from query params
-        filters = {}
+        # Check for advanced filtering parameters
+        filters_json = request.args.get('filters')
+        quick_filter = request.args.get('quick_filter')
+        sort_by = request.args.get('sort_by', 'display_order')
+        sort_order = request.args.get('sort_order', 'asc')
+        
+        # Legacy filter parameters (for backward compatibility)
+        legacy_filters = {}
         if request.args.get('industry'):
-            filters['industry'] = request.args.get('industry')
+            legacy_filters['industry'] = request.args.get('industry')
         if request.args.get('size'):
-            filters['size'] = request.args.get('size')
+            legacy_filters['size'] = request.args.get('size')
         if request.args.get('search'):
-            filters['search'] = request.args.get('search')
+            legacy_filters['search'] = request.args.get('search')
+        # Add assigned_to filter
+        if request.args.get('assigned_to'):
+            assigned_to_value = request.args.get('assigned_to')
+            if assigned_to_value == 'unassigned':
+                legacy_filters['assigned_to'] = 'unassigned'
+            elif assigned_to_value != 'all':
+                try:
+                    legacy_filters['assigned_to'] = int(assigned_to_value)
+                except (TypeError, ValueError):
+                    return jsonify({'error': 'Geçersiz assigned_to parametresi'}), 400
         
-        # Get paginated companies
         from models_crm import Company
         from models import db
+        from services.filter_service import FilterService
+        from services.filter_validation_service import FilterValidationService
+        from services.filter_cache_service import FilterCacheService
+        from utils.rate_limiter import get_rate_limit_status
         
+        # Use FilterService if advanced filters are provided
+        if filters_json or quick_filter:
+            try:
+                # Check rate limit
+                current_count, max_count, window_seconds = get_rate_limit_status(user_id)
+                if current_count >= max_count:
+                    return jsonify({
+                        'error': f'Rate limit exceeded. Maximum {max_count} concurrent filter requests allowed. Please wait and try again.',
+                        'retry_after': window_seconds
+                    }), 429
+                
+                # Parse filters JSON
+                filter_config = None
+                if filters_json:
+                    import json
+                    try:
+                        filter_config = json.loads(filters_json)
+                    except json.JSONDecodeError as e:
+                        return jsonify({'error': f'Invalid JSON in filters parameter: {str(e)}'}), 400
+                elif quick_filter:
+                    # Evaluate quick filter
+                    try:
+                        filter_config = FilterService.evaluate_quick_filter(quick_filter, 'company')
+                    except ValueError as e:
+                        return jsonify({'error': str(e)}), 400
+                
+                # Validate workspace access
+                if not FilterValidationService.check_workspace_access(workspace_id, user_id):
+                    logger.warning(f"Workspace access violation: user {user_id} attempted to access workspace {workspace_id}")
+                    return jsonify({'error': 'Access denied to this workspace'}), 403
+                
+                # Check cache first
+                cache_key = FilterCacheService.generate_cache_key('company', filter_config, workspace_id)
+                cached_results = FilterCacheService.get_cached_results(cache_key)
+                
+                if cached_results:
+                    cached_data, cached_pagination = cached_results
+                    logger.info(f"Cache hit for company filters: {cache_key}")
+                    
+                    return jsonify({
+                        'companies': cached_data,
+                        'pagination': cached_pagination,
+                        'applied_filters': filter_config,
+                        'cached': True
+                    }), 200
+                
+                # Apply filters using FilterService
+                results, pagination_info = FilterService.apply_filters(
+                    entity_type='company',
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    filters=filter_config,
+                    page=page,
+                    per_page=per_page,
+                    sort_by=sort_by,
+                    sort_order=sort_order
+                )
+                
+                # Build result
+                result = []
+                for c in results:
+                    result.append({
+                        'id': c.id,
+                        'name': c.name,
+                        'industry': c.industry,
+                        'size': c.size,
+                        'website': c.website,
+                        'phone': c.phone,
+                        'address': c.address,
+                        'parent_company_id': c.parent_company_id,
+                        'parent_company_name': c.parent_company.name if c.parent_company else None,
+                        'created_at': c.created_at.isoformat() if c.created_at else None,
+                        'updated_at': c.updated_at.isoformat() if c.updated_at else None
+                    })
+                
+                # Cache the results
+                FilterCacheService.set_cached_results(
+                    cache_key=cache_key,
+                    results=result,
+                    pagination=pagination_info,
+                    ttl=FilterCacheService.DEFAULT_TTL,
+                    entity_type='company',
+                    workspace_id=workspace_id
+                )
+                
+                return jsonify({
+                    'companies': result,
+                    'pagination': pagination_info,
+                    'applied_filters': filter_config
+                }), 200
+                
+            except ValueError as e:
+                logger.warning(f"Filter validation error: {str(e)}")
+                return jsonify({'error': str(e)}), 400
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON decode error: {str(e)}")
+                return jsonify({'error': f'Invalid JSON format: {str(e)}'}), 400
+            except Exception as e:
+                logger.error(f"Error applying filters: {str(e)}", exc_info=True)
+                return jsonify({'error': 'Internal server error while applying filters'}), 500
+        
+        # Legacy filtering (backward compatibility)
         query = Company.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
-        # Apply filters
-        if filters.get('industry'):
-            query = query.filter_by(industry=filters['industry'])
-        if filters.get('size'):
-            query = query.filter_by(size=filters['size'])
-        if filters.get('search'):
-            search_term = f"%{filters['search']}%"
+        # Apply legacy filters
+        if legacy_filters.get('industry'):
+            query = query.filter_by(industry=legacy_filters['industry'])
+        if legacy_filters.get('size'):
+            query = query.filter_by(size=legacy_filters['size'])
+        if legacy_filters.get('search'):
+            search_term = f"%{legacy_filters['search']}%"
             query = query.filter(
                 db.or_(
                     Company.name.ilike(search_term),
@@ -83,6 +209,11 @@ def get_companies():
                     Company.phone.ilike(search_term)
                 )
             )
+        # Apply assigned_to filter
+        if legacy_filters.get('assigned_to') == 'unassigned':
+            query = query.filter(Company.assigned_to == None)
+        elif legacy_filters.get('assigned_to'):
+            query = query.filter(Company.assigned_to == legacy_filters['assigned_to'])
         
         # Eager load parent company
         query = query.options(db.joinedload(Company.parent_company))
@@ -185,6 +316,13 @@ def create_company():
         
         company = ContactService.create_company(workspace_id, data, user_id)
         
+        # Invalidate filter cache for companies
+        try:
+            from services.filter_cache_service import FilterCacheService
+            FilterCacheService.invalidate_cache('company', workspace_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate filter cache: {str(e)}")
+        
         return jsonify({
             'id': company.id,
             'name': company.name,
@@ -222,6 +360,13 @@ def update_company(company_id):
             return jsonify({'error': 'No data provided'}), 400
         
         company = ContactService.update_company(workspace_id, company_id, data, user_id)
+        
+        # Invalidate filter cache for companies
+        try:
+            from services.filter_cache_service import FilterCacheService
+            FilterCacheService.invalidate_cache('company', workspace_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate filter cache: {str(e)}")
         
         return jsonify({
             'id': company.id,
@@ -264,6 +409,13 @@ def delete_company(company_id):
             company.is_deleted = True
             company.deleted_at = datetime.utcnow()
             db.session.commit()
+            
+            # Invalidate filter cache for companies
+            try:
+                from services.filter_cache_service import FilterCacheService
+                FilterCacheService.invalidate_cache('company', workspace_id)
+            except Exception as e:
+                logger.warning(f"Failed to invalidate filter cache: {str(e)}")
         except Exception as db_error:
             db.session.rollback()
             logger.error(f"Database error deleting company: {str(db_error)}")
@@ -318,48 +470,217 @@ def get_contacts():
     """Get all contacts with optional filters and pagination - includes both CRM Contacts and Customers"""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        # Validate authentication
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         # Pagination parameters
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 50, type=int), 100)
-        offset = (page - 1) * per_page
         
-        # Get filters from query params
-        filters = {}
+        # Check for advanced filtering parameters
+        filters_json = request.args.get('filters')
+        quick_filter = request.args.get('quick_filter')
+        sort_by = request.args.get('sort_by', 'display_order')
+        sort_order = request.args.get('sort_order', 'asc')
+        
+        # Legacy filter parameters (for backward compatibility)
+        legacy_filters = {}
         if request.args.get('company_id'):
             try:
-                filters['company_id'] = int(request.args.get('company_id'))
+                legacy_filters['company_id'] = int(request.args.get('company_id'))
             except (TypeError, ValueError):
                 return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
         if request.args.get('role'):
-            filters['role'] = request.args.get('role')
+            legacy_filters['role'] = request.args.get('role')
         if request.args.get('search'):
-            filters['search'] = request.args.get('search')
+            legacy_filters['search'] = request.args.get('search')
         if request.args.get('limit'):
             try:
                 per_page = min(int(request.args.get('limit')), 100)
-                offset = (page - 1) * per_page
             except (TypeError, ValueError):
                 pass
+        # Add assigned_to filter
+        if request.args.get('assigned_to'):
+            assigned_to_value = request.args.get('assigned_to')
+            if assigned_to_value == 'unassigned':
+                legacy_filters['assigned_to'] = 'unassigned'
+            elif assigned_to_value != 'all':
+                try:
+                    legacy_filters['assigned_to'] = int(assigned_to_value)
+                except (TypeError, ValueError):
+                    return jsonify({'error': 'Geçersiz assigned_to parametresi'}), 400
         
-        # Get paginated contacts
-        from models_crm import Contact, Deal
+        from models_crm import Contact, Deal, Company
         from models import db, Customer
         from sqlalchemy import func
+        from services.filter_service import FilterService
+        from services.filter_validation_service import FilterValidationService
+        from services.filter_cache_service import FilterCacheService
+        from utils.rate_limiter import filter_rate_limit, get_rate_limit_status
+        
+        # Use FilterService if advanced filters are provided
+        if filters_json or quick_filter:
+            try:
+                # Check rate limit
+                current_count, max_count, window_seconds = get_rate_limit_status(user_id)
+                if current_count >= max_count:
+                    return jsonify({
+                        'error': f'Rate limit exceeded. Maximum {max_count} concurrent filter requests allowed. Please wait and try again.',
+                        'retry_after': window_seconds
+                    }), 429
+                
+                # Parse filters JSON
+                filter_config = None
+                if filters_json:
+                    import json
+                    try:
+                        filter_config = json.loads(filters_json)
+                    except json.JSONDecodeError as e:
+                        return jsonify({'error': f'Invalid JSON in filters parameter: {str(e)}'}), 400
+                elif quick_filter:
+                    # Evaluate quick filter
+                    try:
+                        filter_config = FilterService.evaluate_quick_filter(quick_filter, 'contact')
+                    except ValueError as e:
+                        return jsonify({'error': str(e)}), 400
+                
+                # Validate workspace access
+                if not FilterValidationService.check_workspace_access(workspace_id, user_id):
+                    logger.warning(f"Workspace access violation: user {user_id} attempted to access workspace {workspace_id}")
+                    return jsonify({'error': 'Access denied to this workspace'}), 403
+                
+                # Apply filters using FilterService (handles caching internally with page-aware cache keys)
+                results, pagination_info = FilterService.apply_filters(
+                    entity_type='contact',
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    filters=filter_config,
+                    page=page,
+                    per_page=per_page,
+                    sort_by=sort_by,
+                    sort_order=sort_order
+                )
+                
+                # Load custom field values for results
+                contact_ids = [c.id for c in results]
+                company_ids = [c.company_id for c in results if c.company_id]
+                custom_field_values_map = {}
+                open_deals_count_map = {}
+                
+                if contact_ids:
+                    from services.custom_field_service import CustomFieldService
+                    for contact_id in contact_ids:
+                        try:
+                            values = CustomFieldService.get_values('contact', contact_id, workspace_id)
+                            custom_field_values_map[contact_id] = values
+                        except:
+                            custom_field_values_map[contact_id] = {}
+
+                    # Count open deals per company
+                    if company_ids:
+                        open_deals_counts = db.session.query(
+                            Deal.company_id,
+                            func.count(Deal.id)
+                        ).filter(
+                            Deal.workspace_id == workspace_id,
+                            Deal.company_id.in_(company_ids),
+                            Deal.is_deleted == False,
+                            Deal.status == 'open'
+                        ).group_by(Deal.company_id).all()
+
+                        open_deals_count_map = {
+                            company_id: deal_count for company_id, deal_count in open_deals_counts
+                        }
+                
+                # Build result
+                result = []
+                for c in results:
+                    result.append({
+                        'id': c.id,
+                        'first_name': c.first_name,
+                        'last_name': c.last_name,
+                        'full_name': c.full_name,
+                        'email': c.email,
+                        'phone': c.phone,
+                        'whatsapp_phone': c.whatsapp_phone,
+                        'role': c.role,
+                        'job_title': c.job_title,
+                        'lead_score': c.lead_score,
+                        'company_id': c.company_id,
+                        'company_name': c.company.name if c.company else None,
+                        'open_deals_count': open_deals_count_map.get(c.company_id, 0) if c.company_id else 0,
+                        'customFieldValues': custom_field_values_map.get(c.id, {}),
+                        'is_starred': c.is_starred,
+                        'created_at': c.created_at.isoformat() if c.created_at else None,
+                        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
+                        'source': 'crm'
+                    })
+                
+                # Note: Caching is handled by FilterService.apply_filters internally
+                
+                return jsonify({
+                    'contacts': result,
+                    'pagination': pagination_info,
+                    'applied_filters': filter_config
+                }), 200
+                
+            except ValueError as e:
+                logger.warning(f"Filter validation error: {str(e)}")
+                return jsonify({'error': str(e)}), 400
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON decode error: {str(e)}")
+                return jsonify({'error': f'Invalid JSON format: {str(e)}'}), 400
+            except Exception as e:
+                logger.error(f"Error applying filters: {str(e)}", exc_info=True)
+                return jsonify({'error': 'Internal server error while applying filters'}), 500
+        
+        # Legacy filtering (backward compatibility)
+        offset = (page - 1) * per_page
         
         # Get CRM Contacts
         query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
         
-        # Apply filters
-        if filters.get('company_id'):
-            query = query.filter_by(company_id=filters['company_id'])
-        if filters.get('role'):
-            query = query.filter_by(role=filters['role'])
-        if filters.get('search'):
-            from models_crm import Company
-            search_term = f"%{filters['search']}%"
+        # Build applied_filters for legacy mode
+        applied_filters = {'filters': [], 'legacy_mode': True}
+        
+        # Apply legacy filters
+        if legacy_filters.get('company_id'):
+            query = query.filter_by(company_id=legacy_filters['company_id'])
+            applied_filters['filters'].append({
+                'field': 'company_id',
+                'operator': 'equals',
+                'value': legacy_filters['company_id']
+            })
+        if legacy_filters.get('role'):
+            query = query.filter_by(role=legacy_filters['role'])
+            applied_filters['filters'].append({
+                'field': 'role',
+                'operator': 'equals',
+                'value': legacy_filters['role']
+            })
+        if legacy_filters.get('assigned_to'):
+            if legacy_filters['assigned_to'] == 'unassigned':
+                query = query.filter(Contact.assigned_to.is_(None))
+                applied_filters['filters'].append({
+                    'field': 'assigned_to',
+                    'operator': 'is_null',
+                    'value': None
+                })
+            else:
+                query = query.filter_by(assigned_to=legacy_filters['assigned_to'])
+                applied_filters['filters'].append({
+                    'field': 'assigned_to',
+                    'operator': 'equals',
+                    'value': legacy_filters['assigned_to']
+                })
+        if legacy_filters.get('search'):
+            search_term = f"%{legacy_filters['search']}%"
             query = query.outerjoin(Company, Contact.company_id == Company.id).filter(
                 db.or_(
                     Contact.first_name.ilike(search_term),
@@ -371,6 +692,11 @@ def get_contacts():
                     Company.name.ilike(search_term)
                 )
             )
+            applied_filters['filters'].append({
+                'field': 'search',
+                'operator': 'contains',
+                'value': legacy_filters['search']
+            })
         
         # Eager load company
         query = query.options(db.joinedload(Contact.company))
@@ -394,8 +720,8 @@ def get_contacts():
         if linked_customer_ids:
             customer_query = customer_query.filter(~Customer.id.in_(linked_customer_ids))
         
-        if filters.get('search'):
-            search_term = f"%{filters['search']}%"
+        if legacy_filters.get('search'):
+            search_term = f"%{legacy_filters['search']}%"
             customer_query = customer_query.filter(
                 db.or_(
                     Customer.profile_name.ilike(search_term),
@@ -500,11 +826,12 @@ def get_contacts():
                 'pages': total_pages,
                 'has_next': page < total_pages,
                 'has_prev': page > 1
-            }
+            },
+            'applied_filters': applied_filters if applied_filters['filters'] else None
         }), 200
         
     except Exception as e:
-        logger.error(f"Error getting contacts: {str(e)}")
+        logger.error(f"Error getting contacts: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
@@ -1213,6 +1540,13 @@ def create_contact():
         contact.lead_score = lead_score
         from models import db
         db.session.commit()
+        
+        # Invalidate filter cache for contacts
+        try:
+            from services.filter_cache_service import FilterCacheService
+            FilterCacheService.invalidate_cache('contact', workspace_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate filter cache: {str(e)}")
 
         try:
             from services.webhook_service import WebhookService
@@ -1273,6 +1607,13 @@ def update_contact(contact_id):
         contact.lead_score = lead_score
         from models import db
         db.session.commit()
+        
+        # Invalidate filter cache for contacts
+        try:
+            from services.filter_cache_service import FilterCacheService
+            FilterCacheService.invalidate_cache('contact', workspace_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate filter cache: {str(e)}")
 
         CollaborationService.notify_followers_on_entity_change(
             workspace_id=workspace_id,
@@ -1331,6 +1672,13 @@ def delete_contact(contact_id):
             contact.is_deleted = True
             contact.deleted_at = datetime.utcnow()
             db.session.commit()
+            
+            # Invalidate filter cache for contacts
+            try:
+                from services.filter_cache_service import FilterCacheService
+                FilterCacheService.invalidate_cache('contact', workspace_id)
+            except Exception as e:
+                logger.warning(f"Failed to invalidate filter cache: {str(e)}")
         except Exception as db_error:
             db.session.rollback()
             logger.error(f"Database error deleting contact: {str(db_error)}")
@@ -1379,34 +1727,104 @@ def restore_contact(contact_id):
 # CSV IMPORT/EXPORT ENDPOINTS
 # ============================================================================
 
-@contacts_bp.route('/api/v1/contacts/export', methods=['GET'])
+@contacts_bp.route('/api/v1/contacts/export', methods=['GET', 'POST'])
 @login_required
 def export_contacts():
-    """Export contacts to CSV"""
+    """Export contacts to CSV or Excel (supports both simple GET and advanced POST with filters)"""
     try:
         workspace_id = session.get('workspace_id')
-        if not workspace_id:
-            return jsonify({'error': 'Workspace not found'}), 400
+        user_id = session.get('user_id')
         
-        # Get filters from query params
-        filters = {}
-        if request.args.get('company_id'):
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Handle POST request with advanced filtering
+        if request.method == 'POST':
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            # Get parameters
+            filters = data.get('filters', {})
+            export_format = data.get('format', 'csv').lower()
+            columns = data.get('columns', [
+                'first_name', 'last_name', 'email', 'phone', 
+                'whatsapp_phone', 'role', 'job_title', 'lead_score', 
+                'company_name', 'is_starred', 'created_at', 'updated_at'
+            ])
+            
+            # Validate format
+            if export_format not in ['csv', 'xlsx']:
+                return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
+            
+            from services.filter_service import FilterService
+            
+            # Apply filters without pagination (max 10,000 records)
             try:
-                filters['company_id'] = int(request.args.get('company_id'))
-            except (TypeError, ValueError):
-                return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
-        if request.args.get('role'):
-            filters['role'] = request.args.get('role')
-        if request.args.get('search'):
-            filters['search'] = request.args.get('search')
+                results, pagination_info = FilterService.apply_filters(
+                    entity_type='contact',
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    filters=filters,
+                    page=1,
+                    per_page=10000,
+                    sort_by='created_at',
+                    sort_order='desc'
+                )
+                
+                # Check result count limit
+                if pagination_info['total'] > 10000:
+                    return jsonify({
+                        'error': f'Too many records to export ({pagination_info["total"]}). Maximum is 10,000. Please apply more filters.'
+                    }), 400
+                
+                # Generate filename
+                timestamp = datetime.now().strftime('%Y-%m-%d')
+                filename = f'contacts_filtered_{timestamp}.{export_format}'
+                
+                # Export based on format
+                if export_format == 'csv':
+                    csv_data = FilterService.export_to_csv(results, columns, 'contact')
+                    
+                    response = make_response(csv_data)
+                    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    return response
+                    
+                else:  # xlsx
+                    excel_data = FilterService.export_to_excel(results, columns, 'contact')
+                    
+                    response = make_response(excel_data)
+                    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    return response
+                    
+            except Exception as e:
+                logger.error(f"Error applying filters for export: {str(e)}")
+                return jsonify({'error': f'Filter error: {str(e)}'}), 500
         
-        csv_content = ContactService.export_contacts_csv(workspace_id, filters)
-        
-        response = make_response(csv_content)
-        response.headers['Content-Type'] = 'text/csv'
-        response.headers['Content-Disposition'] = 'attachment; filename=contacts.csv'
-        
-        return response
+        # Handle GET request (simple export - backward compatibility)
+        else:
+            filters = {}
+            if request.args.get('company_id'):
+                try:
+                    filters['company_id'] = int(request.args.get('company_id'))
+                except (TypeError, ValueError):
+                    return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+            if request.args.get('role'):
+                filters['role'] = request.args.get('role')
+            if request.args.get('search'):
+                filters['search'] = request.args.get('search')
+            
+            csv_content = ContactService.export_contacts_csv(workspace_id, filters)
+            
+            response = make_response(csv_content)
+            response.headers['Content-Type'] = 'text/csv'
+            response.headers['Content-Disposition'] = 'attachment; filename=contacts.csv'
+            
+            return response
         
     except Exception as e:
         logger.error(f"Error exporting contacts: {str(e)}")
@@ -1456,31 +1874,100 @@ def import_contacts():
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
-@contacts_bp.route('/api/v1/companies/export', methods=['GET'])
+@contacts_bp.route('/api/v1/companies/export', methods=['GET', 'POST'])
 @login_required
 def export_companies():
-    """Export companies to CSV"""
+    """Export companies to CSV or Excel (supports both simple GET and advanced POST with filters)"""
     try:
         workspace_id = session.get('workspace_id')
-        if not workspace_id:
-            return jsonify({'error': 'Workspace not found'}), 400
+        user_id = session.get('user_id')
         
-        # Get filters from query params
-        filters = {}
-        if request.args.get('industry'):
-            filters['industry'] = request.args.get('industry')
-        if request.args.get('size'):
-            filters['size'] = request.args.get('size')
-        if request.args.get('search'):
-            filters['search'] = request.args.get('search')
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
         
-        csv_content = ContactService.export_companies_csv(workspace_id, filters)
+        # Handle POST request with advanced filtering
+        if request.method == 'POST':
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            # Get parameters
+            filters = data.get('filters', {})
+            export_format = data.get('format', 'csv').lower()
+            columns = data.get('columns', [
+                'name', 'industry', 'size', 'website', 'phone', 
+                'address', 'parent_company_name', 'created_at', 'updated_at'
+            ])
+            
+            # Validate format
+            if export_format not in ['csv', 'xlsx']:
+                return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
+            
+            from services.filter_service import FilterService
+            
+            # Apply filters without pagination (max 10,000 records)
+            try:
+                results, pagination_info = FilterService.apply_filters(
+                    entity_type='company',
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    filters=filters,
+                    page=1,
+                    per_page=10000,
+                    sort_by='created_at',
+                    sort_order='desc'
+                )
+                
+                # Check result count limit
+                if pagination_info['total'] > 10000:
+                    return jsonify({
+                        'error': f'Too many records to export ({pagination_info["total"]}). Maximum is 10,000. Please apply more filters.'
+                    }), 400
+                
+                # Generate filename
+                timestamp = datetime.now().strftime('%Y-%m-%d')
+                filename = f'companies_filtered_{timestamp}.{export_format}'
+                
+                # Export based on format
+                if export_format == 'csv':
+                    csv_data = FilterService.export_to_csv(results, columns, 'company')
+                    
+                    response = make_response(csv_data)
+                    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    return response
+                    
+                else:  # xlsx
+                    excel_data = FilterService.export_to_excel(results, columns, 'company')
+                    
+                    response = make_response(excel_data)
+                    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    return response
+                    
+            except Exception as e:
+                logger.error(f"Error applying filters for export: {str(e)}")
+                return jsonify({'error': f'Filter error: {str(e)}'}), 500
         
-        response = make_response(csv_content)
-        response.headers['Content-Type'] = 'text/csv'
-        response.headers['Content-Disposition'] = 'attachment; filename=companies.csv'
-        
-        return response
+        # Handle GET request (simple export - backward compatibility)
+        else:
+            filters = {}
+            if request.args.get('industry'):
+                filters['industry'] = request.args.get('industry')
+            if request.args.get('size'):
+                filters['size'] = request.args.get('size')
+            if request.args.get('search'):
+                filters['search'] = request.args.get('search')
+            
+            csv_content = ContactService.export_companies_csv(workspace_id, filters)
+            
+            response = make_response(csv_content)
+            response.headers['Content-Type'] = 'text/csv'
+            response.headers['Content-Disposition'] = 'attachment; filename=companies.csv'
+            
+            return response
         
     except Exception as e:
         logger.error(f"Error exporting companies: {str(e)}")
@@ -1857,6 +2344,166 @@ def save_contacts_column_widths():
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+@contacts_bp.route('/api/v1/user-preferences/contacts-assignee-filter', methods=['GET'])
+@login_required
+def get_contacts_assignee_filter():
+    """Get user's assignee filter preference for contacts"""
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id or not workspace_id:
+            return jsonify({'error': 'User or workspace not found'}), 400
+        
+        from models import db
+        from sqlalchemy import text
+        
+        result = db.session.execute(
+            text("SELECT preference_value FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_assignee_filter'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            import json
+            return jsonify({'assignee_filter': json.loads(result[0])}), 200
+        
+        # Default to "all"
+        return jsonify({'assignee_filter': 'all'}), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting assignee filter: {str(e)}")
+        return jsonify({'assignee_filter': 'all'}), 200
+
+
+@contacts_bp.route('/api/v1/user-preferences/contacts-assignee-filter', methods=['POST'])
+@login_required
+def save_contacts_assignee_filter():
+    """Save user's assignee filter preference for contacts"""
+    user_id = session.get('user_id')
+    workspace_id = session.get('workspace_id')
+    
+    if not user_id or not workspace_id:
+        return jsonify({'error': 'User or workspace not found'}), 400
+    
+    data = request.get_json()
+    if not data or 'assignee_filter' not in data:
+        return jsonify({'error': 'No assignee_filter provided'}), 400
+    
+    assignee_filter = data['assignee_filter']
+    
+    from models import db
+    from sqlalchemy import text
+    import json
+    
+    try:
+        # Check if preference exists
+        result = db.session.execute(
+            text("SELECT id FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_assignee_filter'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            # Update existing
+            db.session.execute(
+                text("UPDATE user_preferences SET preference_value = :value, updated_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'contacts_assignee_filter'"),
+                {'value': json.dumps(assignee_filter), 'user_id': user_id, 'workspace_id': workspace_id}
+            )
+        else:
+            # Insert new
+            db.session.execute(
+                text("INSERT INTO user_preferences (user_id, workspace_id, preference_key, preference_value, created_at, updated_at) VALUES (:user_id, :workspace_id, 'contacts_assignee_filter', :value, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                {'user_id': user_id, 'workspace_id': workspace_id, 'value': json.dumps(assignee_filter)}
+            )
+        
+        db.session.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error saving assignee filter: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/user-preferences/companies-assignee-filter', methods=['GET'])
+@login_required
+def get_companies_assignee_filter():
+    """Get user's assignee filter preference for companies"""
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not user_id or not workspace_id:
+            return jsonify({'error': 'User or workspace not found'}), 400
+        
+        from models import db
+        from sqlalchemy import text
+        
+        result = db.session.execute(
+            text("SELECT preference_value FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'companies_assignee_filter'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            import json
+            return jsonify({'assignee_filter': json.loads(result[0])}), 200
+        
+        # Default to "all"
+        return jsonify({'assignee_filter': 'all'}), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting companies assignee filter: {str(e)}")
+        return jsonify({'assignee_filter': 'all'}), 200
+
+
+@contacts_bp.route('/api/v1/user-preferences/companies-assignee-filter', methods=['POST'])
+@login_required
+def save_companies_assignee_filter():
+    """Save user's assignee filter preference for companies"""
+    user_id = session.get('user_id')
+    workspace_id = session.get('workspace_id')
+    
+    if not user_id or not workspace_id:
+        return jsonify({'error': 'User or workspace not found'}), 400
+    
+    data = request.get_json()
+    if not data or 'assignee_filter' not in data:
+        return jsonify({'error': 'No assignee_filter provided'}), 400
+    
+    assignee_filter = data['assignee_filter']
+    
+    from models import db
+    from sqlalchemy import text
+    import json
+    
+    try:
+        # Check if preference exists
+        result = db.session.execute(
+            text("SELECT id FROM user_preferences WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'companies_assignee_filter'"),
+            {'user_id': user_id, 'workspace_id': workspace_id}
+        ).fetchone()
+        
+        if result:
+            # Update existing
+            db.session.execute(
+                text("UPDATE user_preferences SET preference_value = :value, updated_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND workspace_id = :workspace_id AND preference_key = 'companies_assignee_filter'"),
+                {'value': json.dumps(assignee_filter), 'user_id': user_id, 'workspace_id': workspace_id}
+            )
+        else:
+            # Insert new
+            db.session.execute(
+                text("INSERT INTO user_preferences (user_id, workspace_id, preference_key, preference_value, created_at, updated_at) VALUES (:user_id, :workspace_id, 'companies_assignee_filter', :value, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                {'user_id': user_id, 'workspace_id': workspace_id, 'value': json.dumps(assignee_filter)}
+            )
+        
+        db.session.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error saving companies assignee filter: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
 # ============================================================================
 # DRAG-AND-DROP REORDERING ENDPOINTS
 # ============================================================================
@@ -2015,4 +2662,355 @@ def reorder_companies():
         
     except Exception as e:
         logger.error(f"Error reordering companies: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
+# SAVED FILTER ENDPOINTS
+# ============================================================================
+
+@contacts_bp.route('/api/v1/saved-filters', methods=['POST'])
+@login_required
+def create_saved_filter():
+    """Create a new saved filter"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        if 'name' not in data:
+            return jsonify({'error': 'Filter name is required'}), 400
+        if 'entity_type' not in data:
+            return jsonify({'error': 'Entity type is required'}), 400
+        if 'filter_config' not in data:
+            return jsonify({'error': 'Filter configuration is required'}), 400
+        
+        # Validate entity_type
+        if data['entity_type'] not in ['contact', 'company']:
+            return jsonify({'error': 'Invalid entity type. Must be contact or company'}), 400
+        
+        from services.saved_filter_service import SavedFilterService
+        
+        try:
+            saved_filter = SavedFilterService.create_filter(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                name=data['name'],
+                entity_type=data['entity_type'],
+                filter_config=data['filter_config'],
+                is_shared=data.get('is_shared', False)
+            )
+            
+            return jsonify({
+                'id': saved_filter.id,
+                'name': saved_filter.name,
+                'entity_type': saved_filter.entity_type,
+                'filter_config': saved_filter.filter_config,
+                'is_shared': saved_filter.is_shared,
+                'created_at': saved_filter.created_at.isoformat() if saved_filter.created_at else None
+            }), 201
+            
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            logger.error(f"Error creating saved filter: {str(e)}")
+            return jsonify({'error': 'Failed to create filter'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error in create_saved_filter: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/saved-filters', methods=['GET'])
+@login_required
+def get_saved_filters():
+    """Get user's saved filters"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Get entity_type from query params
+        entity_type = request.args.get('entity_type')
+        if not entity_type:
+            return jsonify({'error': 'entity_type parameter is required'}), 400
+        
+        if entity_type not in ['contact', 'company']:
+            return jsonify({'error': 'Invalid entity type. Must be contact or company'}), 400
+        
+        from services.saved_filter_service import SavedFilterService
+        
+        filters = SavedFilterService.get_user_filters(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            entity_type=entity_type
+        )
+        
+        return jsonify({
+            'filters': [
+                {
+                    'id': f.id,
+                    'name': f.name,
+                    'entity_type': f.entity_type,
+                    'filter_config': f.filter_config,
+                    'is_shared': f.is_shared,
+                    'created_at': f.created_at.isoformat() if f.created_at else None,
+                    'updated_at': f.updated_at.isoformat() if f.updated_at else None
+                }
+                for f in filters
+            ]
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting saved filters: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/saved-filters/<int:filter_id>', methods=['DELETE'])
+@login_required
+def delete_saved_filter(filter_id):
+    """Delete a saved filter"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        from services.saved_filter_service import SavedFilterService
+        
+        try:
+            SavedFilterService.delete_filter(
+                filter_id=filter_id,
+                workspace_id=workspace_id,
+                user_id=user_id
+            )
+            
+            return jsonify({'message': 'Filter deleted successfully'}), 200
+            
+        except PermissionError as e:
+            return jsonify({'error': str(e)}), 403
+        except LookupError as e:
+            return jsonify({'error': str(e)}), 404
+        except Exception as e:
+            logger.error(f"Error deleting saved filter: {str(e)}")
+            return jsonify({'error': 'Failed to delete filter'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error in delete_saved_filter: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/saved-filters/<int:filter_id>/share', methods=['PATCH'])
+@login_required
+def share_saved_filter(filter_id):
+    """Share or unshare a saved filter"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        if not data or 'is_shared' not in data:
+            return jsonify({'error': 'is_shared field is required'}), 400
+        
+        if not isinstance(data['is_shared'], bool):
+            return jsonify({'error': 'is_shared must be a boolean'}), 400
+        
+        from services.saved_filter_service import SavedFilterService
+        
+        try:
+            saved_filter = SavedFilterService.share_filter(
+                filter_id=filter_id,
+                workspace_id=workspace_id,
+                user_id=user_id,
+                is_shared=data['is_shared']
+            )
+            
+            return jsonify({
+                'id': saved_filter.id,
+                'name': saved_filter.name,
+                'is_shared': saved_filter.is_shared,
+                'updated_at': saved_filter.updated_at.isoformat() if saved_filter.updated_at else None
+            }), 200
+            
+        except PermissionError as e:
+            return jsonify({'error': str(e)}), 403
+        except LookupError as e:
+            return jsonify({'error': str(e)}), 404
+        except Exception as e:
+            logger.error(f"Error sharing saved filter: {str(e)}")
+            return jsonify({'error': 'Failed to update filter'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error in share_saved_filter: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
+# ADVANCED EXPORT ENDPOINTS (with filtering)
+# ============================================================================
+
+@contacts_bp.route('/api/v1/contacts/export-filtered', methods=['POST'])
+@login_required
+def export_contacts_filtered():
+    """Export contacts with advanced filtering to CSV or Excel"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Get parameters
+        filters = data.get('filters', {'filters': []})
+        export_format = data.get('format', 'csv').lower()
+        columns = data.get('columns', [
+            'id', 'first_name', 'last_name', 'email', 'phone', 
+            'whatsapp_phone', 'role', 'job_title', 'lead_score', 
+            'company_id', 'is_starred', 'created_at', 'updated_at'
+        ])
+        
+        # Validate format
+        if export_format not in ['csv', 'xlsx']:
+            return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
+        
+        from services.filter_service import FilterService
+        
+        # Apply filters without pagination (max 5000 records)
+        try:
+            results, pagination_info = FilterService.apply_filters(
+                entity_type='contact',
+                workspace_id=workspace_id,
+                user_id=user_id,
+                filters=filters,
+                page=1,
+                per_page=5000,
+                sort_by='created_at',
+                sort_order='desc'
+            )
+            
+            # Check result count limit
+            if pagination_info['total'] > 5000:
+                return jsonify({
+                    'error': f'Too many records to export ({pagination_info["total"]}). Maximum is 5000. Please apply more filters.'
+                }), 400
+            
+            # Export based on format
+            if export_format == 'csv':
+                csv_data = FilterService.export_to_csv(results, columns, 'contact')
+                
+                response = make_response(csv_data)
+                response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+                response.headers['Content-Disposition'] = f'attachment; filename=contacts_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+                return response
+                
+            else:  # xlsx
+                excel_data = FilterService.export_to_excel(results, columns, 'contact')
+                
+                response = make_response(excel_data.read())
+                response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                response.headers['Content-Disposition'] = f'attachment; filename=contacts_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                return response
+                
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            logger.error(f"Error exporting contacts: {str(e)}")
+            return jsonify({'error': 'Export failed'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error in export_contacts_filtered: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/companies/export-filtered', methods=['POST'])
+@login_required
+def export_companies_filtered():
+    """Export companies with advanced filtering to CSV or Excel"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Get parameters
+        filters = data.get('filters', {'filters': []})
+        export_format = data.get('format', 'csv').lower()
+        columns = data.get('columns', [
+            'id', 'name', 'industry', 'size', 'website', 
+            'phone', 'address', 'parent_company_id', 
+            'created_at', 'updated_at'
+        ])
+        
+        # Validate format
+        if export_format not in ['csv', 'xlsx']:
+            return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
+        
+        from services.filter_service import FilterService
+        
+        # Apply filters without pagination (max 5000 records)
+        try:
+            results, pagination_info = FilterService.apply_filters(
+                entity_type='company',
+                workspace_id=workspace_id,
+                user_id=user_id,
+                filters=filters,
+                page=1,
+                per_page=5000,
+                sort_by='created_at',
+                sort_order='desc'
+            )
+            
+            # Check result count limit
+            if pagination_info['total'] > 5000:
+                return jsonify({
+                    'error': f'Too many records to export ({pagination_info["total"]}). Maximum is 5000. Please apply more filters.'
+                }), 400
+            
+            # Export based on format
+            if export_format == 'csv':
+                csv_data = FilterService.export_to_csv(results, columns, 'company')
+                
+                response = make_response(csv_data)
+                response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+                response.headers['Content-Disposition'] = f'attachment; filename=companies_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+                return response
+                
+            else:  # xlsx
+                excel_data = FilterService.export_to_excel(results, columns, 'company')
+                
+                response = make_response(excel_data.read())
+                response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                response.headers['Content-Disposition'] = f'attachment; filename=companies_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                return response
+                
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            logger.error(f"Error exporting companies: {str(e)}")
+            return jsonify({'error': 'Export failed'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error in export_companies_filtered: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500

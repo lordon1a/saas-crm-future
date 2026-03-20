@@ -75,6 +75,275 @@ class EmailHubService:
         return SMTPEmailProvider()
 
     @staticmethod
+    def send_invitation_email(workspace_name, inviter_name, invitee_email, role, token, expires_at):
+        """
+        Send team member invitation email.
+        Handles SMTP not configured gracefully - logs instead of failing.
+        
+        Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5, 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7
+        """
+        try:
+            # Check if SMTP is configured
+            if not Config.SMTP_HOST or not Config.SMTP_FROM_EMAIL:
+                logger.info(
+                    'SMTP not configured. Invitation email not sent. '
+                    'workspace=%s invitee=%s role=%s token=%s',
+                    workspace_name, invitee_email, role, token
+                )
+                return None
+
+            # Build invitation link
+            base_url = Config.APP_BASE_URL
+            invitation_link = f"{base_url}/accept-invitation?token={token}"
+            
+            # Format expiration date
+            expires_str = expires_at.strftime('%B %d, %Y at %I:%M %p UTC') if expires_at else 'N/A'
+            
+            # HTML email template
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Invitation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #4F46E5; padding: 30px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                                You're Invited!
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                Hi there,
+                            </p>
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                <strong>{inviter_name}</strong> has invited you to join <strong>{workspace_name}</strong> as a <strong>{role}</strong>.
+                            </p>
+                            <p style="margin: 0 0 30px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                Click the button below to accept the invitation and create your account:
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{invitation_link}" style="display: inline-block; padding: 14px 40px; background-color: #4F46E5; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold;">
+                                            Accept Invitation
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 30px 0 10px; font-size: 14px; line-height: 1.5; color: #666666;">
+                                Or copy and paste this link into your browser:
+                            </p>
+                            <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #4F46E5; word-break: break-all;">
+                                {invitation_link}
+                            </p>
+                            
+                            <p style="margin: 30px 0 0; font-size: 14px; line-height: 1.5; color: #999999;">
+                                This invitation expires on <strong>{expires_str}</strong>.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; font-size: 12px; color: #999999;">
+                                If you didn't expect this invitation, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+            
+            # Plain text fallback
+            text_body = f"""
+You're Invited to {workspace_name}!
+
+{inviter_name} has invited you to join {workspace_name} as a {role}.
+
+Accept your invitation by visiting this link:
+{invitation_link}
+
+This invitation expires on {expires_str}.
+
+If you didn't expect this invitation, you can safely ignore this email.
+            """
+            
+            subject = f"You're invited to join {workspace_name}"
+            
+            provider = EmailHubService._provider()
+            message_id = provider.send(
+                to_email=invitee_email,
+                subject=subject,
+                body_text=text_body.strip(),
+                body_html=html_body
+            )
+            
+            logger.info(
+                'Invitation email sent successfully. workspace=%s invitee=%s message_id=%s',
+                workspace_name, invitee_email, message_id
+            )
+            return message_id
+            
+        except Exception as exc:
+            # Log error but don't fail - graceful degradation
+            logger.error(
+                'Failed to send invitation email. workspace=%s invitee=%s error=%s',
+                workspace_name, invitee_email, str(exc)
+            )
+            return None
+
+    @staticmethod
+    def send_assignment_notification(assignee_email, assignee_name, entity_type, entity_name, assigner_name, entity_link):
+        """
+        Send assignment notification email to team member.
+        Handles SMTP not configured gracefully - logs instead of failing.
+        
+        Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5, 14.6
+        """
+        try:
+            # Check if SMTP is configured
+            if not Config.SMTP_HOST or not Config.SMTP_FROM_EMAIL:
+                logger.info(
+                    'SMTP not configured. Assignment notification not sent. '
+                    'assignee=%s entity_type=%s entity_name=%s',
+                    assignee_email, entity_type, entity_name
+                )
+                return None
+
+            # HTML email template
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Assignment</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #10B981; padding: 30px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                                New Assignment
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                Hi {assignee_name},
+                            </p>
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                <strong>{assigner_name}</strong> has assigned a <strong>{entity_type}</strong> to you:
+                            </p>
+                            <p style="margin: 0 0 30px; font-size: 18px; line-height: 1.5; color: #4F46E5; font-weight: bold;">
+                                {entity_name}
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{entity_link}" style="display: inline-block; padding: 14px 40px; background-color: #10B981; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold;">
+                                            View {entity_type}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 30px 0 10px; font-size: 14px; line-height: 1.5; color: #666666;">
+                                Or copy and paste this link into your browser:
+                            </p>
+                            <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #10B981; word-break: break-all;">
+                                {entity_link}
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; font-size: 12px; color: #999999;">
+                                You're receiving this because you were assigned to this {entity_type}.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+            
+            # Plain text fallback
+            text_body = f"""
+New Assignment
+
+Hi {assignee_name},
+
+{assigner_name} has assigned a {entity_type} to you:
+
+{entity_name}
+
+View the {entity_type} here:
+{entity_link}
+
+You're receiving this because you were assigned to this {entity_type}.
+            """
+            
+            subject = f"New {entity_type} assigned: {entity_name}"
+            
+            provider = EmailHubService._provider()
+            message_id = provider.send(
+                to_email=assignee_email,
+                subject=subject,
+                body_text=text_body.strip(),
+                body_html=html_body
+            )
+            
+            logger.info(
+                'Assignment notification sent successfully. assignee=%s entity_type=%s message_id=%s',
+                assignee_email, entity_type, message_id
+            )
+            return message_id
+            
+        except Exception as exc:
+            # Log error but don't fail - graceful degradation
+            logger.error(
+                'Failed to send assignment notification. assignee=%s entity_type=%s error=%s',
+                assignee_email, entity_type, str(exc)
+            )
+            return None
+
+    @staticmethod
     def extract_variables(template_text):
         return sorted(set(_VARIABLE_PATTERN.findall(template_text or '')))
 

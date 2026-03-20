@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Davet Kabul Et - Sleek CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            blue: '#e6f0ff',
+                            darkblue: '#4a72ff',
+                            lightbtn: '#c6ddff',
+                            btnhq: '#2563eb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .input-glass {
+            border: 1px solid #eaebf0;
+            border-radius: 6px;
+            padding: 12px 14px;
+            width: 100%;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
+        }
+
+        .input-glass:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .input-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="h-full font-sans antialiased bg-gradient-to-br from-blue-50 to-indigo-100">
+
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            
+            <!-- Logo -->
+            <div class="text-center mb-8">
+                <div class="flex items-baseline gap-1 justify-center mb-2">
+                    <span class="text-[#2563eb] text-2xl font-bold tracking-tighter">_sleekflow</span>
+                    <div class="w-1.5 h-1.5 bg-[#2563eb]"></div>
+                </div>
+                <p class="text-sm text-gray-600">Takım Daveti</p>
+            </div>
+
+            <!-- Card -->
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                
+                {% if error %}
+                <!-- Error State -->
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Davet Geçersiz</h2>
+                    <p class="text-gray-600 mb-6">{{ error }}</p>
+                    <a href="/login" class="inline-block bg-[#2563eb] text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors">
+                        Giriş Sayfasına Dön
+                    </a>
+                </div>
+                
+                {% else %}
+                <!-- Success State - Show Form -->
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-plus text-blue-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Takıma Katıl</h2>
+                    <p class="text-sm text-gray-600">
+                        <strong>{{ inviter.name }}</strong> sizi <strong>{{ workspace.company_name }}</strong> workspace'ine davet etti
+                    </p>
+                    <div class="mt-3 inline-block bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                        Rol: {{ invitation.role|title }}
+                    </div>
+                </div>
+
+                <form id="acceptForm" class="space-y-5">
+                    <input type="hidden" id="token" value="{{ invitation.token }}">
+                    
+                    <div>
+                        <label class="input-label">E-posta</label>
+                        <input type="email" class="input-glass bg-gray-50" value="{{ invitation.invitee_email }}" disabled>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Adınız Soyadınız</label>
+                        <input type="text" id="name" class="input-glass" placeholder="Adınız Soyadınız" required autofocus>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Parola</label>
+                        <input type="password" id="password" class="input-glass" placeholder="En az 8 karakter" required>
+                        <p class="text-xs text-gray-500 mt-1.5">Parolanız en az 8 karakter olmalıdır</p>
+                    </div>
+
+                    <div id="alert" class="hidden text-sm font-medium p-3 rounded-lg border"></div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-[#2563eb] text-white font-semibold text-sm px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                        <i class="fas fa-check"></i>
+                        Daveti Kabul Et ve Hesap Oluştur
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center text-xs text-gray-500">
+                    <p>Bu davet <strong>{{ invitation.expires_at.strftime('%d.%m.%Y %H:%M') }}</strong> tarihinde sona erecek</p>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-6">
+                <a href="/login" class="text-sm text-gray-600 hover:text-gray-900 transition">
+                    <i class="fas fa-arrow-left mr-1"></i> Giriş sayfasına dön
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('acceptForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const token = document.getElementById('token').value;
+            const name = document.getElementById('name').value.trim();
+            const password = document.getElementById('password').value;
+            const alertBox = document.getElementById('alert');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validation
+            if (!name || !password) {
+                alertBox.textContent = "Lütfen tüm alanları doldurun";
+                alertBox.className = "text-sm font-medium p-3 rounded-lg border border-red-200 bg-red-50 text-red-600";
+                alertBox.classList.remove('hidden');
+                return;
+            }
+
+            if (password.length < 8) {
+                alertBox.textContent = "Parola en az 8 karakter olmalıdır";
+                alertBox.className = "text-sm font-medium p-3 rounded-lg border border-red-200 bg-red-50 text-red-600";
+                alertBox.classList.remove('hidden');
+                return;
+            }
+
+            alertBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> İşleniyor...';
+
+            try {
+                const res = await fetch('/accept-invitation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, name, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alertBox.textContent = "Hesabınız oluşturuldu! Yönlendiriliyorsunuz...";
+                    alertBox.className = "text-sm font-medium p-3 rounded-lg border border-green-200 bg-green-50 text-green-600";
+                    alertBox.classList.remove('hidden');
+                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Başarılı';
+                    
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/';
+                    }, 1000);
+                } else {
+                    alertBox.textContent = data.error || 'Bir hata oluştu';
+                    alertBox.className = "text-sm font-medium p-3 rounded-lg border border-red-200 bg-red-50 text-red-600";
+                    alertBox.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Daveti Kabul Et ve Hesap Oluştur';
+                }
+            } catch (err) {
+                alertBox.textContent = 'Bağlantı hatası. Lütfen tekrar deneyin.';
+                alertBox.className = "text-sm font-medium p-3 rounded-lg border border-red-200 bg-red-50 text-red-600";
+                alertBox.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i> Daveti Kabul Et ve Hesap Oluştur';
+            }
+        });
+    </script>
+
+</body>
+
+</html>

@@ -400,6 +400,10 @@
                             <button type="button" onclick="startInlineEdit('contact.job_title')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Unvan düzenle"><i class="fas fa-pen text-[10px]"></i></button>
                         </div>
                         
+                        <div class="text-gray-500">Atanan</div>
+                        <div id="contact-assignment-selector" class="flex-1"></div>
+                        </div>
+                        
                         <div class="text-gray-500">Rol</div>
                         <div class="flex items-center justify-between gap-2 group w-full">
                             <span id="details-role" ondblclick="startInlineEdit('contact.role')" class="text-gray-900 font-medium flex-1">{{ contact.role or '-' }}</span>
@@ -2579,5 +2583,47 @@
         });
     </script>
     <script src="/static/topbar-global.js"></script>
+    <script src="/static/team-selector.js"></script>
+    <script>
+        // Initialize team member selector for contact assignment
+        document.addEventListener('DOMContentLoaded', async () => {
+            const contactId = {{ contact.id }};
+            const assignedTo = {{ contact.assigned_to|tojson }};
+            
+            const selector = new TeamMemberSelector('contact-assignment-selector', {
+                includeUnassigned: true,
+                selectedValue: assignedTo,
+                placeholder: 'Atama yapın'
+            });
+            
+            await selector.init();
+            
+            // Handle assignment changes
+            document.getElementById('contact-assignment-selector').addEventListener('memberSelected', async (e) => {
+                const memberId = e.detail.memberId;
+                
+                try {
+                    const response = await fetch(`/api/assignments/contact/${contactId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ assigned_to: memberId })
+                    });
+                    
+                    if (response.ok) {
+                        showToast('Atama başarıyla güncellendi', 'success');
+                    } else {
+                        const data = await response.json();
+                        showToast(data.error || 'Atama güncellenemedi', 'error');
+                        selector.setValue(assignedTo); // Revert on error
+                    }
+                } catch (error) {
+                    console.error('Error updating assignment:', error);
+                    showToast('Bağlantı hatası', 'error');
+                    selector.setValue(assignedTo); // Revert on error
+                }
+            });
+        });
+    </script>
 </body>
 </html>
+

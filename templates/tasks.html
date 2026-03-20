@@ -252,9 +252,7 @@
 
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Atanan Kişi</label>
-                        <select id="task-assignee" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
-                            <option value="">Unassigned</option>
-                        </select>
+                        <div id="task-assignment-selector"></div>
                     </div>
 
                     <label class="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-600 cursor-pointer">
@@ -332,5 +330,30 @@
 
     <script src="{{ url_for('static', filename='tasks.js') }}"></script>
     <script src="/static/topbar-global.js"></script>
+    <script src="/static/team-selector.js"></script>
+    <script>
+        // Initialize team member selector for task assignment
+        let taskAssignmentSelector = null;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            taskAssignmentSelector = new TeamMemberSelector('task-assignment-selector', {
+                includeUnassigned: true,
+                placeholder: 'Atama yapın'
+            });
+            await taskAssignmentSelector.init();
+        });
+        
+        // Helper to get selected assignee from team selector
+        function getTaskAssignee() {
+            return taskAssignmentSelector ? taskAssignmentSelector.getValue() : null;
+        }
+        
+        // Helper to set assignee in team selector
+        function setTaskAssignee(assigneeId) {
+            if (taskAssignmentSelector) {
+                taskAssignmentSelector.setValue(assigneeId);
+            }
+        }
+    </script>
 </body>
 </html>

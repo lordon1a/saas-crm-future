@@ -219,6 +219,7 @@
             <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
             <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
             <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
+            <a href="/team" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Takım"><i class="fas fa-users text-lg"></i></a>
         </nav>
         <div class="flex flex-col gap-4 w-full px-3 pb-4">
             <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
@@ -489,6 +490,10 @@
                         </div>
                     </div>
                     <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Atanan</p>
+                        <div id="conversation-assignment-selector"></div>
+                    </div>
+                    <div>
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">E-posta</p>
                         <input id="customerEmailInput" type="email" placeholder="Ekle..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium outline-none focus:border-brand-500" onblur="saveCustomerEmail(this.value)" />
                     </div>
@@ -542,6 +547,7 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/team-selector.js"></script>
     <script src="/static/app.js"></script>
     <script src="/static/topbar-global.js"></script>
     <script>

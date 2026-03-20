@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify, session, redirect, url_for, render_template
 import logging
 import secrets
-from models import db, User, Workspace
+from models import db, User, Workspace, TeamInvitation
 from config import Config
 from services.auth_manager import AuthManager
 from services.audit_service import AuditService
 from services.security_service import SecurityService
+from services.team_service import TeamService
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('auth', __name__)
@@ -32,6 +33,11 @@ def login():
         if not user:
             logger.warning('Başarısız giriş denemesi: %s', email)
             return jsonify({'error': 'Email veya şifre hatalı'}), 401
+        
+        # Check if user is active (not deactivated)
+        if not user.is_active:
+            logger.warning('Deactivated user login attempt: %s', email)
+            return jsonify({'error': 'Hesabınız devre dışı bırakılmış. Lütfen workspace yöneticinizle iletişime geçin.'}), 403
 
         try:
             if not SecurityService.is_ip_allowed(user.workspace_id, request.remote_addr):
@@ -227,3 +233,115 @@ def update_password():
     db.session.commit()
 
     return jsonify({'status': 'ok'}), 200
+
+@bp.route('/accept-invitation/<token>', methods=['GET'])
+def accept_invitation_page(token):
+    """Display invitation acceptance form"""
+    # Validate token and get invitation details
+    invitation = TeamInvitation.query.filter_by(token=token).first()
+    
+    if not invitation:
+        return render_template('accept_invitation.html', 
+                             error='Geçersiz davet linki',
+                             invitation=None)
+    
+    # Check if already accepted
+    if invitation.status != 'pending':
+        return render_template('accept_invitation.html',
+                             error=f'Bu davet {invitation.status} durumunda',
+                             invitation=None)
+    
+    # Check expiration
+    from datetime import datetime
+    if invitation.expires_at < datetime.utcnow():
+        invitation.status = 'expired'
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to update expired invitation: {str(e)}")
+        
+        return render_template('accept_invitation.html',
+                             error='Bu davet süresi dolmuş',
+                             invitation=None)
+    
+    # Get workspace details
+    workspace = Workspace.query.get(invitation.workspace_id)
+    inviter = User.query.get(invitation.inviter_id)
+    
+    return render_template('accept_invitation.html',
+                         invitation=invitation,
+                         workspace=workspace,
+                         inviter=inviter,
+                         error=None)
+
+@bp.route('/accept-invitation', methods=['POST'])
+def accept_invitation():
+    """Process invitation acceptance and create user account"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    token = data.get('token', '').strip()
+    name = data.get('name', '').strip()
+    password = data.get('password', '')
+    
+    # Validate inputs
+    if not all([token, name, password]):
+        return jsonify({'error': 'Tüm alanları doldurunuz'}), 400
+    
+    if len(password) < 8:
+        return jsonify({'error': 'Parola en az 8 karakter olmalıdır'}), 400
+    
+    try:
+        # Hash password
+        password_hash = AuthManager.hash_password(password)
+        
+        # Use TeamService to accept invitation
+        user = TeamService.accept_invitation(token, name, password_hash)
+        
+        # Create session for new user
+        from flask import session as flask_session
+        flask_session.permanent = True
+        session_token = secrets.token_urlsafe(32)
+        session['user_id'] = user.id
+        session['workspace_id'] = user.workspace_id
+        session['user_name'] = user.name
+        session['user_email'] = user.email
+        session['user_role'] = user.role
+        session['session_token'] = session_token
+        
+        # Record session activity
+        timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
+        try:
+            SecurityService.record_session_activity(
+                workspace_id=user.workspace_id,
+                user_id=user.id,
+                session_token=session_token,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', ''),
+                timeout_minutes=timeout_minutes,
+            )
+        except Exception as exc:
+            logger.error(f'Session activity write failed for new user {user.id}: {str(exc)}')
+        
+        # Log audit event
+        try:
+            AuditService.log_event(
+                user.workspace_id, 
+                user.id, 
+                'team.invitation_accepted', 
+                'user', 
+                entity_id=user.id
+            )
+        except Exception as exc:
+            logger.error(f'Audit log failed for invitation acceptance: {str(exc)}')
+        
+        logger.info(f"User {user.id} accepted invitation and created account")
+        
+        return jsonify({'status': 'ok', 'redirect': '/'}), 200
+        
+    except ValueError as e:
+        # Business logic errors from TeamService
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.exception(f'Unexpected error during invitation acceptance: {str(e)}')
+        db.session.rollback()
+        return jsonify({'error': 'Davet kabul edilirken bir hata oluştu'}), 500

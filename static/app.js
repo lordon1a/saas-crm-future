@@ -1027,6 +1027,7 @@ function initRealtimeSocket() {
     socketClient.off('new_message');
     socketClient.off('new_incoming_message');
     socketClient.off('inbox_updated');
+    socketClient.off('assignment_updated');
 
     socketClient.on('new_message', (data) => {
         console.log('WebSocket event received:', data);
@@ -1039,6 +1040,10 @@ function initRealtimeSocket() {
     socketClient.on('inbox_updated', (data) => {
         console.log('WebSocket event received:', data);
         handleInboxUpdatedEvent(data);
+    });
+    socketClient.on('assignment_updated', (data) => {
+        console.log('Assignment updated event received:', data);
+        handleAssignmentUpdated(data);
     });
     socketClient.on('disconnect', (reason) => {
         console.warn('WebSocket disconnected', reason || 'unknown');
@@ -1132,6 +1137,33 @@ function handleInboxUpdatedEvent(payload) {
         triggerUnreadSignal();
     }
 }
+
+function handleAssignmentUpdated(payload) {
+    console.log('Assignment updated event received:', payload);
+    
+    if (!payload) return;
+    
+    const incomingConversationId = Number(payload.conversation_id || 0);
+    const activeConversationId = Number(currentConversationId || 0);
+    
+    // If this is the currently active conversation, update the selector
+    if (incomingConversationId && incomingConversationId === activeConversationId) {
+        if (conversationAssignmentSelector) {
+            conversationAssignmentSelector.setValue(payload.assignee_id || null);
+        }
+        
+        // Show toast notification
+        if (payload.assigned_by_name && payload.assignee_name) {
+            showToast(`${payload.assigned_by_name} bu görüşmeyi ${payload.assignee_name}'e atadı`, 'info');
+        } else if (payload.assigned_by_name) {
+            showToast(`${payload.assigned_by_name} atamasını kaldırdı`, 'info');
+        }
+    }
+    
+    // Refresh conversation list to show updated assignment
+    scheduleConversationsRefresh(500);
+}
+
 
 async function sendMessage() {
     const input = document.getElementById('messageInput');
@@ -1652,17 +1684,63 @@ async function loadUserInfo() {
     } catch {}
 }
 
+// Global team member selector instance
+let conversationAssignmentSelector = null;
+
 async function loadTeamForDropdown(currentId) {
-    try {
-        const res = await fetch('/api/team');
-        const users = await res.json();
-        const sel = document.getElementById('assigneeSelect');
-        if (!sel) return;
-        sel.innerHTML = '<option value="">Temsilci Ata...</option>';
-        users.forEach(u => {
-            sel.innerHTML += `<option value="${u.id}" ${u.id === currentId ? 'selected' : ''}>${u.name}</option>`;
+    // Initialize TeamMemberSelector for conversation assignment
+    if (!conversationAssignmentSelector) {
+        conversationAssignmentSelector = new TeamMemberSelector('conversation-assignment-selector', {
+            includeUnassigned: true,
+            selectedValue: currentId,
+            placeholder: 'Atama yapın'
         });
-    } catch {}
+        
+        await conversationAssignmentSelector.init();
+        
+        // Handle assignment changes
+        document.getElementById('conversation-assignment-selector').addEventListener('memberSelected', async (e) => {
+            const memberId = e.detail.memberId;
+            
+            if (!currentConversationId) {
+                console.error('No conversation selected');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/conversation/${currentConversationId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assignee_id: memberId })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast('Atama başarıyla güncellendi', 'success');
+                    
+                    // Send Socket.IO notification
+                    if (socket && socket.connected && memberId) {
+                        socket.emit('assignment_notification', {
+                            conversation_id: currentConversationId,
+                            assignee_id: memberId,
+                            entity_type: 'conversation'
+                        });
+                    }
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'Atama güncellenemedi', 'error');
+                    conversationAssignmentSelector.setValue(currentId); // Revert on error
+                }
+            } catch (error) {
+                console.error('Error updating assignment:', error);
+                showToast('Atama güncellenirken hata oluştu', 'error');
+                conversationAssignmentSelector.setValue(currentId); // Revert on error
+            }
+        });
+    } else {
+        // Update existing selector with new value
+        conversationAssignmentSelector.setValue(currentId);
+    }
 }
 
 window.openConversation = (id) => selectConversation(id, '', '', '');
@@ -1746,3 +1824,203 @@ document.addEventListener('click', function(e) {
     // Intentionally avoid forcing socket cleanup on click.
     // Actual navigation is already handled by beforeunload/pagehide.
 });
+
+
+// ============================================
+// FILTER UTILITIES (Advanced Filtering System)
+// ============================================
+
+/**
+ * Debounce function - delays execution until after wait milliseconds
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Milliseconds to wait
+ * @returns {Function} Debounced function
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+/**
+ * Serialize filter configuration to JSON string
+ * @param {Object} filters - Filter configuration object
+ * @returns {string} JSON string
+ */
+function serializeFilters(filters) {
+    try {
+        return JSON.stringify(filters);
+    } catch (e) {
+        console.error('Error serializing filters:', e);
+        return '{}';
+    }
+}
+
+/**
+ * Deserialize filter configuration from JSON string
+ * @param {string} filtersJson - JSON string
+ * @returns {Object} Filter configuration object
+ */
+function deserializeFilters(filtersJson) {
+    try {
+        return JSON.parse(filtersJson);
+    } catch (e) {
+        console.error('Error deserializing filters:', e);
+        return { filters: [], logic: 'AND' };
+    }
+}
+
+/**
+ * Validate filter parameters for XSS prevention
+ * @param {Object} filters - Filter configuration object
+ * @returns {boolean} True if valid, false otherwise
+ */
+function validateFilterParams(filters) {
+    if (!filters || typeof filters !== 'object') {
+        return false;
+    }
+    
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+        /<script/i,
+        /javascript:/i,
+        /on\w+\s*=/i,
+        /<iframe/i,
+        /eval\(/i
+    ];
+    
+    const filterStr = JSON.stringify(filters);
+    
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(filterStr)) {
+            console.warn('Suspicious pattern detected in filters');
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+/**
+ * Format operator label for display
+ * @param {string} operator - Operator key
+ * @returns {string} Formatted label
+ */
+function formatOperatorLabel(operator) {
+    const labels = {
+        'equals': 'Equals',
+        'not_equals': 'Not Equals',
+        'contains': 'Contains',
+        'not_contains': 'Does Not Contain',
+        'starts_with': 'Starts With',
+        'ends_with': 'Ends With',
+        'greater_than': 'Greater Than',
+        'less_than': 'Less Than',
+        'between': 'Between',
+        'in': 'In',
+        'not_in': 'Not In',
+        'is_null': 'Is Empty',
+        'is_not_null': 'Is Not Empty'
+    };
+    return labels[operator] || operator;
+}
+
+/**
+ * Format field label for display
+ * @param {string} field - Field name
+ * @param {string} entityType - 'contact' or 'company'
+ * @returns {string} Formatted label
+ */
+function formatFieldLabel(field, entityType) {
+    const contactFields = {
+        'first_name': 'First Name',
+        'last_name': 'Last Name',
+        'email': 'Email',
+        'phone': 'Phone',
+        'role': 'Role',
+        'lead_score': 'Lead Score',
+        'is_starred': 'Starred',
+        'job_title': 'Job Title',
+        'created_at': 'Created Date',
+        'updated_at': 'Updated Date'
+    };
+    
+    const companyFields = {
+        'name': 'Company Name',
+        'industry': 'Industry',
+        'size': 'Size',
+        'website': 'Website',
+        'phone': 'Phone',
+        'created_at': 'Created Date',
+        'updated_at': 'Updated Date'
+    };
+    
+    const fields = entityType === 'contact' ? contactFields : companyFields;
+    return fields[field] || field;
+}
+
+/**
+ * Build URL with filter parameters
+ * @param {Object} filters - Filter configuration
+ * @param {Object} options - Additional options (page, per_page, sort_by, sort_order)
+ * @returns {string} URL with query parameters
+ */
+function buildFilterUrl(filters, options = {}) {
+    const params = new URLSearchParams();
+    
+    if (filters && Object.keys(filters).length > 0) {
+        params.append('filters', serializeFilters(filters));
+    }
+    
+    if (options.quick_filter) {
+        params.append('quick_filter', options.quick_filter);
+    }
+    
+    if (options.search) {
+        params.append('search', options.search);
+    }
+    
+    params.append('page', options.page || 1);
+    params.append('per_page', options.per_page || 50);
+    
+    if (options.sort_by) {
+        params.append('sort_by', options.sort_by);
+    }
+    
+    if (options.sort_order) {
+        params.append('sort_order', options.sort_order);
+    }
+    
+    return params.toString();
+}
+
+/**
+ * Parse filter parameters from URL
+ * @returns {Object} Parsed filter configuration and options
+ */
+function parseFilterUrl() {
+    const params = new URLSearchParams(window.location.search);
+    
+    const result = {
+        filters: null,
+        quick_filter: params.get('quick_filter'),
+        search: params.get('search'),
+        page: parseInt(params.get('page')) || 1,
+        per_page: parseInt(params.get('per_page')) || 50,
+        sort_by: params.get('sort_by'),
+        sort_order: params.get('sort_order')
+    };
+    
+    const filtersParam = params.get('filters');
+    if (filtersParam) {
+        result.filters = deserializeFilters(filtersParam);
+    }
+    
+    return result;
+}

@@ -144,12 +144,26 @@ class Company(db.Model):
     deleted_at = db.Column(db.DateTime, nullable=True)
     display_order = db.Column(db.Integer, default=0, nullable=False, index=True)
     
+    # Team member assignment
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    
     # Relationships
+    assignee = db.relationship('User', foreign_keys=[assigned_to], backref='assigned_companies')
     contacts = db.relationship('Contact', backref='company', lazy=True, 
                               foreign_keys='Contact.company_id')
     deals = db.relationship('Deal', backref='company', lazy=True, cascade='all, delete-orphan')
     subsidiaries = db.relationship('Company', backref=db.backref('parent_company', remote_side=[id]), 
                                   lazy=True)
+    
+    # Performance indexes for filtering
+    __table_args__ = (
+        db.Index('idx_company_workspace_deleted', 'workspace_id', 'is_deleted'),
+        db.Index('idx_company_industry', 'industry'),
+        db.Index('idx_company_size', 'size'),
+        db.Index('idx_company_created_at', 'created_at'),
+        db.Index('idx_company_updated_at', 'updated_at'),
+        db.Index('idx_company_parent', 'parent_company_id'),
+    )
     
     def __repr__(self):
         return f'<Company {self.name}>'
@@ -184,8 +198,21 @@ class Contact(db.Model):
     # Link to existing Customer for WhatsApp conversations
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     
+    # Team member assignment
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    
     # Relationships
+    assignee = db.relationship('User', foreign_keys=[assigned_to], backref='assigned_contacts')
     activities = db.relationship('Activity', backref='contact', lazy=True, cascade='all, delete-orphan', foreign_keys='Activity.contact_id')
+    
+    # Performance indexes for filtering
+    __table_args__ = (
+        db.Index('idx_contact_workspace_deleted', 'workspace_id', 'is_deleted'),
+        db.Index('idx_contact_role', 'role'),
+        db.Index('idx_contact_lead_score', 'lead_score'),
+        db.Index('idx_contact_created_at', 'created_at'),
+        db.Index('idx_contact_updated_at', 'updated_at'),
+    )
     
     def __repr__(self):
         return f'<Contact {self.first_name} {self.last_name}>'
@@ -1391,3 +1418,86 @@ class DriveAttachment(db.Model):
     
     def __repr__(self):
         return f'<DriveAttachment {self.file_name} -> {self.entity_type}:{self.entity_id}>'
+
+
+# ============================================================================
+# ADVANCED FILTERING SYSTEM
+# ============================================================================
+
+class SavedFilter(db.Model):
+    """
+    User-saved filter configurations for quick reuse.
+    Supports both simple filters and complex user-defined filters.
+    """
+    __tablename__ = 'saved_filters'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    entity_type = db.Column(db.String(20), nullable=False, index=True)  # 'contact' or 'company'
+    filter_config = db.Column(db.Text, nullable=False)  # JSON: filter criteria
+    is_shared = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.Index('idx_saved_filter_workspace_user_entity', 'workspace_id', 'user_id', 'entity_type'),
+    )
+    
+    def __repr__(self):
+        return f'<SavedFilter {self.name} ({self.entity_type})>'
+
+
+class UserDefinedFilter(db.Model):
+    """
+    Advanced user-created filters with complex logic (AND/OR, nested groups).
+    Extends SavedFilter with additional metadata for filter builder.
+    """
+    __tablename__ = 'user_defined_filters'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    entity_type = db.Column(db.String(20), nullable=False, index=True)  # 'contact' or 'company'
+    filter_config = db.Column(db.Text, nullable=False)  # JSON: complex filter structure
+    is_shared = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_by_name = db.Column(db.String(100))  # Denormalized for display
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.Index('idx_user_defined_filter_workspace_entity', 'workspace_id', 'entity_type'),
+        db.Index('idx_user_defined_filter_shared', 'workspace_id', 'is_shared'),
+    )
+    
+    def __repr__(self):
+        return f'<UserDefinedFilter {self.name} ({self.entity_type})>'
+
+
+class FilterExecutionLog(db.Model):
+    """
+    Audit log for filter operations (security and performance monitoring).
+    """
+    __tablename__ = 'filter_execution_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    entity_type = db.Column(db.String(20), nullable=False, index=True)
+    filter_config = db.Column(db.Text)  # JSON: applied filters
+    result_count = db.Column(db.Integer)
+    execution_time_ms = db.Column(db.Integer)  # Query execution time
+    is_slow_query = db.Column(db.Boolean, default=False, index=True)  # >1000ms
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    __table_args__ = (
+        db.Index('idx_filter_log_workspace_created', 'workspace_id', 'created_at'),
+        db.Index('idx_filter_log_slow_queries', 'is_slow_query', 'created_at'),
+    )
+    
+    def __repr__(self):
+        return f'<FilterExecutionLog {self.entity_type} - {self.result_count} results in {self.execution_time_ms}ms>'

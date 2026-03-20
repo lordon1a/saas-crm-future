@@ -28,8 +28,34 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), default='agent', nullable=False)
+    role = db.Column(db.String(20), default='owner', nullable=False)  # owner, admin, member, viewer
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_login = db.Column(db.DateTime, nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     messages = db.relationship('Message', backref='sender', lazy=True)
+
+class TeamInvitation(db.Model):
+    __tablename__ = 'team_invitations'
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    inviter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    invitee_email = db.Column(db.String(120), nullable=False, index=True)
+    role = db.Column(db.String(20), nullable=False)  # admin, member, viewer
+    token = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    status = db.Column(db.String(20), default='pending', nullable=False, index=True)  # pending, accepted, expired, cancelled
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    accepted_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    inviter = db.relationship('User', foreign_keys=[inviter_id], backref='sent_invitations')
+    workspace = db.relationship('Workspace', backref='team_invitations')
+    
+    # Unique constraint: one pending invitation per email per workspace
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'invitee_email', 'status', name='uix_workspace_email_pending'),
+    )
 
 class Customer(db.Model):
     __tablename__ = 'customers'

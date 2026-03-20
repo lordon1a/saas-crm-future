@@ -369,6 +369,10 @@
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Durum</p>
                             <p class="text-sm text-slate-700">Açık</p>
                         </div>
+                        <div class="col-span-2">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Atanan</p>
+                            <div id="deal-assignment-selector"></div>
+                        </div>
                     </div>
                     <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
                         <div class="flex items-center justify-between mb-2">
@@ -1077,6 +1081,43 @@
             loadDealCustomFields(dealId);
             loadDealQuickBooksInvoice(dealId);
             loadDealFollowStatus(dealId);
+            
+            // Initialize team member selector for deal assignment
+            setTimeout(async () => {
+                const selector = new TeamMemberSelector('deal-assignment-selector', {
+                    includeUnassigned: true,
+                    selectedValue: deal.owner_id,
+                    placeholder: 'Atama yapın'
+                });
+                
+                await selector.init();
+                
+                // Handle assignment changes
+                document.getElementById('deal-assignment-selector').addEventListener('memberSelected', async (e) => {
+                    const memberId = e.detail.memberId;
+                    
+                    try {
+                        const response = await fetch(`/api/assignments/deal/${deal.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ assigned_to: memberId })
+                        });
+                        
+                        if (response.ok) {
+                            showToast('Atama başarıyla güncellendi', 'success');
+                            deal.owner_id = memberId;
+                        } else {
+                            const data = await response.json();
+                            showToast(data.error || 'Atama güncellenemedi', 'error');
+                            selector.setValue(deal.owner_id);
+                        }
+                    } catch (error) {
+                        console.error('Error updating assignment:', error);
+                        showToast('Bağlantı hatası', 'error');
+                        selector.setValue(deal.owner_id);
+                    }
+                });
+            }, 100);
         }
 
         async function loadDealFollowStatus(dealId) {
@@ -2552,6 +2593,7 @@
     <script src="/static/topbar-global.js"></script>
     <script src="/static/pipeline-enhancements.js"></script>
     <script src="/static/pipeline-analytics.js"></script>
+    <script src="/static/team-selector.js"></script>
 </body>
 </html>
 
