@@ -87,6 +87,7 @@ def list_members():
                 'id': invitation.id,
                 'invitee_email': invitation.invitee_email,
                 'role': invitation.role,
+                'token': invitation.token,
                 'status': invitation.status,
                 'expires_at': invitation.expires_at.isoformat() if invitation.expires_at else None,
                 'created_at': invitation.created_at.isoformat() if invitation.created_at else None,

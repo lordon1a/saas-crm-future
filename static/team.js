@@ -125,6 +125,7 @@ function renderInvitations(invitations) {
 
         // Generate invitation link
         const invitationLink = `${window.location.origin}/accept-invitation/${inv.token}`;
+        const inviterName = inv.inviter ? inv.inviter.name : 'Bilinmiyor';
 
         return `
             <tr class="hover:bg-gray-50">
@@ -132,7 +133,7 @@ function renderInvitations(invitations) {
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="text-xs font-medium px-3 py-1 rounded-full ${roleColors[inv.role]}">${inv.role.charAt(0).toUpperCase() + inv.role.slice(1)}</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(inv.inviter_name)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(inviterName)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${expiresAt}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                     <button onclick="copyInvitationLink('${invitationLink}')" class="text-brand-600 hover:text-brand-800 font-medium" title="Davet linkini kopyala">
