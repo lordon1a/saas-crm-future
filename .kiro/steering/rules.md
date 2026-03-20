@@ -81,3 +81,12 @@ Kontrol listesi — her model değişikliğinde sor:
 - ❌ Worker sayısını -w 1'den fazla yapma
 - ❌ Start command'ı Procfile yerine Dashboard'dan değiştirmeyi unutma
 - ❌ **models.py'e kolon ekleyip migrate etmeden commit yapmak — ASLA YAPMA**
+- ❌ **Model değişikliğinde app.py'deki run_migrations() fonksiyonunu güncellemeyi unutmak — PRODUCTION ÇÖKER!**
+
+## RENDER FREE TIER ÖZEL KURAL
+**Her model değişikliğinde 3 YER güncelle:**
+1. Model dosyası (models_crm.py)
+2. Migration script (migrations/add_*.py)
+3. **app.py → run_migrations() fonksiyonu** ← UNUTMA!
+
+Render Free Tier'da shell yok, sadece startup migration çalışır!
