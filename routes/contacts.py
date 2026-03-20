@@ -3014,3 +3014,331 @@ def export_companies_filtered():
     except Exception as e:
         logger.error(f"Error in export_companies_filtered: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
+# LEAD MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/qualify', methods=['POST'])
+@login_required
+def qualify_lead(contact_id):
+    """
+    Qualify a lead (move from 'lead' to 'qualified_lead' stage)
+    """
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        from models_crm import Contact
+        from models import db
+        
+        # Get contact
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # Check if already qualified
+        if contact.lifecycle_stage != 'lead':
+            return jsonify({'error': f'Contact is already in {contact.lifecycle_stage} stage'}), 400
+        
+        try:
+            # Update lifecycle stage
+            contact.lifecycle_stage = 'qualified_lead'
+            contact.qualified_at = datetime.utcnow()
+            contact.updated_at = datetime.utcnow()
+            
+            # Log activity
+            from models_crm import Activity
+            activity = Activity(
+                workspace_id=workspace_id,
+                activity_type='system',
+                contact_id=contact_id,
+                company_id=contact.company_id,
+                user_id=user_id,
+                subject='Lead Qualified',
+                body=f'{contact.full_name} was qualified as a lead',
+                created_at=datetime.utcnow()
+            )
+            db.session.add(activity)
+            
+            db.session.commit()
+            
+            logger.info(f"Lead {contact_id} qualified by user {user_id}")
+            
+            return jsonify({
+                'status': 'ok',
+                'message': 'Lead qualified successfully',
+                'contact': {
+                    'id': contact.id,
+                    'lifecycle_stage': contact.lifecycle_stage,
+                    'qualified_at': contact.qualified_at.isoformat() if contact.qualified_at else None
+                }
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to qualify lead {contact_id}: {str(e)}")
+            return jsonify({'error': 'Failed to qualify lead'}), 500
+            
+    except Exception as e:
+        logger.exception(f"Error qualifying lead {contact_id}: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/convert', methods=['POST'])
+@login_required
+def convert_to_customer(contact_id):
+    """
+    Convert a qualified lead to customer
+    """
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        from models_crm import Contact
+        from models import db
+        
+        # Get contact
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # Check if can be converted
+        if contact.lifecycle_stage not in ['lead', 'qualified_lead']:
+            return jsonify({'error': f'Contact is already in {contact.lifecycle_stage} stage'}), 400
+        
+        try:
+            # Update lifecycle stage
+            old_stage = contact.lifecycle_stage
+            contact.lifecycle_stage = 'customer'
+            contact.converted_at = datetime.utcnow()
+            contact.updated_at = datetime.utcnow()
+            
+            # If not qualified yet, mark as qualified too
+            if not contact.qualified_at:
+                contact.qualified_at = datetime.utcnow()
+            
+            # Log activity
+            from models_crm import Activity
+            activity = Activity(
+                workspace_id=workspace_id,
+                activity_type='system',
+                contact_id=contact_id,
+                company_id=contact.company_id,
+                user_id=user_id,
+                subject='Lead Converted to Customer',
+                body=f'{contact.full_name} was converted from {old_stage} to customer',
+                created_at=datetime.utcnow()
+            )
+            db.session.add(activity)
+            
+            db.session.commit()
+            
+            logger.info(f"Lead {contact_id} converted to customer by user {user_id}")
+            
+            return jsonify({
+                'status': 'ok',
+                'message': 'Lead converted to customer successfully',
+                'contact': {
+                    'id': contact.id,
+                    'lifecycle_stage': contact.lifecycle_stage,
+                    'qualified_at': contact.qualified_at.isoformat() if contact.qualified_at else None,
+                    'converted_at': contact.converted_at.isoformat() if contact.converted_at else None
+                }
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to convert lead {contact_id}: {str(e)}")
+            return jsonify({'error': 'Failed to convert lead'}), 500
+            
+    except Exception as e:
+        logger.exception(f"Error converting lead {contact_id}: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/lifecycle-stage', methods=['PATCH'])
+@login_required
+def update_lifecycle_stage(contact_id):
+    """
+    Update contact lifecycle stage manually
+    """
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        new_stage = data.get('lifecycle_stage')
+        if not new_stage:
+            return jsonify({'error': 'lifecycle_stage is required'}), 400
+        
+        # Validate stage
+        valid_stages = ['lead', 'qualified_lead', 'customer', 'evangelist']
+        if new_stage not in valid_stages:
+            return jsonify({'error': f'Invalid lifecycle_stage. Must be one of: {", ".join(valid_stages)}'}), 400
+        
+        from models_crm import Contact
+        from models import db
+        
+        # Get contact
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        try:
+            old_stage = contact.lifecycle_stage
+            contact.lifecycle_stage = new_stage
+            contact.updated_at = datetime.utcnow()
+            
+            # Update timestamps based on stage
+            if new_stage in ['qualified_lead', 'customer', 'evangelist'] and not contact.qualified_at:
+                contact.qualified_at = datetime.utcnow()
+            
+            if new_stage in ['customer', 'evangelist'] and not contact.converted_at:
+                contact.converted_at = datetime.utcnow()
+            
+            # Log activity
+            from models_crm import Activity
+            activity = Activity(
+                workspace_id=workspace_id,
+                activity_type='system',
+                contact_id=contact_id,
+                company_id=contact.company_id,
+                user_id=user_id,
+                subject='Lifecycle Stage Updated',
+                body=f'{contact.full_name} moved from {old_stage} to {new_stage}',
+                created_at=datetime.utcnow()
+            )
+            db.session.add(activity)
+            
+            db.session.commit()
+            
+            logger.info(f"Contact {contact_id} lifecycle stage updated from {old_stage} to {new_stage} by user {user_id}")
+            
+            return jsonify({
+                'status': 'ok',
+                'message': 'Lifecycle stage updated successfully',
+                'contact': {
+                    'id': contact.id,
+                    'lifecycle_stage': contact.lifecycle_stage,
+                    'qualified_at': contact.qualified_at.isoformat() if contact.qualified_at else None,
+                    'converted_at': contact.converted_at.isoformat() if contact.converted_at else None
+                }
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to update lifecycle stage for contact {contact_id}: {str(e)}")
+            return jsonify({'error': 'Failed to update lifecycle stage'}), 500
+            
+    except Exception as e:
+        logger.exception(f"Error updating lifecycle stage for contact {contact_id}: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@contacts_bp.route('/api/v1/leads/stats', methods=['GET'])
+@login_required
+def get_lead_stats():
+    """
+    Get lead statistics (counts by stage, source, etc.)
+    """
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        from models_crm import Contact
+        from models import db
+        from sqlalchemy import func
+        
+        # Get counts by lifecycle stage
+        stage_counts = db.session.query(
+            Contact.lifecycle_stage,
+            func.count(Contact.id).label('count')
+        ).filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False
+        ).group_by(Contact.lifecycle_stage).all()
+        
+        # Get counts by lead source
+        source_counts = db.session.query(
+            Contact.lead_source,
+            func.count(Contact.id).label('count')
+        ).filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+            Contact.lead_source.isnot(None)
+        ).group_by(Contact.lead_source).all()
+        
+        # Get conversion metrics
+        total_leads = Contact.query.filter_by(
+            workspace_id=workspace_id,
+            is_deleted=False
+        ).count()
+        
+        qualified_leads = Contact.query.filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+            Contact.lifecycle_stage.in_(['qualified_lead', 'customer', 'evangelist'])
+        ).count()
+        
+        customers = Contact.query.filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+            Contact.lifecycle_stage.in_(['customer', 'evangelist'])
+        ).count()
+        
+        # Calculate conversion rates
+        qualification_rate = (qualified_leads / total_leads * 100) if total_leads > 0 else 0
+        conversion_rate = (customers / total_leads * 100) if total_leads > 0 else 0
+        
+        return jsonify({
+            'status': 'ok',
+            'stats': {
+                'by_stage': {stage: count for stage, count in stage_counts},
+                'by_source': {source: count for source, count in source_counts if source},
+                'totals': {
+                    'total_contacts': total_leads,
+                    'qualified_leads': qualified_leads,
+                    'customers': customers
+                },
+                'conversion_rates': {
+                    'qualification_rate': round(qualification_rate, 2),
+                    'conversion_rate': round(conversion_rate, 2)
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.exception(f"Error getting lead stats: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500

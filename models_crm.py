@@ -188,6 +188,13 @@ class Contact(db.Model):
     role = db.Column(db.String(100))  # Decision Maker, Influencer, Champion, Blocker, End User
     job_title = db.Column(db.String(100))
     lead_score = db.Column(db.Integer, default=0)
+    
+    # Lead Management Fields
+    lead_source = db.Column(db.String(100), index=True)  # web, referral, cold_call, email_campaign, social_media, event, partner, other
+    lifecycle_stage = db.Column(db.String(50), default='lead', nullable=False, index=True)  # lead, qualified_lead, customer, evangelist
+    qualified_at = db.Column(db.DateTime, nullable=True)  # When lead was qualified
+    converted_at = db.Column(db.DateTime, nullable=True)  # When lead became customer
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
@@ -210,6 +217,8 @@ class Contact(db.Model):
         db.Index('idx_contact_workspace_deleted', 'workspace_id', 'is_deleted'),
         db.Index('idx_contact_role', 'role'),
         db.Index('idx_contact_lead_score', 'lead_score'),
+        db.Index('idx_contact_lead_source', 'lead_source'),
+        db.Index('idx_contact_lifecycle_stage', 'lifecycle_stage'),
         db.Index('idx_contact_created_at', 'created_at'),
         db.Index('idx_contact_updated_at', 'updated_at'),
     )
@@ -223,6 +232,18 @@ class Contact(db.Model):
         if self.last_name:
             return f'{self.first_name} {self.last_name}'
         return self.first_name
+    
+    def is_lead(self):
+        """Check if contact is still a lead"""
+        return self.lifecycle_stage == 'lead'
+    
+    def is_qualified(self):
+        """Check if lead is qualified"""
+        return self.lifecycle_stage in ['qualified_lead', 'customer', 'evangelist']
+    
+    def is_customer(self):
+        """Check if contact is a customer"""
+        return self.lifecycle_stage in ['customer', 'evangelist']
 
 
 # ============================================================================
