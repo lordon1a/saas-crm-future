@@ -555,6 +555,79 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added assigned_to column to contacts")
             
+            # === LEAD MANAGEMENT MIGRATIONS ===
+            # Check if lead_source column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='lead_source'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add lead_source column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN lead_source VARCHAR(100)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_contact_lead_source 
+                    ON contacts(lead_source)
+                """)
+                conn.commit()
+                logger.info("✓ Added lead_source column to contacts")
+            
+            # Check if lifecycle_stage column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='lifecycle_stage'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add lifecycle_stage column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN lifecycle_stage VARCHAR(50) DEFAULT 'lead' NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_contact_lifecycle_stage 
+                    ON contacts(lifecycle_stage)
+                """)
+                conn.commit()
+                logger.info("✓ Added lifecycle_stage column to contacts")
+            
+            # Check if qualified_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='qualified_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add qualified_at column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN qualified_at TIMESTAMP
+                """)
+                conn.commit()
+                logger.info("✓ Added qualified_at column to contacts")
+            
+            # Check if converted_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='converted_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add converted_at column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN converted_at TIMESTAMP
+                """)
+                conn.commit()
+                logger.info("✓ Added converted_at column to contacts")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
