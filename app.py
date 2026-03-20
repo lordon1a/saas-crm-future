@@ -147,7 +147,6 @@ from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
 from routes.import_wizard import import_bp
 from routes.pipeline_settings import pipeline_settings_bp
-from routes.filters import filters_bp
 from services import portal_notification_service  # noqa: F401
 from services.security_service import SecurityService
 from utils.exceptions import (
@@ -554,7 +553,6 @@ app.register_blueprint(scheduled_messages_bp)
 app.register_blueprint(documents_bp)
 app.register_blueprint(email_hub_bp)
 app.register_blueprint(import_bp)
-app.register_blueprint(filters_bp)
 app.register_blueprint(team_route.bp)
 app.register_blueprint(assignments_route.bp)
 from routes.super_admin import bp as super_admin_bp

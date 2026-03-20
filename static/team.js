@@ -123,6 +123,9 @@ function renderInvitations(invitations) {
             viewer: 'bg-gray-100 text-gray-800'
         };
 
+        // Generate invitation link
+        const invitationLink = `${window.location.origin}/accept-invitation/${inv.token}`;
+
         return `
             <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(inv.invitee_email)}</td>
@@ -131,7 +134,10 @@ function renderInvitations(invitations) {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(inv.inviter_name)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${expiresAt}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
+                    <button onclick="copyInvitationLink('${invitationLink}')" class="text-brand-600 hover:text-brand-800 font-medium" title="Davet linkini kopyala">
+                        <i class="fas fa-link mr-1"></i> Linki Kopyala
+                    </button>
                     <button onclick="cancelInvitation(${inv.id}, '${escapeHtml(inv.invitee_email)}')" class="text-red-600 hover:text-red-800 font-medium">
                         <i class="fas fa-times mr-1"></i> İptal Et
                     </button>
@@ -309,4 +315,27 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Copy invitation link to clipboard
+async function copyInvitationLink(link) {
+    try {
+        await navigator.clipboard.writeText(link);
+        showToast('Davet linki kopyalandı! Artık bu linki paylaşabilirsiniz.', 'success');
+    } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = link;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast('Davet linki kopyalandı!', 'success');
+        } catch (err) {
+            showToast('Link kopyalanamadı. Lütfen manuel olarak kopyalayın: ' + link, 'error');
+        }
+        document.body.removeChild(textArea);
+    }
 }

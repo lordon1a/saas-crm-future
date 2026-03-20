@@ -430,9 +430,11 @@ class TeamService:
                 logger.error(f"Cannot send invitation email: workspace or inviter not found")
                 return
             
-            # Build invitation URL (assuming app is deployed)
-            # TODO: Get base URL from config
-            invitation_url = f"https://your-app-url.com/accept-invitation?token={invitation.token}"
+            # Build invitation URL
+            # Use request context to get base URL
+            from flask import request
+            base_url = request.url_root.rstrip('/')
+            invitation_url = f"{base_url}/accept-invitation/{invitation.token}"
             
             # Email subject
             subject = f"You're invited to join {workspace.company_name} on WhatsApp CRM"
