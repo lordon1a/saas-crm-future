@@ -345,3 +345,128 @@ def accept_invitation():
         logger.exception(f'Unexpected error during invitation acceptance: {str(e)}')
         db.session.rollback()
         return jsonify({'error': 'Davet kabul edilirken bir hata oluştu'}), 500
+
+@bp.route('/forgot-password', methods=['GET'])
+def forgot_password_page():
+    """Display forgot password form"""
+    if session.get('user_id'):
+        return redirect(url_for('index'))
+    return render_template('forgot_password.html')
+
+@bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Process forgot password request and send reset email"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    email = data.get('email', '').strip().lower()
+    
+    if not email:
+        return jsonify({'error': 'Email adresi gereklidir'}), 400
+    
+    try:
+        # Create reset token (returns None if user not found, but we don't reveal that)
+        token = AuthManager.create_password_reset_token(email, request.remote_addr)
+        
+        # Always return success to prevent email enumeration attacks
+        # If user exists, send email; if not, just pretend we did
+        if token:
+            from models import User
+            user = User.query.filter_by(email=email).first()
+            if user:
+                from services.email_hub_service import EmailHubService
+                EmailHubService.send_password_reset_email(
+                    user_email=user.email,
+                    user_name=user.name,
+                    reset_token=token
+                )
+        
+        # Log audit event (only if user exists)
+        if token:
+            user = User.query.filter_by(email=email).first()
+            if user:
+                try:
+                    AuditService.log_event(
+                        user.workspace_id,
+                        user.id,
+                        'auth.password_reset_requested',
+                        'user',
+                        entity_id=user.id
+                    )
+                except Exception as exc:
+                    logger.error(f'Audit log failed for password reset request: {str(exc)}')
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Eğer bu email adresi kayıtlıysa, şifre sıfırlama linki gönderildi.'
+        }), 200
+        
+    except Exception as e:
+        logger.exception(f'Unexpected error during forgot password: {str(e)}')
+        db.session.rollback()
+        return jsonify({'error': 'Bir hata oluştu, lütfen tekrar deneyin'}), 500
+
+@bp.route('/reset-password', methods=['GET'])
+def reset_password_page():
+    """Display reset password form"""
+    if session.get('user_id'):
+        return redirect(url_for('index'))
+    
+    token = request.args.get('token', '').strip()
+    if not token:
+        return render_template('reset_password.html', error='Geçersiz sıfırlama linki')
+    
+    # Verify token
+    user = AuthManager.verify_reset_token(token)
+    if not user:
+        return render_template('reset_password.html', error='Bu link geçersiz veya süresi dolmuş')
+    
+    return render_template('reset_password.html', token=token, user=user)
+
+@bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """Process password reset with token"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    token = data.get('token', '').strip()
+    new_password = data.get('password', '')
+    
+    if not token or not new_password:
+        return jsonify({'error': 'Token ve yeni şifre gereklidir'}), 400
+    
+    if len(new_password) < 8:
+        return jsonify({'error': 'Şifre en az 8 karakter olmalıdır'}), 400
+    
+    try:
+        # Verify token and get user before resetting
+        user = AuthManager.verify_reset_token(token)
+        if not user:
+            return jsonify({'error': 'Bu link geçersiz veya süresi dolmuş'}), 400
+        
+        # Reset password
+        success = AuthManager.reset_password_with_token(token, new_password)
+        
+        if not success:
+            return jsonify({'error': 'Şifre sıfırlama başarısız oldu'}), 400
+        
+        # Log audit event
+        try:
+            AuditService.log_event(
+                user.workspace_id,
+                user.id,
+                'auth.password_reset_completed',
+                'user',
+                entity_id=user.id
+            )
+        except Exception as exc:
+            logger.error(f'Audit log failed for password reset completion: {str(exc)}')
+        
+        logger.info(f"User {user.id} successfully reset password")
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Şifreniz başarıyla değiştirildi. Giriş yapabilirsiniz.',
+            'redirect': '/login'
+        }), 200
+        
+    except Exception as e:
+        logger.exception(f'Unexpected error during password reset: {str(e)}')
+        db.session.rollback()
+        return jsonify({'error': 'Bir hata oluştu, lütfen tekrar deneyin'}), 500

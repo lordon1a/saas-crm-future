@@ -722,3 +722,147 @@ You're receiving this because you were assigned to this {entity_type}.
             'limit': limit,
             'offset': offset,
         }
+
+
+    @staticmethod
+    def send_password_reset_email(user_email, user_name, reset_token):
+        """
+        Send password reset email with secure token link.
+        Handles SMTP not configured gracefully - logs instead of failing.
+        """
+        try:
+            # Check if SMTP is configured
+            if not Config.SMTP_HOST or not Config.SMTP_FROM_EMAIL:
+                logger.info(
+                    'SMTP not configured. Password reset email not sent. '
+                    'email=%s token=%s',
+                    user_email, reset_token[:10] + '...'
+                )
+                return None
+
+            # Build reset link
+            base_url = Config.APP_BASE_URL
+            reset_link = f"{base_url}/reset-password?token={reset_token}"
+            
+            # HTML email template
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #EF4444; padding: 30px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                                Password Reset Request
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                Hi {user_name},
+                            </p>
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                We received a request to reset your password. Click the button below to create a new password:
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{reset_link}" style="display: inline-block; padding: 14px 40px; background-color: #EF4444; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold;">
+                                            Reset Password
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 30px 0 10px; font-size: 14px; line-height: 1.5; color: #666666;">
+                                Or copy and paste this link into your browser:
+                            </p>
+                            <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #EF4444; word-break: break-all;">
+                                {reset_link}
+                            </p>
+                            
+                            <div style="margin: 30px 0; padding: 20px; background-color: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 4px;">
+                                <p style="margin: 0 0 10px; font-size: 14px; line-height: 1.5; color: #991B1B; font-weight: bold;">
+                                    Security Notice:
+                                </p>
+                                <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #991B1B;">
+                                    This link will expire in 1 hour for security reasons.
+                                </p>
+                            </div>
+                            
+                            <p style="margin: 20px 0 0; font-size: 14px; line-height: 1.5; color: #666666;">
+                                If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; font-size: 12px; color: #999999;">
+                                For security reasons, never share this link with anyone.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+            
+            # Plain text fallback
+            text_body = f"""
+Password Reset Request
+
+Hi {user_name},
+
+We received a request to reset your password. Click the link below to create a new password:
+
+{reset_link}
+
+This link will expire in 1 hour for security reasons.
+
+If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+
+For security reasons, never share this link with anyone.
+            """
+            
+            subject = "Password Reset Request"
+            
+            provider = EmailHubService._provider()
+            message_id = provider.send(
+                to_email=user_email,
+                subject=subject,
+                body_text=text_body.strip(),
+                body_html=html_body
+            )
+            
+            logger.info(
+                'Password reset email sent successfully. email=%s message_id=%s',
+                user_email, message_id
+            )
+            return message_id
+            
+        except Exception as exc:
+            # Log error but don't fail - graceful degradation
+            logger.error(
+                'Failed to send password reset email. email=%s error=%s',
+                user_email, str(exc)
+            )
+            return None
