@@ -414,6 +414,97 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Created impersonate_logs table")
             
+            # === USERS TABLE MIGRATIONS (Team Member System) ===
+            # Check if is_active column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='is_active'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add is_active column to users...")
+                cur.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN is_active BOOLEAN DEFAULT TRUE NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added is_active column to users")
+            
+            # Check if created_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='created_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add created_at column to users...")
+                cur.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN created_at TIMESTAMP DEFAULT NOW()
+                """)
+                conn.commit()
+                logger.info("✓ Added created_at column to users")
+            
+            # Check if last_login column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='last_login'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add last_login column to users...")
+                cur.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN last_login TIMESTAMP DEFAULT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added last_login column to users")
+            
+            # Check if deleted_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='deleted_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add deleted_at column to users...")
+                cur.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added deleted_at column to users")
+            
+            # === TEAM_INVITATIONS TABLE ===
+            # Check if team_invitations table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='team_invitations'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create team_invitations table...")
+                cur.execute("""
+                    CREATE TABLE team_invitations (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                        email VARCHAR(255) NOT NULL,
+                        role VARCHAR(50) NOT NULL DEFAULT 'member',
+                        token VARCHAR(255) NOT NULL UNIQUE,
+                        invited_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        invited_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        expires_at TIMESTAMP NOT NULL,
+                        status VARCHAR(50) NOT NULL DEFAULT 'pending'
+                    )
+                """)
+                conn.commit()
+                logger.info("✓ Created team_invitations table")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
