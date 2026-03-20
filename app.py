@@ -539,6 +539,22 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added assigned_to column to customers")
             
+            # Check if assigned_to column exists in contacts table
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='assigned_to'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add assigned_to column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added assigned_to column to contacts")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
