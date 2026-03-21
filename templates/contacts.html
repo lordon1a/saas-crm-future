@@ -272,6 +272,127 @@
             background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             flex-shrink: 0;
         }
+
+        /* Advanced Filter Button */
+        .filter-button {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .filter-button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .animate-scale-in {
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        /* Filter dropdown */
+        .filter-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 280px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .filter-dropdown.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* Filter badge pulse */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .filter-badge-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Pulse badge animation */
+        @keyframes pulse-badge {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+        }
+
+        .animate-pulse-badge {
+            animation: pulse-badge 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
@@ -401,7 +522,45 @@
             <div class="flex items-center justify-between gap-4">
                 <!-- Left Controls -->
                 <div class="flex items-center gap-3">
-                    <!-- Role Filter -->
+                    <!-- Advanced Filter Button -->
+                    <div id="advancedFilterContainer"></div>
+                    
+                    <!-- Divider -->
+                    <div class="h-6 w-px bg-slate-300"></div>
+                    
+                    <!-- Quick Filter Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="applyQuickContactFilter('starred')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-yellow-400 hover:text-yellow-600 hover:bg-yellow-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-star text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Yıldızlı
+                        </button>
+                        <button onclick="applyQuickContactFilter('high_score')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-chart-line text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Yüksek Skor
+                        </button>
+                        <button onclick="applyQuickContactFilter('recent')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-clock text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Son Eklenenler
+                        </button>
+                        <button onclick="applyQuickContactFilter('no_company')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-building text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Şirketsiz
+                        </button>
+                        <button onclick="clearAllContactFilters()" id="clearFiltersBtn"
+                                class="hidden px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-100 hover:border-red-300 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5 animate-fade-in">
+                            <i class="fas fa-times text-xs transition-transform duration-200 group-hover:rotate-90"></i>
+                            Filtreleri Temizle
+                        </button>
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div class="h-6 w-px bg-slate-300"></div>
+                    
+                    <!-- Quick Role Filter -->
                     <select id="roleFilter" class="quick-action">
                         <option value="">Tüm Roller</option>
                         <option value="Decision Maker">Decision Maker</option>
@@ -410,11 +569,6 @@
                         <option value="Blocker">Blocker</option>
                         <option value="User">User</option>
                     </select>
-
-                    <!-- Add Filter -->
-                    <button id="openFilterPanelBtn" class="header-icon-btn" title="Hızlı Filtre Ekle">
-                        <i class="fas fa-plus text-sm"></i>
-                    </button>
                 </div>
 
                 <!-- Right: Search & Stats -->
@@ -442,16 +596,6 @@
                             class="w-56 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Filter Panel Container -->
-        <div id="filter-panel-container"></div>
-
-        <!-- Filter Chips Container -->
-        <div id="filter-chips-container" class="bg-white border-b border-slate-200 px-6 py-2 flex-shrink-0 hidden">
-            <div class="flex items-center gap-2 flex-wrap">
-                <!-- Filter chips will be rendered here by FilterSystem -->
             </div>
         </div>
 
@@ -1909,12 +2053,9 @@
                 if (role) url += `&role=${encodeURIComponent(role)}`;
                 if (companyIdFilter) url += `&company_id=${companyIdFilter}`;
                 
-                // Add filter system filters if available
-                if (window.contactFilterSystem && window.contactFilterSystem.getActiveFilters) {
-                    const filters = window.contactFilterSystem.getActiveFilters();
-                    if (filters && filters.length > 0) {
-                        url += `&filters=${encodeURIComponent(JSON.stringify(filters))}`;
-                    }
+                // Add advanced filter if available
+                if (window.activeContactFilters) {
+                    url += `&filters=${encodeURIComponent(JSON.stringify(window.activeContactFilters))}`;
                 }
                 
                 const res = await fetch(url);
@@ -3682,6 +3823,12 @@
             await loadColumnWidths();
             await loadCompanies();
             await loadContacts();
+            
+            // Initialize advanced filter system
+            if (typeof AdvancedFilter !== 'undefined') {
+                window.advancedFilter = new AdvancedFilter('contact', 'advancedFilterContainer');
+                advancedFilter.init();
+            }
         })();
 
         // Drag-and-drop reordering functionality
@@ -3759,25 +3906,140 @@
         }
     </script>
     <script src="/static/topbar-global.js"></script>
-    <script src="/static/filter-system.js"></script>
+    
+    <script src="/static/advanced-filter.js"></script>
     <script src="/static/contacts-pagination.js"></script>
     <script>
-        // Initialize filter system
+        // Initialize advanced filter system
+        let advancedFilter;
+        
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof FilterSystem !== 'undefined') {
-                window.contactFilterSystem = new FilterSystem('contact', 'filter-panel-container');
-                window.contactFilterSystem.init();
-                
-                // Connect filter system to contacts reload
-                window.contactFilterSystem.onFilterChange = (filters) => {
-                    console.log('Filters changed:', filters);
-                    // Reload contacts with new filters
-                    if (typeof loadContacts === 'function') {
-                        loadContacts();
-                    }
-                };
+            if (typeof AdvancedFilter !== 'undefined') {
+                advancedFilter = new AdvancedFilter('contact', 'advancedFilterContainer');
+                advancedFilter.init();
+                window.advancedFilter = advancedFilter;
             }
         });
+        
+        // Helper function to load contacts with filters
+        window.loadWithFilters = async function(filterQuery) {
+            window.activeContactFilters = filterQuery;
+            await loadContacts();
+        };
+        
+        // Quick filter button handler
+        window.applyQuickContactFilter = async function(filterId) {
+            try {
+                // Show loading state
+                const loading = document.getElementById('loadingState');
+                if (loading) {
+                    loading.classList.remove('hidden');
+                }
+                
+                const quickFilters = {
+                    'starred': {
+                        filters: [
+                            { field: 'is_starred', operator: 'equals', value: true }
+                        ]
+                    },
+                    'high_score': {
+                        filters: [
+                            { field: 'lead_score', operator: 'greater_than_or_equal', value: 80 }
+                        ]
+                    },
+                    'recent': {
+                        filters: [
+                            { field: 'created_at', operator: 'greater_than', 
+                              value: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+                        ]
+                    },
+                    'no_company': {
+                        filters: [
+                            { field: 'company_id', operator: 'is_null', value: null }
+                        ]
+                    }
+                };
+                
+                const filterConfig = quickFilters[filterId];
+                if (!filterConfig) {
+                    showToast('Geçersiz filtre', 'error');
+                    return;
+                }
+                
+                // Set active filters
+                window.activeContactFilters = filterConfig;
+                window.currentPage = 1; // Reset to first page
+                
+                // Load contacts with filter
+                await loadContacts();
+                
+                // Update advanced filter UI if available
+                if (advancedFilter) {
+                    advancedFilter.activeFilters = filterConfig.filters;
+                    advancedFilter.updateFilterBadge();
+                    advancedFilter.renderActiveFilterChips();
+                }
+                
+                // Show success message
+                const filterNames = {
+                    'starred': 'Yıldızlı kişiler',
+                    'high_score': 'Yüksek skor',
+                    'recent': 'Son 7 gün',
+                    'no_company': 'Şirketsiz kişiler'
+                };
+                showToast(`${filterNames[filterId]} filtresi uygulandı`, 'success');
+                
+                // Show clear button with animation
+                const clearBtn = document.getElementById('clearFiltersBtn');
+                if (clearBtn && clearBtn.classList.contains('hidden')) {
+                    clearBtn.classList.remove('hidden');
+                    // Trigger reflow for animation
+                    void clearBtn.offsetWidth;
+                    clearBtn.style.animation = 'fade-in 0.3s ease-out';
+                }
+                
+            } catch (error) {
+                console.error('Quick filter error:', error);
+                showToast('Filtre uygulanırken hata oluştu', 'error');
+            } finally {
+                const loading = document.getElementById('loadingState');
+                if (loading) {
+                    loading.classList.add('hidden');
+                }
+            }
+        };
+        
+        // Clear all filters function
+        window.clearAllContactFilters = async function() {
+            try {
+                // Clear active filters
+                window.activeContactFilters = null;
+                window.currentPage = 1;
+                
+                // Reload contacts without filters
+                await loadContacts();
+                
+                // Update advanced filter UI
+                if (advancedFilter) {
+                    advancedFilter.activeFilters = [];
+                    advancedFilter.filterGroups = [];
+                    advancedFilter.updateFilterBadge();
+                    advancedFilter.renderActiveFilterChips();
+                }
+                
+                // Hide clear button
+                const clearBtn = document.getElementById('clearFiltersBtn');
+                if (clearBtn) {
+                    clearBtn.classList.add('hidden');
+                }
+                
+                showToast('Tüm filtreler temizlendi', 'success');
+                
+            } catch (error) {
+                console.error('Clear filters error:', error);
+                showToast('Filtreler temizlenirken hata oluştu', 'error');
+            }
+        };
     </script>
 </body>
 </html>

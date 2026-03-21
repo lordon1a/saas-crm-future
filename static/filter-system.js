@@ -101,31 +101,44 @@ class FilterSystem {
             this.renderFilterBuilder();
         });
         
-        document.getElementById('filterBuilderModal').classList.remove('hidden');
-        document.getElementById('filterBuilderModal').classList.add('flex');
+        const modalEl = document.getElementById('filterBuilderModal');
+        const contentEl = document.getElementById('filterModalContent');
+        
+        modalEl.classList.remove('hidden');
+        modalEl.classList.add('flex');
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            contentEl.style.transform = 'scale(1)';
+            contentEl.style.opacity = '1';
+        });
     }
 
     createFilterBuilderModal() {
         const modalHTML = `
-            <div id="filterBuilderModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div id="filterBuilderModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 items-center justify-center p-4 animate-fade-in">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transform transition-all duration-300 ease-out scale-95 opacity-0" id="filterModalContent">
                     <!-- Header -->
-                    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-white to-gray-50">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-800">Gelişmiş Filtreler</h3>
-                            <p class="text-sm text-gray-500 mt-1">Kişileri detaylı kriterlere göre filtreleyin</p>
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <i class="fas fa-filter text-brand-600"></i>
+                                Gelişmiş Filtreler
+                            </h3>
+                            <p class="text-sm text-gray-500 mt-0.5">Kişileri detaylı kriterlere göre filtreleyin</p>
                         </div>
-                        <button onclick="filterSystem.closeFilterBuilder()" class="w-10 h-10 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex items-center justify-center">
-                            <i class="fas fa-times"></i>
+                        <button onclick="filterSystem.closeFilterBuilder()" class="w-9 h-9 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 flex items-center justify-center hover:rotate-90">
+                            <i class="fas fa-times text-sm"></i>
                         </button>
                     </div>
 
                     <!-- Saved Filters Tabs -->
-                    <div class="px-6 py-3 border-b border-gray-200 flex items-center gap-2 overflow-x-auto flex-shrink-0">
-                        <button onclick="filterSystem.newFilter()" class="px-3 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 rounded-lg transition-all flex items-center gap-1">
-                            <i class="fas fa-plus text-xs"></i> Yeni Filtre
+                    <div class="px-6 py-3 border-b border-gray-100 flex items-center gap-2 overflow-x-auto flex-shrink-0 bg-gray-50/50">
+                        <button onclick="filterSystem.newFilter()" class="px-3 py-2 text-xs font-semibold text-brand-600 hover:bg-brand-50 hover:text-brand-700 rounded-lg transition-all duration-200 flex items-center gap-1.5 border border-transparent hover:border-brand-200 hover:shadow-sm">
+                            <i class="fas fa-plus text-xs"></i> 
+                            <span>Yeni Filtre</span>
                         </button>
-                        <div class="h-4 w-px bg-gray-300"></div>
+                        <div class="h-5 w-px bg-gray-300"></div>
                         <div id="savedFilterTabs" class="flex items-center gap-2">
                             <!-- Saved filters will be rendered here -->
                         </div>
@@ -139,22 +152,24 @@ class FilterSystem {
                     </div>
 
                     <!-- Footer -->
-                    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
+                    <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/30">
                         <div class="flex items-center gap-2">
-                            <button onclick="filterSystem.saveCurrentFilter()" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-all flex items-center gap-2">
-                                <i class="fas fa-save"></i> Filtreyi Kaydet
+                            <button onclick="filterSystem.saveCurrentFilter()" class="px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-white border border-gray-200 hover:border-gray-300 rounded-lg transition-all duration-200 flex items-center gap-2 hover:shadow-sm">
+                                <i class="fas fa-bookmark text-xs"></i> 
+                                <span>Kaydet</span>
                             </button>
-                            <button onclick="filterSystem.clearAllFilters()" class="px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                                Temizle
+                            <button onclick="filterSystem.clearAllFilters()" class="px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-all duration-200 hover:shadow-sm">
+                                <i class="fas fa-eraser text-xs"></i>
+                                <span>Temizle</span>
                             </button>
                         </div>
                         <div class="flex gap-3">
-                            <button onclick="filterSystem.closeFilterBuilder()" class="px-6 py-2.5 bg-gray-100 text-gray-600 font-semibold rounded-lg hover:bg-gray-200 transition-all">
+                            <button onclick="filterSystem.closeFilterBuilder()" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">
                                 İptal
                             </button>
-                            <button onclick="filterSystem.applyFilters()" class="px-6 py-2.5 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition-all shadow-md flex items-center gap-2">
-                                <i class="fas fa-filter"></i>
-                                <span id="filterApplyBtnText">Filtrele</span>
+                            <button onclick="filterSystem.applyFilters()" class="px-6 py-2.5 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 hover:scale-105 active:scale-100">
+                                <i class="fas fa-check text-sm"></i>
+                                <span id="filterApplyBtnText">Uygula</span>
                             </button>
                         </div>
                     </div>
@@ -189,20 +204,23 @@ class FilterSystem {
         const isFirst = groupIndex === 0;
         
         let html = `
-            <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in">
                 ${!isFirst ? `
-                    <div class="flex items-center justify-between mb-3">
-                        <select onchange="filterSystem.updateGroupLogic(${groupIndex}, this.value)" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700">
-                            <option value="AND" ${filterGroup.logic === 'AND' ? 'selected' : ''}>VE</option>
-                            <option value="OR" ${filterGroup.logic === 'OR' ? 'selected' : ''}>VEYA</option>
-                        </select>
-                        <button onclick="filterSystem.removeFilterGroup(${groupIndex})" class="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Mantık</span>
+                            <select onchange="filterSystem.updateGroupLogic(${groupIndex}, this.value)" class="px-3 py-2 bg-gradient-to-b from-white to-gray-50 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200">
+                                <option value="AND" ${filterGroup.logic === 'AND' ? 'selected' : ''}>VE (AND)</option>
+                                <option value="OR" ${filterGroup.logic === 'OR' ? 'selected' : ''}>VEYA (OR)</option>
+                            </select>
+                        </div>
+                        <button onclick="filterSystem.removeFilterGroup(${groupIndex})" class="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95">
                             <i class="fas fa-trash text-sm"></i>
                         </button>
                     </div>
                 ` : ''}
                 
-                <div class="space-y-2">
+                <div class="space-y-3">
         `;
 
         filterGroup.conditions.forEach((condition, condIndex) => {
@@ -212,8 +230,9 @@ class FilterSystem {
         html += `
                 </div>
                 
-                <button onclick="filterSystem.addCondition(${groupIndex})" class="mt-3 px-3 py-1.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 rounded-lg transition-all flex items-center gap-1">
-                    <i class="fas fa-plus text-xs"></i> Koşul Ekle
+                <button onclick="filterSystem.addCondition(${groupIndex})" class="mt-4 px-4 py-2 text-sm font-semibold text-brand-600 hover:bg-brand-50 hover:text-brand-700 rounded-lg transition-all duration-200 flex items-center gap-2 border border-dashed border-brand-300 hover:border-brand-500 w-full justify-center hover:shadow-sm">
+                    <i class="fas fa-plus text-xs"></i> 
+                    <span>Koşul Ekle</span>
                 </button>
             </div>
         `;
@@ -226,10 +245,10 @@ class FilterSystem {
         const operators = this.operators[field.type] || this.operators.text;
         
         return `
-            <div class="flex items-center gap-2 bg-white p-3 rounded-lg border border-gray-200">
+            <div class="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:border-brand-300 transition-all duration-200 hover:shadow-sm group">
                 <!-- Field Select -->
                 <select onchange="filterSystem.updateConditionField(${groupIndex}, ${condIndex}, this.value)" 
-                        class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                        class="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200 cursor-pointer">
                     ${this.fields.map(f => `
                         <option value="${f.id}" ${f.id === condition.field ? 'selected' : ''}>${f.label}</option>
                     `).join('')}
@@ -237,7 +256,7 @@ class FilterSystem {
 
                 <!-- Operator Select -->
                 <select onchange="filterSystem.updateConditionOperator(${groupIndex}, ${condIndex}, this.value)"
-                        class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                        class="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200 cursor-pointer">
                     ${operators.map(op => `
                         <option value="${op.value}" ${op.value === condition.operator ? 'selected' : ''}>${op.label}</option>
                     `).join('')}
@@ -248,7 +267,7 @@ class FilterSystem {
 
                 <!-- Remove Button -->
                 <button onclick="filterSystem.removeCondition(${groupIndex}, ${condIndex})" 
-                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                        class="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100">
                     <i class="fas fa-times text-sm"></i>
                 </button>
             </div>
@@ -276,7 +295,7 @@ class FilterSystem {
             
             return `
                 <select id="${inputId}" onchange="filterSystem.updateConditionValue(${groupIndex}, ${condIndex}, this.value)"
-                        class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                        class="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200 cursor-pointer">
                     <option value="">Seçiniz</option>
                     ${field.id === 'is_starred' 
                         ? options.map(opt => `
@@ -292,21 +311,21 @@ class FilterSystem {
             return `
                 <input type="number" id="${inputId}" value="${condition.value || ''}"
                        onchange="filterSystem.updateConditionValue(${groupIndex}, ${condIndex}, this.value)"
-                       placeholder="Değer"
-                       class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                       placeholder="Değer girin"
+                       class="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200">
             `;
         } else if (field.type === 'date') {
             return `
                 <input type="date" id="${inputId}" value="${condition.value || ''}"
                        onchange="filterSystem.updateConditionValue(${groupIndex}, ${condIndex}, this.value)"
-                       class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                       class="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200">
             `;
         } else {
             return `
                 <input type="text" id="${inputId}" value="${condition.value || ''}"
                        onchange="filterSystem.updateConditionValue(${groupIndex}, ${condIndex}, this.value)"
-                       placeholder="Değer"
-                       class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                       placeholder="Değer girin"
+                       class="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200">
             `;
         }
     }
@@ -521,9 +540,17 @@ class FilterSystem {
 
     closeFilterBuilder() {
         const modal = document.getElementById('filterBuilderModal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+        const contentEl = document.getElementById('filterModalContent');
+        
+        if (modal && contentEl) {
+            // Animate out
+            contentEl.style.transform = 'scale(0.95)';
+            contentEl.style.opacity = '0';
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
         }
     }
 
@@ -581,11 +608,12 @@ class FilterSystem {
 
         container.innerHTML = this.savedFilters.map(filter => `
             <button onclick="filterSystem.loadSavedFilter(${filter.id})" 
-                    class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    class="px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
                         this.activeFilterId === filter.id 
-                            ? 'bg-brand-600 text-white' 
-                            : 'text-gray-600 hover:bg-gray-100'
+                            ? 'bg-brand-600 text-white shadow-md' 
+                            : 'text-gray-600 hover:bg-white hover:text-gray-800 border border-gray-200 hover:border-gray-300 hover:shadow-sm'
                     }">
+                <i class="fas fa-bookmark text-xs mr-1"></i>
                 ${filter.name}
             </button>
         `).join('');

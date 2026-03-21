@@ -474,33 +474,39 @@
             <div class="flex items-center justify-between gap-4">
                 <!-- Left Controls -->
                 <div class="flex items-center gap-3">
-                    <!-- View Dropdown -->
-                    <div class="relative" id="viewDropdown">
-                        <button onclick="toggleViewDropdown()" class="quick-action">
-                            <i class="fas fa-layer-group text-slate-500"></i>
-                            <span id="currentViewLabel">Tüm Şirketler</span>
-                            <i class="fas fa-chevron-down text-xs text-slate-400 ml-1"></i>
+                    <!-- Advanced Filter Button -->
+                    <div id="advancedFilterContainer"></div>
+                    
+                    <!-- Divider -->
+                    <div class="h-6 w-px bg-slate-300"></div>
+                    
+                    <!-- Quick Filter Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="applyQuickCompanyFilter('recent')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-clock text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Son Eklenenler
                         </button>
-                        <div class="dropdown-menu" id="viewDropdownMenu">
-                            <div class="dropdown-item" onclick="setView('all')">
-                                <i class="fas fa-list text-slate-400"></i>
-                                Tüm Şirketler
-                            </div>
-                            <div class="dropdown-item" onclick="setView('top')">
-                                <i class="fas fa-star text-yellow-500"></i>
-                                En İyi Şirketler
-                            </div>
-                            <div class="dropdown-item" onclick="setView('recent')">
-                                <i class="fas fa-clock text-slate-400"></i>
-                                Son Eklenenler
-                            </div>
-                            <div class="dropdown-item" onclick="setView('favorites')">
-                                <i class="fas fa-heart text-red-400"></i>
-                                Favorilerim
-                            </div>
-                        </div>
+                        <button onclick="applyQuickCompanyFilter('large')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-green-400 hover:text-green-600 hover:bg-green-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-building text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Büyük Şirketler
+                        </button>
+                        <button onclick="applyQuickCompanyFilter('no_parent')" 
+                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5">
+                            <i class="fas fa-sitemap text-xs transition-transform duration-200 group-hover:scale-110"></i>
+                            Ana Şirketsiz
+                        </button>
+                        <button onclick="clearAllCompanyFilters()" id="clearCompanyFiltersBtn"
+                                class="hidden px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-100 hover:border-red-300 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out flex items-center gap-1.5 animate-fade-in">
+                            <i class="fas fa-times text-xs transition-transform duration-200 group-hover:rotate-90"></i>
+                            Filtreleri Temizle
+                        </button>
                     </div>
-
+                    
+                    <!-- Divider -->
+                    <div class="h-6 w-px bg-slate-300"></div>
+                    
                     <!-- Sorted By -->
                     <button class="quick-action" id="sortBtn" onclick="toggleSortDropdown()">
                         <i class="fas fa-sort-amount-down text-slate-500"></i>
@@ -511,17 +517,17 @@
                     <div class="relative" id="assigneeDropdown">
                         <button onclick="toggleAssigneeDropdown()" class="quick-action">
                             <i class="fas fa-user text-slate-500"></i>
-                            <span id="assigneeFilterLabel">Company owner</span>
+                            <span id="assigneeFilterLabel">Atanan</span>
                             <i class="fas fa-chevron-down text-xs text-slate-400 ml-1"></i>
                         </button>
                         <div class="dropdown-menu" id="assigneeDropdownMenu">
                             <div class="dropdown-item" onclick="applyAssigneeFilter('all')">
                                 <i class="fas fa-users text-slate-400"></i>
-                                All
+                                Tümü
                             </div>
                             <div class="dropdown-item" onclick="applyAssigneeFilter('unassigned')">
                                 <i class="fas fa-user-slash text-slate-400"></i>
-                                Unassigned
+                                Atanmamış
                             </div>
                             <div class="border-t border-slate-100 my-1"></div>
                             <div id="assigneeTeamMembersList">
@@ -529,18 +535,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Advanced Filter -->
-                    <button onclick="openAdvancedFilter()" class="quick-action relative">
-                        <i class="fas fa-filter text-slate-500"></i>
-                        <span>Filtre</span>
-                        <span id="filterBadge" class="filter-badge hidden">0</span>
-                    </button>
-
-                    <!-- Add Filter -->
-                    <button class="header-icon-btn" title="Hızlı Filtre Ekle">
-                        <i class="fas fa-plus text-sm"></i>
-                    </button>
                 </div>
 
                 <!-- Right: Search & Stats -->
@@ -978,19 +972,26 @@
         // Load companies from API
         async function loadCompanies() {
             try {
+                // Build URL with filters
+                let url = '/api/v1/companies?per_page=100';
+                
                 // Get current assignee filter from session
-                let assignedToParam = '';
                 try {
                     const filterResponse = await fetch('/api/v1/user-preferences/companies-assignee-filter');
                     const filterData = await filterResponse.json();
                     if (filterData.assignee_filter && filterData.assignee_filter !== 'all') {
-                        assignedToParam = `&assigned_to=${filterData.assignee_filter}`;
+                        url += `&assigned_to=${filterData.assignee_filter}`;
                     }
                 } catch (e) {
                     // Ignore filter errors
                 }
                 
-                const response = await fetch(`/api/v1/companies?per_page=100${assignedToParam}`);
+                // Add advanced filter if available
+                if (window.activeCompanyFilters) {
+                    url += `&filters=${encodeURIComponent(JSON.stringify(window.activeCompanyFilters))}`;
+                }
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 if (data.companies) {
@@ -1725,7 +1726,133 @@
             initializeDragDrop();
         }, 100);
     </script>
+    <link rel="stylesheet" href="/static/filter-animations.css">
     <script src="/static/topbar-global.js"></script>
     <script src="/static/team-selector.js"></script>
+    <script src="/static/advanced-filter.js"></script>
+    <script>
+        // Initialize advanced filter system for companies
+        let advancedFilter;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof AdvancedFilter !== 'undefined') {
+                advancedFilter = new AdvancedFilter('company', 'advancedFilterContainer');
+                advancedFilter.init();
+                window.advancedFilter = advancedFilter;
+            }
+        });
+        
+        // Helper function to load companies with filters
+        window.loadWithFilters = async function(filterQuery) {
+            window.activeCompanyFilters = filterQuery;
+            await loadCompanies();
+        };
+        
+        // Quick filter button handler
+        window.applyQuickCompanyFilter = async function(filterId) {
+            try {
+                const quickFilters = {
+                    'recent': {
+                        filters: [
+                            { field: 'created_at', operator: 'greater_than',
+                              value: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+                        ]
+                    },
+                    'large': {
+                        filters: [
+                            { field: 'size', operator: 'in', value: ['201-500', '500+'] }
+                        ]
+                    },
+                    'no_parent': {
+                        filters: [
+                            { field: 'parent_company_id', operator: 'is_null', value: null }
+                        ]
+                    }
+                };
+                
+                const filterConfig = quickFilters[filterId];
+                if (!filterConfig) {
+                    console.error('Invalid filter ID:', filterId);
+                    return;
+                }
+                
+                // Set active filters
+                window.activeCompanyFilters = filterConfig;
+                
+                // Load companies with filter
+                await loadCompanies();
+                
+                // Update advanced filter UI if available
+                if (advancedFilter) {
+                    advancedFilter.activeFilters = filterConfig.filters;
+                    advancedFilter.updateFilterBadge();
+                    advancedFilter.renderActiveFilterChips();
+                }
+                
+                // Show toast notification
+                const filterNames = {
+                    'recent': 'Son 7 gün',
+                    'large': 'Büyük şirketler',
+                    'no_parent': 'Ana şirketsiz'
+                };
+                
+                if (typeof showToast === 'function') {
+                    showToast(`${filterNames[filterId]} filtresi uygulandı`, 'success');
+                } else {
+                    console.log(`${filterNames[filterId]} filtresi uygulandı`);
+                }
+                
+                // Show clear button with animation
+                const clearBtn = document.getElementById('clearCompanyFiltersBtn');
+                if (clearBtn && clearBtn.classList.contains('hidden')) {
+                    clearBtn.classList.remove('hidden');
+                    // Trigger reflow for animation
+                    void clearBtn.offsetWidth;
+                    clearBtn.style.animation = 'fade-in 0.3s ease-out';
+                }
+                
+            } catch (error) {
+                console.error('Quick filter error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('Filtre uygulanırken hata oluştu', 'error');
+                }
+            }
+        };
+        
+        // Clear all filters function
+        window.clearAllCompanyFilters = async function() {
+            try {
+                // Clear active filters
+                window.activeCompanyFilters = null;
+                
+                // Reload companies without filters
+                await loadCompanies();
+                
+                // Update advanced filter UI
+                if (advancedFilter) {
+                    advancedFilter.activeFilters = [];
+                    advancedFilter.filterGroups = [];
+                    advancedFilter.updateFilterBadge();
+                    advancedFilter.renderActiveFilterChips();
+                }
+                
+                // Hide clear button
+                const clearBtn = document.getElementById('clearCompanyFiltersBtn');
+                if (clearBtn) {
+                    clearBtn.classList.add('hidden');
+                }
+                
+                if (typeof showToast === 'function') {
+                    showToast('Tüm filtreler temizlendi', 'success');
+                }
+                
+            } catch (error) {
+                console.error('Clear filters error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('Filtreler temizlenirken hata oluştu', 'error');
+                }
+            }
+        };
+    </script>
 </body>
 </html>

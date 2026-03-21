@@ -1,0 +1,289 @@
+/* Advanced Filter Animations */
+
+/* Fade-in animation for clear button */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+}
+
+/* Slide-in animation for filter chips */
+@keyframes slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+}
+
+/* Pulse animation for filter badge */
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.animate-pulse-badge {
+    animation: pulse-badge 0.5s ease-in-out;
+}
+
+/* Smooth modal backdrop */
+#advancedFilterModal {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Slide-in panel animations */
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slide-out-right {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slide-out-left {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+.slide-in-panel {
+    animation: slide-in-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-out-panel {
+    animation: slide-out-left 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Panel shadow for depth */
+.panel-shadow {
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12), -2px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Filter group animations */
+.filter-group-enter {
+    animation: slide-in 0.3s ease-out;
+}
+
+/* Button ripple effect */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.button-ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.button-ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    pointer-events: none;
+}
+
+.button-ripple:active::after {
+    animation: ripple 0.6s ease-out;
+}
+
+/* Smooth transitions for all interactive elements */
+button, select, input {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Filter chip animations */
+.filter-chip {
+    animation: slide-in 0.3s ease-out;
+    transition: all 0.2s ease-out;
+}
+
+.filter-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Skeleton loading animation */
+@keyframes skeleton-loading {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 0px, #f8f8f8 40px, #f0f0f0 80px);
+    background-size: 200px 100%;
+    animation: skeleton-loading 1.2s ease-in-out infinite;
+}
+
+/* Smooth height transitions */
+.transition-height {
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stagger animation for filter groups */
+.filter-group:nth-child(1) { animation-delay: 0s; }
+.filter-group:nth-child(2) { animation-delay: 0.05s; }
+.filter-group:nth-child(3) { animation-delay: 0.1s; }
+.filter-group:nth-child(4) { animation-delay: 0.15s; }
+
+/* Smooth scale animation for modals */
+.modal-scale-enter {
+    animation: modal-scale 0.2s ease-out;
+}
+
+@keyframes modal-scale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Hover glow effect for primary buttons */
+.btn-glow:hover {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+}
+
+/* Smooth border animation */
+@keyframes border-pulse {
+    0%, 100% {
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+    50% {
+        border-color: rgba(99, 102, 241, 0.6);
+    }
+}
+
+.border-pulse {
+    animation: border-pulse 2s ease-in-out infinite;
+}
+
+/* Success checkmark animation */
+@keyframes checkmark {
+    0% {
+        transform: scale(0) rotate(45deg);
+    }
+    50% {
+        transform: scale(1.2) rotate(45deg);
+    }
+    100% {
+        transform: scale(1) rotate(45deg);
+    }
+}
+
+.animate-checkmark {
+    animation: checkmark 0.4s ease-out;
+}
+
+/* Smooth opacity transitions */
+.fade-enter {
+    animation: fade-in 0.2s ease-out;
+}
+
+.fade-exit {
+    animation: fade-in 0.2s ease-in reverse;
+}
+
+/* Icon bounce on hover */
+@keyframes icon-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+.icon-bounce:hover i {
+    animation: icon-bounce 0.5s ease-in-out;
+}
+
+/* Gradient animation for advanced filter button */
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.gradient-animate {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+}
