@@ -837,7 +837,12 @@ def get_contacts():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error getting contacts: {str(e)}", exc_info=True)
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Error getting contacts: {str(e)}\n{error_details}")
+        # Return detailed error in development
+        if app.config.get('DEBUG'):
+            return jsonify({'error': 'Internal Server Error', 'details': str(e), 'traceback': error_details}), 500
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
