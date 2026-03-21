@@ -4,14 +4,25 @@ Endpoints for tracking and analyzing search behavior
 """
 from flask import Blueprint, request, jsonify, session
 from datetime import datetime
+from functools import wraps
 import logging
-
-from utils.auth import login_required
-from services.search_log_service import SearchLogService
 
 logger = logging.getLogger(__name__)
 
 search_bp = Blueprint('search', __name__)
+
+
+def login_required(f):
+    """Decorator to require login"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+from services.search_log_service import SearchLogService
 
 
 @search_bp.route('/api/v1/search/log', methods=['POST'])

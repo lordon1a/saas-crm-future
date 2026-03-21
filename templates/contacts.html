@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Search Logger - Load early -->
+    <script src="{{ url_for('static', filename='search-logger.js') }}"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -4088,8 +4090,5 @@
             }
         };
     </script>
-    
-    <!-- Search Logger -->
-    <script src="{{ url_for('static', filename='search-logger.js') }}"></script>
 </body>
 </html>

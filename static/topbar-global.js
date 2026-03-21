@@ -161,6 +161,8 @@
   async function fetchSearchResults(query) {
     searchState.loading = true;
     renderSearchPanel();
+    
+    const searchStartTime = Date.now();
 
     try {
       var url = "/api/settings/topbar/search?q=" + encodeURIComponent(query || "");
@@ -171,6 +173,18 @@
       searchState.items = data.items || [];
       searchState.mode = data.mode || "search";
       searchState.activeIndex = -1;
+      
+      // Log search if query exists and searchLogger is available
+      if (query && query.trim() && window.searchLogger) {
+        const searchDuration = Date.now() - searchStartTime;
+        window.searchLogger.logSearch(
+          query.trim(),
+          'global',
+          searchState.items.length,
+          null,
+          null
+        );
+      }
     } catch (err) {
       console.error("Topbar arama hatasi:", err);
       searchState.items = [];
