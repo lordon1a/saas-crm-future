@@ -1,4 +1,72 @@
 (function () {
+  // ============================================
+  // SEARCH LOGGER - Tracks user search behavior
+  // ============================================
+  class SearchLogger {
+    constructor() {
+      this.currentLogId = null;
+      this.searchStartTime = null;
+    }
+
+    async logSearch(query, searchType, resultsCount = 0, entityType = null, filters = null) {
+      if (!query || query.trim().length === 0) return;
+
+      const duration = this.searchStartTime 
+        ? Date.now() - this.searchStartTime 
+        : null;
+
+      try {
+        const response = await fetch('/api/v1/search/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            search_query: query.trim(),
+            search_type: searchType,
+            entity_type: entityType,
+            results_count: resultsCount,
+            search_duration_ms: duration,
+            filters_applied: filters ? JSON.stringify(filters) : null
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          this.currentLogId = data.log_id;
+        }
+      } catch (error) {
+        console.debug('Search logging failed:', error);
+      }
+
+      this.searchStartTime = null;
+    }
+
+    startSearch() {
+      this.searchStartTime = Date.now();
+    }
+
+    async logClick(resultId, resultType) {
+      if (!this.currentLogId) return;
+
+      try {
+        await fetch(`/api/v1/search/log/${this.currentLogId}/click`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result_id: resultId, result_type: resultType })
+        });
+      } catch (error) {
+        console.debug('Click logging failed:', error);
+      }
+
+      this.currentLogId = null;
+    }
+  }
+
+  // Initialize global search logger
+  window.searchLogger = new SearchLogger();
+
+  // ============================================
+  // TOPBAR GLOBAL FUNCTIONALITY
+  // ============================================
   var searchState = {
     panel: null,
     list: null,
