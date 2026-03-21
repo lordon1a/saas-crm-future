@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from sqlalchemy import or_, and_
 from models import db
-from models_crm import Company, Contact, CustomField, CustomFieldValue, Activity
+from models_crm import Company, Contact, CustomField, CustomFieldValue, Activity, Tag, ContactTag
 
 logger = logging.getLogger(__name__)
 
@@ -283,11 +283,19 @@ class ContactService:
         # Track changes
         changes = {}
         for field in ['first_name', 'last_name', 'email', 'phone', 'whatsapp_phone', 
-                     'role', 'job_title', 'lead_score', 'company_id']:
+                     'role', 'job_title', 'lead_score', 'company_id',
+                     'lead_source', 'lifecycle_stage']:
             if field in data and getattr(contact, field) != data[field]:
                 old_value = getattr(contact, field)
                 setattr(contact, field, data[field])
                 changes[field] = {'old': old_value, 'new': data[field]}
+        
+        # Handle lifecycle stage transitions
+        if 'lifecycle_stage' in data:
+            if data['lifecycle_stage'] == 'qualified_lead' and not contact.qualified_at:
+                contact.qualified_at = datetime.utcnow()
+            elif data['lifecycle_stage'] == 'customer' and not contact.converted_at:
+                contact.converted_at = datetime.utcnow()
         
         if changes:
             contact.updated_at = datetime.utcnow()
@@ -564,7 +572,7 @@ class ContactService:
     def _create_activity(workspace_id: int, user_id: int, activity_type: str, 
                         subject: str, body: str, contact_id: Optional[int] = None,
                         company_id: Optional[int] = None) -> Activity:
-        """Create an activity record."""
+        """Create an activity record and update contact's last_activity_at."""
         activity = Activity(
             workspace_id=workspace_id,
             contact_id=contact_id,
@@ -575,6 +583,13 @@ class ContactService:
             body=body
         )
         db.session.add(activity)
+        
+        # Update last_activity_at on contact
+        if contact_id:
+            contact = Contact.query.get(contact_id)
+            if contact:
+                contact.last_activity_at = datetime.utcnow()
+        
         return activity
 
     # ============================================================================

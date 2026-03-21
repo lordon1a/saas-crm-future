@@ -532,9 +532,22 @@
                         <i class="fas fa-chevron-down text-xs"></i>
                     </button>
                 </div>
-                <button class="btn-icon-sm" title="Daha fazla seçenek">
-                    <i class="fas fa-ellipsis-h text-xs"></i>
-                </button>
+                <div class="relative" id="more-actions-wrapper">
+                    <button class="btn-icon-sm" title="Daha fazla seçenek" onclick="toggleMoreActions()">
+                        <i class="fas fa-ellipsis-h text-xs"></i>
+                    </button>
+                    <div id="more-actions-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-48 py-1 z-50">
+                        <button onclick="openMergeModal()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                            <i class="fas fa-code-merge text-gray-400 text-xs"></i> Kişi Birleştir
+                        </button>
+                        <button onclick="findContactDuplicates()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                            <i class="fas fa-copy text-gray-400 text-xs"></i> Kopya Bul
+                        </button>
+                    </div>
+                </div>
+                <span id="inactivity-badge" class="hidden px-2 py-0.5 text-[10px] font-semibold rounded-full bg-orange-100 text-orange-700 whitespace-nowrap">
+                    <i class="fas fa-clock text-[9px]"></i> <span id="inactivity-days"></span> gün inaktif
+                </span>
             </div>
         </header>
 
@@ -578,10 +591,25 @@
                         </div>
                     </div>
                     <div id="summary-content" class="sidebar-section-body">
-                        <div class="mb-2">
-                            <a href="#" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                                <i class="fas fa-tag text-[10px]"></i> Etiket ekle
-                            </a>
+                        <!-- Tag Management -->
+                        <div class="mb-2" id="contact-tags-area">
+                            <div class="flex flex-wrap gap-1 mb-1" id="contact-tags-list"></div>
+                            <div class="relative">
+                                <button onclick="toggleTagDropdown()" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                    <i class="fas fa-tag text-[10px]"></i> Etiket ekle
+                                </button>
+                                <div id="tag-dropdown" class="hidden absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-lg shadow-lg w-56 py-1">
+                                    <div class="px-2 py-1.5">
+                                        <input id="tag-search-input" type="text" placeholder="Etiket ara veya oluştur..." class="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400" oninput="filterTagDropdown(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();createTagFromInput();}">
+                                    </div>
+                                    <div id="tag-dropdown-list" class="max-h-36 overflow-y-auto"></div>
+                                    <div id="tag-create-option" class="hidden px-2 py-1.5 border-t border-gray-100">
+                                        <button onclick="createTagFromInput()" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 w-full">
+                                            <i class="fas fa-plus text-[9px]"></i> <span id="tag-create-label">Yeni etiket oluştur</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="sidebar-info-row group">
                             <i class="fas fa-envelope"></i>
@@ -811,6 +839,9 @@
                     <button data-tab="documents" class="tab-btn tab-button" aria-selected="false">
                         <i class="far fa-file-lines"></i> Belgeler
                     </button>
+                    <button data-tab="whatsapp" class="tab-btn tab-button" aria-selected="false">
+                        <i class="fab fa-whatsapp"></i> Mesajlar
+                    </button>
                 </div>
 
                 <!-- Activity Input -->
@@ -972,59 +1003,41 @@
                 
                 <!-- EMAIL TAB -->
                 <div id="email-tab" class="tab-content hidden h-full overflow-y-auto">
-                    <div class="p-6 max-w-4xl">
-                        <div class="text-center py-12">
-                            <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <i class="fas fa-envelope text-blue-600 text-3xl"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3">Daha iyi e-postalarla anlaşmaları daha hızlı kapatın</h3>
-                            <p class="text-sm text-gray-600 mb-6 max-w-2xl mx-auto">Akıllı, güvenilir, yapılandırılabilir <span class="font-semibold">Satış Gelen Kutusu</span>.</p>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-8">
-                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
-                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                                        <i class="fas fa-link text-purple-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 mb-2">Güçlü özellikler</h4>
-                                    <p class="text-sm text-gray-600">E-postaları anlaşmalara ve müşteri adaylarına bağlayın. E-postaları toplu olarak gönderin, açma ve tıklamayı takip edin, şablonları ayarlayın.</p>
+                    <div class="p-5 max-w-3xl mx-auto space-y-4">
+                        <!-- Compose Form -->
+                        <div class="bg-white border border-gray-200 rounded-xl p-5">
+                            <h3 class="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                <i class="fas fa-pen-to-square text-blue-500"></i> E-posta Gönder
+                            </h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Alıcı</label>
+                                    <input id="email-to" type="email" value="{{ contact.email or '' }}" placeholder="ornek@email.com" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
                                 </div>
-                                
-                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
-                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                                        <i class="fas fa-users text-blue-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 mb-2">Gelişmiş araçlar</h4>
-                                    <p class="text-sm text-gray-600">Yapay zeka ile görüşmeleri yazıp özetleyin. Daha iyi iş birliği yapmak için ekip gelen kutusu ekleyin.</p>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Konu</label>
+                                    <input id="email-subject" type="text" placeholder="E-posta konusu" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
                                 </div>
-                                
-                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
-                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                                        <i class="fas fa-users-cog text-green-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 mb-2">Ekip Gelen Kutusu</h4>
-                                    <p class="text-sm text-gray-600">Aynı gelen kutusunda iş birliği yapmak için ekip üyeleri ekleyin. Daha iyi iş birliği için e-posta atayın.</p>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1">Mesaj</label>
+                                    <textarea id="email-body" rows="6" placeholder="E-posta içeriği..." class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"></textarea>
                                 </div>
-                                
-                                <div class="bg-white border border-gray-200 rounded-lg p-6 text-left">
-                                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
-                                        <i class="fas fa-shield-alt text-yellow-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 mb-2">Güvenli ve özel</h4>
-                                    <p class="text-sm text-gray-600">E-postalarınızı kimin görebileceğine karar verin. Verileriniz bizimle güvendedir.</p>
+                                <div class="flex items-center justify-between">
+                                    <span id="email-send-status" class="text-xs text-gray-400"></span>
+                                    <button onclick="sendContactEmail()" id="email-send-btn" class="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
+                                        <i class="fas fa-paper-plane text-xs"></i> Gönder
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <div class="flex items-center justify-center gap-3">
-                                <input type="email" value="{{ contact.email or '' }}" placeholder="yigitguidal@gmail.com" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <button onclick="sendEmail()" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-                                    Başlayın
-                                </button>
-                                <button class="px-4 py-2 text-blue-600 text-sm font-semibold hover:underline">
-                                    Satış Gelen Kutusu Aç <i class="fas fa-arrow-right ml-1"></i>
-                                </button>
+                        </div>
+                        <!-- Sent Emails History -->
+                        <div class="bg-white border border-gray-200 rounded-xl p-5">
+                            <h3 class="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                <i class="fas fa-inbox text-gray-400"></i> Gönderilen E-postalar
+                            </h3>
+                            <div id="email-history-list" class="space-y-2">
+                                <div class="text-xs text-gray-400 text-center py-4">Henüz e-posta gönderilmedi</div>
                             </div>
-                            
-                            <p class="text-xs text-gray-500 mt-4">Premium faturalama planınızda bulunmuyor.</p>
                         </div>
                     </div>
                 </div>
@@ -1211,12 +1224,61 @@
                         <div class="text-sm text-gray-600">Bu bölümde kişiyle ilgili belgeler gösterilecektir.</div>
                     </div>
                 </div>
+
+                <!-- WHATSAPP MESSAGES TAB -->
+                <div id="whatsapp-tab" class="tab-content hidden h-full overflow-y-auto p-5">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
+                                <i class="fab fa-whatsapp text-green-500"></i> Mesaj Geçmişi
+                            </h3>
+                            <span id="wa-msg-count" class="text-xs text-gray-400"></span>
+                        </div>
+                        <div id="whatsapp-messages-list" class="space-y-2">
+                            <div class="text-sm text-gray-400 text-center py-8">
+                                <i class="fab fa-whatsapp text-3xl text-gray-300 mb-2 block"></i>
+                                Yükleniyor...
+                            </div>
+                        </div>
+                        <div class="pt-4 text-center">
+                            <button id="wa-load-more-btn" type="button" onclick="loadMoreWhatsAppMessages()" class="hidden inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
+                                <i class="fas fa-chevron-down mr-2 text-xs"></i> Daha Fazla Yükle
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 
             </div>
         </main>
     </div>
     </div>
     
+    <!-- Merge Contact Modal -->
+    <div id="merge-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900"><i class="fas fa-code-merge mr-2 text-blue-500"></i>Kişi Birleştir</h3>
+                <button onclick="closeMergeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Birleştirmek istediğiniz kişiyi seçin. Seçilen kişinin verileri bu kişiye aktarılacak ve kopya kişi silinecektir.</p>
+                <div id="merge-duplicates-list" class="space-y-2 mb-4">
+                    <div class="text-sm text-gray-400 text-center py-4">Kopya aranıyor...</div>
+                </div>
+                <div id="merge-action-area" class="hidden border-t border-gray-200 pt-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                        <div class="text-xs font-semibold text-blue-700 mb-1">Birleştirme Özeti</div>
+                        <div id="merge-summary" class="text-xs text-blue-600"></div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="closeMergeModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">İptal</button>
+                        <button onclick="executeMerge()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Birleştir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Activity Creation Modal -->
     <div id="activity-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1389,7 +1451,20 @@
                 'address': contact.company.address,
                 'size': contact.company.size
             } if contact.company else None)|tojson }},
-            orgEditMode: 'create'
+            orgEditMode: 'create',
+            // Tags
+            contactTags: [],
+            allTags: [],
+            // WhatsApp messages
+            waMessages: [],
+            waPage: 1,
+            waHasNext: false,
+            waLoading: false,
+            // Merge
+            mergeTargetId: null,
+            // Inactivity
+            lastActivityAt: {{ (contact.last_activity_at.isoformat() if contact.last_activity_at else None)|tojson }},
+            customerId: {{ (contact.customer_id or 0)|int }}
         };
 
         // ============================================================================
@@ -2745,6 +2820,396 @@
         }
 
         // ============================================================================
+        // TAG MANAGEMENT
+        // ============================================================================
+        async function loadTags() {
+            try {
+                const [tagsRes, contactTagsRes] = await Promise.all([
+                    fetch('/api/v1/tags'),
+                    fetch(`/api/v1/contacts/${STATE.contactId}/tags`)
+                ]);
+                if (tagsRes.ok) { const d = await tagsRes.json(); STATE.allTags = d.tags || []; }
+                if (contactTagsRes.ok) { const d = await contactTagsRes.json(); STATE.contactTags = d.tags || []; }
+                renderContactTags();
+            } catch (e) { console.error('Error loading tags:', e); }
+        }
+
+        function renderContactTags() {
+            const container = document.getElementById('contact-tags-list');
+            if (!container) return;
+            if (!STATE.contactTags.length) { container.innerHTML = ''; return; }
+            container.innerHTML = STATE.contactTags.map(t => `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white" style="background:${t.color || '#6366f1'}">
+                    ${t.name}
+                    <button onclick="removeContactTag(${t.id})" class="hover:opacity-70 ml-0.5"><i class="fas fa-times text-[8px]"></i></button>
+                </span>
+            `).join('');
+        }
+
+        function toggleTagDropdown() {
+            const dd = document.getElementById('tag-dropdown');
+            dd.classList.toggle('hidden');
+            if (!dd.classList.contains('hidden')) {
+                document.getElementById('tag-search-input').value = '';
+                renderTagDropdownList('');
+                setTimeout(() => document.getElementById('tag-search-input').focus(), 50);
+            }
+        }
+
+        function filterTagDropdown(val) { renderTagDropdownList(val); }
+
+        function renderTagDropdownList(search) {
+            const list = document.getElementById('tag-dropdown-list');
+            const createOpt = document.getElementById('tag-create-option');
+            const createLabel = document.getElementById('tag-create-label');
+            const contactTagIds = new Set(STATE.contactTags.map(t => t.id));
+            const q = (search || '').trim().toLowerCase();
+
+            let filtered = STATE.allTags;
+            if (q) filtered = filtered.filter(t => t.name.toLowerCase().includes(q));
+
+            list.innerHTML = filtered.map(t => {
+                const assigned = contactTagIds.has(t.id);
+                return `<button onclick="${assigned ? `removeContactTag(${t.id})` : `addTagToContact(${t.id})`}" class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 ${assigned ? 'bg-blue-50' : ''}">
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${t.color || '#6366f1'}"></span>
+                    <span class="flex-1">${t.name}</span>
+                    ${assigned ? '<i class="fas fa-check text-blue-500 text-[10px]"></i>' : ''}
+                </button>`;
+            }).join('');
+
+            const exactMatch = STATE.allTags.some(t => t.name.toLowerCase() === q);
+            if (q && !exactMatch) {
+                createOpt.classList.remove('hidden');
+                createLabel.textContent = `"${search.trim()}" oluştur`;
+            } else {
+                createOpt.classList.add('hidden');
+            }
+        }
+
+        async function addTagToContact(tagId) {
+            try {
+                const res = await fetch(`/api/v1/contacts/${STATE.contactId}/tags`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tag_ids: [tagId] })
+                });
+                if (res.ok) { const d = await res.json(); STATE.contactTags = d.tags || []; renderContactTags(); renderTagDropdownList(document.getElementById('tag-search-input').value); }
+                else showToast('Etiket eklenemedi', 'error');
+            } catch (e) { showToast('Bağlantı hatası', 'error'); }
+        }
+
+        async function removeContactTag(tagId) {
+            try {
+                const res = await fetch(`/api/v1/contacts/${STATE.contactId}/tags/${tagId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    STATE.contactTags = STATE.contactTags.filter(t => t.id !== tagId);
+                    renderContactTags();
+                    renderTagDropdownList(document.getElementById('tag-search-input')?.value || '');
+                } else showToast('Etiket kaldırılamadı', 'error');
+            } catch (e) { showToast('Bağlantı hatası', 'error'); }
+        }
+
+        async function createTagFromInput() {
+            const input = document.getElementById('tag-search-input');
+            const name = (input.value || '').trim();
+            if (!name) return;
+            try {
+                const res = await fetch(`/api/v1/contacts/${STATE.contactId}/tags`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tag_name: name })
+                });
+                if (res.ok) {
+                    const d = await res.json();
+                    STATE.contactTags = d.tags || [];
+                    // Reload all tags to include the new one
+                    const allRes = await fetch('/api/v1/tags');
+                    if (allRes.ok) { const ad = await allRes.json(); STATE.allTags = ad.tags || []; }
+                    renderContactTags();
+                    input.value = '';
+                    renderTagDropdownList('');
+                    showToast('Etiket eklendi', 'success');
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Etiket oluşturulamadı', 'error');
+                }
+            } catch (e) { showToast('Bağlantı hatası', 'error'); }
+        }
+
+        // Close tag dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('tag-dropdown');
+            const area = document.getElementById('contact-tags-area');
+            if (dd && area && !area.contains(e.target)) dd.classList.add('hidden');
+        });
+
+        // ============================================================================
+        // WHATSAPP MESSAGES
+        // ============================================================================
+        async function loadWhatsAppMessages(reset = true) {
+            if (STATE.waLoading) return;
+            STATE.waLoading = true;
+            if (reset) { STATE.waPage = 1; STATE.waMessages = []; }
+
+            try {
+                const res = await fetch(`/api/v1/contacts/${STATE.contactId}/whatsapp-messages?page=${STATE.waPage}&per_page=20`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                STATE.waMessages = reset ? (data.messages || []) : [...STATE.waMessages, ...(data.messages || [])];
+                STATE.waHasNext = data.pagination?.has_next || false;
+                renderWhatsAppMessages();
+                const countEl = document.getElementById('wa-msg-count');
+                if (countEl) countEl.textContent = `${data.pagination?.total || 0} mesaj`;
+            } catch (e) {
+                console.error('WA messages error:', e);
+                document.getElementById('whatsapp-messages-list').innerHTML = '<div class="text-sm text-gray-400 text-center py-8"><i class="fab fa-whatsapp text-3xl text-gray-300 mb-2 block"></i>Mesaj bulunamadı veya bağlantı yok</div>';
+            }
+            STATE.waLoading = false;
+        }
+
+        function loadMoreWhatsAppMessages() {
+            STATE.waPage++;
+            loadWhatsAppMessages(false);
+        }
+
+        function renderWhatsAppMessages() {
+            const container = document.getElementById('whatsapp-messages-list');
+            const loadBtn = document.getElementById('wa-load-more-btn');
+            if (!container) return;
+
+            if (!STATE.waMessages.length) {
+                container.innerHTML = '<div class="text-sm text-gray-400 text-center py-8"><i class="fab fa-whatsapp text-3xl text-gray-300 mb-2 block"></i>Henüz mesaj yok</div>';
+                if (loadBtn) loadBtn.classList.add('hidden');
+                return;
+            }
+
+            container.innerHTML = STATE.waMessages.map(m => {
+                const isOut = m.direction === 'outgoing';
+                const time = m.created_at ? new Date(m.created_at).toLocaleString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+                const mediaHtml = m.media_url ? `<div class="mt-1"><a href="${m.media_url}" target="_blank" class="text-xs text-blue-500 hover:underline"><i class="fas fa-paperclip mr-1"></i>${m.media_type || 'dosya'}</a></div>` : '';
+                return `<div class="flex ${isOut ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[75%] px-3 py-2 rounded-lg text-sm ${isOut ? 'bg-green-100 text-green-900' : 'bg-gray-100 text-gray-800'}">
+                        <div class="text-[10px] font-semibold mb-0.5 ${isOut ? 'text-green-600' : 'text-gray-500'}">${m.sender_name || (isOut ? 'Siz' : 'Kişi')}</div>
+                        <div>${m.body || ''}</div>
+                        ${mediaHtml}
+                        <div class="text-[10px] mt-1 ${isOut ? 'text-green-500' : 'text-gray-400'} text-right">${time}</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (loadBtn) loadBtn.classList.toggle('hidden', !STATE.waHasNext);
+        }
+
+        // ============================================================================
+        // CONTACT MERGE
+        // ============================================================================
+        function toggleMoreActions() {
+            const menu = document.getElementById('more-actions-menu');
+            menu.classList.toggle('hidden');
+        }
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('more-actions-wrapper');
+            const menu = document.getElementById('more-actions-menu');
+            if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.add('hidden');
+        });
+
+        function openMergeModal() {
+            document.getElementById('more-actions-menu').classList.add('hidden');
+            document.getElementById('merge-modal').classList.remove('hidden');
+            findContactDuplicates();
+        }
+        function closeMergeModal() {
+            document.getElementById('merge-modal').classList.add('hidden');
+            STATE.mergeTargetId = null;
+        }
+
+        async function findContactDuplicates() {
+            const listEl = document.getElementById('merge-duplicates-list');
+            const actionArea = document.getElementById('merge-action-area');
+            listEl.innerHTML = '<div class="text-sm text-gray-400 text-center py-4">Kopya aranıyor...</div>';
+            actionArea.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/v1/contacts/duplicates?contact_id=${STATE.contactId}`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                const groups = data.duplicate_groups || [];
+
+                if (!groups.length || !groups[0].duplicates?.length) {
+                    listEl.innerHTML = '<div class="text-sm text-gray-400 text-center py-4"><i class="fas fa-check-circle text-green-400 text-lg mb-1 block"></i>Kopya kişi bulunamadı</div>';
+                    return;
+                }
+
+                const dupes = groups[0].duplicates;
+                listEl.innerHTML = dupes.map(d => `
+                    <button onclick="selectMergeTarget(${d.id}, '${(d.full_name||'').replace(/'/g,"\\'")}', '${d.email||''}', '${d.phone||''}')"
+                        class="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/50 transition-colors merge-dup-btn" data-id="${d.id}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-400 text-white text-xs font-bold flex items-center justify-center">
+                                ${(d.first_name||'?')[0].toUpperCase()}${(d.last_name||'')[0]?.toUpperCase()||''}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-gray-900">${d.full_name || '-'}</div>
+                                <div class="text-xs text-gray-500">${d.email || d.phone || '-'} ${d.company_name ? '· '+d.company_name : ''}</div>
+                            </div>
+                        </div>
+                    </button>
+                `).join('');
+            } catch (e) {
+                listEl.innerHTML = '<div class="text-sm text-red-400 text-center py-4">Kopya arama başarısız</div>';
+            }
+        }
+
+        function selectMergeTarget(id, name, email, phone) {
+            STATE.mergeTargetId = id;
+            document.querySelectorAll('.merge-dup-btn').forEach(b => {
+                b.classList.toggle('border-blue-500', parseInt(b.dataset.id) === id);
+                b.classList.toggle('bg-blue-50', parseInt(b.dataset.id) === id);
+            });
+            const actionArea = document.getElementById('merge-action-area');
+            const summary = document.getElementById('merge-summary');
+            actionArea.classList.remove('hidden');
+            summary.innerHTML = `<strong>${name}</strong> kişisi bu kişiyle birleştirilecek. Eksik bilgiler doldurulacak, aktiviteler ve etiketler aktarılacak.`;
+        }
+
+        async function executeMerge() {
+            if (!STATE.mergeTargetId) return;
+            try {
+                const res = await fetch('/api/v1/contacts/merge', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ primary_id: STATE.contactId, secondary_id: STATE.mergeTargetId })
+                });
+                if (res.ok) {
+                    showToast('Kişiler başarıyla birleştirildi', 'success');
+                    closeMergeModal();
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Birleştirme başarısız', 'error');
+                }
+            } catch (e) { showToast('Bağlantı hatası', 'error'); }
+        }
+
+        // ============================================================================
+        // EMAIL INTEGRATION
+        // ============================================================================
+        async function sendContactEmail() {
+            const toEl = document.getElementById('email-to');
+            const subjectEl = document.getElementById('email-subject');
+            const bodyEl = document.getElementById('email-body');
+            const statusEl = document.getElementById('email-send-status');
+            const btn = document.getElementById('email-send-btn');
+
+            const to = (toEl.value || '').trim();
+            const subject = (subjectEl.value || '').trim();
+            const body = (bodyEl.value || '').trim();
+
+            if (!to) { showToast('Alıcı e-posta adresi gerekli', 'error'); toEl.focus(); return; }
+            if (!subject) { showToast('Konu gerekli', 'error'); subjectEl.focus(); return; }
+            if (!body) { showToast('Mesaj gerekli', 'error'); bodyEl.focus(); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Gönderiliyor...';
+            statusEl.textContent = '';
+
+            try {
+                const res = await fetch('/api/v1/email/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to_email: to,
+                        subject: subject,
+                        body_text: body,
+                        body_html: `<div style="font-family:sans-serif;white-space:pre-wrap;">${body.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`,
+                        contact_id: STATE.contactId
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('E-posta başarıyla gönderildi', 'success');
+                    subjectEl.value = '';
+                    bodyEl.value = '';
+                    statusEl.textContent = 'Gönderildi';
+                    statusEl.className = 'text-xs text-green-600';
+                    loadEmailHistory();
+                } else {
+                    showToast(data.error || 'E-posta gönderilemedi', 'error');
+                    statusEl.textContent = 'Hata';
+                    statusEl.className = 'text-xs text-red-500';
+                }
+            } catch (e) {
+                showToast('Bağlantı hatası', 'error');
+                statusEl.textContent = 'Bağlantı hatası';
+                statusEl.className = 'text-xs text-red-500';
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane text-xs"></i> Gönder';
+        }
+
+        async function loadEmailHistory() {
+            const container = document.getElementById('email-history-list');
+            if (!container) return;
+
+            try {
+                const res = await fetch(`/api/v1/email/unified-inbox?channel=email&limit=20`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const items = (data.data?.items || []).filter(
+                    i => i.contact_id === STATE.contactId || i.counterparty_email === STATE.email
+                );
+
+                if (!items.length) {
+                    container.innerHTML = '<div class="text-xs text-gray-400 text-center py-4">Henüz e-posta gönderilmedi</div>';
+                    return;
+                }
+
+                container.innerHTML = items.map(item => {
+                    const date = item.created_at ? new Date(item.created_at).toLocaleString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+                    const dirIcon = item.direction === 'sent' ? 'fa-arrow-up text-blue-500' : 'fa-arrow-down text-green-500';
+                    const statusBadge = item.status === 'sent' ? '<span class="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded">Gönderildi</span>'
+                        : item.status === 'failed' ? '<span class="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Başarısız</span>'
+                        : '<span class="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">' + (item.status || '') + '</span>';
+                    return `<div class="flex items-start gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas ${dirIcon} mt-0.5 text-xs"></i>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-xs font-semibold text-gray-800 truncate">${item.subject || '-'}</span>
+                                ${statusBadge}
+                            </div>
+                            <div class="text-[11px] text-gray-500 truncate">${item.preview || ''}</div>
+                            <div class="text-[10px] text-gray-400 mt-1">${item.counterparty_email || ''} · ${date}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { console.error('Email history error:', e); }
+        }
+
+        // ============================================================================
+        // INACTIVITY TRACKING
+        // ============================================================================
+        function checkInactivity() {
+            const badge = document.getElementById('inactivity-badge');
+            const daysEl = document.getElementById('inactivity-days');
+            if (!badge || !daysEl) return;
+
+            let daysInactive = null;
+            if (STATE.lastActivityAt) {
+                const lastDate = new Date(STATE.lastActivityAt);
+                daysInactive = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            } else {
+                // Use created_at as fallback
+                const created = '{{ contact.created_at.isoformat() if contact.created_at else "" }}';
+                if (created) daysInactive = Math.floor((Date.now() - new Date(created).getTime()) / (1000 * 60 * 60 * 24));
+            }
+
+            if (daysInactive !== null && daysInactive >= 14) {
+                daysEl.textContent = daysInactive;
+                badge.classList.remove('hidden');
+                if (daysInactive >= 60) {
+                    badge.className = badge.className.replace('bg-orange-100 text-orange-700', 'bg-red-100 text-red-700');
+                }
+            }
+        }
+
+        // ============================================================================
         // MISSING / NEW HELPER FUNCTIONS
         // ============================================================================
         function openNewDealModal() {
@@ -2793,6 +3258,18 @@
             initTimeline();
             loadDeals();
             loadFiles();
+            loadTags();
+            checkInactivity();
+
+            // Lazy-load WhatsApp messages when tab is clicked
+            document.querySelector('.tab-button[data-tab="whatsapp"]')?.addEventListener('click', () => {
+                if (!STATE.waMessages.length && !STATE.waLoading) loadWhatsAppMessages();
+            });
+
+            // Lazy-load email history when tab is clicked
+            document.querySelector('.tab-button[data-tab="email"]')?.addEventListener('click', () => {
+                loadEmailHistory();
+            });
 
             // Support deep-linking like /contacts/{id}?tab=files
             const urlTab = new URLSearchParams(window.location.search).get('tab');

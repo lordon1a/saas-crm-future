@@ -617,6 +617,9 @@ def get_contacts():
                         'open_deals_count': open_deals_count_map.get(c.company_id, 0) if c.company_id else 0,
                         'customFieldValues': custom_field_values_map.get(c.id, {}),
                         'is_starred': c.is_starred,
+                        'tags': [t.to_dict() for t in c.tags] if hasattr(c, 'tags') and c.tags else [],
+                        'last_activity_at': c.last_activity_at.isoformat() if c.last_activity_at else None,
+                        'lifecycle_stage': c.lifecycle_stage,
                         'created_at': c.created_at.isoformat() if c.created_at else None,
                         'updated_at': c.updated_at.isoformat() if c.updated_at else None,
                         'source': 'crm'
@@ -786,6 +789,9 @@ def get_contacts():
                 'open_deals_count': open_deals_count_map.get(c.company_id, 0) if c.company_id else 0,
                 'customFieldValues': custom_field_values_map.get(c.id, {}),
                 'is_starred': c.is_starred,
+                'tags': [t.to_dict() for t in c.tags] if hasattr(c, 'tags') and c.tags else [],
+                'last_activity_at': c.last_activity_at.isoformat() if c.last_activity_at else None,
+                'lifecycle_stage': c.lifecycle_stage,
                 'created_at': c.created_at.isoformat() if c.created_at else None,
                 'updated_at': c.updated_at.isoformat() if c.updated_at else None,
                 'source': 'crm'
@@ -870,9 +876,16 @@ def get_contact(contact_id):
             'role': contact.role,
             'job_title': contact.job_title,
             'lead_score': contact.lead_score,
+            'lead_source': contact.lead_source,
+            'lifecycle_stage': contact.lifecycle_stage,
             'company_id': contact.company_id,
             'company_name': contact.company.name if contact.company else None,
             'custom_fields': custom_fields,
+            'tags': [t.to_dict() for t in contact.tags] if hasattr(contact, 'tags') and contact.tags else [],
+            'last_activity_at': contact.last_activity_at.isoformat() if contact.last_activity_at else None,
+            'is_starred': contact.is_starred,
+            'assigned_to': contact.assigned_to,
+            'customer_id': contact.customer_id,
             'created_at': contact.created_at.isoformat() if contact.created_at else None,
             'updated_at': contact.updated_at.isoformat() if contact.updated_at else None
         }), 200
@@ -3462,3 +3475,408 @@ def get_lead_stats():
     except Exception as e:
         logger.exception(f"Error getting lead stats: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
+# ============================================================================
+# TAG MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@contacts_bp.route('/api/v1/tags', methods=['GET'])
+@login_required
+def get_tags():
+    """Get all tags for the workspace"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from services.tag_service import TagService
+        tags = TagService.get_tags(workspace_id)
+        return jsonify({'tags': [t.to_dict() for t in tags]}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting tags: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/tags', methods=['POST'])
+@login_required
+def create_tag():
+    """Create a new tag"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({'error': 'Tag name is required'}), 400
+
+        from services.tag_service import TagService
+        tag = TagService.create_tag(workspace_id, data['name'], data.get('color', '#6366f1'))
+        return jsonify(tag.to_dict()), 201
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating tag: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/tags/<int:tag_id>', methods=['PATCH'])
+@login_required
+def update_tag(tag_id):
+    """Update a tag"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        from services.tag_service import TagService
+        tag = TagService.update_tag(workspace_id, tag_id, data)
+        return jsonify(tag.to_dict()), 200
+
+    except LookupError:
+        return jsonify({'error': 'Tag not found'}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating tag: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/tags/<int:tag_id>', methods=['DELETE'])
+@login_required
+def delete_tag(tag_id):
+    """Delete a tag"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from services.tag_service import TagService
+        TagService.delete_tag(workspace_id, tag_id)
+        return jsonify({'message': 'Tag deleted'}), 200
+
+    except LookupError:
+        return jsonify({'error': 'Tag not found'}), 404
+    except Exception as e:
+        logger.error(f"Error deleting tag: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/tags', methods=['GET'])
+@login_required
+def get_contact_tags(contact_id):
+    """Get tags for a contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from services.tag_service import TagService
+        tags = TagService.get_contact_tags(contact_id)
+        return jsonify({'tags': [t.to_dict() for t in tags]}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting contact tags: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/tags', methods=['POST'])
+@login_required
+def add_contact_tags(contact_id):
+    """Add tags to a contact. Body: { tag_ids: [1,2,3] } or { tag_name: 'VIP' }"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        from services.tag_service import TagService
+
+        # Support adding by name (auto-create)
+        if 'tag_name' in data:
+            tag = TagService.get_or_create_tag(workspace_id, data['tag_name'], data.get('color', '#6366f1'))
+            tags = TagService.add_tags_to_contact(workspace_id, contact_id, [tag.id])
+            return jsonify({'tags': [t.to_dict() for t in tags]}), 200
+
+        tag_ids = data.get('tag_ids', [])
+        if not tag_ids:
+            return jsonify({'error': 'tag_ids or tag_name is required'}), 400
+
+        tags = TagService.add_tags_to_contact(workspace_id, contact_id, tag_ids)
+        return jsonify({'tags': [t.to_dict() for t in tags]}), 200
+
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error adding contact tags: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/tags/<int:tag_id>', methods=['DELETE'])
+@login_required
+def remove_contact_tag(contact_id, tag_id):
+    """Remove a tag from a contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from services.tag_service import TagService
+        TagService.remove_tag_from_contact(contact_id, tag_id)
+        return jsonify({'message': 'Tag removed'}), 200
+
+    except Exception as e:
+        logger.error(f"Error removing contact tag: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/tags/set', methods=['PUT'])
+@login_required
+def set_contact_tags(contact_id):
+    """Replace all tags on a contact. Body: { tag_ids: [1,2,3] }"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        data = request.get_json()
+        tag_ids = data.get('tag_ids', []) if data else []
+
+        from services.tag_service import TagService
+        tags = TagService.set_contact_tags(workspace_id, contact_id, tag_ids)
+        return jsonify({'tags': [t.to_dict() for t in tags]}), 200
+
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        logger.error(f"Error setting contact tags: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
+# CONTACT MERGE ENDPOINTS
+# ============================================================================
+
+@contacts_bp.route('/api/v1/contacts/duplicates', methods=['GET'])
+@login_required
+def find_duplicates():
+    """Find duplicate contacts in the workspace"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        contact_id = request.args.get('contact_id', type=int)
+
+        from services.contact_merge_service import ContactMergeService
+        groups = ContactMergeService.find_duplicates(workspace_id, contact_id)
+        return jsonify({'duplicate_groups': groups}), 200
+
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        logger.error(f"Error finding duplicates: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/contacts/merge', methods=['POST'])
+@login_required
+def merge_contacts():
+    """Merge two contacts. Body: { primary_id, secondary_id, field_overrides? }"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        primary_id = data.get('primary_id')
+        secondary_id = data.get('secondary_id')
+        if not primary_id or not secondary_id:
+            return jsonify({'error': 'primary_id and secondary_id are required'}), 400
+
+        from services.contact_merge_service import ContactMergeService
+        contact = ContactMergeService.merge_contacts(
+            workspace_id, primary_id, secondary_id, user_id,
+            data.get('field_overrides')
+        )
+
+        return jsonify({
+            'message': 'Contacts merged successfully',
+            'contact': {
+                'id': contact.id,
+                'first_name': contact.first_name,
+                'last_name': contact.last_name,
+                'full_name': contact.full_name,
+                'email': contact.email,
+                'phone': contact.phone,
+            }
+        }), 200
+
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error merging contacts: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
+# WHATSAPP TIMELINE INTEGRATION
+# ============================================================================
+
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/whatsapp-messages', methods=['GET'])
+@login_required
+def get_contact_whatsapp_messages(contact_id):
+    """Get WhatsApp/Telegram message history for a contact"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 100)
+
+        from models_crm import Contact
+        from models import db, Customer, Conversation, Message
+
+        contact = Contact.query.filter_by(
+            id=contact_id, workspace_id=workspace_id, is_deleted=False
+        ).first()
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+
+        # Find linked customer
+        customer_id = contact.customer_id
+        if not customer_id:
+            return jsonify({'messages': [], 'pagination': {'page': page, 'total': 0, 'pages': 0}}), 200
+
+        # Get conversation
+        conversation = Conversation.query.filter_by(
+            workspace_id=workspace_id, customer_id=customer_id
+        ).first()
+        if not conversation:
+            return jsonify({'messages': [], 'pagination': {'page': page, 'total': 0, 'pages': 0}}), 200
+
+        # Get messages
+        messages_page = Message.query.filter_by(
+            conversation_id=conversation.id
+        ).order_by(Message.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        result = []
+        for msg in messages_page.items:
+            result.append({
+                'id': msg.id,
+                'body': msg.message_body,
+                'direction': 'outgoing' if msg.sender_id else 'incoming',
+                'sender_name': msg.sender.name if msg.sender_id and msg.sender else contact.full_name,
+                'media_type': msg.media_type,
+                'media_url': f"/api/media/{msg.media_url}" if msg.media_url else None,
+                'channel': msg.channel if hasattr(msg, 'channel') else 'whatsapp',
+                'created_at': msg.created_at.isoformat() if msg.created_at else None,
+            })
+
+        return jsonify({
+            'messages': result,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': messages_page.total,
+                'pages': messages_page.pages,
+                'has_next': messages_page.has_next,
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting WhatsApp messages: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
+# INACTIVITY TRACKING
+# ============================================================================
+
+@contacts_bp.route('/api/v1/contacts/inactive', methods=['GET'])
+@login_required
+def get_inactive_contacts():
+    """Get contacts with no activity in the last N days (default 30)"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        days = request.args.get('days', 30, type=int)
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 50, type=int), 100)
+
+        from models_crm import Contact
+        from models import db
+        from datetime import timedelta
+
+        cutoff = datetime.utcnow() - timedelta(days=days)
+
+        query = Contact.query.filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+            db.or_(
+                Contact.last_activity_at.is_(None),
+                Contact.last_activity_at < cutoff
+            )
+        ).order_by(Contact.last_activity_at.asc().nullsfirst())
+
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        contacts = []
+        for c in pagination.items:
+            days_inactive = None
+            if c.last_activity_at:
+                days_inactive = (datetime.utcnow() - c.last_activity_at).days
+            elif c.created_at:
+                days_inactive = (datetime.utcnow() - c.created_at).days
+
+            contacts.append({
+                'id': c.id,
+                'first_name': c.first_name,
+                'last_name': c.last_name,
+                'full_name': c.full_name,
+                'email': c.email,
+                'phone': c.phone,
+                'company_name': c.company.name if c.company else None,
+                'last_activity_at': c.last_activity_at.isoformat() if c.last_activity_at else None,
+                'days_inactive': days_inactive,
+                'lead_score': c.lead_score,
+            })
+
+        return jsonify({
+            'contacts': contacts,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': pagination.total,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+            },
+            'threshold_days': days,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting inactive contacts: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500

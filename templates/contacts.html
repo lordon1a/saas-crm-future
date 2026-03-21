@@ -1383,6 +1383,8 @@
             { id: 'phone', label: 'Telefon', required: false },
             { id: 'role', label: 'Rol', required: false },
             { id: 'lead_score', label: 'Lead Score', required: false },
+            { id: 'tags', label: 'Etiketler', required: false },
+            { id: 'last_activity', label: 'Son Etkileşim', required: false },
             { id: 'deals', label: 'Açık Anlaşmalar', required: false }
         ];
 
@@ -2322,6 +2324,30 @@
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
                                 </div>
+                            </td>
+                        `;
+                    } else if (col === 'tags') {
+                        const tags = c.tags || [];
+                        html += `
+                            <td class="px-4 py-2.5 border-r-2 border-gray-300 align-middle" ${style}>
+                                <div class="flex flex-wrap gap-1 max-w-[200px]">
+                                    ${tags.length ? tags.map(t => `<span class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white truncate max-w-[80px]" style="background:${t.color || '#6366f1'}" title="${t.name}">${t.name}</span>`).join('') : '<span class="text-xs text-gray-400">-</span>'}
+                                </div>
+                            </td>
+                        `;
+                    } else if (col === 'last_activity') {
+                        let laText = '-';
+                        let laBadge = '';
+                        if (c.last_activity_at) {
+                            const laDate = new Date(c.last_activity_at);
+                            const daysDiff = Math.floor((Date.now() - laDate.getTime()) / (1000*60*60*24));
+                            laText = laDate.toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'});
+                            if (daysDiff >= 30) laBadge = '<span class="ml-1 w-2 h-2 rounded-full bg-orange-400 inline-block" title="30+ gün inaktif"></span>';
+                            if (daysDiff >= 60) laBadge = '<span class="ml-1 w-2 h-2 rounded-full bg-red-500 inline-block" title="60+ gün inaktif"></span>';
+                        }
+                        html += `
+                            <td class="px-4 py-2.5 whitespace-nowrap border-r-2 border-gray-300 align-middle" ${style}>
+                                <span class="text-sm text-gray-700">${laText}</span>${laBadge}
                             </td>
                         `;
                     } else if (col === 'deals') {

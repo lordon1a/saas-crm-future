@@ -202,6 +202,9 @@ class Contact(db.Model):
     display_order = db.Column(db.Integer, default=0, nullable=False, index=True)
     is_starred = db.Column(db.Boolean, default=False, nullable=False, index=True)
     
+    # Last activity tracking for inactivity alerts
+    last_activity_at = db.Column(db.DateTime, nullable=True, index=True)
+    
     # Link to existing Customer for WhatsApp conversations
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     
@@ -211,6 +214,7 @@ class Contact(db.Model):
     # Relationships
     assignee = db.relationship('User', foreign_keys=[assigned_to], backref='assigned_contacts')
     activities = db.relationship('Activity', backref='contact', lazy=True, cascade='all, delete-orphan', foreign_keys='Activity.contact_id')
+    tags = db.relationship('Tag', secondary='contact_tags', backref=db.backref('contacts', lazy='dynamic'), lazy='joined')
     
     # Performance indexes for filtering
     __table_args__ = (
@@ -244,6 +248,82 @@ class Contact(db.Model):
     def is_customer(self):
         """Check if contact is a customer"""
         return self.lifecycle_stage in ['customer', 'evangelist']
+
+
+# ============================================================================
+# TAG SYSTEM
+# ============================================================================
+
+class Tag(db.Model):
+    """
+    Reusable tags for categorizing contacts, companies, and deals.
+    Each tag has a name and optional color within a workspace.
+    """
+    __tablename__ = 'tags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    color = db.Column(db.String(7), default='#6366f1')  # hex color
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='uix_tag_workspace_name'),
+    )
+
+    def __repr__(self):
+        return f'<Tag {self.name} workspace={self.workspace_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'color': self.color,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class ContactTag(db.Model):
+    """
+    Many-to-many relationship between contacts and tags.
+    """
+    __tablename__ = 'contact_tags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False, index=True)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tags.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('contact_id', 'tag_id', name='uix_contact_tag'),
+    )
+
+    def __repr__(self):
+        return f'<ContactTag contact={self.contact_id} tag={self.tag_id}>'
+
+
+# ============================================================================
+# CONTACT MERGE HISTORY
+# ============================================================================
+
+class ContactMergeHistory(db.Model):
+    """
+    Tracks contact merge operations for audit and undo capability.
+    """
+    __tablename__ = 'contact_merge_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    primary_contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False, index=True)
+    merged_contact_id = db.Column(db.Integer, nullable=False, index=True)  # ID of the contact that was merged (now deleted)
+    merged_data_json = db.Column(db.Text, nullable=False)  # JSON snapshot of the merged contact before deletion
+    merged_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    primary_contact = db.relationship('Contact', foreign_keys=[primary_contact_id], backref='merge_history')
+
+    def __repr__(self):
+        return f'<ContactMergeHistory primary={self.primary_contact_id} merged={self.merged_contact_id}>'
 
 
 # ============================================================================
