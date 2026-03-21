@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Theme Preview - CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#ede9fe', 100: '#ddd6fe', 200: '#c4b5fd', 300: '#a78bfa',
+                            400: '#8b5cf6', 500: '#7c3aed', 600: '#6d28d9', 700: '#5b21b6',
+                            800: '#4c1d95', 900: '#3b0764',
+                        },
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#e2e8f0',
+                            200: '#cbd5e1',
+                            300: '#94a3b8',
+                            400: '#64748b',
+                            500: '#475569',
+                            600: '#334155',
+                            700: '#1e293b',
+                            750: '#172033',
+                            800: '#0f172a',
+                            850: '#0c1322',
+                            900: '#020617',
+                            950: '#010410',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Glow Effects */
+        .glow-brand { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15), 0 0 60px rgba(139, 92, 246, 0.05); }
+        .glow-brand-sm { box-shadow: 0 0 12px rgba(139, 92, 246, 0.2); }
+        .glow-green { box-shadow: 0 0 12px rgba(34, 197, 94, 0.2); }
+        .glow-amber { box-shadow: 0 0 12px rgba(245, 158, 11, 0.2); }
+
+        /* Card hover */
+        .card-dark {
+            background: linear-gradient(135deg, #1e293b 0%, #172033 100%);
+            border: 1px solid rgba(148, 163, 184, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-dark:hover {
+            border-color: rgba(139, 92, 246, 0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 20px rgba(139, 92, 246, 0.08);
+            transform: translateY(-2px);
+        }
+
+        /* Sidebar nav item */
+        .nav-item {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            background: linear-gradient(180deg, #8b5cf6, #6d28d9);
+            border-radius: 0 4px 4px 0;
+            transition: height 0.2s ease;
+        }
+        .nav-item:hover::before, .nav-item.active::before {
+            height: 24px;
+        }
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(109, 40, 217, 0.08) 100%);
+            color: #a78bfa;
+        }
+
+        /* Table row hover */
+        .table-row {
+            transition: all 0.15s ease;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+        }
+        .table-row:hover {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.05) 0%, rgba(30, 41, 59, 0.8) 100%);
+        }
+        .table-row:hover td:first-child {
+            border-left: 2px solid #8b5cf6;
+        }
+
+        /* Neon pill badges */
+        .pill-neon {
+            backdrop-filter: blur(8px);
+            border: 1px solid;
+        }
+
+        /* Pulse animation for online status */
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+        }
+        .pulse-online { animation: pulse-green 2s ease-in-out infinite; }
+
+        /* Chart placeholder shimmer */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* Modal backdrop */
+        .modal-bg {
+            background: rgba(2, 6, 23, 0.75);
+            backdrop-filter: blur(12px);
+        }
+
+        /* Input focus glow */
+        .input-dark:focus {
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15), 0 0 16px rgba(139, 92, 246, 0.1);
+        }
+
+        /* Subtle gradient text */
+        .text-gradient {
+            background: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 50%, #6d28d9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Smooth scrollbar for sidebar */
+        .sidebar-scroll::-webkit-scrollbar { width: 0; }
+    </style>
+</head>
+<body class="bg-dark-900 text-dark-100 h-screen overflow-hidden flex font-sans antialiased">
+
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside class="w-[68px] bg-dark-850 border-r border-dark-700/50 flex flex-col items-center py-5 z-30 flex-shrink-0">
+        <!-- Logo -->
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-8 glow-brand-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+            <span class="text-xl">🐧</span>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 flex flex-col gap-1.5 w-full px-3 sidebar-scroll overflow-y-auto">
+            <a href="/inbox" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-[17px]"></i>
+            </a>
+            <a href="/analytics" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Raporlar">
+                <i class="fas fa-chart-line text-[17px]"></i>
+            </a>
+            <a href="/contacts" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Kişiler">
+                <i class="fas fa-address-book text-[17px]"></i>
+            </a>
+            <a href="/companies" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Şirketler">
+                <i class="fas fa-building text-[17px]"></i>
+            </a>
+            <a href="/broadcast" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Toplu Mesaj">
+                <i class="fas fa-bullhorn text-[17px]"></i>
+            </a>
+            <a href="/automation" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Otomasyon">
+                <i class="fas fa-robot text-[17px]"></i>
+            </a>
+            <a href="/pipeline" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Pipeline">
+                <i class="fas fa-filter text-[17px]"></i>
+            </a>
+            <a href="/tasks" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Görevler">
+                <i class="fas fa-list-check text-[17px]"></i>
+            </a>
+            <a href="/calendar" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Takvim">
+                <i class="fas fa-calendar-days text-[17px]"></i>
+            </a>
+            <a href="/documents" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Dokümanlar">
+                <i class="fas fa-file-lines text-[17px]"></i>
+            </a>
+            <a href="/channels" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Kanallar">
+                <i class="fas fa-plug text-[17px]"></i>
+            </a>
+            <a href="/settings" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Ayarlar">
+                <i class="fas fa-cog text-[17px]"></i>
+            </a>
+        </nav>
+
+        <!-- Bottom -->
+        <div class="flex flex-col gap-2 w-full px-3 pt-3 border-t border-dark-700/50">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-dark-400 hover:text-red-400 rounded-xl mx-auto transition-all" title="Çıkış">
+                <i class="fas fa-sign-out-alt text-[17px]"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══════════════ MAIN ═══════════════ -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- ─── TOPBAR ─── -->
+        <header class="h-14 bg-dark-850/80 backdrop-blur-xl border-b border-dark-700/50 px-6 flex items-center justify-between flex-shrink-0 z-20">
+            <!-- Left: Breadcrumb -->
+            <div class="flex items-center gap-3">
+                <span class="text-dark-400 text-sm">CRM</span>
+                <i class="fas fa-chevron-right text-[9px] text-dark-500"></i>
+                <span class="text-dark-100 text-sm font-semibold">Dashboard</span>
+            </div>
+
+            <!-- Center: Search -->
+            <div class="absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400 text-xs"></i>
+                    <input type="text" placeholder="Ara... (⌘K)" class="input-dark w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-600/50 rounded-xl text-sm text-dark-100 placeholder-dark-400 focus:outline-none focus:border-brand-400/50 transition-all">
+                    <kbd class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-dark-500 bg-dark-700 px-1.5 py-0.5 rounded border border-dark-600/50">⌘K</kbd>
+                </div>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex items-center gap-2">
+                <button class="relative w-9 h-9 flex items-center justify-center text-dark-400 hover:text-dark-100 hover:bg-dark-700/50 rounded-xl transition-all">
+                    <i class="fas fa-bell text-sm"></i>
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full pulse-online"></span>
+                </button>
+                <button class="w-9 h-9 flex items-center justify-center text-dark-400 hover:text-dark-100 hover:bg-dark-700/50 rounded-xl transition-all">
+                    <i class="fas fa-circle-question text-sm"></i>
+                </button>
+                <div class="w-px h-6 bg-dark-700/50 mx-1"></div>
+                <button class="h-9 pl-1.5 pr-3 rounded-xl border border-dark-600/50 bg-dark-800 hover:bg-dark-700 transition-all flex items-center gap-2.5" onclick="window.location.href='/settings'">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                        {{ session.get('user_name', 'User')[0].upper() }}{{ session.get('user_name', 'User').split()[1][0].upper() if session.get('user_name', 'User').split()|length > 1 else '' }}
+                    </div>
+                    <span class="text-xs font-semibold text-dark-200">{{ session.get('user_name', 'User') }}</span>
+                    <i class="fas fa-chevron-down text-[9px] text-dark-500"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ─── PAGE HEADER ─── -->
+        <div class="bg-dark-850/50 border-b border-dark-700/40 px-6 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(109,40,217,0.08));">
+                        <i class="fas fa-chart-pie text-brand-400 text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-dark-50 flex items-center gap-2">
+                            Dashboard
+                            <span class="text-xs font-medium text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded-md">Canlı</span>
+                        </h1>
+                        <p class="text-xs text-dark-400 mt-0.5">Son 30 günlük genel bakış</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="export-dashboard" class="px-3 py-2 bg-dark-700/50 border border-dark-600/40 text-dark-200 rounded-xl text-xs font-semibold hover:bg-dark-700 transition-all flex items-center gap-2">
+                        <i class="fas fa-download text-[11px]"></i> Dışa Aktar
+                    </button>
+                    <button id="new-contact-btn" class="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-2 transition-all hover:shadow-lg" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 16px rgba(139,92,246,0.3);">
+                        <i class="fas fa-plus text-[11px]"></i> Yeni Kişi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── CONTENT ─── -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+
+            <!-- ══ STAT CARDS ══ -->
+            <div class="grid grid-cols-4 gap-4">
+                <!-- Card 1: Toplam Kişi -->
+                <div class="card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(109,40,217,0.08));">
+                            <i class="fas fa-users text-brand-400"></i>
+                        </div>
+                        <span class="pill-neon text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                            <i class="fas fa-arrow-up text-[8px] mr-0.5"></i>12%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-dark-50" id="total-contacts">0</div>
+                    <div class="text-xs text-dark-400 mt-1">Toplam Kişi</div>
+                    <div class="mt-3 h-1 bg-dark-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full" style="width:72%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);"></div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Aktif Anlaşmalar -->
+                <div class="card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/10">
+                            <i class="fas fa-handshake text-emerald-400"></i>
+                        </div>
+                        <span class="pill-neon text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                            <i class="fas fa-arrow-up text-[8px] mr-0.5"></i>8%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-dark-50" id="active-deals">0</div>
+                    <div class="text-xs text-dark-400 mt-1">Aktif Anlaşma</div>
+                    <div class="mt-3 h-1 bg-dark-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full" style="width:58%;background:linear-gradient(90deg,#22c55e,#4ade80);"></div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Gelir -->
+                <div class="card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-500/10">
+                            <i class="fas fa-coins text-amber-400"></i>
+                        </div>
+                        <span class="pill-neon text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border-red-500/20">
+                            <i class="fas fa-arrow-down text-[8px] mr-0.5"></i>3%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-dark-50" id="total-revenue">₺0</div>
+                    <div class="text-xs text-dark-400 mt-1">Aylık Gelir</div>
+                    <div class="mt-3 h-1 bg-dark-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full" style="width:45%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Görevler -->
+                <div class="card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-sky-500/10">
+                            <i class="fas fa-list-check text-sky-400"></i>
+                        </div>
+                        <span class="pill-neon text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                            <i class="fas fa-check text-[8px] mr-0.5"></i>85%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-dark-50" id="pending-tasks">0</div>
+                    <div class="text-xs text-dark-400 mt-1">Bekleyen Görev</div>
+                    <div class="mt-3 h-1 bg-dark-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full" style="width:85%;background:linear-gradient(90deg,#0ea5e9,#38bdf8);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ CHARTS ROW ══ -->
+            <div class="grid grid-cols-3 gap-4">
+                <!-- Chart: Aylık Trend -->
+                <div class="col-span-2 card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-5">
+                        <div>
+                            <h3 class="text-sm font-bold text-dark-100">Aylık Performans</h3>
+                            <p class="text-xs text-dark-400 mt-0.5">Gelir ve anlaşma trendi</p>
+                        </div>
+                        <div class="flex items-center gap-1 bg-dark-700/50 rounded-lg p-0.5">
+                            <button class="px-3 py-1 text-xs font-semibold text-white rounded-md" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">Hafta</button>
+                            <button class="px-3 py-1 text-xs font-semibold text-dark-400 rounded-md hover:text-dark-200">Ay</button>
+                            <button class="px-3 py-1 text-xs font-semibold text-dark-400 rounded-md hover:text-dark-200">Yıl</button>
+                        </div>
+                    </div>
+                    <!-- Simulated Chart -->
+                    <div class="h-48 flex items-end gap-3 px-2">
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:60%;background:linear-gradient(180deg,#8b5cf6,#6d28d9);opacity:0.8;"></div>
+                            <span class="text-[10px] text-dark-500">Pzt</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:80%;background:linear-gradient(180deg,#8b5cf6,#6d28d9);opacity:0.85;"></div>
+                            <span class="text-[10px] text-dark-500">Sal</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:45%;background:linear-gradient(180deg,#8b5cf6,#6d28d9);opacity:0.7;"></div>
+                            <span class="text-[10px] text-dark-500">Çar</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:90%;background:linear-gradient(180deg,#8b5cf6,#6d28d9);"></div>
+                            <span class="text-[10px] text-dark-500">Per</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:70%;background:linear-gradient(180deg,#8b5cf6,#6d28d9);opacity:0.8;"></div>
+                            <span class="text-[10px] text-dark-500">Cum</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:40%;background:linear-gradient(180deg,#334155,#475569);opacity:0.5;"></div>
+                            <span class="text-[10px] text-dark-500">Cmt</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-1">
+                            <div class="w-full rounded-t-lg" style="height:30%;background:linear-gradient(180deg,#334155,#475569);opacity:0.4;"></div>
+                            <span class="text-[10px] text-dark-500">Paz</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Mini -->
+                <div class="card-dark rounded-2xl p-5">
+                    <h3 class="text-sm font-bold text-dark-100 mb-1">Pipeline Durumu</h3>
+                    <p class="text-xs text-dark-400 mb-5">Aktif aşama dağılımı</p>
+                    <div class="space-y-3.5" id="pipeline-stages">
+                        <!-- Pipeline stages will be loaded dynamically -->
+                        <div class="text-center text-dark-500 text-xs py-4">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ TABLE: Son Kişiler ══ -->
+            <div class="card-dark rounded-2xl overflow-hidden">
+                <!-- Table Header -->
+                <div class="px-5 py-4 flex items-center justify-between border-b border-dark-700/40">
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-sm font-bold text-dark-100">Son Eklenen Kişiler</h3>
+                        <span class="text-[10px] font-bold text-dark-400 bg-dark-700/60 px-2 py-0.5 rounded-md">248 kişi</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-500 text-[11px]"></i>
+                            <input type="text" placeholder="Tabloda ara..." class="input-dark w-48 pl-8 pr-3 py-1.5 bg-dark-800 border border-dark-600/40 rounded-lg text-xs text-dark-200 placeholder-dark-500 focus:outline-none focus:border-brand-500/40 transition-all">
+                        </div>
+                        <button class="w-8 h-8 flex items-center justify-center text-dark-400 hover:text-dark-200 bg-dark-700/40 hover:bg-dark-700 rounded-lg transition-all">
+                            <i class="fas fa-filter text-[11px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-dark-700/40">
+                            <th class="w-10 px-4 py-3 text-left">
+                                <input type="checkbox" class="w-3.5 h-3.5 rounded border-dark-500 bg-dark-700 text-brand-500 focus:ring-brand-500/30">
+                            </th>
+                            <th class="px-4 py-3 text-left"><span class="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Kişi</span></th>
+                            <th class="px-4 py-3 text-left"><span class="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Şirket</span></th>
+                            <th class="px-4 py-3 text-left"><span class="text-[11px] font-bold text-dark-400 uppercase tracking-wider">E-posta</span></th>
+                            <th class="px-4 py-3 text-left"><span class="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Lead Skor</span></th>
+                            <th class="px-4 py-3 text-left"><span class="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Durum</span></th>
+                            <th class="px-4 py-3 text-left"><span class="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Son İletişim</span></th>
+                            <th class="w-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="contacts-table-body">
+                        <!-- Contacts will be loaded dynamically -->
+                        <tr>
+                            <td colspan="8" class="px-4 py-8 text-center text-dark-400">Yükleniyor...</td>
+                        </tr>
+
+                            <td class="px-4 py-3">
+                                <button class="w-7 h-7 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all">
+                                    <i class="fas fa-ellipsis-vertical text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Row 2 -->
+                        <tr class="table-row cursor-pointer">
+                            <td class="px-4 py-3"><input type="checkbox" class="w-3.5 h-3.5 rounded border-dark-500 bg-dark-700 text-brand-500 focus:ring-brand-500/30"></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">EK</div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-dark-100">Elif Kaya</div>
+                                        <div class="text-[11px] text-dark-400">CTO</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-300">Dijital Medya</span></td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-400">elif@dijitalmedya.com</span></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-sky-400">78</span>
+                                    <div class="w-12 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width:78%;background:linear-gradient(90deg,#0ea5e9,#38bdf8);"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="pill-neon text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border-amber-500/20">
+                                    <i class="fas fa-clock text-[8px] mr-1"></i>Takipte
+                                </span>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-xs text-dark-400">Dün</span></td>
+                            <td class="px-4 py-3">
+                                <button class="w-7 h-7 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all">
+                                    <i class="fas fa-ellipsis-vertical text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Row 3 -->
+                        <tr class="table-row cursor-pointer">
+                            <td class="px-4 py-3"><input type="checkbox" class="w-3.5 h-3.5 rounded border-dark-500 bg-dark-700 text-brand-500 focus:ring-brand-500/30"></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,#f59e0b,#d97706);">MD</div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-dark-100">Mehmet Demir</div>
+                                        <div class="text-[11px] text-dark-400">Satış Müdürü</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-300">Global Trade</span></td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-400">mehmet@globaltrade.com</span></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-amber-400">65</span>
+                                    <div class="w-12 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width:65%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="pill-neon text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                                    <i class="fas fa-circle text-[5px] mr-1"></i>Aktif
+                                </span>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-xs text-dark-400">3 gün önce</span></td>
+                            <td class="px-4 py-3">
+                                <button class="w-7 h-7 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all">
+                                    <i class="fas fa-ellipsis-vertical text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Row 4 -->
+                        <tr class="table-row cursor-pointer">
+                            <td class="px-4 py-3"><input type="checkbox" class="w-3.5 h-3.5 rounded border-dark-500 bg-dark-700 text-brand-500 focus:ring-brand-500/30"></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,#ec4899,#be185d);">SÖ</div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-dark-100">Selin Öztürk</div>
+                                        <div class="text-[11px] text-dark-400">Pazarlama Direktörü</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-300">Yaratıcı Ajans</span></td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-400">selin@yaratici.co</span></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-red-400">42</span>
+                                    <div class="w-12 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width:42%;background:linear-gradient(90deg,#ef4444,#f87171);"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="pill-neon text-[10px] font-bold px-2.5 py-1 rounded-full bg-dark-600/50 text-dark-300 border-dark-500/30">
+                                    <i class="fas fa-pause text-[7px] mr-1"></i>Pasif
+                                </span>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-xs text-dark-400">1 hafta önce</span></td>
+                            <td class="px-4 py-3">
+                                <button class="w-7 h-7 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all">
+                                    <i class="fas fa-ellipsis-vertical text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Row 5 -->
+                        <tr class="table-row cursor-pointer">
+                            <td class="px-4 py-3"><input type="checkbox" class="w-3.5 h-3.5 rounded border-dark-500 bg-dark-700 text-brand-500 focus:ring-brand-500/30"></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style="background:linear-gradient(135deg,#22c55e,#15803d);">CA</div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-dark-100">Can Arslan</div>
+                                        <div class="text-[11px] text-dark-400">CFO</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-300">Finans Plus</span></td>
+                            <td class="px-4 py-3"><span class="text-sm text-dark-400">can@finansplus.com</span></td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-emerald-400">88</span>
+                                    <div class="w-12 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width:88%;background:linear-gradient(90deg,#22c55e,#4ade80);"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="pill-neon text-[10px] font-bold px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-300 border-brand-500/20">
+                                    <i class="fas fa-star text-[7px] mr-1"></i>VIP
+                                </span>
+                            </td>
+                            <td class="px-4 py-3"><span class="text-xs text-dark-400">Bugün</span></td>
+                            <td class="px-4 py-3">
+                                <button class="w-7 h-7 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all">
+                                    <i class="fas fa-ellipsis-vertical text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Table Footer -->
+                <div class="px-5 py-3 border-t border-dark-700/40 flex items-center justify-between">
+                    <span class="text-xs text-dark-400">1-5 / 248 kişi gösteriliyor</span>
+                    <div class="flex items-center gap-1">
+                        <button class="w-8 h-8 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
+                        <button class="w-8 h-8 flex items-center justify-center text-white rounded-lg text-xs font-bold" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">1</button>
+                        <button class="w-8 h-8 flex items-center justify-center text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg text-xs font-semibold transition-all">2</button>
+                        <button class="w-8 h-8 flex items-center justify-center text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg text-xs font-semibold transition-all">3</button>
+                        <span class="text-dark-500 text-xs px-1">...</span>
+                        <button class="w-8 h-8 flex items-center justify-center text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg text-xs font-semibold transition-all">50</button>
+                        <button class="w-8 h-8 flex items-center justify-center text-dark-500 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ BOTTOM: Activity + Tasks ══ -->
+            <div class="grid grid-cols-2 gap-4 pb-4">
+                <!-- Recent Activity -->
+                <div class="card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-dark-100">Son Aktiviteler</h3>
+                        <a href="/activities" class="text-xs text-brand-400 hover:text-brand-300 font-semibold">Tümünü Gör →</a>
+                    </div>
+                    <div class="space-y-3" id="recent-activities">
+                        <!-- Activities will be loaded dynamically -->
+                        <div class="text-center text-dark-500 text-xs py-4">Yükleniyor...</div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Tasks -->
+                <div class="card-dark rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-dark-100">Yaklaşan Görevler</h3>
+                        <a href="/tasks" class="text-xs text-brand-400 hover:text-brand-300 font-semibold">Tümünü Gör →</a>
+                    </div>
+                    <div class="space-y-2" id="upcoming-tasks">
+                        <!-- Tasks will be loaded dynamically -->
+                        <div class="text-center text-dark-500 text-xs py-4">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════ SAMPLE MODAL (always visible for preview) ═══════════════ -->
+    <div id="sampleModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="modal-bg absolute inset-0" onclick="document.getElementById('sampleModal').classList.add('hidden')"></div>
+        <div class="relative w-full max-w-md rounded-2xl overflow-hidden" style="background:linear-gradient(135deg,#1e293b,#172033);border:1px solid rgba(148,163,184,0.1);box-shadow:0 32px 64px rgba(0,0,0,0.5),0 0 40px rgba(139,92,246,0.1);">
+            <div class="px-6 py-4 border-b border-dark-700/40 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-dark-100">Yeni Kişi Ekle</h3>
+                <button onclick="document.getElementById('sampleModal').classList.add('hidden')" class="w-7 h-7 flex items-center justify-center text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-dark-400 mb-1.5">Ad Soyad</label>
+                    <input type="text" placeholder="Kişi adı girin..." class="input-dark w-full px-3.5 py-2.5 bg-dark-800 border border-dark-600/50 rounded-xl text-sm text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-400/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-dark-400 mb-1.5">E-posta</label>
+                    <input type="email" placeholder="ornek@sirket.com" class="input-dark w-full px-3.5 py-2.5 bg-dark-800 border border-dark-600/50 rounded-xl text-sm text-dark-100 placeholder-dark-500 focus:outline-none focus:border-brand-400/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-dark-400 mb-1.5">Şirket</label>
+                    <select class="w-full px-3.5 py-2.5 bg-dark-800 border border-dark-600/50 rounded-xl text-sm text-dark-300 focus:outline-none focus:border-brand-400/50 transition-all">
+                        <option>Şirket seçin...</option>
+                        <option>TechCorp A.Ş.</option>
+                        <option>Dijital Medya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-dark-400 mb-1.5">Öncelik</label>
+                    <div class="flex gap-2">
+                        <button class="flex-1 py-2 rounded-xl text-xs font-semibold border border-dark-600/40 text-dark-400 hover:text-dark-200 hover:border-dark-500 transition-all">🔵 Düşük</button>
+                        <button class="flex-1 py-2 rounded-xl text-xs font-semibold border text-brand-300 transition-all" style="border-color:rgba(139,92,246,0.4);background:rgba(139,92,246,0.1);">🟡 Orta</button>
+                        <button class="flex-1 py-2 rounded-xl text-xs font-semibold border border-dark-600/40 text-dark-400 hover:text-dark-200 hover:border-dark-500 transition-all">🔴 Acil</button>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-dark-700/40 flex items-center justify-end gap-2">
+                <button onclick="document.getElementById('sampleModal').classList.add('hidden')" class="px-4 py-2 text-dark-400 hover:text-dark-200 text-xs font-semibold rounded-xl hover:bg-dark-700 transition-all">İptal</button>
+                <button class="px-5 py-2 rounded-xl text-xs font-semibold text-white transition-all" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 16px rgba(139,92,246,0.3);">
+                    <i class="fas fa-check mr-1.5"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Modal Toggle Button -->
+    <button onclick="document.getElementById('sampleModal').classList.toggle('hidden');document.getElementById('sampleModal').classList.toggle('flex')" 
+            class="fixed bottom-6 right-6 w-12 h-12 rounded-full text-white flex items-center justify-center z-40 transition-all hover:scale-110"
+            style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 8px 32px rgba(139,92,246,0.4);"
+            title="Modal Önizleme">
+        <i class="fas fa-layer-group"></i>
+    </button>
+
+    <!-- Dashboard JavaScript -->
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
