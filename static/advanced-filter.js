@@ -788,11 +788,4 @@ class AdvancedFilter {
     }
 }
 
-// Helper function for toast notifications
-function showToast(message, type = 'info') {
-    if (typeof window.showToast === 'function') {
-        window.showToast(message, type);
-    } else {
-        console.log(`[${type.toUpperCase()}] ${message}`);
-    }
-}
+// Toast notifications are handled by the global showToast function in contacts.html
