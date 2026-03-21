@@ -150,6 +150,7 @@ from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
 from routes.import_wizard import import_bp
 from routes.pipeline_settings import pipeline_settings_bp
+from routes.search import search_bp
 from services import portal_notification_service  # noqa: F401
 from services.security_service import SecurityService
 from services.task_scheduler import TaskScheduler
@@ -897,6 +898,60 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Created indexes on notification_preferences table")
             
+            # Check if search_logs table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='search_logs'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create search_logs table...")
+                cur.execute("""
+                    CREATE TABLE search_logs (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id),
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        search_query VARCHAR(500) NOT NULL,
+                        search_type VARCHAR(50) NOT NULL,
+                        entity_type VARCHAR(50),
+                        results_count INTEGER DEFAULT 0 NOT NULL,
+                        search_duration_ms INTEGER,
+                        filters_applied TEXT,
+                        clicked_result_id INTEGER,
+                        clicked_result_type VARCHAR(50),
+                        user_agent VARCHAR(500),
+                        ip_address VARCHAR(45),
+                        created_at TIMESTAMP DEFAULT NOW() NOT NULL
+                    )
+                """)
+                conn.commit()
+                logger.info("✓ Created search_logs table")
+                
+                # Create indexes on search_logs
+                cur.execute("""
+                    CREATE INDEX idx_search_logs_workspace_id 
+                    ON search_logs(workspace_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_search_logs_user_id 
+                    ON search_logs(user_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_search_logs_search_type 
+                    ON search_logs(search_type)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_search_logs_created_at 
+                    ON search_logs(created_at)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_search_logs_workspace_user 
+                    ON search_logs(workspace_id, user_id)
+                """)
+                conn.commit()
+                logger.info("✓ Created indexes on search_logs table")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
@@ -1042,6 +1097,7 @@ app.register_blueprint(team_route.bp)
 app.register_blueprint(assignments_route.bp)
 from routes.super_admin import bp as super_admin_bp
 app.register_blueprint(super_admin_bp)
+app.register_blueprint(search_bp)
 
 # Initialize TaskScheduler for background jobs (notifications, overdue tasks)
 TaskScheduler.init_scheduler(app)

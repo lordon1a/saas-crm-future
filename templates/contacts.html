@@ -2050,6 +2050,11 @@
                 const search = document.getElementById('contactsSearchInput').value.trim();
                 const role = document.getElementById('roleFilter').value;
                 
+                // Start search timer for duration tracking
+                if (search && window.searchLogger) {
+                    window.searchLogger.startSearch();
+                }
+                
                 let url = `/api/v1/contacts?page=${page}&per_page=50`;
                 if (search) url += `&search=${encodeURIComponent(search)}`;
                 if (role) url += `&role=${encodeURIComponent(role)}`;
@@ -2066,6 +2071,22 @@
                 }
                 const data = await res.json();
                 allContacts = Array.isArray(data.contacts) ? data.contacts : [];
+                
+                // Log search if there was a query
+                if (search && window.searchLogger) {
+                    const filters = {};
+                    if (role) filters.role = role;
+                    if (companyIdFilter) filters.company_id = companyIdFilter;
+                    if (window.activeContactFilters) filters.advanced = window.activeContactFilters;
+                    
+                    window.searchLogger.logSearch(
+                        search,
+                        'contact',
+                        data.pagination?.total || allContacts.length,
+                        'contact',
+                        Object.keys(filters).length > 0 ? filters : null
+                    );
+                }
                 
                 // Update pagination info
                 if (data.pagination) {
@@ -4067,5 +4088,8 @@
             }
         };
     </script>
+    
+    <!-- Search Logger -->
+    <script src="{{ url_for('static', filename='search-logger.js') }}"></script>
 </body>
 </html>

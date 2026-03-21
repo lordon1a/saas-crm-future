@@ -1748,3 +1748,52 @@ class FilterExecutionLog(db.Model):
     
     def __repr__(self):
         return f'<FilterExecutionLog {self.entity_type} - {self.result_count} results in {self.execution_time_ms}ms>'
+
+# ============================================================================
+# SEARCH LOGGING & ANALYTICS
+# ============================================================================
+
+class SearchLog(db.Model):
+    """
+    Tracks user search behavior for analytics and UX improvements.
+    Records search queries, results, and user interactions.
+    """
+    __tablename__ = 'search_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    search_query = db.Column(db.String(500), nullable=False, index=True)
+    search_type = db.Column(db.String(50), nullable=False, index=True)  # 'contact', 'company', 'deal', 'global'
+    entity_type = db.Column(db.String(50), nullable=True)  # specific entity searched
+    results_count = db.Column(db.Integer, default=0)
+    clicked_result_id = db.Column(db.Integer, nullable=True)  # which result user clicked
+    clicked_result_type = db.Column(db.String(50), nullable=True)  # type of clicked result
+    search_duration_ms = db.Column(db.Integer, nullable=True)  # search execution time
+    filters_applied = db.Column(db.Text, nullable=True)  # JSON string of applied filters
+    user_agent = db.Column(db.String(500), nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    __table_args__ = (
+        db.Index('idx_search_log_workspace_created', 'workspace_id', 'created_at'),
+        db.Index('idx_search_log_user_created', 'user_id', 'created_at'),
+        db.Index('idx_search_log_query', 'search_query', 'workspace_id'),
+        db.Index('idx_search_log_type', 'search_type', 'workspace_id'),
+    )
+    
+    def __repr__(self):
+        return f'<SearchLog "{self.search_query}" - {self.results_count} results>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'search_query': self.search_query,
+            'search_type': self.search_type,
+            'entity_type': self.entity_type,
+            'results_count': self.results_count,
+            'clicked_result_id': self.clicked_result_id,
+            'clicked_result_type': self.clicked_result_type,
+            'search_duration_ms': self.search_duration_ms,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
