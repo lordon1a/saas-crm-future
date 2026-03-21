@@ -392,6 +392,13 @@ class Task(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
+    # Calendar/Task Management - New columns
+    start_time = db.Column(db.DateTime, nullable=True, index=True)  # Başlangıç zamanı (tarih + saat)
+    end_time = db.Column(db.DateTime, nullable=True, index=True)    # Bitiş zamanı (tarih + saat)
+    timezone = db.Column(db.String(50), default='UTC', nullable=False)  # Timezone (örn: 'Europe/Istanbul')
+    task_type = db.Column(db.String(50), default='task', nullable=False, index=True)  # call, meeting, email, todo, follow_up, other
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)  # İlişkili contact
+    
     # Relationships
     comments = db.relationship('TaskComment', backref='task', lazy=True, cascade="all, delete-orphan")
     attachments = db.relationship('TaskAttachment', backref='task', lazy=True, cascade="all, delete-orphan")
@@ -399,8 +406,64 @@ class Task(db.Model):
                                   foreign_keys='TaskDependency.task_id',
                                   backref='task', lazy=True, cascade="all, delete-orphan")
     
+    # Performance indexes
+    __table_args__ = (
+        db.Index('idx_task_workspace_start_time', 'workspace_id', 'start_time'),
+        db.Index('idx_task_workspace_status', 'workspace_id', 'status'),
+        db.Index('idx_task_assignee_status', 'assignee_id', 'status'),
+        db.Index('idx_task_type', 'task_type'),
+    )
+    
     def __repr__(self):
         return f'<Task {self.title}>'
+    
+    def is_overdue(self):
+        """Görevin süresi geçmiş mi kontrol et"""
+        if self.status in ['completed', 'cancelled']:
+            return False
+        if not self.end_time:
+            return False
+        return datetime.utcnow() > self.end_time
+    
+    def duration_minutes(self):
+        """Görev süresi (dakika)"""
+        if not self.start_time or not self.end_time:
+            return None
+        delta = self.end_time - self.start_time
+        return int(delta.total_seconds() / 60)
+    
+    def to_calendar_event(self):
+        """Takvim event formatına dönüştür"""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'start': self.start_time.isoformat() + 'Z' if self.start_time else None,
+            'end': self.end_time.isoformat() + 'Z' if self.end_time else None,
+            'type': self.task_type,
+            'status': self.status,
+            'assignee_id': self.assignee_id,
+            'color': self._get_color_by_type(),
+            'editable': True,
+            'extendedProps': {
+                'description': self.description,
+                'priority': self.priority,
+                'contact_id': self.contact_id,
+                'company_id': self.company_id,
+                'deal_id': self.deal_id,
+            }
+        }
+    
+    def _get_color_by_type(self):
+        """Görev tipine göre renk"""
+        colors = {
+            'call': '#10b981',      # green
+            'meeting': '#3b82f6',   # blue
+            'email': '#8b5cf6',     # purple
+            'todo': '#f59e0b',      # amber
+            'follow_up': '#ec4899', # pink
+            'other': '#6b7280',     # gray
+        }
+        return colors.get(self.task_type, '#6b7280')
 
 
 class TaskDependency(db.Model):
@@ -476,6 +539,89 @@ class TaskAttachment(db.Model):
     
     def __repr__(self):
         return f'<TaskAttachment {self.file_name}>'
+
+
+class TaskNotification(db.Model):
+    """
+    Görev bildirimleri için kayıt tablosu.
+    Her görev için birden fazla bildirim oluşturulabilir (örn: 15dk önce, görev zamanında).
+    """
+    __tablename__ = 'task_notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Bildirim zamanlaması
+    notify_at = db.Column(db.DateTime, nullable=False, index=True)  # Ne zaman bildirim gönderilecek
+    
+    # Bildirim içeriği
+    message = db.Column(db.String(500), nullable=False)
+    notification_type = db.Column(db.String(50), default='task_reminder', nullable=False)
+    # Değerler: 'task_reminder', 'task_overdue', 'task_assigned', 'task_updated'
+    
+    # Durum takibi
+    is_sent = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    sent_at = db.Column(db.DateTime, nullable=True)
+    is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    read_at = db.Column(db.DateTime, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # İlişkiler
+    task = db.relationship('Task', backref=db.backref('notifications', lazy=True, cascade='all, delete-orphan'))
+    
+    __table_args__ = (
+        db.Index('idx_notification_pending', 'is_sent', 'notify_at'),
+        db.Index('idx_notification_user_unread', 'user_id', 'is_read'),
+        db.Index('idx_notification_workspace_user', 'workspace_id', 'user_id'),
+    )
+    
+    def __repr__(self):
+        return f'<TaskNotification task_id={self.task_id} user_id={self.user_id}>'
+    
+    def mark_as_sent(self):
+        """Bildirimi gönderildi olarak işaretle"""
+        self.is_sent = True
+        self.sent_at = datetime.utcnow()
+    
+    def mark_as_read(self):
+        """Bildirimi okundu olarak işaretle"""
+        self.is_read = True
+        self.read_at = datetime.utcnow()
+
+
+class NotificationPreference(db.Model):
+    """
+    Kullanıcı bildirim tercihleri.
+    Her kullanıcı hangi tür bildirimleri almak istediğini ayarlayabilir.
+    """
+    __tablename__ = 'notification_preferences'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Bildirim tercihleri (boolean flags)
+    task_reminder_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    task_overdue_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    task_assigned_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    task_updated_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Hatırlatma zamanı (görev başlangıcından kaç dakika önce)
+    reminder_minutes_before = db.Column(db.Integer, default=15, nullable=False)
+    # Değerler: 0, 5, 10, 15, 30, 60, 120, 1440 (1 gün)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', name='uix_notification_pref_workspace_user'),
+    )
+    
+    def __repr__(self):
+        return f'<NotificationPreference user_id={self.user_id}>'
 
 
 # ============================================================================

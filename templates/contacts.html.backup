@@ -278,58 +278,44 @@
     <!-- Sidebar -->
     <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
         <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
-            <span class="text-2xl">💬</span>
+            <span class="text-2xl">🐧</span>
         </a>
-        <nav class="flex-1 flex flex-col gap-3 w-full px-3">
-            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
-                <i class="fas fa-inbox text-lg"></i>
-            </a>
-            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
-                <i class="fas fa-chart-line text-lg"></i>
-            </a>
-            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Kişiler">
-                <i class="fas fa-address-book text-lg"></i>
-            </a>
-            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
-                <i class="fas fa-building text-lg"></i>
-            </a>
-            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
-                <i class="fas fa-bullhorn text-lg"></i>
-            </a>
-            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
-                <i class="fas fa-robot text-lg"></i>
-            </a>
-            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
-                <i class="fas fa-chart-line text-lg"></i>
-            </a>
-            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
-                <i class="fas fa-list-check text-lg"></i>
-            </a>
-            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar">
-                <i class="fas fa-file-lines text-lg"></i>
-            </a>
-            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
-                <i class="fas fa-plug text-lg"></i>
-            </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
         </nav>
-        <div class="flex flex-col gap-3 w-full px-3 pb-4">
-            <a href="/account" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Hesap">
-                <i class="fas fa-user text-lg"></i>
-            </a>
-        </div>
     </aside>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top Header -->
-        <header class="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
-            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-4">
-                <div class="hidden lg:block"></div>
-                <div class="relative w-full max-w-3xl justify-self-center">
-                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-gray-200 px-4 md:px-6 xl:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[minmax(180px,1fr)_minmax(520px,760px)_minmax(260px,1fr)] items-center gap-3 md:gap-4">
+                <div class="hidden lg:flex items-center">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+                        <i class="fas fa-address-book text-[11px]"></i>
+                        Kişiler
+                    </span>
                 </div>
-                <div class="flex items-center gap-2 justify-self-end">
+
+                <div class="relative w-full max-w-2xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full h-11 pl-10 pr-4 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm transition-all">
+                </div>
+
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <button onclick="openNewContactModal()" class="w-10 h-10 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all flex items-center justify-center" title="Kişi Ekle">
+                        <i class="fas fa-plus text-sm"></i>
+                    </button>
+                    <div class="hidden md:block w-px h-6 bg-gray-200"></div>
                     <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
                         <i class="fas fa-gift text-sm"></i>
                     </button>
@@ -339,201 +325,181 @@
                     <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="İpuçları">
                         <i class="fas fa-lightbulb text-sm"></i>
                     </button>
+
                     <div class="relative">
                         <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
                             <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
                             <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
                             <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
                         </button>
+
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="mt-3 p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2 md:gap-3">
+                <div class="flex flex-wrap items-center gap-2 md:gap-3">
+                    <div class="relative min-w-[220px]">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        <input type="text" id="contactsSearchInput" placeholder="Kişilerde ara..." class="w-full h-10 pl-9 pr-3 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 outline-none focus:border-brand-500 transition-all">
+                    </div>
+                    <button onclick="openNewContactModal()" class="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap">
+                        <i class="fas fa-plus"></i> Kişi
+                        <i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <span class="h-10 px-3 inline-flex items-center rounded-lg bg-white border border-gray-200 text-sm text-gray-500"><span id="contactCount" class="font-semibold text-gray-800 mr-1">0</span> kişi</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="window.location.href='/import'" class="h-10 px-3.5 bg-blue-600 border border-blue-600 rounded-lg text-xs font-semibold text-white hover:bg-blue-700 transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fas fa-file-import text-xs"></i> İçe Aktar
+                    </button>
+                    <button onclick="exportContacts()" class="h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fas fa-download text-xs"></i> CSV İndir
+                    </button>
+                    <button class="h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fas fa-filter text-xs"></i> Filtrele
+                    </button>
+                    <button class="h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fas fa-cog text-xs"></i> Görünüm
+                    </button>
                 </div>
             </div>
         </header>
-            </div>
 
-        </header>
-
-        <!-- Page Header -->
-        <div class="bg-white border-b border-slate-200 px-6 py-4 flex-shrink-0">
-            <div class="flex items-center justify-between">
-                <!-- Left: Title -->
-                <div class="flex items-center gap-4">
-                    <div>
-                        <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fas fa-address-book text-brand-600"></i>
-                            Kişiler
-                            <span class="text-sm font-normal text-slate-500 ml-2">(<span id="contactCount">0</span> kişi)</span>
-                        </h1>
-                    </div>
-                </div>
-
-                <!-- Right: Actions -->
-                <div class="flex items-center gap-3">
-                    <!-- View Settings -->
-                    <button class="quick-action" title="Görünüm Ayarları">
-                        <i class="fas fa-sliders-h text-slate-500"></i>
-                        <span>Görünüm</span>
-                    </button>
-
-                    <!-- Import -->
-                    <button onclick="window.location.href='/import'" class="quick-action" title="İçe Aktar">
-                        <i class="fas fa-file-import text-slate-500"></i>
-                        <span>İçe Aktar</span>
-                    </button>
-
-                    <!-- Export -->
-                    <button onclick="exportContacts()" class="quick-action" title="Dışa Aktar">
-                        <i class="fas fa-download text-slate-500"></i>
-                        <span>Dışa Aktar</span>
-                    </button>
-
-                    <!-- Add New -->
-                    <button onclick="openNewContactModal()" class="quick-action bg-brand-600 text-white border-brand-600 hover:bg-brand-700">
-                        <i class="fas fa-plus"></i>
-                        <span>Yeni Kişi</span>
-                    </button>
-                </div>
-            </div>
+        <!-- Filters Bar -->
+        <div class="bg-gray-50 border-b border-gray-200 px-8 py-2 flex items-center gap-3 flex-shrink-0">
+            <select id="roleFilter" class="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-700 outline-none focus:border-brand-500 transition-all">
+                <option value="">Tüm Roller</option>
+                <option value="Decision Maker">Decision Maker</option>
+                <option value="Champion">Champion</option>
+                <option value="Influencer">Influencer</option>
+                <option value="Blocker">Blocker</option>
+                <option value="User">User</option>
+            </select>
+            <button class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all">
+                + Filtre Ekle
+            </button>
+            <div class="flex-1"></div>
+            <button onclick="openColumnManager()" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2" title="Sütunları Yönet">
+                <i class="fas fa-columns text-xs"></i> Sütunları Yönet
+            </button>
         </div>
 
-        <!-- Toolbar -->
-        <div class="bg-white border-b border-slate-200 px-6 py-3 flex-shrink-0">
-            <div class="flex items-center justify-between gap-4">
-                <!-- Left Controls -->
-                <div class="flex items-center gap-3">
-                    <!-- Role Filter -->
-                    <select id="roleFilter" class="quick-action">
-                        <option value="">Tüm Roller</option>
-                        <option value="Decision Maker">Decision Maker</option>
-                        <option value="Champion">Champion</option>
-                        <option value="Influencer">Influencer</option>
-                        <option value="Blocker">Blocker</option>
-                        <option value="User">User</option>
-                    </select>
-
-                    <!-- Add Filter -->
-                    <button id="openFilterPanelBtn" class="header-icon-btn" title="Hızlı Filtre Ekle">
-                        <i class="fas fa-plus text-sm"></i>
-                    </button>
-                </div>
-
-                <!-- Right: Search & Stats -->
-                <div class="flex items-center gap-4">
-                    <!-- Quick Stats -->
-                    <div class="flex items-center gap-4 text-xs border-l border-slate-200 pl-4">
-                        <div class="flex items-center gap-1.5">
-                            <span class="status-dot status-dot-excellent"></span>
-                            <span class="text-slate-600"><span id="excellentCount">0</span> Mükemmel</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="status-dot status-dot-good"></span>
-                            <span class="text-slate-600"><span id="goodCount">0</span> İyi</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="status-dot status-dot-medium"></span>
-                            <span class="text-slate-600"><span id="mediumCount">0</span> Orta</span>
-                        </div>
-                    </div>
-
-                    <!-- Search -->
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="text" id="contactsSearchInput" placeholder="Ara... (Ctrl+K)"
-                            class="w-56 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter Panel Container -->
-        <div id="filter-panel-container"></div>
-
-        <!-- Filter Chips Container -->
-        <div id="filter-chips-container" class="bg-white border-b border-slate-200 px-6 py-2 flex-shrink-0 hidden">
-            <div class="flex items-center gap-2 flex-wrap">
-                <!-- Filter chips will be rendered here by FilterSystem -->
-            </div>
-        </div>
-
-        <!-- Table Container -->
-        <div class="flex-1 overflow-auto bg-white mx-4 my-4 rounded-xl border border-slate-200 shadow-sm">
-            <table class="excel-table w-full">
-                <thead>
-                    <tr>
-                        <th class="w-10 px-4 py-3 text-left">
-                            <input type="checkbox" id="selectAll" class="custom-checkbox" onclick="toggleSelectAll(this.checked)">
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[250px]">
-                            <button class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-brand-600">
-                                Kişi
-                                <i class="fas fa-plus text-[10px] text-slate-400"></i>
-                            </button>
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[160px]">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kuruluş</span>
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[180px]">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">E-posta</span>
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[140px]">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Telefon</span>
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[120px]">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rol</span>
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[140px]">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lead Score</span>
-                                <span class="ai-badge">AI</span>
-                            </div>
-                        </th>
-                        <th class="px-4 py-3 text-left min-w-[140px]">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Açık Anlaşmalar</span>
-                        </th>
-                        <th class="px-4 py-3 text-right min-w-[80px]">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">İşlemler</span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="contactsTableBody">
-                    <!-- JS ile doldurulacak -->
-                </tbody>
-            </table>
-
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden py-16 text-center">
-                <div class="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-users text-2xl text-slate-400"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-slate-700 mb-1">Henüz kişi eklenmemiş</h3>
-                <p class="text-sm text-slate-500 mb-4">İlk kişinizi ekleyerek başlayın</p>
-                <button onclick="openNewContactModal()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Yeni Kişi Ekle
+        <!-- Bulk Actions Bar (Hidden by default) -->
+        <div id="bulkActionsBar" class="hidden bg-blue-600 text-white px-8 py-3 flex items-center justify-between flex-shrink-0 shadow-lg">
+            <div class="flex items-center gap-4">
+                <span id="selectedCount" class="font-semibold">0 kişi seçildi</span>
+                <button onclick="clearSelection()" class="text-xs text-blue-100 hover:text-white underline">
+                    Seçimi Temizle
                 </button>
             </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openBulkEditModal()" class="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-all flex items-center gap-2">
+                    <i class="fas fa-edit"></i> Toplu Düzenle
+                </button>
+                <button onclick="bulkDeleteContacts()" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-all flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Sil
+                </button>
+            </div>
+        </div>
 
-            <!-- Loading State -->
-            <div id="loadingState" class="hidden py-12 text-center">
+        <!-- Contacts Table -->
+        <div class="flex-1 overflow-auto">
+            <div class="min-w-full inline-block align-middle">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-fixed divide-y divide-gray-300">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th scope="col" class="w-12 px-4 py-3">
+                                    <input type="checkbox" id="selectAll" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500">
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    Ad Soyad
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    Kuruluş
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    E-posta
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    Telefon
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    Rol
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    Lead Score
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                                    Açık Anlaşmalar
+                                </th>
+                                <th scope="col" class="w-12 px-4 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="contactsTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 px-4">
+                <div class="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mb-6">
+                    <i class="fas fa-users text-gray-400 text-3xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Henüz kişi eklenmemiş</h3>
+                <p class="text-sm text-gray-500 mb-6 text-center max-w-sm">İlk kişinizi ekleyerek müşteri ilişkilerinizi yönetmeye başlayın.</p>
+                <button onclick="openNewContactModal()" class="px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md flex items-center gap-2">
+                    <i class="fas fa-plus"></i> İlk Kişiyi Ekle
+                </button>
+            </div>
+            
+            <div id="loadingState" class="hidden p-12 text-center">
                 <i class="fas fa-spinner fa-spin text-2xl text-brand-600 mb-2"></i>
                 <p class="text-slate-500 text-sm">Yükleniyor...</p>
             </div>
         </div>
-
-        <!-- Pagination -->
-        <div id="paginationBar" class="bg-white border-t border-slate-200 px-6 py-3 flex-shrink-0">
-            <div class="flex items-center justify-between">
-                <div class="text-sm text-slate-500">
-                    <span id="paginationInfo">0-0 / 0</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="prevPageBtn" onclick="goToPage((window.currentPage || 1) - 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                        <i class="fas fa-chevron-left text-xs"></i>
+        
+        <!-- Pagination & Bulk Actions Bar -->
+        <div id="paginationBar" class="bg-white border-t border-gray-200 px-6 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Bulk Actions (shown when items selected) -->
+                <div id="bulkActionsBar" class="hidden flex items-center gap-3">
+                    <span id="selectedCount" class="text-sm font-semibold text-gray-700">0 kişi seçildi</span>
+                    <button onclick="bulkDeleteContacts()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all flex items-center gap-2">
+                        <i class="fas fa-trash"></i> Seçilenleri Sil
                     </button>
+                    <button onclick="deleteAllContacts()" class="px-4 py-2 bg-red-700 text-white rounded-lg text-sm font-semibold hover:bg-red-800 transition-all flex items-center gap-2">
+                        <i class="fas fa-trash-alt"></i> Tüm Kişileri Sil
+                    </button>
+                </div>
+                
+                <!-- Pagination Info -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <span id="paginationInfo">1-50 / 100</span>
+                </div>
+                
+                <!-- Pagination Controls -->
+                <div class="flex items-center gap-2">
+                    <button id="prevPageBtn" onclick="goToPage((window.currentPage || 1) - 1)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    
                     <div id="pageNumbers" class="flex items-center gap-1">
-                        <!-- JS ile doldurulacak -->
+                        <!-- Page numbers will be inserted here -->
                     </div>
-                    <button id="nextPageBtn" onclick="goToPage((window.currentPage || 1) + 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                        <i class="fas fa-chevron-right text-xs"></i>
+                    
+                    <button id="nextPageBtn" onclick="goToPage((window.currentPage || 1) + 1)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    
+                    <button onclick="deleteAllContactsConfirm()" class="ml-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all flex items-center gap-2">
+                        <i class="fas fa-trash-alt"></i> Tümünü Sil
                     </button>
                 </div>
             </div>
@@ -1908,14 +1874,6 @@
                 if (search) url += `&search=${encodeURIComponent(search)}`;
                 if (role) url += `&role=${encodeURIComponent(role)}`;
                 if (companyIdFilter) url += `&company_id=${companyIdFilter}`;
-                
-                // Add filter system filters if available
-                if (window.contactFilterSystem && window.contactFilterSystem.getActiveFilters) {
-                    const filters = window.contactFilterSystem.getActiveFilters();
-                    if (filters && filters.length > 0) {
-                        url += `&filters=${encodeURIComponent(JSON.stringify(filters))}`;
-                    }
-                }
                 
                 const res = await fetch(url);
                 if (!res.ok) {
@@ -3759,25 +3717,6 @@
         }
     </script>
     <script src="/static/topbar-global.js"></script>
-    <script src="/static/filter-system.js"></script>
     <script src="/static/contacts-pagination.js"></script>
-    <script>
-        // Initialize filter system
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof FilterSystem !== 'undefined') {
-                window.contactFilterSystem = new FilterSystem('contact', 'filter-panel-container');
-                window.contactFilterSystem.init();
-                
-                // Connect filter system to contacts reload
-                window.contactFilterSystem.onFilterChange = (filters) => {
-                    console.log('Filters changed:', filters);
-                    // Reload contacts with new filters
-                    if (typeof loadContacts === 'function') {
-                        loadContacts();
-                    }
-                };
-            }
-        });
-    </script>
 </body>
 </html>

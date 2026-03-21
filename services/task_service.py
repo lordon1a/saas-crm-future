@@ -3,9 +3,13 @@ Task Service - Business logic for task and project management
 Handles task CRUD, dependencies, milestones, and templates
 """
 from models import db
-from models_crm import Task, TaskDependency, Milestone, TaskComment, TaskAttachment
-from datetime import datetime
+from models_crm import Task, TaskDependency, Milestone, TaskComment, TaskAttachment, TaskNotification, NotificationPreference, Activity
+from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TaskService:
@@ -15,9 +19,10 @@ class TaskService:
     def create_task(workspace_id, title, description=None, assignee_id=None, 
                    company_id=None, deal_id=None, milestone_id=None,
                    status='not_started', priority='medium', due_date=None,
-                   is_customer_facing=False):
+                   is_customer_facing=False, start_time=None, end_time=None,
+                   timezone='UTC', task_type='task', contact_id=None, user_id=None):
         """
-        Create a new task
+        Create a new task with calendar/notification support
         
         Args:
             workspace_id: Workspace ID for multi-tenant isolation
@@ -31,10 +36,24 @@ class TaskService:
             priority: Task priority (low, medium, high, urgent)
             due_date: Due date (datetime)
             is_customer_facing: Whether visible in customer portal
+            start_time: Start time for scheduled tasks
+            end_time: End time for scheduled tasks
+            timezone: Timezone (e.g., 'Europe/Istanbul', 'UTC')
+            task_type: Task type (call, meeting, email, todo, follow_up, other)
+            contact_id: Associated contact ID
+            user_id: User creating the task (for activity log)
             
         Returns:
             Task object
         """
+        # Validasyon
+        if not title:
+            raise ValueError("Görev başlığı zorunludur")
+        
+        if start_time and end_time:
+            if start_time >= end_time:
+                raise ValueError("Bitiş zamanı başlangıç zamanından sonra olmalıdır")
+        
         task = Task(
             workspace_id=workspace_id,
             title=title,
@@ -46,10 +65,31 @@ class TaskService:
             status=status,
             priority=priority,
             due_date=due_date,
-            is_customer_facing=is_customer_facing
+            is_customer_facing=is_customer_facing,
+            start_time=start_time,
+            end_time=end_time,
+            timezone=timezone,
+            task_type=task_type,
+            contact_id=contact_id
         )
         
         db.session.add(task)
+        db.session.flush()  # ID almak için
+        
+        # Bildirim oluştur
+        if task.start_time and task.assignee_id:
+            TaskService._create_task_notifications(task)
+        
+        # Activity log
+        if user_id:
+            TaskService._create_activity_log(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                task_id=task.id,
+                action='task_created',
+                details=f"Görev oluşturuldu: {task.title}"
+            )
+        
         db.session.commit()
         
         return task
@@ -103,13 +143,14 @@ class TaskService:
         )
     
     @staticmethod
-    def update_task(task_id, workspace_id, **kwargs):
+    def update_task(task_id, workspace_id, user_id=None, **kwargs):
         """
-        Update task fields
+        Update task fields with notification refresh support
         
         Args:
             task_id: Task ID
             workspace_id: Workspace ID
+            user_id: User updating the task (for activity log)
             **kwargs: Fields to update
             
         Returns:
@@ -121,18 +162,50 @@ class TaskService:
 
         previous_status = task.status
         
+        # Zaman değişikliği kontrolü
+        time_changed = False
+        if 'start_time' in kwargs and kwargs['start_time'] != task.start_time:
+            time_changed = True
+            task.start_time = kwargs['start_time']
+        
+        if 'end_time' in kwargs and kwargs['end_time'] != task.end_time:
+            time_changed = True
+            task.end_time = kwargs['end_time']
+        
         # Update allowed fields
         allowed_fields = ['title', 'description', 'assignee_id', 'company_id', 
                          'deal_id', 'milestone_id', 'status', 'priority', 
-                         'due_date', 'is_customer_facing']
+                         'due_date', 'is_customer_facing', 'timezone', 'task_type', 'contact_id']
         
         for field, value in kwargs.items():
-            if field in allowed_fields:
+            if field in allowed_fields and field not in ['start_time', 'end_time']:
                 setattr(task, field, value)
         
         # Set completed_at when status changes to completed
         if 'status' in kwargs and kwargs['status'] == 'completed':
             task.completed_at = datetime.utcnow()
+        
+        # Zaman değişti ise bildirimleri yeniden oluştur
+        if time_changed and task.assignee_id:
+            # Eski bildirimleri sil (henüz gönderilmemişleri)
+            TaskNotification.query.filter_by(
+                task_id=task.id,
+                is_sent=False
+            ).delete()
+            
+            # Yeni bildirimler oluştur
+            if task.start_time:
+                TaskService._create_task_notifications(task)
+        
+        # Activity log
+        if user_id:
+            TaskService._create_activity_log(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                task_id=task.id,
+                action='task_updated',
+                details=f"Görev güncellendi: {task.title}"
+            )
         
         db.session.commit()
 
@@ -524,6 +597,152 @@ class TaskService:
                     )
         
         return created_tasks
+    
+    # ========================================================================
+    # CALENDAR & NOTIFICATION SUPPORT
+    # ========================================================================
+    
+    @staticmethod
+    def _create_task_notifications(task):
+        """
+        Görev için bildirim kayıtları oluştur.
+        
+        Args:
+            task: Task instance
+        """
+        # Kullanıcı tercihlerini al
+        pref = NotificationPreference.query.filter_by(
+            workspace_id=task.workspace_id,
+            user_id=task.assignee_id
+        ).first()
+        
+        if not pref:
+            # Varsayılan tercihler
+            pref = NotificationPreference(
+                workspace_id=task.workspace_id,
+                user_id=task.assignee_id,
+                reminder_minutes_before=15
+            )
+            db.session.add(pref)
+            db.session.flush()
+        
+        # Hatırlatma bildirimi
+        if pref.task_reminder_enabled and task.start_time:
+            notify_at = task.start_time - timedelta(minutes=pref.reminder_minutes_before)
+            
+            # Geçmiş zaman kontrolü
+            if notify_at > datetime.utcnow():
+                notification = TaskNotification(
+                    workspace_id=task.workspace_id,
+                    task_id=task.id,
+                    user_id=task.assignee_id,
+                    notify_at=notify_at,
+                    message=f"Hatırlatma: '{task.title}' görevi {pref.reminder_minutes_before} dakika içinde başlayacak",
+                    notification_type='task_reminder'
+                )
+                db.session.add(notification)
+    
+    @staticmethod
+    def get_tasks_for_calendar(workspace_id, user_id, start_date, end_date, filters=None):
+        """
+        Takvim görünümü için görevleri getir.
+        
+        Args:
+            workspace_id: Workspace ID
+            user_id: Kullanıcı ID
+            start_date: Başlangıç tarihi
+            end_date: Bitiş tarihi
+            filters: Opsiyonel filtreler (task_type, assignee_id, status)
+        
+        Returns:
+            List[dict]: Takvim event formatında görevler
+        """
+        query = Task.query.filter(
+            Task.workspace_id == workspace_id,
+            Task.start_time.isnot(None),
+            Task.start_time >= start_date,
+            Task.start_time <= end_date
+        )
+        
+        # Filtreler
+        if filters:
+            if filters.get('task_type'):
+                query = query.filter(Task.task_type == filters['task_type'])
+            
+            if filters.get('assignee_id'):
+                if filters['assignee_id'] == 'me':
+                    query = query.filter(Task.assignee_id == user_id)
+                else:
+                    query = query.filter(Task.assignee_id == filters['assignee_id'])
+            
+            if filters.get('status'):
+                query = query.filter(Task.status == filters['status'])
+        
+        tasks = query.order_by(Task.start_time.asc()).all()
+        
+        return [task.to_calendar_event() for task in tasks]
+    
+    @staticmethod
+    def mark_overdue_tasks(workspace_id):
+        """
+        Süresi geçmiş görevleri 'overdue' olarak işaretle.
+        Background job tarafından çağrılır.
+        
+        Args:
+            workspace_id: Workspace ID
+        """
+        now = datetime.utcnow()
+        
+        overdue_tasks = Task.query.filter(
+            Task.workspace_id == workspace_id,
+            Task.status == 'pending',
+            Task.end_time < now
+        ).all()
+        
+        for task in overdue_tasks:
+            task.status = 'overdue'
+            
+            # Overdue bildirimi oluştur
+            if task.assignee_id:
+                pref = NotificationPreference.query.filter_by(
+                    workspace_id=task.workspace_id,
+                    user_id=task.assignee_id
+                ).first()
+                
+                if pref and pref.task_overdue_enabled:
+                    notification = TaskNotification(
+                        workspace_id=task.workspace_id,
+                        task_id=task.id,
+                        user_id=task.assignee_id,
+                        notify_at=now,
+                        message=f"Görev süresi geçti: '{task.title}'",
+                        notification_type='task_overdue'
+                    )
+                    db.session.add(notification)
+        
+        db.session.commit()
+    
+    @staticmethod
+    def _create_activity_log(workspace_id, user_id, task_id, action, details):
+        """
+        Activity log oluştur
+        
+        Args:
+            workspace_id: Workspace ID
+            user_id: User ID
+            task_id: Task ID
+            action: Action type (task_created, task_updated, etc.)
+            details: Details text
+        """
+        activity = Activity(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            activity_type='task',
+            subject=action,
+            body=details,
+            extra_data=json.dumps({'task_id': task_id})
+        )
+        db.session.add(activity)
     
     # ========================================================================
     # CUSTOMER PORTAL QUERIES

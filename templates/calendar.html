@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM - Takvim</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+                            400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+                            800: '#5b21b6', 900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #cbd5e1, #94a3b8); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #94a3b8, #64748b); }
+
+        /* Modern Event Cards with Drag & Drop */
+        .cal-ev { 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: grab;
+            position: relative;
+            overflow: hidden;
+        }
+        .cal-ev:active {
+            cursor: grabbing;
+        }
+        .cal-ev:hover { 
+            transform: translateY(-2px) scale(1.02); 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+            cursor: grab;
+        }
+        .cal-ev.dragging {
+            opacity: 0.3;
+            cursor: grabbing !important;
+            transform: scale(0.9);
+            filter: blur(1px);
+            border: 2px dashed #8b5cf6 !important;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%) !important;
+        }
+        .cal-ev::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+
+        /* Modern Calendar Days */
+        .cal-day {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .cal-day:hover { 
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.1);
+        }
+        body.dragging .cal-day:hover {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            box-shadow: inset 0 0 0 2px rgba(139, 92, 246, 0.3);
+        }
+        .cal-day.today { 
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            box-shadow: inset 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+        .cal-day.other-month { opacity: 0.4; }
+        .cal-day.drag-over {
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            box-shadow: inset 0 0 0 3px #8b5cf6, 0 0 20px rgba(139, 92, 246, 0.3);
+            animation: dropZonePulse 1s ease-in-out infinite;
+        }
+        @keyframes dropZonePulse {
+            0%, 100% { box-shadow: inset 0 0 0 3px #8b5cf6, 0 0 20px rgba(139, 92, 246, 0.3); }
+            50% { box-shadow: inset 0 0 0 3px #7c3aed, 0 0 30px rgba(124, 58, 237, 0.5); }
+        }
+
+        /* Modern Hour Rows */
+        .cal-hour-row { 
+            min-height: 60px;
+            transition: background 0.15s ease;
+            position: relative;
+        }
+        .cal-hour-row:hover { 
+            background: linear-gradient(90deg, #fafafe 0%, #f8fafc 100%);
+        }
+        .cal-hour-row.drag-over {
+            background: linear-gradient(90deg, #f5f3ff 0%, #ede9fe 100%);
+            box-shadow: inset 0 0 0 2px #8b5cf6;
+        }
+        .cal-hour-row .flex-1.drag-over {
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            box-shadow: inset 0 0 0 3px #8b5cf6, 0 0 20px rgba(139, 92, 246, 0.3);
+            animation: dropZonePulse 1s ease-in-out infinite;
+        }
+
+        /* Modern Week Events with Glassmorphism */
+        .week-ev { 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: grab;
+            backdrop-filter: blur(8px);
+            position: relative;
+        }
+        .week-ev:active {
+            cursor: grabbing;
+        }
+        .week-ev:hover { 
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.12);
+            z-index: 20;
+            cursor: grab;
+        }
+        .week-ev.dragging {
+            opacity: 0.3;
+            cursor: grabbing !important;
+            transform: scale(0.9);
+            filter: blur(1px);
+            border: 2px dashed #8b5cf6 !important;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%) !important;
+        }
+        .week-ev::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        /* Modern Mini Calendar */
+        .mini-day { 
+            width: 32px; 
+            height: 32px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 12px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+        .mini-day:hover { 
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+        }
+        .mini-day.today { 
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white; 
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .mini-day.selected { 
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            color: #7c3aed; 
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        }
+        .mini-day.other { color: #cbd5e1; }
+
+        /* Modern Modal with Glassmorphism */
+        .modal-overlay { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .modal-content { 
+            animation: modalIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 24px 48px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.1);
+        }
+        @keyframes modalIn { 
+            from { 
+                opacity: 0; 
+                transform: scale(0.85) translateY(-20px); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: scale(1) translateY(0); 
+            } 
+        }
+        
+        .modal-overlay {
+            animation: fadeIn 0.25s ease;
+        }
+
+        /* Modern Time Indicator */
+        .time-now { 
+            position: absolute; 
+            left: 0; 
+            right: 0; 
+            z-index: 5; 
+            pointer-events: none;
+        }
+        .time-now::before { 
+            content: ''; 
+            position: absolute; 
+            left: 56px; 
+            right: 0; 
+            top: 50%; 
+            height: 2px; 
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+        .time-now::after { 
+            content: ''; 
+            position: absolute; 
+            left: 50px; 
+            top: 50%; 
+            width: 12px; 
+            height: 12px; 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-radius: 50%; 
+            transform: translateY(-50%);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.6), 0 0 24px rgba(239, 68, 68, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+            50% { transform: translateY(-50%) scale(1.2); opacity: 0.8; }
+        }
+
+        /* Modern Event Dot */
+        .ev-dot { 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Modern View Buttons */
+        .vbtn.active { 
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white; 
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .vbtn { 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+        }
+        .vbtn:hover:not(.active) { 
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-in { animation: fadeIn 0.3s ease; }
+        
+        @keyframes slideIn { 
+            from { transform: translateX(-10px); opacity: 0; } 
+            to { transform: translateX(0); opacity: 1; } 
+        }
+        .slide-in { animation: slideIn 0.3s ease; }
+
+        /* Drag Ghost - More visible */
+        .drag-ghost {
+            opacity: 0.9;
+            transform: rotate(2deg) scale(1.05);
+            box-shadow: 0 20px 60px rgba(139, 92, 246, 0.4), 0 8px 24px rgba(0,0,0,0.3);
+            border: 2px solid #8b5cf6;
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(249,250,251,0.95) 100%);
+        }
+
+        /* Quick Add Indicator */
+        .quick-add-indicator {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%);
+            border: 2px dashed #8b5cf6;
+            border-radius: 8px;
+            pointer-events: none;
+            animation: quickAddPulse 1s ease-in-out infinite;
+        }
+        @keyframes quickAddPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">🐧</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/calendar" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Takvim"><i class="fas fa-calendar-days text-lg"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
+            <a href="/team" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Takım"><i class="fas fa-users text-lg"></i></a>
+        </nav>
+        <div class="flex flex-col gap-4 w-full px-3 pb-4">
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Topbar -->
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-3 md:gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="CRM'de ara..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
+                    <div id="notification-bell-container"></div>
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardım"><i class="fas fa-circle-question text-sm"></i></button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">U</div>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Calendar Toolbar -->
+        <header class="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <button onclick="goToday()" class="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">Bugün</button>
+                <div class="flex items-center gap-1">
+                    <button onclick="navPrev()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
+                    <button onclick="navNext()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
+                </div>
+                <h2 id="calTitle" class="text-lg font-bold text-slate-800"></h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center bg-slate-100 rounded-lg p-1 gap-0.5">
+                    <button onclick="setView('month')" class="vbtn px-3.5 py-1.5 rounded-md text-xs font-semibold" data-view="month">Ay</button>
+                    <button onclick="setView('week')" class="vbtn px-3.5 py-1.5 rounded-md text-xs font-semibold" data-view="week">Hafta</button>
+                    <button onclick="setView('day')" class="vbtn px-3.5 py-1.5 rounded-md text-xs font-semibold" data-view="day">Gün</button>
+                </div>
+                <button onclick="openCreateModal()" class="px-4 py-1.5 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                    <i class="fas fa-plus text-xs"></i> Etkinlik Ekle
+                </button>
+            </div>
+        </header>
+
+        <!-- Calendar Body -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Left Sidebar -->
+            <aside class="w-[268px] bg-white border-r border-slate-200 flex flex-col overflow-y-auto flex-shrink-0">
+                <!-- Mini Calendar -->
+                <div class="p-4 border-b border-slate-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 id="miniTitle" class="text-sm font-bold text-slate-700"></h3>
+                        <div class="flex items-center gap-1">
+                            <button onclick="miniPrev()" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400"><i class="fas fa-chevron-left text-[10px]"></i></button>
+                            <button onclick="miniNext()" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400"><i class="fas fa-chevron-right text-[10px]"></i></button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-0 mb-1">
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Pt</div>
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Sa</div>
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Ça</div>
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Pe</div>
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Cu</div>
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Ct</div>
+                        <div class="mini-day text-[10px] font-bold text-slate-400 cursor-default">Pz</div>
+                    </div>
+                    <div id="miniGrid" class="grid grid-cols-7 gap-0"></div>
+                </div>
+
+                <!-- Event Type Filters -->
+                <div class="p-4 border-b border-slate-100">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Etkinlik Türleri</h4>
+                    <div class="space-y-2" id="typeFilters">
+                        <label class="flex items-center gap-2.5 cursor-pointer group"><input type="checkbox" checked data-ft="call" class="w-3.5 h-3.5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"><span class="ev-dot" style="background:#10b981"></span><span class="text-xs font-medium text-slate-600 group-hover:text-slate-800">Arama</span></label>
+                        <label class="flex items-center gap-2.5 cursor-pointer group"><input type="checkbox" checked data-ft="meeting" class="w-3.5 h-3.5 rounded border-slate-300 text-blue-500 focus:ring-blue-500"><span class="ev-dot" style="background:#3b82f6"></span><span class="text-xs font-medium text-slate-600 group-hover:text-slate-800">Toplantı</span></label>
+                        <label class="flex items-center gap-2.5 cursor-pointer group"><input type="checkbox" checked data-ft="email" class="w-3.5 h-3.5 rounded border-slate-300 text-purple-500 focus:ring-purple-500"><span class="ev-dot" style="background:#8b5cf6"></span><span class="text-xs font-medium text-slate-600 group-hover:text-slate-800">E-posta</span></label>
+                        <label class="flex items-center gap-2.5 cursor-pointer group"><input type="checkbox" checked data-ft="todo" class="w-3.5 h-3.5 rounded border-slate-300 text-amber-500 focus:ring-amber-500"><span class="ev-dot" style="background:#f59e0b"></span><span class="text-xs font-medium text-slate-600 group-hover:text-slate-800">Yapılacak</span></label>
+                        <label class="flex items-center gap-2.5 cursor-pointer group"><input type="checkbox" checked data-ft="follow_up" class="w-3.5 h-3.5 rounded border-slate-300 text-pink-500 focus:ring-pink-500"><span class="ev-dot" style="background:#ec4899"></span><span class="text-xs font-medium text-slate-600 group-hover:text-slate-800">Takip</span></label>
+                        <label class="flex items-center gap-2.5 cursor-pointer group"><input type="checkbox" checked data-ft="other" class="w-3.5 h-3.5 rounded border-slate-300 text-slate-500 focus:ring-slate-500"><span class="ev-dot" style="background:#6b7280"></span><span class="text-xs font-medium text-slate-600 group-hover:text-slate-800">Diğer</span></label>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events -->
+                <div class="p-4 flex-1">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yaklaşan Etkinlikler</h4>
+                    <div id="upcoming" class="space-y-2"><div class="text-xs text-slate-400 text-center py-4">Yükleniyor...</div></div>
+                </div>
+            </aside>
+
+            <!-- Calendar Grid -->
+            <div class="flex-1 overflow-hidden flex flex-col">
+                <div id="calView" class="flex-1 overflow-auto"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Modal -->
+    <div id="evModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
+        <div class="modal-content relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 id="modalTitle" class="text-base font-bold text-slate-800">Yeni Etkinlik</h3>
+                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-200 text-slate-400 transition-all"><i class="fas fa-times text-sm"></i></button>
+            </div>
+            <form id="evForm" class="p-6 space-y-4 max-h-[70vh] overflow-y-auto" onsubmit="saveEvent(event)">
+                <input type="hidden" id="fId" value="">
+                <div><input type="text" id="fTitle" placeholder="Etkinlik başlığı ekle" required class="w-full px-0 py-2 text-lg font-semibold text-slate-800 placeholder-slate-300 border-0 border-b-2 border-slate-100 focus:border-brand-500 focus:ring-0 transition-colors bg-transparent"></div>
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Etkinlik Türü</label>
+                        <select id="fType" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                            <option value="call">📞 Arama</option>
+                            <option value="meeting">🤝 Toplantı</option>
+                            <option value="email">📧 E-posta</option>
+                            <option value="todo">✅ Yapılacak</option>
+                            <option value="follow_up">🔄 Takip</option>
+                            <option value="other">📌 Diğer</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Öncelik</label>
+                        <select id="fPriority" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" onchange="updatePriorityStyle(this)">
+                            <option value="low" data-color="#94a3b8">🔵 Düşük</option>
+                            <option value="medium" selected data-color="#f59e0b">🟡 Orta</option>
+                            <option value="high" data-color="#f97316">🟠 Yüksek</option>
+                            <option value="urgent" data-color="#ef4444">🔴 Acil</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Başlangıç</label><input type="datetime-local" id="fStart" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"></div>
+                    <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Bitiş</label><input type="datetime-local" id="fEnd" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"></div>
+                </div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Açıklama</label><textarea id="fDesc" rows="2" placeholder="Notlar ekle..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none"></textarea></div>
+                <div class="border-t border-slate-100 pt-4">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">CRM Bağlantıları</h4>
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Kişi</label>
+                            <input type="hidden" id="fContact" value="">
+                            <div class="relative">
+                                <div id="contactPickerSelected" class="hidden items-center gap-2 w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm cursor-pointer hover:border-brand-400 transition-all" onclick="toggleContactSearch(true)">
+                                    <i class="fas fa-user text-slate-400 text-xs"></i>
+                                    <span id="contactPickerName" class="flex-1 text-slate-700 truncate"></span>
+                                    <button type="button" onclick="event.stopPropagation();clearContactPicker()" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 hover:text-red-500 transition-all"><i class="fas fa-times text-[10px]"></i></button>
+                                </div>
+                                <div id="contactPickerSearch" class="relative">
+                                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="contactSearchInput" placeholder="Kişi ara..." autocomplete="off" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" oninput="searchContacts(this.value)" onfocus="searchContacts(this.value)">
+                                </div>
+                                <div id="contactDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-50">
+                                    <div id="contactDropdownList" class="py-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Şirket</label><select id="fCompany" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"><option value="">Şirket seçin...</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Anlaşma</label><select id="fDeal" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"><option value="">Anlaşma seçin...</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Atanan Kişi</label><select id="fAssignee" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"><option value="">Kişi seçin...</option></select></div>
+                    </div>
+                </div>
+            </form>
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <button id="delBtn" onclick="deleteEvent()" class="hidden px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-semibold transition-all"><i class="fas fa-trash-alt mr-1"></i> Sil</button>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-semibold transition-all">İptal</button>
+                    <button type="submit" form="evForm" class="px-5 py-2 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700 transition-all shadow-md"><i class="fas fa-check mr-1"></i> Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Popover -->
+    <div id="evPop" class="fixed z-40 hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-80 overflow-hidden fade-in">
+            <div id="popHead" class="px-4 py-3 border-b border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2"><span id="popDot" class="ev-dot"></span><span id="popType" class="text-[10px] font-bold uppercase tracking-wider text-slate-400"></span></div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="editPop()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-all" title="Düzenle"><i class="fas fa-pen text-xs"></i></button>
+                        <button onclick="delPop()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all" title="Sil"><i class="fas fa-trash text-xs"></i></button>
+                        <button onclick="closePop()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-all"><i class="fas fa-times text-xs"></i></button>
+                    </div>
+                </div>
+                <h3 id="popTitle" class="text-sm font-bold text-slate-800 mt-1"></h3>
+            </div>
+            <div class="px-4 py-3 space-y-2">
+                <div class="flex items-center gap-2 text-xs text-slate-600"><i class="fas fa-clock w-4 text-center text-slate-400"></i><span id="popTime"></span></div>
+                <div id="popDescW" class="flex items-start gap-2 text-xs text-slate-600 hidden"><i class="fas fa-align-left w-4 text-center text-slate-400 mt-0.5"></i><span id="popDesc" class="line-clamp-3"></span></div>
+                <div id="popContactW" class="flex items-center gap-2 text-xs text-slate-600 hidden"><i class="fas fa-user w-4 text-center text-slate-400"></i><span id="popContact"></span></div>
+                <div id="popCompanyW" class="flex items-center gap-2 text-xs text-slate-600 hidden"><i class="fas fa-building w-4 text-center text-slate-400"></i><span id="popCompany"></span></div>
+                <div id="popDealW" class="flex items-center gap-2 text-xs text-slate-600 hidden"><i class="fas fa-handshake w-4 text-center text-slate-400"></i><span id="popDeal"></span></div>
+                <div id="popPriorityW" class="flex items-center gap-2 text-xs text-slate-600 hidden"><i class="fas fa-flag w-4 text-center text-slate-400"></i><span id="popPriority"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toastBox" class="fixed bottom-6 right-6 z-[60] space-y-2"></div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='notification-bell.js') }}"></script>
+    <script src="/static/topbar-global.js"></script>
+    <script src="/static/app.js"></script>
+    <script>
+    // ========== STATE ==========
+    const S = {
+        date: new Date(),
+        view: 'month',
+        events: [],
+        miniDate: new Date(),
+        selDate: null,
+        popEv: null,
+        filters: new Set(['call','meeting','email','todo','follow_up','other']),
+    };
+
+    const COLORS = { call:'#10b981', meeting:'#3b82f6', email:'#8b5cf6', todo:'#f59e0b', follow_up:'#ec4899', other:'#6b7280' };
+    const LABELS = { call:'Arama', meeting:'Toplantı', email:'E-posta', todo:'Yapılacak', follow_up:'Takip', other:'Diğer' };
+    const ICONS = { call:'📞', meeting:'🤝', email:'📧', todo:'✅', follow_up:'🔄', other:'📌' };
+    const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+    const DAYS_S = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+    const PRI_LABELS = { low:'Düşük', medium:'Orta', high:'Yüksek', urgent:'Acil' };
+    const PRI_COLORS = { low:'#94a3b8', medium:'#f59e0b', high:'#f97316', urgent:'#ef4444' };
+    const PRI_ICONS = { low:'🔵', medium:'🟡', high:'🟠', urgent:'🔴' };
+
+    // ========== API ==========
+    async function api(url, method='GET', body=null) {
+        const o = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body) o.body = JSON.stringify(body);
+        const r = await fetch(url, o);
+        if (r.status === 401) { window.location.href = '/login'; return {}; }
+        
+        const data = await r.json();
+        
+        if (!r.ok) {
+            const errorMsg = data.error || data.message || `HTTP ${r.status}`;
+            console.error('API Error:', errorMsg, data);
+            throw new Error(errorMsg);
+        }
+        
+        return data;
+    }
+
+    function toast(msg, type='success') {
+        const c = document.getElementById('toastBox');
+        const t = document.createElement('div');
+        const bg = type==='error'?'bg-red-600':type==='warning'?'bg-amber-500':'bg-brand-600';
+        t.className = `${bg} text-white px-5 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-2 fade-in`;
+        const ic = type==='error'?'fa-circle-xmark':type==='warning'?'fa-triangle-exclamation':'fa-circle-check';
+        t.innerHTML = `<i class="fas ${ic}"></i> ${msg}`;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    // ========== FETCH ==========
+    async function fetchEvents() {
+        try {
+            const r = getRange();
+            const data = await api(`/api/v1/calendar/events?start=${r.s.toISOString()}&end=${r.e.toISOString()}`);
+            S.events = data.events || [];
+            render();
+        } catch(err) {
+            console.error('Error fetching events:', err);
+            S.events = [];
+            render();
+            toast('Etkinlikler yüklenemedi', 'error');
+        }
+    }
+
+    async function fetchUpcoming() {
+        const data = await api('/api/v1/calendar/upcoming?limit=8');
+        renderUpcoming(data.events || []);
+    }
+
+    async function loadCRM() {
+        const [co, d, t] = await Promise.all([
+            api('/api/v1/calendar/companies-search'),
+            api('/api/v1/calendar/deals-search'),
+            api('/api/v1/calendar/team')
+        ]);
+        const sel = (id, items, labelKey='name') => {
+            const el = document.getElementById(id);
+            const first = el.options[0].outerHTML;
+            el.innerHTML = first + (items||[]).map(i => `<option value="${i.id}">${esc(i[labelKey])}</option>`).join('');
+        };
+        sel('fCompany', co.companies);
+        sel('fDeal', d.deals);
+        sel('fAssignee', t.users);
+    }
+
+    function getRange() {
+        const d = S.date;
+        if (S.view === 'month') {
+            const s = new Date(d.getFullYear(), d.getMonth(), 1);
+            s.setDate(s.getDate() - ((s.getDay()+6)%7));
+            const e = new Date(d.getFullYear(), d.getMonth()+1, 0);
+            e.setDate(e.getDate() + (7-((e.getDay()+6)%7))%7);
+            e.setHours(23,59,59);
+            return {s,e};
+        } else if (S.view === 'week') {
+            const s = new Date(d); s.setDate(d.getDate()-((d.getDay()+6)%7)); s.setHours(0,0,0,0);
+            const e = new Date(s); e.setDate(s.getDate()+6); e.setHours(23,59,59);
+            return {s,e};
+        } else {
+            const s = new Date(d); s.setHours(0,0,0,0);
+            const e = new Date(d); e.setHours(23,59,59);
+            return {s,e};
+        }
+    }
+
+    function filtered() { return S.events.filter(e => S.filters.has(e.type||'other')); }
+
+    // ========== NAV ==========
+    function goToday() { S.date=new Date(); S.miniDate=new Date(); fetchEvents(); }
+    function navPrev() { const d=S.date; if(S.view==='month') d.setMonth(d.getMonth()-1); else if(S.view==='week') d.setDate(d.getDate()-7); else d.setDate(d.getDate()-1); S.miniDate=new Date(d); fetchEvents(); }
+    function navNext() { const d=S.date; if(S.view==='month') d.setMonth(d.getMonth()+1); else if(S.view==='week') d.setDate(d.getDate()+7); else d.setDate(d.getDate()+1); S.miniDate=new Date(d); fetchEvents(); }
+    function setView(v) { S.view=v; fetchEvents(); }
+    function miniPrev() { S.miniDate.setMonth(S.miniDate.getMonth()-1); renderMini(); }
+    function miniNext() { S.miniDate.setMonth(S.miniDate.getMonth()+1); renderMini(); }
+
+    // ========== RENDER ==========
+    function render() { 
+        updateTitle(); 
+        updateBtns(); 
+        renderMini(); 
+        if(S.view==='month') renderMonth(); 
+        else if(S.view==='week') renderWeek(); 
+        else renderDay();
+        
+        // Enable drag & drop after DOM updates
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                enableDragDrop();
+            });
+        });
+    }
+
+    function updateTitle() {
+        const d=S.date, el=document.getElementById('calTitle');
+        if(S.view==='month') el.textContent=`${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        else if(S.view==='week') { const r=getRange(); const s=r.s,e=r.e; el.textContent = s.getMonth()===e.getMonth() ? `${s.getDate()} - ${e.getDate()} ${MONTHS[s.getMonth()]} ${s.getFullYear()}` : `${s.getDate()} ${MONTHS[s.getMonth()]} - ${e.getDate()} ${MONTHS[e.getMonth()]} ${s.getFullYear()}`; }
+        else el.textContent=`${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${DAYS[(d.getDay()+6)%7]}`;
+    }
+
+    function updateBtns() { document.querySelectorAll('.vbtn').forEach(b => b.classList.toggle('active', b.dataset.view===S.view)); }
+
+    // ========== MINI CAL ==========
+    function renderMini() {
+        const d=S.miniDate;
+        const miniTitleEl = document.getElementById('miniTitle');
+        const g=document.getElementById('miniGrid');
+        if (!miniTitleEl || !g) return;
+        
+        miniTitleEl.textContent=`${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        g.innerHTML='';
+        const first=new Date(d.getFullYear(),d.getMonth(),1);
+        const sd=(first.getDay()+6)%7, dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+        const pd=new Date(d.getFullYear(),d.getMonth(),0).getDate();
+        const today=new Date();
+        
+        for(let i=sd-1;i>=0;i--){
+            const dy=pd-i;
+            const el=mk('div','mini-day other');
+            el.textContent=dy;
+            const cd=new Date(d.getFullYear(),d.getMonth()-1,dy);
+            el.onclick=(e)=>{e.preventDefault();e.stopPropagation();S.date=new Date(cd);S.miniDate=new Date(cd);fetchEvents();};
+            g.appendChild(el);
+        }
+        
+        for(let i=1;i<=dim;i++){
+            const el=mk('div','mini-day');
+            const isT=today.getDate()===i&&today.getMonth()===d.getMonth()&&today.getFullYear()===d.getFullYear();
+            if(isT)el.classList.add('today');
+            el.textContent=i;
+            const cd=new Date(d.getFullYear(),d.getMonth(),i);
+            el.onclick=(e)=>{e.preventDefault();e.stopPropagation();S.date=new Date(cd);S.selDate=new Date(cd);S.view='day';fetchEvents();};
+            g.appendChild(el);
+        }
+        
+        const tc=sd+dim;const rem=tc%7===0?0:7-(tc%7);
+        for(let i=1;i<=rem;i++){
+            const el=mk('div','mini-day other');
+            el.textContent=i;
+            const cd=new Date(d.getFullYear(),d.getMonth()+1,i);
+            el.onclick=(e)=>{e.preventDefault();e.stopPropagation();S.date=new Date(cd);S.miniDate=new Date(cd);fetchEvents();};
+            g.appendChild(el);
+        }
+    }
+
+    // ========== MONTH VIEW ==========
+    function renderMonth() {
+        const c=document.getElementById('calView'), d=S.date, today=new Date(), evs=filtered();
+        const first=new Date(d.getFullYear(),d.getMonth(),1), sd=(first.getDay()+6)%7;
+        const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+        const pd=new Date(d.getFullYear(),d.getMonth(),0).getDate();
+        let h='<div class="h-full flex flex-col"><div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 flex-shrink-0">';
+        DAYS_S.forEach(x=>{h+=`<div class="py-2.5 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">${x}</div>`;});
+        h+='</div><div class="grid grid-cols-7 flex-1" style="grid-auto-rows:1fr;">';
+        let dn=1, nm=1;
+        const total=Math.ceil((sd+dim)/7)*7;
+        for(let i=0;i<total;i++){
+            let dt, isO=false, lbl;
+            if(i<sd){dt=new Date(d.getFullYear(),d.getMonth()-1,pd-sd+i+1);lbl=dt.getDate();isO=true;}
+            else if(dn<=dim){dt=new Date(d.getFullYear(),d.getMonth(),dn);lbl=dn;dn++;}
+            else{dt=new Date(d.getFullYear(),d.getMonth()+1,nm);lbl=nm;nm++;isO=true;}
+            const isT=dt.toDateString()===today.toDateString();
+            const ds=`${dt.getFullYear()}-${(dt.getMonth()+1).toString().padStart(2,'0')}-${dt.getDate().toString().padStart(2,'0')}`;
+            const de=evs.filter(e=>{const es=new Date(e.start),ee=new Date(e.end);const d0=new Date(dt);d0.setHours(0,0,0,0);const d1=new Date(dt);d1.setHours(23,59,59,999);return es<=d1&&ee>=d0;});
+            h+=`<div class="cal-day border-r border-b border-slate-100 p-2 min-h-[130px] ${isO?'other-month':''} ${isT?'today':''}" data-date="${ds}" onclick="onDayClick(event,'${ds}')">`;
+            h+='<div class="flex items-center justify-between mb-1">';
+            h+=isT?`<span class="w-7 h-7 bg-brand-600 text-white rounded-full flex items-center justify-center text-xs font-bold">${lbl}</span>`:`<span class="w-7 h-7 flex items-center justify-center text-xs font-medium ${isO?'text-slate-300':'text-slate-600'} hover:bg-slate-100 rounded-full transition-colors">${lbl}</span>`;
+            if(de.length>5) h+=`<span class="text-[10px] font-semibold text-slate-400">+${de.length-5}</span>`;
+            h+='</div>';
+            de.slice(0,5).forEach(ev=>{
+                const cl=ev.color||COLORS[ev.type]||COLORS.other;
+                const pri=ev.extendedProps?.priority||'medium';
+                const pc=PRI_COLORS[pri]||PRI_COLORS.medium;
+                const icon=ICONS[ev.type]||ICONS.other;
+                const t=new Date(ev.start);
+                const ts=`${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')} `;
+                const urgentBorder=pri==='urgent'?`border-right:3px solid ${pc};`:'';
+                h+=`<div class="cal-ev rounded-lg px-2.5 py-1.5 mb-0.5 text-xs font-semibold truncate shadow-sm flex items-center gap-1.5" style="background:${cl}20;color:${cl};border-left:3px solid ${cl};${urgentBorder}" data-eid="${ev.id}"><span class="flex-shrink-0 text-[11px]">${icon}</span><span class="text-[10px] font-medium opacity-80 flex-shrink-0">${ts.trim()}</span><span class="truncate">${esc(ev.title)}</span>${pri==='urgent'||pri==='high'?`<span class="flex-shrink-0 w-2 h-2 rounded-full" style="background:${pc}"></span>`:''}</div>`;
+            });
+            h+='</div>';
+        }
+        h+='</div></div>';
+        c.innerHTML=h;
+    }
+
+    // ========== WEEK VIEW ==========
+    function renderWeek() {
+        const c=document.getElementById('calView'), r=getRange(), today=new Date(), evs=filtered();
+        const hours=Array.from({length:24},(_,i)=>i);
+        let h='<div class="flex flex-col h-full">';
+        h+='<div class="flex border-b border-slate-200 bg-white sticky top-0 z-10 flex-shrink-0"><div class="w-14 flex-shrink-0"></div>';
+        for(let i=0;i<7;i++){
+            const dy=new Date(r.s);dy.setDate(r.s.getDate()+i);const isT=dy.toDateString()===today.toDateString();
+            h+=`<div class="flex-1 text-center py-2 border-l border-slate-100 ${isT?'bg-brand-50/50':''}"><div class="text-[10px] font-bold uppercase tracking-wider ${isT?'text-brand-600':'text-slate-400'}">${DAYS_S[i]}</div>`;
+            h+=isT?`<div class="w-8 h-8 bg-brand-600 text-white rounded-full flex items-center justify-center text-sm font-bold mx-auto mt-0.5">${dy.getDate()}</div>`:`<div class="text-lg font-semibold text-slate-700 mt-0.5">${dy.getDate()}</div>`;
+            h+='</div>';
+        }
+        h+='</div><div class="flex-1 overflow-y-auto relative" id="weekGrid">';
+        hours.forEach(hr=>{
+            h+=`<div class="flex cal-hour-row border-b border-slate-50" style="min-height:60px;"><div class="w-14 flex-shrink-0 text-[10px] font-semibold text-slate-400 text-right pr-2 pt-0 -mt-2">${hr.toString().padStart(2,'0')}:00</div>`;
+            for(let i=0;i<7;i++){
+                const dy=new Date(r.s);dy.setDate(r.s.getDate()+i);
+                const ds=`${dy.getFullYear()}-${(dy.getMonth()+1).toString().padStart(2,'0')}-${dy.getDate().toString().padStart(2,'0')}`;
+                h+=`<div class="flex-1 border-l border-slate-100 relative" onclick="onSlotClick('${ds}',${hr})">`;
+                const hEvs=evs.filter(e=>{const es=new Date(e.start);const ed=`${es.getFullYear()}-${(es.getMonth()+1).toString().padStart(2,'0')}-${es.getDate().toString().padStart(2,'0')}`;return ed===ds&&es.getHours()===hr;});
+                hEvs.forEach(ev=>{
+                    const es=new Date(ev.start),ee=new Date(ev.end);const dur=Math.max((ee-es)/60000,30);const ht=Math.max(dur/60*60,20);const top=es.getMinutes()/60*60;const cl=ev.color||COLORS[ev.type]||COLORS.other;
+                    const pri=ev.extendedProps?.priority||'medium';const pc=PRI_COLORS[pri]||PRI_COLORS.medium;const icon=ICONS[ev.type]||ICONS.other;
+                    h+=`<div class="week-ev absolute left-1 right-1 rounded-lg px-2 py-1 overflow-hidden shadow-sm" style="top:${top}px;height:${ht}px;background:${cl}20;border-left:4px solid ${cl};${pri==='urgent'?'border-right:3px solid '+pc+';':''}z-index:2;" data-eid="${ev.id}"><div class="text-xs font-bold truncate flex items-center gap-1" style="color:${cl}"><span class="flex-shrink-0">${icon}</span><span class="truncate">${esc(ev.title)}</span>${pri==='urgent'||pri==='high'?`<span class="flex-shrink-0 w-2 h-2 rounded-full" style="background:${pc}"></span>`:''}</div>`;
+                    if(ht>25) h+=`<div class="text-[10px] font-medium text-slate-500 mt-0.5 flex items-center gap-1"><i class="fas fa-clock text-[9px]"></i>${es.getHours().toString().padStart(2,'0')}:${es.getMinutes().toString().padStart(2,'0')} - ${ee.getHours().toString().padStart(2,'0')}:${ee.getMinutes().toString().padStart(2,'0')}</div>`;
+                    h+='</div>';
+                });
+                h+='</div>';
+            }
+            h+='</div>';
+        });
+        if(r.s<=today&&today<=r.e){const nm=today.getHours()*60+today.getMinutes();h+=`<div class="time-now" style="top:${nm}px;"></div>`;}
+        h+='</div></div>';
+        c.innerHTML=h;
+        const wg=document.getElementById('weekGrid');
+        if(wg){wg.scrollTop=Math.max(0,(new Date().getHours()-2)*60);}
+    }
+
+    // ========== DAY VIEW ==========
+    function renderDay() {
+        const c=document.getElementById('calView'), d=S.date, today=new Date(), isT=d.toDateString()===today.toDateString();
+        const evs=filtered(), hours=Array.from({length:24},(_,i)=>i);
+        const ds=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
+        const dayEvs=evs.filter(e=>{const es=new Date(e.start),ee=new Date(e.end);const d0=new Date(d);d0.setHours(0,0,0,0);const d1=new Date(d);d1.setHours(23,59,59,999);return es<=d1&&ee>=d0;});
+        let h='<div class="flex flex-col h-full"><div class="flex-1 overflow-y-auto relative" id="dayGrid">';
+        hours.forEach(hr=>{
+            h+=`<div class="flex cal-hour-row border-b border-slate-50" style="min-height:60px;" onclick="onSlotClick('${ds}',${hr})"><div class="w-16 flex-shrink-0 text-xs font-semibold text-slate-400 text-right pr-3 pt-0 -mt-2">${hr.toString().padStart(2,'0')}:00</div><div class="flex-1 border-l border-slate-200 relative">`;
+            const hEvs=dayEvs.filter(e=>{const es=new Date(e.start);return es.getHours()===hr&&`${es.getFullYear()}-${(es.getMonth()+1).toString().padStart(2,'0')}-${es.getDate().toString().padStart(2,'0')}`===ds;});
+            hEvs.forEach((ev,idx)=>{
+                const es=new Date(ev.start),ee=new Date(ev.end);const dur=Math.max((ee-es)/60000,30);const ht=Math.max(dur/60*60,30);const top=es.getMinutes()/60*60;const cl=ev.color||COLORS[ev.type]||COLORS.other;
+                const pri=ev.extendedProps?.priority||'medium';const pc=PRI_COLORS[pri]||PRI_COLORS.medium;const icon=ICONS[ev.type]||ICONS.other;
+                const w=hEvs.length>1?`${Math.floor(100/hEvs.length)-1}%`:'calc(100% - 8px)';const l=hEvs.length>1?`${idx*Math.floor(100/hEvs.length)}%`:'4px';
+                h+=`<div class="week-ev absolute rounded-xl px-3 py-2 overflow-hidden shadow-md" style="top:${top}px;height:${ht}px;left:${l};width:${w};background:${cl}22;border-left:5px solid ${cl};${pri==='urgent'?'border-right:4px solid '+pc+';':''}z-index:2;" data-eid="${ev.id}"><div class="text-sm font-bold truncate flex items-center gap-1.5" style="color:${cl}"><span class="flex-shrink-0">${icon}</span><span class="truncate">${esc(ev.title)}</span>${pri==='urgent'||pri==='high'?`<span class="flex-shrink-0 w-2.5 h-2.5 rounded-full" style="background:${pc}"></span>`:''}</div>`;
+                if(ht>35) h+=`<div class="text-xs font-medium text-slate-600 mt-1 flex items-center gap-1.5"><i class="fas fa-clock text-[10px]"></i>${es.getHours().toString().padStart(2,'0')}:${es.getMinutes().toString().padStart(2,'0')} - ${ee.getHours().toString().padStart(2,'0')}:${ee.getMinutes().toString().padStart(2,'0')}</div>`;
+                h+='</div>';
+            });
+            h+='</div></div>';
+        });
+        if(isT){const nm=today.getHours()*60+today.getMinutes();h+=`<div class="time-now" style="top:${nm}px;"></div>`;}
+        h+='</div></div>';
+        c.innerHTML=h;
+        const dg=document.getElementById('dayGrid');
+        if(dg){dg.scrollTop=Math.max(0,(new Date().getHours()-2)*60);}
+    }
+
+    // ========== UPCOMING ==========
+    function renderUpcoming(evs) {
+        const el=document.getElementById('upcoming');
+        if(!evs.length){el.innerHTML='<div class="text-xs text-slate-400 text-center py-6"><i class="fas fa-calendar-check text-2xl text-slate-200 mb-2 block"></i>Yaklaşan etkinlik yok</div>';return;}
+        el.innerHTML=evs.map(ev=>{
+            const cl=ev.color||COLORS[ev.type]||COLORS.other;const st=new Date(ev.start);const now=new Date();const df=st-now;
+            const dH=Math.floor(df/3600000),dD=Math.floor(df/86400000);
+            let rt;if(df<0)rt='Geçti';else if(dH<1)rt=`${Math.floor(df/60000)} dk`;else if(dH<24)rt=`${dH} saat`;else rt=`${dD} gün`;
+            return `<div class="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition-all group" onclick="openEditById(${ev.id})"><div class="w-1 h-8 rounded-full flex-shrink-0 mt-0.5" style="background:${cl}"></div><div class="flex-1 min-w-0"><div class="text-xs font-semibold text-slate-700 truncate group-hover:text-brand-600">${esc(ev.title)}</div><div class="text-[10px] text-slate-400 mt-0.5">${st.getDate()} ${MONTHS[st.getMonth()]} ${st.getHours().toString().padStart(2,'0')}:${st.getMinutes().toString().padStart(2,'0')}</div></div><span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${df<0?'bg-red-50 text-red-500':dH<2?'bg-amber-50 text-amber-600':'bg-slate-100 text-slate-500'}">${rt}</span></div>`;
+        }).join('');
+    }
+
+    // ========== MODAL ==========
+    function openCreateModal(dateStr, hour) {
+        try {
+            const fId = document.getElementById('fId');
+            const fTitle = document.getElementById('fTitle');
+            const fDesc = document.getElementById('fDesc');
+            const fType = document.getElementById('fType');
+            const fPriority = document.getElementById('fPriority');
+            const fContact = document.getElementById('fContact');
+            const fCompany = document.getElementById('fCompany');
+            const fDeal = document.getElementById('fDeal');
+            const fAssignee = document.getElementById('fAssignee');
+            const delBtn = document.getElementById('delBtn');
+            const modalTitle = document.getElementById('modalTitle');
+            const fStart = document.getElementById('fStart');
+            const fEnd = document.getElementById('fEnd');
+            const evModal = document.getElementById('evModal');
+            
+            if (!fId || !fTitle || !evModal) {
+                console.error('Modal elements not found');
+                return;
+            }
+            
+            fId.value='';
+            fTitle.value='';
+            if (fDesc) fDesc.value='';
+            if (fType) fType.value='meeting';
+            if (fPriority) { fPriority.value='medium'; fPriority.style.borderColor=''; fPriority.style.boxShadow=''; }
+            if (fContact) fContact.value='';
+            clearContactPicker();
+            if (fCompany) fCompany.value='';
+            if (fDeal) fDeal.value='';
+            if (fAssignee) fAssignee.value='';
+            if (delBtn) delBtn.classList.add('hidden');
+            if (modalTitle) modalTitle.textContent='Yeni Etkinlik';
+            
+            const now=new Date();
+            if(dateStr&&hour!==undefined){
+                const [y,m,d]=dateStr.split('-');
+                const s=new Date(y,m-1,d,hour,0);
+                const e=new Date(y,m-1,d,hour+1,0);
+                if (fStart) fStart.value=toISO(s);
+                if (fEnd) fEnd.value=toISO(e);
+            }
+            else if(dateStr){
+                const [y,m,d]=dateStr.split('-');
+                const s=new Date(y,m-1,d,now.getHours()+1,0);
+                const e=new Date(y,m-1,d,now.getHours()+2,0);
+                if (fStart) fStart.value=toISO(s);
+                if (fEnd) fEnd.value=toISO(e);
+            }
+            else{
+                const s=new Date(now.getFullYear(),now.getMonth(),now.getDate(),now.getHours()+1,0);
+                const e=new Date(now.getFullYear(),now.getMonth(),now.getDate(),now.getHours()+2,0);
+                if (fStart) fStart.value=toISO(s);
+                if (fEnd) fEnd.value=toISO(e);
+            }
+            
+            evModal.classList.remove('hidden');
+            setTimeout(()=>{if(fTitle)fTitle.focus();},100);
+        } catch(err) {
+            console.error('Error opening modal:', err);
+            toast('Modal açılamadı', 'error');
+        }
+    }
+
+    function openEditModal(ev) {
+        try {
+            if (!ev) {
+                console.error('No event provided to openEditModal');
+                toast('Etkinlik bulunamadı', 'error');
+                return;
+            }
+            
+            console.log('Opening edit modal for event:', ev);
+            
+            const fId = document.getElementById('fId');
+            const fTitle = document.getElementById('fTitle');
+            const fDesc = document.getElementById('fDesc');
+            const fType = document.getElementById('fType');
+            const fPriority = document.getElementById('fPriority');
+            const fContact = document.getElementById('fContact');
+            const fCompany = document.getElementById('fCompany');
+            const fDeal = document.getElementById('fDeal');
+            const fAssignee = document.getElementById('fAssignee');
+            const delBtn = document.getElementById('delBtn');
+            const modalTitle = document.getElementById('modalTitle');
+            const fStart = document.getElementById('fStart');
+            const fEnd = document.getElementById('fEnd');
+            const evModal = document.getElementById('evModal');
+            
+            if (!fId || !fTitle || !evModal) {
+                console.error('Modal elements not found');
+                return;
+            }
+            
+            fId.value=ev.id;
+            fTitle.value=ev.title||'';
+            if (fDesc) fDesc.value=(ev.extendedProps?.description)||'';
+            if (fType) fType.value=ev.type||'other';
+            if (fPriority) fPriority.value=(ev.extendedProps?.priority)||'medium';
+            const contactId = ev.extendedProps?.contact_id || '';
+            const contactName = ev.extendedProps?.contact_name || '';
+            if (fContact) fContact.value = contactId;
+            setContactPickerFromId(contactId, contactName);
+            if (fCompany) fCompany.value=(ev.extendedProps?.company_id)||'';
+            if (fDeal) fDeal.value=(ev.extendedProps?.deal_id)||'';
+            if (fAssignee) fAssignee.value=ev.assignee_id||'';
+            if (delBtn) delBtn.classList.remove('hidden');
+            if (modalTitle) modalTitle.textContent='Etkinliği Düzenle';
+            if (fPriority) updatePriorityStyle(fPriority);
+            if(ev.start && fStart) fStart.value=toISO(new Date(ev.start));
+            if(ev.end && fEnd) fEnd.value=toISO(new Date(ev.end));
+            evModal.classList.remove('hidden');
+        } catch(err) {
+            console.error('Error opening edit modal:', err);
+            toast('Modal açılamadı', 'error');
+        }
+    }
+
+    function openEditById(id) { const ev=S.events.find(x=>x.id===id); if(ev) openEditModal(ev); }
+    function closeModal() { const evModal = document.getElementById('evModal'); if(evModal) evModal.classList.add('hidden'); }
+
+    async function saveEvent(e) {
+        e.preventDefault();
+        const id=document.getElementById('fId').value;
+        
+        const fTitle = document.getElementById('fTitle');
+        const fDesc = document.getElementById('fDesc');
+        const fType = document.getElementById('fType');
+        const fPriority = document.getElementById('fPriority');
+        const fStart = document.getElementById('fStart');
+        const fEnd = document.getElementById('fEnd');
+        const fContact = document.getElementById('fContact');
+        const fCompany = document.getElementById('fCompany');
+        const fDeal = document.getElementById('fDeal');
+        const fAssignee = document.getElementById('fAssignee');
+        
+        if (!fTitle || !fTitle.value.trim()) {
+            toast('Başlık gereklidir', 'error');
+            return;
+        }
+        
+        if (!fStart || !fStart.value || !fEnd || !fEnd.value) {
+            toast('Başlangıç ve bitiş zamanı gereklidir', 'error');
+            return;
+        }
+        
+        // datetime-local input gives us local time, preserve it with timezone offset
+        const startDate = new Date(fStart.value);
+        const endDate = new Date(fEnd.value);
+        
+        const data={
+            title: fTitle.value.trim(),
+            description: fDesc && fDesc.value ? fDesc.value : null,
+            task_type: fType ? fType.value : 'meeting',
+            priority: fPriority ? fPriority.value : 'medium',
+            start_time: toISOWithTimezone(startDate),
+            end_time: toISOWithTimezone(endDate),
+            contact_id: fContact && fContact.value ? parseInt(fContact.value) : null,
+            company_id: fCompany && fCompany.value ? parseInt(fCompany.value) : null,
+            deal_id: fDeal && fDeal.value ? parseInt(fDeal.value) : null,
+            assignee_id: fAssignee && fAssignee.value ? parseInt(fAssignee.value) : null,
+        };
+        
+        if(new Date(data.end_time)<=new Date(data.start_time)){
+            toast('Bitiş zamanı başlangıçtan sonra olmalıdır','error');
+            return;
+        }
+        
+        try{
+            let response;
+            if(id){
+                response = await api(`/api/v1/tasks/${id}`,'PATCH',data);
+                toast('Etkinlik güncellendi');
+            } else {
+                response = await api('/api/v1/tasks','POST',data);
+                toast('Etkinlik oluşturuldu');
+            }
+            console.log('Event saved:', response);
+            closeModal();
+            fetchEvents();
+            fetchUpcoming();
+        }catch(err){
+            console.error('Save event error:', err);
+            const errorMsg = err.message || 'Kaydetme başarısız';
+            toast(errorMsg, 'error');
+        }
+    }
+
+    async function deleteEvent() {
+        const id=document.getElementById('fId').value;
+        if(!id)return;if(!confirm('Bu etkinliği silmek istediğinize emin misiniz?'))return;
+        try{await api(`/api/v1/tasks/${id}`,'DELETE');toast('Etkinlik silindi');closeModal();fetchEvents();fetchUpcoming();}
+        catch(err){toast('Silme başarısız','error');}
+    }
+
+    // ========== POPOVER ==========
+    function showPop(e, id) {
+        e.stopPropagation();
+        const ev=S.events.find(x=>x.id===id);
+        if(!ev){
+            console.error('Event not found for popup:', id);
+            console.log('Available events:', S.events.map(e => ({id: e.id, title: e.title})));
+            return;
+        }
+        S.popEv=ev;
+        const cl=ev.color||COLORS[ev.type]||COLORS.other;
+        document.getElementById('popDot').style.background=cl;
+        const typeIcon = ICONS[ev.type]||ICONS.other;
+        document.getElementById('popType').textContent=`${typeIcon} ${LABELS[ev.type]||ev.type}`;
+        document.getElementById('popTitle').textContent=ev.title;
+        const st=new Date(ev.start),en=new Date(ev.end);
+        document.getElementById('popTime').textContent=`${st.getDate()} ${MONTHS[st.getMonth()]} ${st.getHours().toString().padStart(2,'0')}:${st.getMinutes().toString().padStart(2,'0')} - ${en.getHours().toString().padStart(2,'0')}:${en.getMinutes().toString().padStart(2,'0')}`;
+        toggleField('popDescW','popDesc',ev.extendedProps?.description);
+        toggleField('popContactW','popContact',ev.extendedProps?.contact_name);
+        toggleField('popCompanyW','popCompany',ev.extendedProps?.company_name);
+        toggleField('popDealW','popDeal',ev.extendedProps?.deal_name);
+        const pri = ev.extendedProps?.priority;
+        const priEl = document.getElementById('popPriority');
+        const priW = document.getElementById('popPriorityW');
+        if (pri && PRI_LABELS[pri]) {
+            priW.classList.remove('hidden');
+            const pc = PRI_COLORS[pri] || PRI_COLORS.medium;
+            const pi = PRI_ICONS[pri] || '🟡';
+            priEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style="background:${pc}15;color:${pc};border:1px solid ${pc}30">${pi} ${PRI_LABELS[pri]}</span>`;
+        } else {
+            priW.classList.add('hidden');
+        }
+        const pop=document.getElementById('evPop');pop.classList.remove('hidden');
+        const rc=e.target.getBoundingClientRect();let top=rc.bottom+8,left=rc.left;
+        if(top+300>window.innerHeight)top=rc.top-300;if(left+320>window.innerWidth)left=window.innerWidth-340;if(left<0)left=16;
+        pop.style.top=top+'px';pop.style.left=left+'px';
+    }
+    function toggleField(wId,tId,v){const w=document.getElementById(wId),t=document.getElementById(tId);if(v){w.classList.remove('hidden');t.textContent=v;}else{w.classList.add('hidden');}}
+    function closePop(){document.getElementById('evPop').classList.add('hidden');S.popEv=null;}
+    function editPop(){
+        if(!S.popEv){
+            console.error('No event selected for editing');
+            return;
+        }
+        console.log('Editing event:', S.popEv);
+        // Save reference before closePop nullifies it
+        const eventToEdit = S.popEv;
+        closePop();
+        openEditModal(eventToEdit);
+    }
+    async function delPop(){if(!S.popEv)return;if(!confirm('Bu etkinliği silmek istediğinize emin misiniz?'))return;try{await api(`/api/v1/tasks/${S.popEv.id}`,'DELETE');toast('Etkinlik silindi');closePop();fetchEvents();fetchUpcoming();}catch(err){toast('Silme başarısız','error');}}
+
+    // ========== CLICK HANDLERS ==========
+    let lastClickTime = 0;
+    let lastClickTarget = null;
+    
+    function onDayClick(e,ds){
+        if(e.target.closest('.cal-ev'))return;
+        
+        // Double-click detection for quick add
+        const now = Date.now();
+        if (now - lastClickTime < 300 && lastClickTarget === e.currentTarget) {
+            // Double click - show quick add indicator then open modal
+            const indicator = document.createElement('div');
+            indicator.className = 'quick-add-indicator';
+            e.currentTarget.style.position = 'relative';
+            e.currentTarget.appendChild(indicator);
+            setTimeout(() => indicator.remove(), 500);
+            openCreateModal(ds);
+        } else {
+            // Single click - just select the day
+            lastClickTime = now;
+            lastClickTarget = e.currentTarget;
+        }
+    }
+    
+    function onSlotClick(ds,hr){
+        openCreateModal(ds,hr);
+    }
+
+    // ========== FILTER ==========
+    document.getElementById('typeFilters').addEventListener('change',function(e){if(e.target.type==='checkbox'){const f=e.target.dataset.ft;if(e.target.checked)S.filters.add(f);else S.filters.delete(f);render();}});
+
+    // ========== HELPERS ==========
+    function toISO(d){return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}T${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;}
+    
+    function toISOWithTimezone(d) {
+        // Convert local datetime to ISO string with timezone offset
+        // This preserves the local time instead of converting to UTC
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        const hours = d.getHours().toString().padStart(2, '0');
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        const seconds = d.getSeconds().toString().padStart(2, '0');
+        
+        // Get timezone offset in minutes and convert to +HH:MM format
+        const offset = -d.getTimezoneOffset();
+        const offsetHours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, '0');
+        const offsetMinutes = (Math.abs(offset) % 60).toString().padStart(2, '0');
+        const offsetSign = offset >= 0 ? '+' : '-';
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
+    }
+    
+    function esc(s){if(!s)return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    function mk(tag,cls){const el=document.createElement(tag);el.className=cls;return el;}
+
+    // ========== PRIORITY STYLE ==========
+    function updatePriorityStyle(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const color = opt?.dataset?.color || '#f59e0b';
+        sel.style.borderColor = color;
+        sel.style.boxShadow = `0 0 0 3px ${color}20`;
+    }
+
+    // ========== CONTACT SEARCH PICKER ==========
+    let contactSearchTimer = null;
+    let contactSearchCache = {};
+
+    async function searchContacts(q) {
+        clearTimeout(contactSearchTimer);
+        contactSearchTimer = setTimeout(async () => {
+            try {
+                const cacheKey = q.trim().toLowerCase();
+                let contacts;
+                if (contactSearchCache[cacheKey]) {
+                    contacts = contactSearchCache[cacheKey];
+                } else {
+                    const data = await api(`/api/v1/calendar/contacts-search?q=${encodeURIComponent(q.trim())}`);
+                    contacts = data.contacts || [];
+                    contactSearchCache[cacheKey] = contacts;
+                }
+                renderContactDropdown(contacts, q.trim());
+            } catch(err) {
+                console.error('Contact search error:', err);
+            }
+        }, 200);
+    }
+
+    function renderContactDropdown(contacts, query) {
+        const dd = document.getElementById('contactDropdown');
+        const list = document.getElementById('contactDropdownList');
+        if (!contacts.length) {
+            list.innerHTML = `<div class="px-3 py-4 text-xs text-slate-400 text-center"><i class="fas fa-user-slash text-slate-300 text-lg mb-1 block"></i>${query ? 'Kişi bulunamadı' : 'Kişi aramak için yazın'}</div>`;
+        } else {
+            list.innerHTML = contacts.map(c => 
+                `<div class="px-3 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700 cursor-pointer flex items-center gap-2 transition-colors" onclick="selectContact(${c.id}, '${esc(c.name)}')">
+                    <div class="w-7 h-7 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold flex-shrink-0">${esc(c.name).charAt(0).toUpperCase()}</div>
+                    <span class="truncate">${esc(c.name)}</span>
+                </div>`
+            ).join('');
+        }
+        dd.classList.remove('hidden');
+    }
+
+    function selectContact(id, name) {
+        document.getElementById('fContact').value = id;
+        document.getElementById('contactPickerName').textContent = name;
+        document.getElementById('contactPickerSelected').style.display = 'flex';
+        document.getElementById('contactPickerSearch').style.display = 'none';
+        document.getElementById('contactDropdown').classList.add('hidden');
+        document.getElementById('contactSearchInput').value = '';
+    }
+
+    function clearContactPicker() {
+        document.getElementById('fContact').value = '';
+        document.getElementById('contactPickerSelected').style.display = 'none';
+        document.getElementById('contactPickerSearch').style.display = 'block';
+        document.getElementById('contactSearchInput').value = '';
+        document.getElementById('contactDropdown').classList.add('hidden');
+    }
+
+    function toggleContactSearch(show) {
+        if (show) {
+            document.getElementById('contactPickerSelected').style.display = 'none';
+            document.getElementById('contactPickerSearch').style.display = 'block';
+            setTimeout(() => document.getElementById('contactSearchInput').focus(), 50);
+        }
+    }
+
+    function setContactPickerFromId(contactId, contactName) {
+        if (contactId && contactName) {
+            selectContact(contactId, contactName);
+        } else if (contactId) {
+            // Fetch name from API
+            api(`/api/v1/calendar/contacts-search?q=`).then(data => {
+                const c = (data.contacts||[]).find(x => x.id == contactId);
+                if (c) selectContact(c.id, c.name);
+            }).catch(() => {});
+        } else {
+            clearContactPicker();
+        }
+    }
+
+    document.addEventListener('click',function(e){
+        if(!e.target.closest('#evPop')&&!e.target.closest('.cal-ev')&&!e.target.closest('.week-ev'))closePop();
+        if(!e.target.closest('.relative') || !e.target.closest('#contactPickerSearch')) {
+            const dd = document.getElementById('contactDropdown');
+            if(dd && !e.target.closest('#contactDropdown') && !e.target.closest('#contactSearchInput')) dd.classList.add('hidden');
+        }
+    });
+    document.addEventListener('keydown',function(e){
+        if(e.key==='Escape'){closePop();closeModal();}
+        if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+        if(e.key==='t'||e.key==='T')goToday();if(e.key==='m'||e.key==='M')setView('month');if(e.key==='w'||e.key==='W')setView('week');if(e.key==='d'||e.key==='D')setView('day');
+        if(e.key==='n'||e.key==='N')openCreateModal();if(e.key==='ArrowLeft')navPrev();if(e.key==='ArrowRight')navNext();
+    });
+
+    // ========== DRAG & DROP ==========
+    let draggedEvent = null;
+    let draggedElement = null;
+    
+    function enableDragDrop() {
+        // Remove old listeners first to prevent duplicates
+        document.querySelectorAll('.cal-ev, .week-ev').forEach(el => {
+            el.removeEventListener('dragstart', handleDragStart);
+            el.removeEventListener('dragend', handleDragEnd);
+            el.removeEventListener('click', handleEventClick);
+        });
+        
+        // Attach drag handlers and click handlers to events
+        document.querySelectorAll('.cal-ev, .week-ev').forEach(el => {
+            el.setAttribute('draggable', 'true');
+            el.addEventListener('dragstart', handleDragStart);
+            el.addEventListener('dragend', handleDragEnd);
+            el.addEventListener('click', handleEventClick);
+        });
+        
+        console.log('Enabled drag on', document.querySelectorAll('.cal-ev, .week-ev').length, 'events');
+        
+        // Add drop zones for month view (calendar days)
+        document.querySelectorAll('.cal-day').forEach(el => {
+            el.removeEventListener('dragover', handleDragOver);
+            el.removeEventListener('dragleave', handleDragLeave);
+            el.removeEventListener('drop', handleDrop);
+            
+            el.addEventListener('dragover', handleDragOver);
+            el.addEventListener('dragleave', handleDragLeave);
+            el.addEventListener('drop', handleDrop);
+        });
+        
+        console.log('Enabled drop on', document.querySelectorAll('.cal-day').length, 'calendar days');
+        
+        // Add drop zones for week/day view (hour slots)
+        // Select the time slot columns (they have .flex-1 and .border-l classes)
+        document.querySelectorAll('.cal-hour-row .flex-1.border-l').forEach(el => {
+            el.removeEventListener('dragover', handleDragOver);
+            el.removeEventListener('dragleave', handleDragLeave);
+            el.removeEventListener('drop', handleDropHour);
+            
+            el.addEventListener('dragover', handleDragOver);
+            el.addEventListener('dragleave', handleDragLeave);
+            el.addEventListener('drop', handleDropHour);
+        });
+        
+        console.log('Enabled drop on', document.querySelectorAll('.cal-hour-row .flex-1.border-l').length, 'hour slots');
+    }
+    
+    function handleEventClick(e) {
+        e.stopPropagation();
+        const eventId = parseInt(e.currentTarget.dataset.eid);
+        console.log('Event clicked:', eventId);
+        if (eventId && !isNaN(eventId)) {
+            const event = S.events.find(ev => ev.id === eventId);
+            if (event) {
+                console.log('Found event:', event);
+                showPop(e, eventId);
+            } else {
+                console.error('Event not found in S.events:', eventId);
+                console.log('Available events:', S.events);
+            }
+        }
+    }
+    
+    function handleDragStart(e) {
+        console.log('🎯 Drag started on element:', e.target);
+        console.log('   Element classes:', e.target.className);
+        console.log('   Dataset:', e.target.dataset);
+        
+        const eventId = parseInt(e.target.dataset.eid);
+        console.log('   Event ID:', eventId);
+        
+        if (!eventId || isNaN(eventId)) {
+            console.error('❌ Invalid event ID:', e.target.dataset.eid);
+            return;
+        }
+        
+        draggedEvent = S.events.find(ev => ev.id === eventId);
+        
+        if (!draggedEvent) {
+            console.error('❌ Event not found in S.events:', eventId);
+            console.log('   Available events:', S.events.map(e => e.id));
+            return;
+        }
+        
+        console.log('✓ Dragging event:', draggedEvent.title, draggedEvent);
+        
+        draggedElement = e.target;
+        
+        // Add dragging class to body to show all drop zones
+        document.body.classList.add('dragging');
+        e.target.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', e.target.innerHTML);
+        
+        // Create custom drag image with better styling
+        const ghost = e.target.cloneNode(true);
+        ghost.classList.add('drag-ghost');
+        ghost.classList.remove('dragging');
+        ghost.style.position = 'absolute';
+        ghost.style.top = '-1000px';
+        ghost.style.left = '-1000px';
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, e.target.offsetWidth / 2, e.target.offsetHeight / 2);
+        setTimeout(() => ghost.remove(), 0);
+    }
+    
+    function handleDragEnd(e) {
+        document.body.classList.remove('dragging');
+        e.target.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        draggedEvent = null;
+        draggedElement = null;
+    }
+    
+    function handleDragOver(e) {
+        if (!draggedEvent) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-over');
+    }
+    
+    function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+    
+    async function handleDrop(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        
+        if (!draggedEvent) {
+            console.log('No dragged event');
+            return;
+        }
+        
+        const dateStr = e.currentTarget.dataset.date;
+        if (!dateStr) {
+            console.log('No date string on drop target');
+            return;
+        }
+        
+        console.log('Dropping event', draggedEvent.id, 'to date', dateStr);
+        
+        try {
+            // Parse old times
+            const oldStart = new Date(draggedEvent.start);
+            const oldEnd = new Date(draggedEvent.end);
+            const duration = oldEnd - oldStart;
+            
+            // Parse new date and PRESERVE the original time
+            const [year, month, day] = dateStr.split('-');
+            const newStart = new Date(
+                parseInt(year), 
+                parseInt(month) - 1, 
+                parseInt(day), 
+                oldStart.getHours(), 
+                oldStart.getMinutes(),
+                oldStart.getSeconds()
+            );
+            const newEnd = new Date(newStart.getTime() + duration);
+            
+            console.log('Old start:', oldStart.toISOString());
+            console.log('New start:', newStart.toISOString());
+            console.log('New end:', newEnd.toISOString());
+            
+            // Update event
+            const data = {
+                start_time: toISOWithTimezone(newStart),
+                end_time: toISOWithTimezone(newEnd)
+            };
+            
+            console.log('Sending update:', data);
+            
+            const response = await api(`/api/v1/tasks/${draggedEvent.id}`, 'PATCH', data);
+            console.log('Update response:', response);
+            
+            toast('✓ Etkinlik taşındı');
+            await fetchEvents();
+        } catch (err) {
+            console.error('Drop error:', err);
+            toast('Taşıma başarısız: ' + (err.message || 'Bilinmeyen hata'), 'error');
+            await fetchEvents(); // Refresh to show original state
+        }
+    }
+    
+    async function handleDropHour(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        
+        if (!draggedEvent) {
+            console.log('No dragged event in hour drop');
+            return;
+        }
+        
+        console.log('Hour drop - target:', e.currentTarget);
+        
+        // Get the hour from the row
+        const hourRow = e.currentTarget.closest('.cal-hour-row');
+        if (!hourRow) {
+            console.error('Could not find hour row');
+            return;
+        }
+        
+        // Find the hour label - it's in a div with text-right class
+        const hourLabel = hourRow.querySelector('[class*="text-right"]');
+        if (!hourLabel) {
+            console.error('Could not find hour label');
+            return;
+        }
+        
+        const hourText = hourLabel.textContent.trim();
+        console.log('Hour text:', hourText);
+        
+        const hour = parseInt(hourText.split(':')[0]);
+        if (isNaN(hour)) {
+            console.error('Invalid hour:', hourText);
+            return;
+        }
+        
+        try {
+            const oldStart = new Date(draggedEvent.start);
+            const oldEnd = new Date(draggedEvent.end);
+            const duration = oldEnd - oldStart;
+            
+            let newStart;
+            
+            if (S.view === 'week') {
+                // Find which column (day) was dropped on
+                const allCols = Array.from(hourRow.querySelectorAll('.flex-1.border-l'));
+                const colIndex = allCols.indexOf(e.currentTarget);
+                
+                console.log('Week view - column index:', colIndex, 'of', allCols.length);
+                
+                if (colIndex === -1) {
+                    console.error('Could not determine column index');
+                    toast('Taşıma başarısız: Konum belirlenemedi', 'error');
+                    return;
+                }
+                
+                const r = getRange();
+                const targetDate = new Date(r.s);
+                targetDate.setDate(r.s.getDate() + colIndex);
+                
+                newStart = new Date(
+                    targetDate.getFullYear(), 
+                    targetDate.getMonth(), 
+                    targetDate.getDate(), 
+                    hour, 
+                    0, 
+                    0
+                );
+                
+                console.log('Week drop - target date:', targetDate.toDateString(), 'hour:', hour);
+            } else {
+                // Day view
+                newStart = new Date(
+                    S.date.getFullYear(), 
+                    S.date.getMonth(), 
+                    S.date.getDate(), 
+                    hour, 
+                    0,
+                    0
+                );
+                
+                console.log('Day drop - date:', S.date.toDateString(), 'hour:', hour);
+            }
+            
+            const newEnd = new Date(newStart.getTime() + duration);
+            
+            console.log('Old start:', oldStart.toISOString());
+            console.log('New start:', newStart.toISOString());
+            console.log('New end:', newEnd.toISOString());
+            
+            const data = {
+                start_time: toISOWithTimezone(newStart),
+                end_time: toISOWithTimezone(newEnd)
+            };
+            
+            console.log('Sending hour drop update:', data);
+            
+            const response = await api(`/api/v1/tasks/${draggedEvent.id}`, 'PATCH', data);
+            console.log('Hour drop response:', response);
+            
+            toast('✓ Etkinlik taşındı');
+            await fetchEvents();
+        } catch (err) {
+            console.error('Drop hour error:', err);
+            toast('Taşıma başarısız: ' + (err.message || 'Bilinmeyen hata'), 'error');
+            await fetchEvents(); // Refresh to show original state
+        }
+    }
+
+    // ========== INIT ==========
+    (async function(){
+        await loadCRM();await fetchEvents();await fetchUpcoming();
+        if(window.NotificationBell){window.notificationBell=new NotificationBell();window.notificationBell.init();}
+        setInterval(()=>{if(S.view==='week'||S.view==='day')render();},60000);
+    })();
+    </script>
+</body>
+</html>

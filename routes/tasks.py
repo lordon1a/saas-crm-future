@@ -7,10 +7,13 @@ from functools import wraps
 from services.task_service import TaskService
 from services.collaboration_service import CollaborationService
 from models import db, User
-from datetime import datetime
+from datetime import datetime, timezone
 import os
+import logging
 from werkzeug.utils import secure_filename
 
+UTC = timezone.utc
+logger = logging.getLogger(__name__)
 tasks_bp = Blueprint('tasks', __name__)
 
 # File upload configuration
@@ -61,9 +64,14 @@ def create_task():
         "company_id": 1,
         "deal_id": 1,
         "milestone_id": 1,
+        "contact_id": 1,
         "status": "not_started",
         "priority": "medium",
         "due_date": "2024-12-31T23:59:59",
+        "start_time": "2024-12-31T10:00:00",
+        "end_time": "2024-12-31T11:00:00",
+        "timezone": "Europe/Istanbul",
+        "task_type": "call",
         "is_customer_facing": false
     }
     """
@@ -73,50 +81,88 @@ def create_task():
     if not data or 'title' not in data:
         return jsonify({'error': 'Title is required'}), 400
     
-    # Parse due_date if provided
-    due_date = None
-    if 'due_date' in data and data['due_date']:
-        try:
+    try:
+        # Parse due_date if provided
+        due_date = None
+        if 'due_date' in data and data['due_date']:
             due_date = datetime.fromisoformat(data['due_date'].replace('Z', '+00:00'))
-        except ValueError:
-            return jsonify({'error': 'Invalid due_date format'}), 400
-    
-    task = TaskService.create_task(
-        workspace_id=get_current_user().workspace_id,
-        title=data['title'],
-        description=data.get('description'),
-        assignee_id=data.get('assignee_id'),
-        company_id=data.get('company_id'),
-        deal_id=data.get('deal_id'),
-        milestone_id=data.get('milestone_id'),
-        status=data.get('status', 'not_started'),
-        priority=data.get('priority', 'medium'),
-        due_date=due_date,
-        is_customer_facing=data.get('is_customer_facing', False)
-    )
-
-    if task and task.assignee_id:
-        CollaborationService.create_task_assignment_notification(
-            workspace_id=current_user.workspace_id,
-            task_id=task.id,
-            assignee_id=task.assignee_id,
-            actor_user_id=current_user.id,
+        
+        # Parse start_time if provided
+        start_time = None
+        if 'start_time' in data and data['start_time']:
+            dt_str = data['start_time'].replace('Z', '+00:00')
+            start_time = datetime.fromisoformat(dt_str)
+            # Convert to UTC for storage if timezone-aware
+            if start_time.tzinfo is not None:
+                start_time = start_time.astimezone(UTC).replace(tzinfo=None)
+        
+        # Parse end_time if provided
+        end_time = None
+        if 'end_time' in data and data['end_time']:
+            dt_str = data['end_time'].replace('Z', '+00:00')
+            end_time = datetime.fromisoformat(dt_str)
+            # Convert to UTC for storage if timezone-aware
+            if end_time.tzinfo is not None:
+                end_time = end_time.astimezone(UTC).replace(tzinfo=None)
+        
+        # Validate time range
+        if start_time and end_time and start_time >= end_time:
+            return jsonify({'error': 'Bitiş zamanı başlangıç zamanından sonra olmalıdır'}), 400
+        
+        task = TaskService.create_task(
+            workspace_id=get_current_user().workspace_id,
+            title=data['title'],
+            description=data.get('description'),
+            assignee_id=data.get('assignee_id'),
+            company_id=data.get('company_id'),
+            deal_id=data.get('deal_id'),
+            milestone_id=data.get('milestone_id'),
+            contact_id=data.get('contact_id'),
+            status=data.get('status', 'not_started'),
+            priority=data.get('priority', 'medium'),
+            due_date=due_date,
+            start_time=start_time,
+            end_time=end_time,
+            timezone=data.get('timezone', 'UTC'),
+            task_type=data.get('task_type', 'task'),
+            is_customer_facing=data.get('is_customer_facing', False),
+            user_id=current_user.id
         )
-    
-    return jsonify({
-        'id': task.id,
-        'title': task.title,
-        'description': task.description,
-        'assignee_id': task.assignee_id,
-        'company_id': task.company_id,
-        'deal_id': task.deal_id,
-        'milestone_id': task.milestone_id,
-        'status': task.status,
-        'priority': task.priority,
-        'due_date': task.due_date.isoformat() if task.due_date else None,
-        'is_customer_facing': task.is_customer_facing,
-        'created_at': task.created_at.isoformat()
-    }), 201
+
+        if task and task.assignee_id:
+            CollaborationService.create_task_assignment_notification(
+                workspace_id=current_user.workspace_id,
+                task_id=task.id,
+                assignee_id=task.assignee_id,
+                actor_user_id=current_user.id,
+            )
+        
+        return jsonify({
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+            'assignee_id': task.assignee_id,
+            'company_id': task.company_id,
+            'deal_id': task.deal_id,
+            'milestone_id': task.milestone_id,
+            'contact_id': task.contact_id,
+            'status': task.status,
+            'priority': task.priority,
+            'due_date': task.due_date.isoformat() if task.due_date else None,
+            'start_time': task.start_time.isoformat() if task.start_time else None,
+            'end_time': task.end_time.isoformat() if task.end_time else None,
+            'timezone': task.timezone,
+            'task_type': task.task_type,
+            'is_customer_facing': task.is_customer_facing,
+            'created_at': task.created_at.isoformat()
+        }), 201
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating task: {str(e)}")
+        return jsonify({'error': 'Görev oluşturulurken hata oluştu'}), 500
 
 
 @tasks_bp.route('/api/v1/tasks', methods=['GET'])
@@ -233,9 +279,14 @@ def update_task(task_id):
         "title": "New title",
         "description": "New description",
         "assignee_id": 2,
+        "contact_id": 1,
         "status": "in_progress",
         "priority": "high",
         "due_date": "2024-12-31T23:59:59",
+        "start_time": "2024-12-31T10:00:00",
+        "end_time": "2024-12-31T11:00:00",
+        "timezone": "Europe/Istanbul",
+        "task_type": "meeting",
         "is_customer_facing": true
     }
     """
@@ -244,42 +295,80 @@ def update_task(task_id):
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
-    # Parse due_date if provided
-    if 'due_date' in data and data['due_date']:
-        try:
+    try:
+        # Parse due_date if provided
+        if 'due_date' in data and data['due_date']:
             data['due_date'] = datetime.fromisoformat(data['due_date'].replace('Z', '+00:00'))
-        except ValueError:
-            return jsonify({'error': 'Invalid due_date format'}), 400
-    
-    current_user = get_current_user()
-    existing_task = TaskService.get_task(task_id, current_user.workspace_id)
-    old_assignee_id = existing_task.assignee_id if existing_task else None
+        
+        # Parse start_time if provided
+        if 'start_time' in data and data['start_time']:
+            dt_str = data['start_time'].replace('Z', '+00:00')
+            dt = datetime.fromisoformat(dt_str)
+            # Convert to UTC for storage if timezone-aware
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(UTC).replace(tzinfo=None)
+            data['start_time'] = dt
+        
+        # Parse end_time if provided
+        if 'end_time' in data and data['end_time']:
+            dt_str = data['end_time'].replace('Z', '+00:00')
+            dt = datetime.fromisoformat(dt_str)
+            # Convert to UTC for storage if timezone-aware
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(UTC).replace(tzinfo=None)
+            data['end_time'] = dt
+        
+        # Validate time range if both provided
+        if 'start_time' in data and 'end_time' in data:
+            if data['start_time'] and data['end_time'] and data['start_time'] >= data['end_time']:
+                return jsonify({'error': 'Bitiş zamanı başlangıç zamanından sonra olmalıdır'}), 400
+        
+        current_user = get_current_user()
+        existing_task = TaskService.get_task(task_id, current_user.workspace_id)
+        old_assignee_id = existing_task.assignee_id if existing_task else None
 
-    task = TaskService.update_task(task_id, current_user.workspace_id, **data)
-    
-    if not task:
-        return jsonify({'error': 'Task not found'}), 404
-
-    if task.assignee_id and task.assignee_id != old_assignee_id:
-        CollaborationService.create_task_assignment_notification(
-            workspace_id=current_user.workspace_id,
-            task_id=task.id,
-            assignee_id=task.assignee_id,
-            actor_user_id=current_user.id,
+        task = TaskService.update_task(
+            task_id, 
+            current_user.workspace_id, 
+            user_id=current_user.id,
+            **data
         )
-    
-    return jsonify({
-        'id': task.id,
-        'title': task.title,
-        'description': task.description,
-        'assignee_id': task.assignee_id,
-        'status': task.status,
-        'priority': task.priority,
-        'due_date': task.due_date.isoformat() if task.due_date else None,
-        'is_customer_facing': task.is_customer_facing,
-        'updated_at': task.updated_at.isoformat(),
-        'completed_at': task.completed_at.isoformat() if task.completed_at else None
-    })
+        
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+
+        if task.assignee_id and task.assignee_id != old_assignee_id:
+            CollaborationService.create_task_assignment_notification(
+                workspace_id=current_user.workspace_id,
+                task_id=task.id,
+                assignee_id=task.assignee_id,
+                actor_user_id=current_user.id,
+            )
+        
+        return jsonify({
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+            'assignee_id': task.assignee_id,
+            'contact_id': task.contact_id,
+            'status': task.status,
+            'priority': task.priority,
+            'due_date': task.due_date.isoformat() if task.due_date else None,
+            'start_time': task.start_time.isoformat() if task.start_time else None,
+            'end_time': task.end_time.isoformat() if task.end_time else None,
+            'timezone': task.timezone,
+            'task_type': task.task_type,
+            'is_customer_facing': task.is_customer_facing,
+            'updated_at': task.updated_at.isoformat(),
+            'completed_at': task.completed_at.isoformat() if task.completed_at else None
+        })
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating task: {str(e)}")
+        return jsonify({'error': 'Görev güncellenirken hata oluştu'}), 500
 
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>', methods=['DELETE'])
@@ -292,6 +381,45 @@ def delete_task(task_id):
         return jsonify({'error': 'Task not found'}), 404
     
     return jsonify({'message': 'Task deleted successfully'})
+
+
+@tasks_bp.route('/api/v1/tasks/<int:task_id>/complete', methods=['POST'])
+@login_required
+def complete_task(task_id):
+    """
+    Mark a task as completed
+    
+    This is a convenience endpoint for completing tasks.
+    It updates the task status to 'completed' and sets completed_at timestamp.
+    """
+    try:
+        current_user = get_current_user()
+        
+        # Get the task first to verify it exists
+        task = TaskService.get_task(task_id, current_user.workspace_id)
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # Update task to completed status
+        task = TaskService.update_task(
+            task_id,
+            current_user.workspace_id,
+            user_id=current_user.id,
+            status='completed'
+        )
+        
+        return jsonify({
+            'id': task.id,
+            'title': task.title,
+            'status': task.status,
+            'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+            'updated_at': task.updated_at.isoformat()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error completing task: {str(e)}")
+        return jsonify({'error': 'Görev tamamlanırken hata oluştu'}), 500
 
 
 # ============================================================================

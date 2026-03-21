@@ -267,9 +267,12 @@ async function loadConversations() {
             });
         }
 
-        document.getElementById('allCount').textContent = counts.total;
-        document.getElementById('openCount').textContent = counts.open;
-        document.getElementById('pendingCount').textContent = counts.pending;
+        const allCountEl = document.getElementById('allCount');
+        const openCountEl = document.getElementById('openCount');
+        const pendingCountEl = document.getElementById('pendingCount');
+        if (allCountEl) allCountEl.textContent = counts.total;
+        if (openCountEl) openCountEl.textContent = counts.open;
+        if (pendingCountEl) pendingCountEl.textContent = counts.pending;
         const allEl = document.getElementById('channelAllCount');
         const waEl = document.getElementById('channelWhatsappCount');
         const tgEl = document.getElementById('channelTelegramCount');
@@ -280,6 +283,7 @@ async function loadConversations() {
         if (emEl) emEl.textContent = counts.email;
 
         const listEl = document.getElementById('conversationList');
+        if (!listEl) return;
         listEl.innerHTML = '';
 
         if (conversations.length === 0) {

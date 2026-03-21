@@ -105,7 +105,7 @@ This implementation plan breaks down the team member management system into disc
     - Use Tailwind CSS for styling
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
   
-  - [~] 10.2 Create static/team.js for team management functionality
+  - [ ] 10.2 Create static/team.js for team management functionality
     - Implement loadTeamMembers function (fetch and render team members)
     - Implement loadPendingInvitations function (fetch and render invitations)
     - Implement showInviteModal function (display invitation form)
@@ -118,7 +118,7 @@ This implementation plan breaks down the team member management system into disc
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 10.1, 10.2, 10.3, 10.4, 10.5, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7_
 
 - [ ] 11. Create invitation acceptance frontend page
-  - [~] 11.1 Create templates/accept_invitation.html
+  - [ ] 11.1 Create templates/accept_invitation.html
     - Create registration form with fields: name, password, confirm password
     - Pre-fill email from invitation (read-only)
     - Display workspace name and role
@@ -127,7 +127,7 @@ This implementation plan breaks down the team member management system into disc
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
 - [ ] 12. Create team member selector component
-  - [~] 12.1 Create static/team-selector.js
+  - [ ] 12.1 Create static/team-selector.js
     - Implement TeamMemberSelector class
     - Implement init method (load members, render dropdown)
     - Implement loadMembers method (fetch from /api/assignments/members)
@@ -138,25 +138,25 @@ This implementation plan breaks down the team member management system into disc
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7_
 
 - [ ] 13. Integrate assignment UI into existing CRM pages
-  - [~] 13.1 Add assignment dropdown to contact detail page
+  - [ ] 13.1 Add assignment dropdown to contact detail page
     - Add team member selector to templates/contact_detail.html (if exists) or relevant contact template
     - Wire up assignment change event to call /api/assignments/contact/<id>
     - Update UI on successful assignment
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
   
-  - [~] 13.2 Add assignment dropdown to company detail page
+  - [ ] 13.2 Add assignment dropdown to company detail page
     - Add team member selector to company detail template
     - Wire up assignment change event to call /api/assignments/company/<id>
     - Update UI on successful assignment
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
   
-  - [~] 13.3 Add assignment dropdown to deal detail page
+  - [ ] 13.3 Add assignment dropdown to deal detail page
     - Add team member selector to deal detail template (use owner_id field)
     - Wire up assignment change event to call /api/assignments/deal/<id>
     - Update UI on successful assignment
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
   
-  - [~] 13.4 Add assignment dropdown to task detail page
+  - [ ] 13.4 Add assignment dropdown to task detail page
     - Add team member selector to task detail template (use assignee_id field)
     - Wire up assignment change event to call /api/assignments/task/<id>
     - Update UI on successful assignment
@@ -184,14 +184,14 @@ This implementation plan breaks down the team member management system into disc
     - Default to "All"
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
   
-  - [~] 14.3 Add assignee filter to deals list page
+  - [ ] 14.3 Add assignee filter to deals list page
     - Add filter dropdown with team members, "Unassigned", and "All" options
     - Update deals query to filter by owner_id
     - Persist filter selection in session
     - Default to "All"
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
   
-  - [~] 14.4 Add assignee filter to tasks list page
+  - [ ] 14.4 Add assignee filter to tasks list page
     - Add filter dropdown with team members, "Unassigned", and "All" options
     - Update tasks query to filter by assignee_id
     - Persist filter selection in session
@@ -199,12 +199,12 @@ This implementation plan breaks down the team member management system into disc
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
 
 - [ ] 15. Implement activity timeline for team actions
-  - [~] 15.1 Update Activity model to record team member actions
+  - [ ] 15.1 Update Activity model to record team member actions
     - Ensure Activity records include user_id for all CRM entity changes
     - Add activity types for: assignment_changed, role_changed, member_added, member_removed, ownership_transferred
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6_
   
-  - [~] 15.2 Update activity display to show team member names
+  - [ ] 15.2 Update activity display to show team member names
     - Modify activity rendering to display team member name who performed action
     - Display assignment changes with old and new assignee names
     - Display role changes with old and new role values
@@ -212,14 +212,14 @@ This implementation plan breaks down the team member management system into disc
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6_
 
 - [ ] 16. Create email templates for notifications
-  - [~] 16.1 Create templates/emails/invitation.html
+  - [ ] 16.1 Create templates/emails/invitation.html
     - Create HTML email template for team invitations
     - Include workspace name, inviter name, role, invitation link, expiration date
     - Add plain text fallback
     - Style with inline CSS
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7_
   
-  - [~] 16.2 Create templates/emails/assignment.html
+  - [ ] 16.2 Create templates/emails/assignment.html
     - Create HTML email template for assignment notifications
     - Include entity type, entity name, assigner name, direct link to entity
     - Add plain text fallback
@@ -227,42 +227,42 @@ This implementation plan breaks down the team member management system into disc
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6_
 
 - [ ] 17. Implement role-based permission checks
-  - [~] 17.1 Create utils/permissions.py with permission system
+  - [ ] 17.1 Create utils/permissions.py with permission system
     - Define ROLE_PERMISSIONS dictionary with all role capabilities
     - Implement require_permission decorator
     - Implement check_permission function
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
   
-  - [~] 17.2 Apply permission checks to all team management endpoints
+  - [ ] 17.2 Apply permission checks to all team management endpoints
     - Add permission checks to team routes
     - Add permission checks to assignment routes
     - Return 403 Forbidden for unauthorized actions
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7_
 
 - [ ] 18. Handle team member deactivation gracefully
-  - [~] 18.1 Update queries to exclude deactivated members from assignment dropdowns
+  - [ ] 18.1 Update queries to exclude deactivated members from assignment dropdowns
     - Filter by is_active=True in get_assignable_members
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7_
   
-  - [~] 18.2 Preserve historical data for deactivated members
+  - [ ] 18.2 Preserve historical data for deactivated members
     - Keep assigned_to references intact when member is removed
     - Display deactivated member names in activity history
     - Add "Deactivated" badge in admin views
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7_
   
-  - [~] 18.3 Prevent login for deactivated members
+  - [ ] 18.3 Prevent login for deactivated members
     - Update login logic in routes/auth.py to check is_active
     - Return appropriate error message for deactivated accounts
     - _Requirements: 9.4, 19.4_
 
 - [ ] 19. Add team management link to navigation
-  - [~] 19.1 Add "Team" link to sidebar navigation
+  - [ ] 19.1 Add "Team" link to sidebar navigation
     - Add link to /team page in sidebar (after Settings, before Logout)
     - Show only for owner and admin roles
     - Use appropriate icon
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-- [~] 20. Final checkpoint - Ensure all tests pass
+- [ ] 20. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

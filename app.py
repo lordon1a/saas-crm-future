@@ -9,6 +9,7 @@ import logging
 import os
 import ipaddress
 import uuid
+import atexit
 from datetime import datetime, UTC
 from urllib.parse import urlparse
 
@@ -139,6 +140,8 @@ from routes import analytics as analytics_route
 from routes.telegram import telegram_bp
 from routes.contacts import contacts_bp
 from routes.tasks import tasks_bp
+from routes.calendar import calendar_bp
+from routes.notifications import notifications_bp
 from routes import custom_fields as custom_fields_route
 from routes import team as team_route
 from routes import assignments as assignments_route
@@ -149,6 +152,7 @@ from routes.import_wizard import import_bp
 from routes.pipeline_settings import pipeline_settings_bp
 from services import portal_notification_service  # noqa: F401
 from services.security_service import SecurityService
+from services.task_scheduler import TaskScheduler
 from utils.exceptions import (
     AppException, ValidationError, NotFoundError, 
     UnauthorizedError, ForbiddenError, ConflictError,
@@ -628,6 +632,198 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added converted_at column to contacts")
             
+            # === CALENDAR TASK MANAGEMENT MIGRATIONS ===
+            # Check if start_time column exists in tasks
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='tasks' AND column_name='start_time'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add calendar fields to tasks...")
+                cur.execute("""
+                    ALTER TABLE tasks 
+                    ADD COLUMN start_time TIMESTAMP
+                """)
+                conn.commit()
+                logger.info("✓ Added start_time column to tasks")
+            
+            # Check if end_time column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='tasks' AND column_name='end_time'
+            """)
+            
+            if not cur.fetchone():
+                cur.execute("""
+                    ALTER TABLE tasks 
+                    ADD COLUMN end_time TIMESTAMP
+                """)
+                conn.commit()
+                logger.info("✓ Added end_time column to tasks")
+            
+            # Check if timezone column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='tasks' AND column_name='timezone'
+            """)
+            
+            if not cur.fetchone():
+                cur.execute("""
+                    ALTER TABLE tasks 
+                    ADD COLUMN timezone VARCHAR(50) DEFAULT 'UTC' NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added timezone column to tasks")
+            
+            # Check if task_type column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='tasks' AND column_name='task_type'
+            """)
+            
+            if not cur.fetchone():
+                cur.execute("""
+                    ALTER TABLE tasks 
+                    ADD COLUMN task_type VARCHAR(50) DEFAULT 'task' NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added task_type column to tasks")
+            
+            # Check if contact_id column exists in tasks
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='tasks' AND column_name='contact_id'
+            """)
+            
+            if not cur.fetchone():
+                cur.execute("""
+                    ALTER TABLE tasks 
+                    ADD COLUMN contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added contact_id column to tasks")
+            
+            # Create indexes on tasks table
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_task_workspace_start_time 
+                ON tasks(workspace_id, start_time)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_task_type 
+                ON tasks(task_type)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_task_contact_id 
+                ON tasks(contact_id)
+            """)
+            conn.commit()
+            logger.info("✓ Created indexes on tasks table")
+            
+            # Check if task_notifications table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='task_notifications'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create task_notifications table...")
+                cur.execute("""
+                    CREATE TABLE task_notifications (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id),
+                        task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        notify_at TIMESTAMP NOT NULL,
+                        message VARCHAR(500) NOT NULL,
+                        notification_type VARCHAR(50) DEFAULT 'task_reminder' NOT NULL,
+                        is_sent BOOLEAN DEFAULT FALSE NOT NULL,
+                        sent_at TIMESTAMP,
+                        is_read BOOLEAN DEFAULT FALSE NOT NULL,
+                        read_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW() NOT NULL
+                    )
+                """)
+                conn.commit()
+                logger.info("✓ Created task_notifications table")
+                
+                # Create indexes on task_notifications
+                cur.execute("""
+                    CREATE INDEX idx_notification_workspace_id 
+                    ON task_notifications(workspace_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_task_id 
+                    ON task_notifications(task_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_user_id 
+                    ON task_notifications(user_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_notify_at 
+                    ON task_notifications(notify_at)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_pending 
+                    ON task_notifications(is_sent, notify_at)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_user_unread 
+                    ON task_notifications(user_id, is_read)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_workspace_user 
+                    ON task_notifications(workspace_id, user_id)
+                """)
+                conn.commit()
+                logger.info("✓ Created indexes on task_notifications table")
+            
+            # Check if notification_preferences table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='notification_preferences'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create notification_preferences table...")
+                cur.execute("""
+                    CREATE TABLE notification_preferences (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id),
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        task_reminder_enabled BOOLEAN DEFAULT TRUE NOT NULL,
+                        task_overdue_enabled BOOLEAN DEFAULT TRUE NOT NULL,
+                        task_assigned_enabled BOOLEAN DEFAULT TRUE NOT NULL,
+                        task_updated_enabled BOOLEAN DEFAULT FALSE NOT NULL,
+                        reminder_minutes_before INTEGER DEFAULT 15 NOT NULL,
+                        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                        updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                        UNIQUE (workspace_id, user_id)
+                    )
+                """)
+                conn.commit()
+                logger.info("✓ Created notification_preferences table")
+                
+                # Create indexes on notification_preferences
+                cur.execute("""
+                    CREATE INDEX idx_notification_pref_workspace_id 
+                    ON notification_preferences(workspace_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_notification_pref_user_id 
+                    ON notification_preferences(user_id)
+                """)
+                conn.commit()
+                logger.info("✓ Created indexes on notification_preferences table")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
@@ -762,6 +958,8 @@ app.register_blueprint(contacts_bp)
 from routes.contacts_file_upload import contacts_files_bp
 app.register_blueprint(contacts_files_bp)
 app.register_blueprint(tasks_bp)
+app.register_blueprint(calendar_bp)
+app.register_blueprint(notifications_bp)
 app.register_blueprint(custom_fields_route.bp)
 app.register_blueprint(scheduled_messages_bp)
 app.register_blueprint(documents_bp)
@@ -771,6 +969,10 @@ app.register_blueprint(team_route.bp)
 app.register_blueprint(assignments_route.bp)
 from routes.super_admin import bp as super_admin_bp
 app.register_blueprint(super_admin_bp)
+
+# Initialize TaskScheduler for background jobs (notifications, overdue tasks)
+TaskScheduler.init_scheduler(app)
+atexit.register(TaskScheduler.shutdown)
 
 # Login endpoint'ine rate limit uygula
 try:
@@ -1066,12 +1268,6 @@ def landing():
     return render_template('landing.html')
 
 
-@app.route('/dashboard')
-@login_required
-def index():
-    return render_template('index.html')
-
-
 @app.route('/channels')
 @login_required
 def channels():
@@ -1088,6 +1284,23 @@ def settings_page():
 @login_required
 def analytics():
     return render_template('analytics.html')
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """Dashboard page with dark theme"""
+    stats = {
+        'total_contacts': 0,
+        'active_deals': 0,
+        'monthly_revenue': 0,
+        'pending_tasks': 0,
+        'pipeline_discovery': 0,
+        'pipeline_proposal': 0,
+        'pipeline_negotiation': 0,
+        'pipeline_closing': 0,
+    }
+    return render_template('dashboard.html', stats=stats, current_user=type('obj', (object,), {'name': session.get('user_name', 'User')})())
 
 
 @app.route('/account')
@@ -1545,6 +1758,12 @@ with app.app_context():
     
     logger.info('Database tables created successfully!')
     logger.info('Server starting on http://localhost:5000')
+
+
+@app.route('/theme-preview')
+def theme_preview():
+    """Dark theme preview page"""
+    return render_template('theme_preview.html')
 
 
 if __name__ == '__main__':
