@@ -351,6 +351,26 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added is_starred column to contacts")
             
+            # Check if last_activity_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='contacts' AND column_name='last_activity_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add last_activity_at column to contacts...")
+                cur.execute("""
+                    ALTER TABLE contacts 
+                    ADD COLUMN last_activity_at TIMESTAMP
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_contacts_last_activity_at 
+                    ON contacts(last_activity_at)
+                """)
+                conn.commit()
+                logger.info("✓ Added last_activity_at column to contacts")
+            
             # === COMPANIES TABLE MIGRATIONS ===
             # Check if display_order column exists
             cur.execute("""
