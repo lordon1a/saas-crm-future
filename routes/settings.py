@@ -131,10 +131,27 @@ def _topbar_recent_items(workspace_id, limit=8):
     # Include recent uploaded contact files from filesystem uploads/contacts/{contact_id}
     uploads_root = os.path.join('uploads', 'contacts')
     if os.path.isdir(uploads_root):
-        contact_names = {
-            c.id: c.full_name
-            for c in Contact.query.filter_by(workspace_id=workspace_id).all()
-        }
+        # OPTIMIZED: Only get contact IDs that have files, then fetch names
+        contact_dirs = []
+        try:
+            for item in os.listdir(uploads_root):
+                item_path = os.path.join(uploads_root, item)
+                if os.path.isdir(item_path) and item.isdigit():
+                    contact_dirs.append(int(item))
+        except Exception:
+            pass
+        
+        contact_names = {}
+        if contact_dirs:
+            contacts_with_files = Contact.query.filter(
+                Contact.id.in_(contact_dirs),
+                Contact.workspace_id == workspace_id
+            ).with_entities(Contact.id, Contact.first_name, Contact.last_name).all()
+            contact_names = {
+                c.id: f"{c.first_name} {c.last_name}".strip() 
+                for c in contacts_with_files
+            }
+        
         file_items = []
         for contact_id in contact_names.keys():
             contact_dir = os.path.join(uploads_root, str(contact_id))
@@ -161,7 +178,7 @@ def _topbar_recent_items(workspace_id, limit=8):
         file_items.sort(key=lambda i: i.get('timestamp') or '', reverse=True)
         items.extend(file_items[:2])
 
-    deals = Deal.query.filter_by(workspace_id=workspace_id) \
+    deals = Deal.query.options(db.joinedload(Deal.company)).filter_by(workspace_id=workspace_id) \
         .order_by(Deal.updated_at.desc(), Deal.created_at.desc()) \
         .limit(2).all()
     for deal in deals:
@@ -261,10 +278,26 @@ def _topbar_search(workspace_id, query, limit=12):
     # Search uploaded contact files from filesystem uploads/contacts/{contact_id}
     uploads_root = os.path.join('uploads', 'contacts')
     if os.path.isdir(uploads_root):
-        contact_names = {
-            c.id: c.full_name
-            for c in Contact.query.filter_by(workspace_id=workspace_id).all()
-        }
+        # OPTIMIZED: Only get contact IDs that have files, then fetch names
+        contact_dirs = []
+        try:
+            for item in os.listdir(uploads_root):
+                item_path = os.path.join(uploads_root, item)
+                if os.path.isdir(item_path) and item.isdigit():
+                    contact_dirs.append(int(item))
+        except Exception:
+            pass
+        
+        contact_names = {}
+        if contact_dirs:
+            contacts_with_files = Contact.query.filter(
+                Contact.id.in_(contact_dirs),
+                Contact.workspace_id == workspace_id
+            ).with_entities(Contact.id, Contact.first_name, Contact.last_name).all()
+            contact_names = {
+                c.id: f"{c.first_name} {c.last_name}".strip() 
+                for c in contacts_with_files
+            }
 
         file_hits = []
         q_lower = q.lower()
@@ -295,7 +328,7 @@ def _topbar_search(workspace_id, query, limit=12):
         file_hits.sort(key=lambda i: i.get('timestamp') or '', reverse=True)
         results.extend(file_hits[:4])
 
-    deals = Deal.query.filter(
+    deals = Deal.query.options(db.joinedload(Deal.company)).filter(
         Deal.workspace_id == workspace_id,
         Deal.name.ilike(like)
     ).order_by(Deal.updated_at.desc(), Deal.created_at.desc()).limit(3).all()
@@ -524,7 +557,7 @@ def get_topbar_config():
             'id': ws.id,
             'company_name': ws.company_name,
         },
-        'search_placeholder': f"{ws.company_name} icinde ara...",
+        'search_placeholder': "CRM'de ara",
         'account_menu': [
             {'group': 'HESABIM', 'label': 'Kisisel tercihler', 'icon': 'fa-user-circle', 'url': '/account'},
             {'group': 'HESABIM', 'label': 'Tavsiye programi', 'icon': 'fa-gift', 'url': '/settings'},
@@ -623,7 +656,9 @@ def update_portal_branding():
 def get_team():
     """Workspace'teki tüm kullanıcıları listele"""
     workspace_id = session.get('workspace_id')
-    users = User.query.filter_by(workspace_id=workspace_id).all()
+    users = User.query.filter_by(workspace_id=workspace_id).with_entities(
+        User.id, User.name, User.email, User.role
+    ).all()
     return jsonify([{
         'id': u.id,
         'name': u.name,

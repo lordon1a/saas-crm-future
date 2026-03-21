@@ -425,3 +425,135 @@ def get_accessible_entities_query(user, entity_class, base_query=None):
     
     # Default: return base query
     return base_query
+
+
+
+# ============================================================================
+# BRUTE-FORCE PROTECTION
+# ============================================================================
+
+def check_login_attempts(email, ip_address):
+    """
+    Check if login should be blocked due to too many failed attempts.
+    Implements rate limiting based on email and IP address.
+    
+    Args:
+        email: Email address attempting to login
+        ip_address: IP address of the request
+    
+    Returns:
+        tuple: (allowed: bool, wait_minutes: int, reason: str)
+            - allowed: True if login attempt is allowed
+            - wait_minutes: Minutes to wait before retry (0 if allowed)
+            - reason: Human-readable reason for blocking
+    
+    Security Rules:
+        1. Email-based: Max 5 failed attempts in 15 minutes
+        2. IP-based: Max 20 failed attempts in 15 minutes (prevents distributed attacks)
+        3. Lockout duration: 15 minutes from last failed attempt
+    """
+    from datetime import datetime, timedelta
+    from models_crm import LoginAttempt
+    from models import db
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Time window for checking attempts (15 minutes)
+    time_window = datetime.utcnow() - timedelta(minutes=15)
+    
+    # Check email-based attempts (max 5 in 15 minutes)
+    email_attempts = LoginAttempt.query.filter(
+        LoginAttempt.email == email,
+        LoginAttempt.attempted_at >= time_window,
+        LoginAttempt.success == False
+    ).count()
+    
+    if email_attempts >= 5:
+        # Get the most recent failed attempt to calculate wait time
+        last_attempt = LoginAttempt.query.filter(
+            LoginAttempt.email == email,
+            LoginAttempt.success == False
+        ).order_by(LoginAttempt.attempted_at.desc()).first()
+        
+        if last_attempt:
+            time_since_last = datetime.utcnow() - last_attempt.attempted_at
+            wait_minutes = max(0, 15 - int(time_since_last.total_seconds() / 60))
+            
+            logger.warning(
+                f"SECURITY: Login blocked for email {email} - "
+                f"{email_attempts} failed attempts in 15 minutes"
+            )
+            
+            return (
+                False,
+                wait_minutes,
+                f"Çok fazla başarısız giriş denemesi. {wait_minutes} dakika sonra tekrar deneyin."
+            )
+    
+    # Check IP-based attempts (max 20 in 15 minutes)
+    if ip_address:
+        ip_attempts = LoginAttempt.query.filter(
+            LoginAttempt.ip_address == ip_address,
+            LoginAttempt.attempted_at >= time_window,
+            LoginAttempt.success == False
+        ).count()
+        
+        if ip_attempts >= 20:
+            last_attempt = LoginAttempt.query.filter(
+                LoginAttempt.ip_address == ip_address,
+                LoginAttempt.success == False
+            ).order_by(LoginAttempt.attempted_at.desc()).first()
+            
+            if last_attempt:
+                time_since_last = datetime.utcnow() - last_attempt.attempted_at
+                wait_minutes = max(0, 15 - int(time_since_last.total_seconds() / 60))
+                
+                logger.warning(
+                    f"SECURITY: Login blocked for IP {ip_address} - "
+                    f"{ip_attempts} failed attempts in 15 minutes"
+                )
+                
+                return (
+                    False,
+                    wait_minutes,
+                    f"Bu IP adresinden çok fazla başarısız giriş denemesi. {wait_minutes} dakika sonra tekrar deneyin."
+                )
+    
+    # Login allowed
+    return (True, 0, "")
+
+
+def record_login_attempt(email, ip_address, success, user_agent=None):
+    """
+    Record a login attempt for security monitoring.
+    
+    Args:
+        email: Email address used in login attempt
+        ip_address: IP address of the request
+        success: True if login was successful
+        user_agent: Optional user agent string
+    """
+    from models_crm import LoginAttempt
+    from models import db
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        attempt = LoginAttempt(
+            email=email,
+            ip_address=ip_address,
+            success=success,
+            user_agent=user_agent
+        )
+        db.session.add(attempt)
+        db.session.commit()
+        
+        logger.info(
+            f"Login attempt recorded: {email} from {ip_address} - "
+            f"{'SUCCESS' if success else 'FAILED'}"
+        )
+    except Exception as e:
+        logger.error(f"Failed to record login attempt: {e}")
+        db.session.rollback()

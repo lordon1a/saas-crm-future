@@ -83,7 +83,7 @@ class Deal(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     closed_at = db.Column(db.DateTime)
-    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
     stage_entered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)  # Track when deal entered current stage
     version = db.Column(db.Integer, default=0, nullable=False)  # Optimistic locking
@@ -140,7 +140,7 @@ class Company(db.Model):
     address = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
     display_order = db.Column(db.Integer, default=0, nullable=False, index=True)
     
@@ -197,7 +197,7 @@ class Contact(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
     display_order = db.Column(db.Integer, default=0, nullable=False, index=True)
     is_starred = db.Column(db.Boolean, default=False, nullable=False, index=True)
@@ -1797,3 +1797,31 @@ class SearchLog(db.Model):
             'search_duration_ms': self.search_duration_ms,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+
+# ============================================================================
+# SECURITY & AUTHENTICATION
+# ============================================================================
+
+class LoginAttempt(db.Model):
+    """
+    Tracks login attempts for brute-force protection and security monitoring.
+    Records both successful and failed login attempts with IP tracking.
+    """
+    __tablename__ = 'login_attempts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), nullable=False, index=True)
+    ip_address = db.Column(db.String(50), index=True)
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    success = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    user_agent = db.Column(db.String(500), nullable=True)
+    
+    __table_args__ = (
+        db.Index('idx_login_attempt_email_time', 'email', 'attempted_at'),
+        db.Index('idx_login_attempt_ip_time', 'ip_address', 'attempted_at'),
+        db.Index('idx_login_attempt_success', 'success', 'attempted_at'),
+    )
+    
+    def __repr__(self):
+        return f'<LoginAttempt {self.email} - {"success" if self.success else "failed"} at {self.attempted_at}>'

@@ -167,5 +167,7 @@ def search_deals_for_calendar():
 def get_team_for_calendar():
     """Get team members for assignee selection"""
     workspace_id = session.get('workspace_id')
-    users = User.query.filter_by(workspace_id=workspace_id).all()
+    users = User.query.filter_by(workspace_id=workspace_id).with_entities(
+        User.id, User.name, User.email
+    ).all()
     return jsonify({'users': [{'id': u.id, 'name': u.name or u.email} for u in users]})

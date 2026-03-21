@@ -19,10 +19,17 @@ def login_required_api(f):
 def get_templates():
     """Workspace'e ait tüm mesaj şablonlarını listele"""
     workspace_id = session.get('workspace_id')
-    templates = MessageTemplate.query.filter_by(workspace_id=workspace_id).order_by(MessageTemplate.created_at.desc()).all()
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 50, type=int), 200)
+    
+    pagination = MessageTemplate.query.filter_by(workspace_id=workspace_id).order_by(
+        MessageTemplate.created_at.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
     
     result = []
-    for t in templates:
+    for t in pagination.items:
         result.append({
             'id': t.id,
             'name': t.name,
@@ -32,7 +39,12 @@ def get_templates():
             'created_at': t.created_at.isoformat()
         })
     
-    return jsonify(result), 200
+    return jsonify({
+        'templates': result,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
 
 @bp.route('/templates', methods=['POST'])
 @login_required_api

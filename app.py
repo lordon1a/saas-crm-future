@@ -1928,5 +1928,11 @@ def theme_preview():
     return render_template('theme_preview.html')
 
 
+@app.route('/health')
+def health():
+    """Simple health check endpoint"""
+    return {'status': 'ok'}, 200
+
+
 if __name__ == '__main__':
     socketio.run(app, debug=Config.DEBUG, port=int(os.getenv('PORT', 5000)), host='0.0.0.0')

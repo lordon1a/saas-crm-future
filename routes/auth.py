@@ -21,17 +21,41 @@ def login_page():
 def login():
     try:
         from flask import session as flask_session
+        from utils.permissions import check_login_attempts, record_login_attempt
+        
         data = request.get_json(silent=True) or request.form.to_dict() or {}
-        email = str(data.get('email', '')).strip()
+        email = str(data.get('email', '')).strip().lower()
         password = str(data.get('password', ''))
         two_factor_token = str(data.get('two_factor_token', '')).strip()
 
         if not email or not password:
             return jsonify({'error': 'Email ve şifre gereklidir'}), 400
 
+        # BRUTE-FORCE PROTECTION: Check if login attempts exceeded
+        ip_address = request.remote_addr
+        allowed, wait_minutes, reason = check_login_attempts(email, ip_address)
+        
+        if not allowed:
+            logger.warning(
+                f'SECURITY: Login blocked for {email} from {ip_address} - {reason}'
+            )
+            return jsonify({
+                'error': reason,
+                'wait_minutes': wait_minutes,
+                'locked_out': True
+            }), 429
+
         user = AuthManager.authenticate_user(email, password)
         if not user:
-            logger.warning('Başarısız giriş denemesi: %s', email)
+            # Record failed attempt
+            record_login_attempt(
+                email=email,
+                ip_address=ip_address,
+                success=False,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            
+            logger.warning('Başarısız giriş denemesi: %s from %s', email, ip_address)
             return jsonify({'error': 'Email veya şifre hatalı'}), 401
         
         # Check if user is active (not deactivated)
@@ -63,6 +87,14 @@ def login():
         session['user_email'] = user.email
         session['user_role'] = user.role
         session['session_token'] = session_token
+
+        # Record successful login attempt
+        record_login_attempt(
+            email=email,
+            ip_address=ip_address,
+            success=True,
+            user_agent=request.headers.get('User-Agent', '')
+        )
 
         timeout_minutes = max(5, int(Config.PERMANENT_SESSION_LIFETIME / 60))
         try:

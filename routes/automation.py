@@ -32,10 +32,17 @@ def login_required_api(f):
 def get_automation_rules():
     """Tüm otomasyon kurallarını listele"""
     workspace_id = session.get('workspace_id')
-    rules = AutomationRule.query.filter_by(workspace_id=workspace_id).order_by(AutomationRule.created_at.desc()).all()
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 50, type=int), 200)
+    
+    pagination = AutomationRule.query.filter_by(workspace_id=workspace_id).order_by(
+        AutomationRule.created_at.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
     
     result = []
-    for rule in rules:
+    for rule in pagination.items:
         result.append({
             'id': rule.id,
             'name': rule.name,
@@ -50,7 +57,12 @@ def get_automation_rules():
             'created_at': rule.created_at.isoformat()
         })
     
-    return jsonify(result), 200
+    return jsonify({
+        'rules': result,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
 
 
 @bp.route('/rules', methods=['POST'])
@@ -157,10 +169,17 @@ def toggle_automation_rule(rule_id):
 def get_auto_replies():
     """Tüm otomatik yanıtları listele"""
     workspace_id = session.get('workspace_id')
-    replies = AutoReply.query.filter_by(workspace_id=workspace_id).order_by(AutoReply.created_at.desc()).all()
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 50, type=int), 200)
+    
+    pagination = AutoReply.query.filter_by(workspace_id=workspace_id).order_by(
+        AutoReply.created_at.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
     
     result = []
-    for reply in replies:
+    for reply in pagination.items:
         result.append({
             'id': reply.id,
             'name': reply.name,
@@ -176,7 +195,12 @@ def get_auto_replies():
             'created_at': reply.created_at.isoformat()
         })
     
-    return jsonify(result), 200
+    return jsonify({
+        'replies': result,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
 
 
 @bp.route('/auto-replies', methods=['POST'])
@@ -275,10 +299,17 @@ def delete_auto_reply(reply_id):
 def get_assignment_rules():
     """Tüm atama kurallarını listele"""
     workspace_id = session.get('workspace_id')
-    rules = AssignmentRule.query.filter_by(workspace_id=workspace_id).order_by(AssignmentRule.priority.desc()).all()
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 50, type=int), 200)
+    
+    pagination = AssignmentRule.query.filter_by(workspace_id=workspace_id).order_by(
+        AssignmentRule.priority.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
     
     result = []
-    for rule in rules:
+    for rule in pagination.items:
         result.append({
             'id': rule.id,
             'name': rule.name,
@@ -292,7 +323,12 @@ def get_assignment_rules():
             'created_at': rule.created_at.isoformat()
         })
     
-    return jsonify(result), 200
+    return jsonify({
+        'rules': result,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
 
 
 @bp.route('/assignment-rules', methods=['POST'])

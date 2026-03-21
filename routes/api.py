@@ -511,7 +511,9 @@ def assign_conversation(conversation_id):
 def get_workspace_team():
     """Frontend'de Temsilci Ata dropdown'u için workspace üyelerini listele"""
     workspace_id = session.get('workspace_id')
-    users = User.query.filter_by(workspace_id=workspace_id).all()
+    users = User.query.filter_by(workspace_id=workspace_id).with_entities(
+        User.id, User.name, User.role
+    ).all()
     return jsonify([{'id': u.id, 'name': u.name, 'role': u.role} for u in users]), 200
 
 @bp.route('/customers/<int:customer_id>/profile', methods=['GET'])
@@ -1120,7 +1122,9 @@ def get_current_user_info():
 def get_team_members():
     """Get all team members in current workspace"""
     workspace_id = session.get('workspace_id')
-    users = User.query.filter_by(workspace_id=workspace_id).all()
+    users = User.query.filter_by(workspace_id=workspace_id).with_entities(
+        User.id, User.name, User.email, User.role
+    ).all()
     
     return jsonify([{
         'id': u.id,
