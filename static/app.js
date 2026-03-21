@@ -1,6 +1,37 @@
 // WhatsApp CRM - Frontend Controller (V4 - Multi-Tenant + Assignment + SSE)
 const API_BASE = '/api';
 
+// CSRF Token Helper
+function getCSRFToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+// Global Fetch Interceptor for CSRF Protection
+(function() {
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        // Only add CSRF token to same-origin requests
+        const isSameOrigin = !url.startsWith('http') || url.startsWith(window.location.origin);
+        
+        if (isSameOrigin) {
+            const csrfToken = getCSRFToken();
+            options.headers = options.headers || {};
+            
+            // Add CSRF token if not already present
+            if (csrfToken && !options.headers['X-CSRFToken'] && !options.headers['X-CSRF-Token']) {
+                if (options.headers instanceof Headers) {
+                    options.headers.set('X-CSRFToken', csrfToken);
+                } else {
+                    options.headers['X-CSRFToken'] = csrfToken;
+                }
+            }
+        }
+        
+        return originalFetch.call(this, url, options);
+    };
+})();
+
 let currentConversationId = null;
 window.currentConvId = null;  // SSE toast için global alias
 

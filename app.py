@@ -3,6 +3,7 @@ monkey.patch_all()
 
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify
 from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 from functools import wraps
 import logging
@@ -118,6 +119,9 @@ limiter = Limiter(
     storage_uri=os.getenv('RATELIMIT_STORAGE_URI', 'memory://'),  # production'da redis kullanılabilir
     swallow_errors=True,
 )
+
+# CSRF Protection
+csrf = CSRFProtect(app)
 
 from models import db
 from models_crm import SessionActivity
@@ -956,6 +960,24 @@ def run_migrations():
             conn.close()
             logger.info("✓ All migrations completed")
             
+            # === LOGIN ATTEMPTS TABLE (BRUTE-FORCE PROTECTION) ===
+            # Import and run the migration
+            try:
+                from migrations.add_login_attempts_table import upgrade as login_attempts_upgrade
+                
+                # Reconnect for this migration
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                logger.info("Running migration: add login_attempts table...")
+                login_attempts_upgrade(conn, cur)
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ Login attempts migration completed")
+            except Exception as e:
+                logger.warning(f"Login attempts migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 
@@ -1098,6 +1120,10 @@ app.register_blueprint(assignments_route.bp)
 from routes.super_admin import bp as super_admin_bp
 app.register_blueprint(super_admin_bp)
 app.register_blueprint(search_bp)
+
+# CSRF Exemptions for webhooks (external services)
+csrf.exempt(webhook.bp)
+csrf.exempt(telegram_bp)
 
 # Initialize TaskScheduler for background jobs (notifications, overdue tasks)
 TaskScheduler.init_scheduler(app)
