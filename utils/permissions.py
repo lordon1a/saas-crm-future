@@ -194,3 +194,234 @@ def can_assign_entity(user, entity):
     
     # Viewer can't assign
     return False
+
+
+# ============================================================================
+# ENTITY-LEVEL ACCESS CONTROL (IDOR Protection)
+# ============================================================================
+
+def get_current_user_from_session():
+    """Get current authenticated user from session"""
+    user_id = session.get('user_id')
+    workspace_id = session.get('workspace_id')
+    
+    if not user_id or not workspace_id:
+        return None
+    
+    return User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+
+
+def check_workspace_access(user, workspace_id):
+    """
+    Verify user belongs to the workspace (CRITICAL for multi-tenant isolation)
+    
+    Args:
+        user: User object
+        workspace_id: Workspace ID to check
+    
+    Returns:
+        bool: True if user has access
+    """
+    if not user or not workspace_id:
+        return False
+    
+    return user.workspace_id == workspace_id
+
+
+def check_entity_access(user, entity, action='read'):
+    """
+    Central function to check if user has permission to access an entity.
+    This is the CORE IDOR protection mechanism.
+    
+    Args:
+        user: Current user object
+        entity: Entity object (Contact, Company, Deal, Task, etc.)
+        action: 'read', 'write', 'delete'
+    
+    Returns:
+        bool: True if user has access
+    
+    Security Rules:
+        1. Workspace isolation (CRITICAL): User can only access entities in their workspace
+        2. Role-based access: owner/admin can access all, member/viewer have restrictions
+        3. Ownership check: Users can access entities assigned to them
+        4. Team visibility: Managers can access their team's entities
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if not user or not entity:
+        return False
+    
+    # RULE 1: Workspace isolation check (CRITICAL - prevents cross-tenant access)
+    if hasattr(entity, 'workspace_id'):
+        if entity.workspace_id != user.workspace_id:
+            logger.warning(
+                f"SECURITY: Cross-workspace access attempt blocked - "
+                f"user {user.id} (workspace {user.workspace_id}) "
+                f"tried to access entity in workspace {entity.workspace_id}"
+            )
+            return False
+    
+    # RULE 2: Owner and admin can access everything in their workspace
+    if user.role in ['owner', 'admin']:
+        return True
+    
+    # RULE 3: For write/delete actions, require ownership or higher privileges
+    if action in ['write', 'delete']:
+        # Check various ownership fields
+        owner_fields = ['owner_id', 'assignee_id', 'assigned_to', 'created_by']
+        
+        for field in owner_fields:
+            if hasattr(entity, field):
+                field_value = getattr(entity, field)
+                if field_value == user.id:
+                    return True
+        
+        # Member role cannot write/delete entities they don't own
+        if user.role == 'member':
+            logger.info(
+                f"Access denied: member user {user.id} attempted {action} "
+                f"on entity they don't own"
+            )
+            return False
+        
+        # Viewer role cannot write/delete anything
+        if user.role == 'viewer':
+            return False
+    
+    # RULE 4: For read action, check visibility based on role
+    if action == 'read':
+        # Member can read entities assigned to them or unassigned
+        if user.role == 'member':
+            owner_fields = ['owner_id', 'assignee_id', 'assigned_to']
+            
+            for field in owner_fields:
+                if hasattr(entity, field):
+                    field_value = getattr(entity, field)
+                    # Can read if assigned to them or unassigned
+                    if field_value is None or field_value == user.id:
+                        return True
+            
+            # If entity has no ownership field, allow read (e.g., tags, pipelines)
+            if not any(hasattr(entity, field) for field in owner_fields):
+                return True
+            
+            # Entity is assigned to someone else
+            return False
+        
+        # Viewer can read all in workspace (read-only role)
+        if user.role == 'viewer':
+            return True
+    
+    # Default deny
+    return False
+
+
+def require_entity_access(entity_getter, action='read'):
+    """
+    Decorator to enforce entity-level access control on endpoints.
+    This prevents IDOR vulnerabilities by checking ownership before allowing access.
+    
+    Usage:
+        @require_entity_access(lambda: Deal.query.get(deal_id), action='write')
+        def update_deal(deal_id):
+            # Access is automatically checked
+            pass
+    
+    Args:
+        entity_getter: Function that returns the entity to check
+        action: 'read', 'write', 'delete'
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            user = get_current_user_from_session()
+            
+            if not user:
+                return jsonify({'error': 'Authentication required'}), 401
+            
+            # Get entity using the provided getter function
+            try:
+                entity = entity_getter()
+            except Exception as e:
+                logger.error(f"Error getting entity: {e}")
+                return jsonify({'error': 'Invalid request'}), 400
+            
+            if not entity:
+                return jsonify({'error': 'Resource not found'}), 404
+            
+            # Check access
+            if not check_entity_access(user, entity, action):
+                logger.warning(
+                    f"SECURITY: Access denied - user {user.id} ({user.role}) "
+                    f"attempted {action} on {type(entity).__name__} {entity.id}"
+                )
+                return jsonify({'error': 'Access denied to this resource'}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def get_accessible_entities_query(user, entity_class, base_query=None):
+    """
+    Filter a query to only return entities the user can access.
+    Use this for list endpoints to prevent IDOR enumeration.
+    
+    Args:
+        user: Current user object
+        entity_class: SQLAlchemy model class (Contact, Company, Deal, etc.)
+        base_query: Optional base query to filter (if None, creates new query)
+    
+    Returns:
+        SQLAlchemy query filtered by access rules
+    
+    Usage:
+        query = get_accessible_entities_query(user, Deal)
+        deals = query.filter(Deal.status == 'open').all()
+    """
+    if base_query is None:
+        base_query = entity_class.query
+    
+    # Always filter by workspace (CRITICAL)
+    base_query = base_query.filter_by(workspace_id=user.workspace_id)
+    
+    # Owner and admin can see all in workspace
+    if user.role in ['owner', 'admin']:
+        return base_query
+    
+    # Member can only see entities assigned to them
+    if user.role == 'member':
+        # Try different ownership field names
+        if hasattr(entity_class, 'assigned_to'):
+            return base_query.filter(
+                db.or_(
+                    entity_class.assigned_to == user.id,
+                    entity_class.assigned_to == None
+                )
+            )
+        elif hasattr(entity_class, 'assignee_id'):
+            return base_query.filter(
+                db.or_(
+                    entity_class.assignee_id == user.id,
+                    entity_class.assignee_id == None
+                )
+            )
+        elif hasattr(entity_class, 'owner_id'):
+            return base_query.filter(
+                db.or_(
+                    entity_class.owner_id == user.id,
+                    entity_class.owner_id == None
+                )
+            )
+    
+    # Viewer can see all (read-only)
+    if user.role == 'viewer':
+        return base_query
+    
+    # Default: return base query
+    return base_query

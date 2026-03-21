@@ -232,11 +232,20 @@ def get_deals():
 @login_required_api
 def get_deal(deal_id):
     """Get a specific deal"""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    
     workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    
     deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
     
     if not deal:
         return jsonify({'error': 'Deal not found'}), 404
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(user, deal, 'read'):
+        logger.warning(f"Access denied: user {user.id} attempted to read deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
     
     return jsonify({
         'id': deal.id,
@@ -411,8 +420,11 @@ def update_deal(deal_id):
     Update a deal.
     Allowed fields: name, value, expected_close_date, owner_id
     """
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
+    user = get_current_user_from_session()
     data = request.get_json()
     
     try:
@@ -420,6 +432,18 @@ def update_deal(deal_id):
         if 'expected_close_date' in data and data['expected_close_date']:
             data['expected_close_date'] = datetime.fromisoformat(data['expected_close_date']).date()
         
+        # Get deal
+        deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+        
+        if not deal:
+            return jsonify({'error': 'Deal not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        if not check_entity_access(user, deal, 'write'):
+            logger.warning(f"Access denied: user {user.id} attempted to update deal {deal_id}")
+            return jsonify({'error': 'Access denied to this deal'}), 403
+        
+        # Update deal
         deal = PipelineService.update_deal(workspace_id, deal_id, data, user_id)
         
         # Prepare response data before async operations
@@ -464,14 +488,29 @@ def move_deal_stage(deal_id):
     Move a deal to a different stage.
     Required: stage_id
     """
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
+    user = get_current_user_from_session()
     data = request.get_json()
     
     if 'stage_id' not in data:
         return jsonify({'error': 'stage_id is required'}), 400
     
     try:
+        # Get deal
+        deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+        
+        if not deal:
+            return jsonify({'error': 'Deal not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        if not check_entity_access(user, deal, 'write'):
+            logger.warning(f"Access denied: user {user.id} attempted to move deal {deal_id} stage")
+            return jsonify({'error': 'Access denied to this deal'}), 403
+        
+        # Move stage
         deal = PipelineService.move_deal_to_stage(
             workspace_id, 
             deal_id, 
@@ -519,8 +558,11 @@ def close_deal(deal_id):
     Close a deal as won or lost.
     Required: status ('won' or 'lost'), win_loss_reason
     """
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
+    user = get_current_user_from_session()
     data = request.get_json()
     
     if 'status' not in data:
@@ -529,6 +571,18 @@ def close_deal(deal_id):
         return jsonify({'error': 'win_loss_reason is required'}), 400
     
     try:
+        # Get deal
+        deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+        
+        if not deal:
+            return jsonify({'error': 'Deal not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        if not check_entity_access(user, deal, 'write'):
+            logger.warning(f"Access denied: user {user.id} attempted to close deal {deal_id}")
+            return jsonify({'error': 'Access denied to this deal'}), 403
+        
+        # Close deal
         deal = PipelineService.close_deal(
             workspace_id,
             deal_id,
@@ -588,11 +642,20 @@ def close_deal(deal_id):
 @login_required_api
 def delete_deal(deal_id):
     """Soft delete a deal"""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    
     workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    
     deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
     
     if not deal:
         return jsonify({'error': 'Deal not found'}), 404
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(user, deal, 'delete'):
+        logger.warning(f"Access denied: user {user.id} attempted to delete deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
     
     try:
         deal.is_deleted = True

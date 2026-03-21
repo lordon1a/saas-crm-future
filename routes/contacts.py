@@ -259,12 +259,18 @@ def get_companies():
 @login_required
 def get_company(company_id):
     """Get a single company by ID"""
+    from utils.permissions import check_entity_access
+    
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         from models_crm import Company
+        from models import User
+        
         company = Company.query.filter_by(
             id=company_id,
             workspace_id=workspace_id,
@@ -273,6 +279,12 @@ def get_company(company_id):
         
         if not company:
             return jsonify({'error': 'Company not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        current_user = User.query.get(user_id)
+        if not check_entity_access(current_user, company, 'read'):
+            logger.warning(f"Access denied: user {user_id} attempted to read company {company_id}")
+            return jsonify({'error': 'Access denied to this company'}), 403
         
         # Get custom fields
         custom_fields = ContactService.get_custom_field_values(
@@ -348,12 +360,33 @@ def create_company():
 @login_required
 def update_company(company_id):
     """Update a company"""
+    from utils.permissions import check_entity_access
+    
     try:
         workspace_id = session.get('workspace_id')
         user_id = session.get('user_id')
         
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Company
+        from models import User
+        
+        # Get company first to check access
+        company = Company.query.filter_by(
+            id=company_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        
+        if not company:
+            return jsonify({'error': 'Company not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        current_user = User.query.get(user_id)
+        if not check_entity_access(current_user, company, 'write'):
+            logger.warning(f"Access denied: user {user_id} attempted to update company {company_id}")
+            return jsonify({'error': 'Access denied to this company'}), 403
         
         data = request.get_json()
         if not data:
@@ -393,17 +426,27 @@ def update_company(company_id):
 @login_required
 def delete_company(company_id):
     """Soft delete a company"""
+    from utils.permissions import check_entity_access
+    
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
 
         from models_crm import Company
-        from models import db
+        from models import db, User
 
         company = Company.query.filter_by(id=company_id, workspace_id=workspace_id, is_deleted=False).first()
         if not company:
             return jsonify({'error': 'Company not found'}), 404
+
+        # SECURITY: Check entity access (IDOR protection)
+        current_user = User.query.get(user_id)
+        if not check_entity_access(current_user, company, 'delete'):
+            logger.warning(f"Access denied: user {user_id} attempted to delete company {company_id}")
+            return jsonify({'error': 'Access denied to this company'}), 403
 
         try:
             company.is_deleted = True
@@ -851,12 +894,18 @@ def get_contacts():
 @login_required
 def get_contact(contact_id):
     """Get a single contact by ID"""
+    from utils.permissions import check_entity_access
+    
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         from models_crm import Contact
+        from models import User
+        
         contact = Contact.query.filter_by(
             id=contact_id,
             workspace_id=workspace_id,
@@ -865,6 +914,12 @@ def get_contact(contact_id):
         
         if not contact:
             return jsonify({'error': 'Contact not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        current_user = User.query.get(user_id)
+        if not check_entity_access(current_user, contact, 'read'):
+            logger.warning(f"Access denied: user {user_id} attempted to read contact {contact_id}")
+            return jsonify({'error': 'Access denied to this contact'}), 403
         
         # Get custom fields
         custom_fields = ContactService.get_custom_field_values(
@@ -1728,12 +1783,33 @@ def create_contact():
 @login_required
 def update_contact(contact_id):
     """Update a contact"""
+    from utils.permissions import check_entity_access
+    
     try:
         workspace_id = session.get('workspace_id')
         user_id = session.get('user_id')
         
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+        
+        from models_crm import Contact
+        from models import User
+        
+        # Get contact first to check access
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        current_user = User.query.get(user_id)
+        if not check_entity_access(current_user, contact, 'write'):
+            logger.warning(f"Access denied: user {user_id} attempted to update contact {contact_id}")
+            return jsonify({'error': 'Access denied to this contact'}), 403
         
         data = request.get_json()
         if not data:
@@ -1789,14 +1865,17 @@ def update_contact(contact_id):
 @login_required
 def delete_contact(contact_id):
     """Soft delete a contact"""
+    from utils.permissions import check_entity_access
+    
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
         
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         from models_crm import Contact
-        from models import db
+        from models import db, User
         
         contact = Contact.query.filter_by(
             id=contact_id,
@@ -1806,6 +1885,12 @@ def delete_contact(contact_id):
         
         if not contact:
             return jsonify({'error': 'Contact not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        current_user = User.query.get(user_id)
+        if not check_entity_access(current_user, contact, 'delete'):
+            logger.warning(f"Access denied: user {user_id} attempted to delete contact {contact_id}")
+            return jsonify({'error': 'Access denied to this contact'}), 403
         
         try:
             contact.is_deleted = True

@@ -181,7 +181,15 @@ def list_tasks():
         - is_customer_facing: Filter by customer visibility (true/false)
         - page: Page number (default 1)
         - per_page: Items per page (default 50)
+    
+    SECURITY: Automatically filters tasks based on user role and assignments
     """
+    from utils.permissions import get_accessible_entities_query
+    from models_crm import Task
+    
+    current_user = get_current_user()
+    
+    # Build filters from query params
     filters = {}
     
     if request.args.get('assignee_id'):
@@ -202,11 +210,16 @@ def list_tasks():
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 50))
     
-    pagination = TaskService.list_tasks(
-        workspace_id=get_current_user().workspace_id,
-        filters=filters,
-        page=page,
-        per_page=per_page
+    # SECURITY: Get base query with access control filtering (IDOR protection)
+    base_query = get_accessible_entities_query(current_user, Task)
+    
+    # Apply additional filters
+    for key, value in filters.items():
+        base_query = base_query.filter(getattr(Task, key) == value)
+    
+    # Paginate
+    pagination = base_query.order_by(Task.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
     )
     
     tasks = [{
@@ -238,10 +251,18 @@ def list_tasks():
 @login_required
 def get_task(task_id):
     """Get task details"""
-    task = TaskService.get_task(task_id, get_current_user().workspace_id)
+    from utils.permissions import check_entity_access
+    
+    current_user = get_current_user()
+    task = TaskService.get_task(task_id, current_user.workspace_id)
     
     if not task:
         return jsonify({'error': 'Task not found'}), 404
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(current_user, task, 'read'):
+        logger.warning(f"Access denied: user {current_user.id} attempted to read task {task_id}")
+        return jsonify({'error': 'Access denied to this task'}), 403
     
     # Get dependencies
     dependencies = TaskService.get_task_dependencies(task_id, get_current_user().workspace_id)
@@ -290,12 +311,29 @@ def update_task(task_id):
         "is_customer_facing": true
     }
     """
+    from utils.permissions import check_entity_access
+    
     data = request.get_json()
     
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
     try:
+        current_user = get_current_user()
+        
+        # Get task first to check access
+        existing_task = TaskService.get_task(task_id, current_user.workspace_id)
+        
+        if not existing_task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        if not check_entity_access(current_user, existing_task, 'write'):
+            logger.warning(f"Access denied: user {current_user.id} attempted to update task {task_id}")
+            return jsonify({'error': 'Access denied to this task'}), 403
+        
+        old_assignee_id = existing_task.assignee_id
+        
         # Parse due_date if provided
         if 'due_date' in data and data['due_date']:
             data['due_date'] = datetime.fromisoformat(data['due_date'].replace('Z', '+00:00'))
@@ -323,10 +361,7 @@ def update_task(task_id):
             if data['start_time'] and data['end_time'] and data['start_time'] >= data['end_time']:
                 return jsonify({'error': 'Bitiş zamanı başlangıç zamanından sonra olmalıdır'}), 400
         
-        current_user = get_current_user()
-        existing_task = TaskService.get_task(task_id, current_user.workspace_id)
-        old_assignee_id = existing_task.assignee_id if existing_task else None
-
+        # Update task
         task = TaskService.update_task(
             task_id, 
             current_user.workspace_id, 
@@ -337,6 +372,7 @@ def update_task(task_id):
         if not task:
             return jsonify({'error': 'Task not found'}), 404
 
+        # Send notification if assignee changed
         if task.assignee_id and task.assignee_id != old_assignee_id:
             CollaborationService.create_task_assignment_notification(
                 workspace_id=current_user.workspace_id,
@@ -375,7 +411,23 @@ def update_task(task_id):
 @login_required
 def delete_task(task_id):
     """Delete a task"""
-    success = TaskService.delete_task(task_id, get_current_user().workspace_id)
+    from utils.permissions import check_entity_access
+    
+    current_user = get_current_user()
+    
+    # Get task first to check access
+    task = TaskService.get_task(task_id, current_user.workspace_id)
+    
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(current_user, task, 'delete'):
+        logger.warning(f"Access denied: user {current_user.id} attempted to delete task {task_id}")
+        return jsonify({'error': 'Access denied to this task'}), 403
+    
+    # Proceed with deletion
+    success = TaskService.delete_task(task_id, current_user.workspace_id)
     
     if not success:
         return jsonify({'error': 'Task not found'}), 404
@@ -392,6 +444,8 @@ def complete_task(task_id):
     This is a convenience endpoint for completing tasks.
     It updates the task status to 'completed' and sets completed_at timestamp.
     """
+    from utils.permissions import check_entity_access
+    
     try:
         current_user = get_current_user()
         
@@ -399,6 +453,11 @@ def complete_task(task_id):
         task = TaskService.get_task(task_id, current_user.workspace_id)
         if not task:
             return jsonify({'error': 'Task not found'}), 404
+        
+        # SECURITY: Check entity access (IDOR protection)
+        if not check_entity_access(current_user, task, 'write'):
+            logger.warning(f"Access denied: user {current_user.id} attempted to complete task {task_id}")
+            return jsonify({'error': 'Access denied to this task'}), 403
         
         # Update task to completed status
         task = TaskService.update_task(
