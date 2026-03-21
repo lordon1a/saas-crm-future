@@ -838,10 +838,11 @@ def get_contacts():
         
     except Exception as e:
         import traceback
+        from flask import current_app
         error_details = traceback.format_exc()
         logger.error(f"Error getting contacts: {str(e)}\n{error_details}")
         # Return detailed error in development
-        if app.config.get('DEBUG'):
+        if current_app.config.get('DEBUG'):
             return jsonify({'error': 'Internal Server Error', 'details': str(e), 'traceback': error_details}), 500
         return jsonify({'error': 'Internal Server Error'}), 500
 
