@@ -412,6 +412,9 @@
                             <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
                             <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
                         </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1247,7 +1250,9 @@
         // View dropdown toggle
         function toggleViewDropdown() {
             const menu = document.getElementById('viewDropdownMenu');
-            menu.classList.toggle('active');
+            if (menu) {
+                menu.classList.toggle('active');
+            }
         }
 
         // Set view
@@ -1259,8 +1264,14 @@
                 'recent': 'Son Eklenenler',
                 'favorites': 'Favorilerim'
             };
-            document.getElementById('currentViewLabel').textContent = labels[view];
-            document.getElementById('viewDropdownMenu').classList.remove('active');
+            const currentViewLabel = document.getElementById('currentViewLabel');
+            if (currentViewLabel) {
+                currentViewLabel.textContent = labels[view];
+            }
+            const menu = document.getElementById('viewDropdownMenu');
+            if (menu) {
+                menu.classList.remove('active');
+            }
 
             // Filtreleme mantığı
             if (view === 'top') {
@@ -1542,29 +1553,43 @@
         }
 
         // Form submit - Yeni şirket
-        document.getElementById('newCompanyForm').addEventListener('submit', (e) => {
+        document.getElementById('newCompanyForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const newId = Math.max(...allCompanies.map(c => c.id)) + 1;
-            const newCompany = {
-                id: newId,
+            const companyData = {
                 name: document.getElementById('newName').value.trim(),
                 industry: document.getElementById('newIndustry').value,
                 size: document.getElementById('newSize').value,
                 website: document.getElementById('newWebsite').value.trim(),
                 phone: document.getElementById('newPhone').value.trim(),
-                address: document.getElementById('newAddress').value.trim(),
-                arr: parseInt(document.getElementById('newArr').value) || 0,
-                icpScore: Math.floor(Math.random() * 40) + 60,
-                connection: ['very_strong', 'strong', 'medium', 'weak'][Math.floor(Math.random() * 4)],
-                deals: 0
+                address: document.getElementById('newAddress').value.trim()
             };
 
-            allCompanies.unshift(newCompany);
-            filteredCompanies = [...allCompanies];
-            showToast('Yeni şirket başarıyla eklendi.', 'success');
-            closeNewCompanyModal();
-            renderCompanies();
+            try {
+                const response = await fetch('/api/v1/companies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(companyData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Şirket eklenirken hata oluştu');
+                }
+
+                const newCompany = await response.json();
+                
+                // Frontend array'e ekle
+                allCompanies.unshift(newCompany);
+                filteredCompanies = [...allCompanies];
+                
+                showToast('Yeni şirket başarıyla eklendi.', 'success');
+                closeNewCompanyModal();
+                renderCompanies();
+            } catch (error) {
+                console.error('Error creating company:', error);
+                showToast(error.message || 'Şirket eklenirken hata oluştu', 'error');
+            }
         });
 
         // Form submit - Düzenle
@@ -1673,7 +1698,10 @@
 
             // Dropdown dışına tıklama
             if (!e.target.closest('#viewDropdown')) {
-                document.getElementById('viewDropdownMenu').classList.remove('active');
+                const menu = document.getElementById('viewDropdownMenu');
+                if (menu) {
+                    menu.classList.remove('active');
+                }
             }
         }
 
