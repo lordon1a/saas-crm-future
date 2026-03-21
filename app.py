@@ -559,6 +559,59 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added assigned_to column to contacts")
             
+            # === TAGS TABLE MIGRATION ===
+            # Check if tags table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='tags'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create tags table...")
+                cur.execute("""
+                    CREATE TABLE tags (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                        name VARCHAR(100) NOT NULL,
+                        color VARCHAR(7) DEFAULT '#6366f1',
+                        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                        UNIQUE (workspace_id, name)
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_tags_workspace_id ON tags(workspace_id)
+                """)
+                conn.commit()
+                logger.info("✓ Created tags table")
+            
+            # Check if contact_tags table exists
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='contact_tags'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: create contact_tags table...")
+                cur.execute("""
+                    CREATE TABLE contact_tags (
+                        id SERIAL PRIMARY KEY,
+                        contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+                        tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+                        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                        UNIQUE (contact_id, tag_id)
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_contact_tags_contact_id ON contact_tags(contact_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_contact_tags_tag_id ON contact_tags(tag_id)
+                """)
+                conn.commit()
+                logger.info("✓ Created contact_tags table")
+            
             # === LEAD MANAGEMENT MIGRATIONS ===
             # Check if lead_source column exists
             cur.execute("""
