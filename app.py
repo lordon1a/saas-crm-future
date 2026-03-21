@@ -1101,10 +1101,17 @@ def enforce_csrf_origin_check():
         return jsonify({'error': 'CSRF validation failed'}), 403
 
     allowed_hosts = _build_allowed_origin_hosts()
-    if candidate_host not in allowed_hosts:
-        return jsonify({'error': 'CSRF validation failed'}), 403
+    if candidate_host in allowed_hosts:
+        return None
 
-    return None
+    # Allow same-machine requests regardless of port (dev proxies, e.g. Windsurf preview)
+    _localhost_ips = {'localhost', '127.0.0.1', '::1', '0.0.0.0'}
+    candidate_ip = candidate_host.split(':')[0].lower()
+    server_ip = request.host.split(':')[0].lower()
+    if candidate_ip in _localhost_ips and server_ip in _localhost_ips:
+        return None
+
+    return jsonify({'error': 'CSRF validation failed'}), 403
 
 
 @app.before_request

@@ -4,588 +4,876 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ contact.full_name }} - Kişi Detayı</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['"Inter"', 'sans-serif'] }
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: { 50:'#eff6ff',100:'#dbeafe',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8' }
+                    }
                 }
             }
         }
     </script>
     <style>
-        .activity-card-container {
-            background-color: #ffffff;
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ── Contact Page Header ── */
+        .contact-page-header {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0 20px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+        .contact-page-header .contact-title-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+        .contact-page-header .back-btn {
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            flex-shrink: 0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+        .contact-page-header .back-btn:hover { background: #f3f4f6; color: #374151; }
+        .contact-avatar-sm {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .contact-page-header h1 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 280px;
+        }
+        .contact-page-header h1:hover { color: #2563eb; }
+        .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .header-assignee-btn {
+            display: flex; align-items: center; gap: 6px;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 5px 12px 5px 8px;
+            font-size: 12px;
+            color: #374151;
+            background: #fff;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .header-assignee-btn:hover { background: #f9fafb; }
+        .assignee-avatar {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #e0e7ff;
+            color: #4338ca;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .followers-btn {
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 12px;
+            color: #374151;
+            background: #fff;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 5px;
+            transition: background 0.15s;
+        }
+        .followers-btn:hover { background: #f9fafb; }
+        .btn-deal-new {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 4px 0 0 4px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            transition: background 0.15s;
+        }
+        .btn-deal-new:hover { background: #16a34a; }
+        .btn-deal-arrow {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-left: 1px solid rgba(255,255,255,0.3);
+            border-radius: 0 4px 4px 0;
+            padding: 7px 9px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-deal-arrow:hover { background: #16a34a; }
+        .btn-icon-sm {
+            width: 32px; height: 32px;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #6b7280;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.15s;
+        }
+        .btn-icon-sm:hover { background: #f9fafb; color: #374151; }
+
+        /* ── Contact Left Sidebar ── */
+        .contact-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: #fff;
+            border-right: 1px solid #e5e7eb;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .sidebar-avatar-section {
+            padding: 20px 16px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .contact-avatar-lg {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            font-size: 22px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            cursor: default;
+        }
+        .contact-full-name-sidebar {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+            text-align: center;
+            cursor: pointer;
+            line-height: 1.3;
+        }
+        .contact-full-name-sidebar:hover { color: #2563eb; }
+        .contact-company-sidebar {
+            font-size: 13px;
+            color: #6b7280;
+            text-align: center;
+            margin-top: -4px;
+        }
+        .quick-action-btns {
+            display: flex; gap: 8px; width: 100%;
+        }
+        .quick-action-btn {
+            flex: 1;
+            padding: 7px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            gap: 5px;
+            border: none;
+            transition: all 0.15s;
+        }
+        .quick-action-btn.email { background: #2563eb; color: #fff; }
+        .quick-action-btn.email:hover { background: #1d4ed8; }
+        .quick-action-btn.call { background: #22c55e; color: #fff; }
+        .quick-action-btn.call:hover { background: #16a34a; }
+        .quick-action-btn.whatsapp { background: #25d366; color: #fff; }
+        .quick-action-btn.whatsapp:hover { background: #1ba34a; }
+
+        /* ── Sidebar Sections ── */
+        .sidebar-section { border-bottom: 1px solid #f3f4f6; }
+        .sidebar-section-header {
+            width: 100%;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s;
+        }
+        .sidebar-section-header:hover { background: #f9fafb; }
+        .sidebar-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .sidebar-section-icons { display: flex; align-items: center; gap: 4px; }
+        .sidebar-icon-btn {
+            width: 22px; height: 22px;
+            border-radius: 3px;
+            border: none; background: none;
+            color: #9ca3af;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.1s;
+        }
+        .sidebar-icon-btn:hover { background: #f3f4f6; color: #374151; }
+        .sidebar-section-body { padding: 4px 16px 12px; }
+        .sidebar-field-row {
+            display: grid;
+            grid-template-columns: 90px 1fr;
+            gap: 4px 8px;
+            align-items: start;
+            padding: 3px 0;
+        }
+        .sidebar-field-label { font-size: 12px; color: #9ca3af; padding-top: 2px; }
+        .sidebar-field-value { font-size: 13px; color: #111827; font-weight: 500; }
+        .sidebar-field-value a { color: #2563eb; text-decoration: none; }
+        .sidebar-field-value a:hover { text-decoration: underline; }
+        .sidebar-info-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 5px 0;
+            font-size: 13px; color: #374151;
+        }
+        .sidebar-info-row i { width: 14px; text-align: center; color: #9ca3af; font-size: 12px; }
+        .sidebar-info-row a { color: #2563eb; text-decoration: none; }
+        .sidebar-info-row a:hover { text-decoration: underline; }
+        .sidebar-info-row .edit-btn {
+            margin-left: auto;
+            opacity: 0;
+            width: 22px; height: 22px;
+            border-radius: 3px; border: 1px solid #e5e7eb;
+            background: #fff; color: #6b7280;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 10px;
+            transition: all 0.1s;
+        }
+        .sidebar-info-row:hover .edit-btn { opacity: 1; }
+        .deal-card {
+            background: #f9fafb;
             border: 1px solid #e5e7eb;
             border-radius: 6px;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            margin-bottom: 24px;
-            overflow: hidden;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
         }
+        .deal-card:hover { border-color: #93c5fd; background: #eff6ff; }
+        .deal-card-name { font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+        .deal-card-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; }
+        .deal-card-value { color: #374151; font-weight: 600; }
+        .deal-stage-badge {
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            background: #dcfce7; color: #166534;
+        }
+        .lead-score-bar {
+            height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 4px;
+        }
+        .lead-score-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #22c55e, #3b82f6); }
 
-        .tabs-header {
-            background-color: #f8f9fa;
+        /* ── Main Content Tabs ── */
+        .content-tab-bar {
+            background: #fff;
             border-bottom: 1px solid #e5e7eb;
-            padding: 0 16px;
+            padding: 0;
             display: flex;
-            gap: 16px;
+            align-items: center;
             overflow-x: auto;
+            flex-shrink: 0;
         }
-
-        .tab-item {
-            padding: 12px 16px;
-            font-size: 14px;
+        .content-tab-bar::-webkit-scrollbar { display: none; }
+        .tab-btn {
+            padding: 14px 16px 13px;
+            font-size: 13px;
             font-weight: 500;
-            color: #4b5563;
-            background-color: transparent;
+            color: #6b7280;
+            background: none;
             border: none;
             border-bottom: 2px solid transparent;
             cursor: pointer;
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .tab-item.active {
-            color: #1a73e8;
-            border-bottom: 2px solid #1a73e8;
+            gap: 6px;
+            transition: color 0.15s;
             margin-bottom: -1px;
         }
+        .tab-btn:hover { color: #374151; }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+        .tab-btn i { font-size: 12px; }
 
-        .input-section {
-            padding: 16px;
-            background-color: #ffffff;
+        /* ── Activity Input ── */
+        .activity-input-wrapper {
+            background: #fff;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 12px 20px;
         }
-
-        .activity-input {
+        .activity-input-box {
             width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 12px 16px;
-            font-size: 14px;
-            color: #374151;
-            outline: none;
-            background-color: #ffffff;
-        }
-
-        .activity-input:focus {
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 1px #1a73e8;
-        }
-
-        .history-filters {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-            padding-bottom: 8px;
-            overflow-x: auto;
-        }
-
-        .filter-btn {
-            background-color: transparent;
-            border: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 10px 14px;
             font-size: 13px;
-            font-weight: 600;
+            color: #9ca3af;
+            outline: none;
+            background: #fafafa;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .activity-input-box:hover, .activity-input-box:focus {
+            border-color: #93c5fd;
+            background: #fff;
             color: #374151;
-            padding: 6px 12px;
-            border-radius: 4px;
+        }
+
+        /* ── Timeline ── */
+        .timeline-section-title {
+            font-size: 16px; font-weight: 700; color: #111827;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .timeline-section-title .chevron { font-size: 11px; color: #6b7280; }
+        .history-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 0 0 12px;
+            overflow-x: auto;
+            flex-shrink: 0;
+            border-bottom: 1px solid #f3f4f6;
+            margin-bottom: 16px;
+        }
+        .history-filter-bar::-webkit-scrollbar { display: none; }
+        .hf-btn {
+            padding: 5px 12px;
+            font-size: 12px; font-weight: 600;
+            color: #6b7280;
+            background: none; border: none;
+            border-radius: 20px;
             cursor: pointer;
             white-space: nowrap;
+            transition: all 0.15s;
         }
-
-        .filter-btn.active {
-            background-color: #e0f2fe;
-            color: #0369a1;
-        }
-
+        .hf-btn:hover { background: #f3f4f6; color: #374151; }
+        .hf-btn.active { background: #eff6ff; color: #2563eb; }
         .timeline-wrapper {
             position: relative;
-            padding-left: 32px;
+            padding-left: 36px;
         }
-
         .timeline-wrapper::before {
             content: '';
             position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 15px;
-            border-left: 2px dashed #d1d5db;
+            top: 0; bottom: 0;
+            left: 16px;
+            border-left: 2px dashed #e5e7eb;
             z-index: 1;
         }
-
         .timeline-item {
             position: relative;
-            display: flex;
-            gap: 24px;
-            margin-bottom: 24px;
-            align-items: flex-start;
+            margin-bottom: 20px;
         }
-
         .timeline-marker {
             position: absolute;
-            left: -32px;
+            left: -36px;
             z-index: 2;
-            background-color: #f4f5f7;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; align-items: center; justify-content: center;
         }
-
         .small-marker {
-            width: 12px;
-            height: 12px;
+            width: 12px; height: 12px;
             border-radius: 50%;
-            border: 2px solid #e5e7eb;
-            background-color: #ffffff;
-            left: -21px;
-            margin-top: 6px;
+            border: 2px solid #d1d5db;
+            background: #fff;
+            left: -24px;
+            margin-top: 5px;
         }
-
         .large-marker {
-            width: 32px;
-            height: 32px;
+            width: 32px; height: 32px;
             border-radius: 50%;
-            border: 1px solid #d1d5db;
-            background-color: #ffffff;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
-
-        .timeline-content {
-            flex-grow: 1;
-            min-width: 0;
-        }
-
-        .transparent-content {
-            background: transparent;
-            border: none;
-            padding: 0;
-        }
-
+        .timeline-content { flex-grow: 1; min-width: 0; }
+        .transparent-content { background: transparent; border: none; padding: 0; }
         .card-content {
             border-radius: 6px;
-            padding: 12px 16px;
+            padding: 10px 14px;
             border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
-
-        .white-card {
-            background-color: #ffffff;
+        .white-card { background: #fff; }
+        .yellow-card { background: #fefce8; border-color: #fde047; }
+        .meta-text { font-size: 11px; color: #9ca3af; display: block; margin-top: 4px; }
+        .focus-activity-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            display: flex; align-items: flex-start; gap: 12px;
+            transition: box-shadow 0.15s;
         }
-
-        .yellow-card {
-            background-color: #fef3c7;
-            border-color: #fde047;
+        .focus-activity-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .focus-activity-icon {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 13px;
         }
-
-        .meta-text {
-            font-size: 12px;
-            color: #6b7280;
-            display: block;
-            margin-top: 4px;
+        .overdue-badge {
+            display: inline-flex; align-items: center;
+            padding: 2px 7px; border-radius: 10px;
+            font-size: 10px; font-weight: 700;
+            background: #fef2f2; color: #dc2626;
+            margin-left: 6px;
         }
     </style>
 </head>
-<body class="bg-gray-50 font-sans antialiased flex h-screen overflow-hidden">
-    <!-- App Sidebar -->
-    <aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
-        <a href="/" class="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
-            <span class="text-2xl">🐧</span>
+<body class="font-sans antialiased flex h-screen overflow-hidden bg-gray-50">
+
+    <!-- ── App Nav Sidebar (64px) ── -->
+    <aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-5 z-30 flex-shrink-0 shadow-sm">
+        <a href="/" class="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg mb-7 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-xl">🐧</span>
         </a>
-        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
-            <a href="/" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
-            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
-            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-purple-600 bg-purple-50 rounded-xl shadow-sm transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
-            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
-            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
-            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
-            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-chart-line text-lg"></i></a>
-            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
-            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-lg"></i></a>
-            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-lg"></i></a>
+        <nav class="flex-1 flex flex-col gap-3 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-base"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-base"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-purple-600 bg-purple-50 rounded-xl shadow-sm" title="Kişiler"><i class="fas fa-address-book text-base"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-base"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-base"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-base"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-filter text-base"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-base"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-base"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-base"></i></a>
         </nav>
-        <div class="flex flex-col gap-4 w-full px-3 pb-4">
-            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış Yap"><i class="fas fa-sign-out-alt text-lg"></i></a>
+        <div class="flex flex-col gap-3 w-full px-3 pb-2">
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-gear text-base"></i></a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış"><i class="fas fa-sign-out-alt text-base"></i></a>
         </div>
     </aside>
-    
-    <!-- Main Grid Container: detached layout -->
-    <div class="flex-1 overflow-hidden bg-[#f4f5f7] px-3 md:px-4 pb-3 md:pb-4 pt-[72px]">
-    <div class="grid grid-cols-12 grid-rows-[auto_1fr] gap-3 h-full overflow-hidden">
 
-        <!-- Global Topbar (Sticky, full-width over both panels) -->
-        <header class="col-span-12 fixed top-0 left-16 right-0 z-40 bg-white border-b border-gray-200 shadow-sm px-4 md:px-6 py-3 flex-shrink-0">
-            <div class="grid grid-cols-1 lg:grid-cols-[200px_minmax(420px,1fr)_320px] items-center gap-3 md:gap-4">
-                <div class="hidden lg:block"></div>
-                <div class="relative w-full max-w-3xl justify-self-center">
-                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                    <input type="text" data-topbar-search placeholder="Pipedrive'da ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+    <!-- ── Main Area ── -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- ── Contact Page Header ── -->
+        <header class="contact-page-header">
+            <div class="contact-title-area">
+                <a href="/contacts" class="back-btn">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                    <span>Kişiler</span>
+                </a>
+                <span class="text-gray-300 text-lg">/</span>
+                <div id="contact-avatar" class="contact-avatar-sm">
+                    {{ contact.first_name[0]|upper if contact.first_name else 'K' }}{{ contact.last_name[0]|upper if contact.last_name else '' }}
                 </div>
-                <div class="flex items-center gap-1.5 md:gap-2 justify-self-end">
-                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Hediye">
-                        <i class="fas fa-gift text-sm"></i>
-                    </button>
-                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardım">
-                        <i class="fas fa-circle-question text-sm"></i>
-                    </button>
-                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="İpuçları">
-                        <i class="fas fa-lightbulb text-sm"></i>
-                    </button>
-                    <div class="relative">
-                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
-                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">YG</div>
-                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Yigit</span>
-                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
-                        </button>
-                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
-                            <div data-topbar-menu-content></div>
-                        </div>
+                <h1 id="contact-name-display" ondblclick="startNameEdit()" title="Düzenlemek için çift tıklayın">{{ contact.full_name }}</h1>
+                <input id="contact-name-input" type="text" class="hidden text-base font-bold text-gray-900 bg-white border border-blue-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-60" value="{{ contact.full_name }}" maxlength="200">
+                {% if contact.lifecycle_stage %}
+                <span class="px-2 py-0.5 text-xs font-semibold rounded-full {% if contact.lifecycle_stage == 'customer' %}bg-green-100 text-green-700{% elif contact.lifecycle_stage == 'qualified_lead' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {{ {'lead':'Aday','qualified_lead':'Nitelikli','customer':'Müşteri','evangelist':'Savunucu'}.get(contact.lifecycle_stage, contact.lifecycle_stage) }}
+                </span>
+                {% endif %}
+            </div>
+            <div class="header-actions">
+                <button class="header-assignee-btn" title="Sorumlu kişi">
+                    <div class="assignee-avatar" id="header-assignee-avatar">
+                        {% if contact.assignee %}{{ contact.assignee.name[0]|upper if contact.assignee.name else '?' }}{% else %}?{% endif %}
                     </div>
+                    <span id="header-assignee-name">{% if contact.assignee %}{{ contact.assignee.name or 'Atanmadı' }}{% else %}Atanmadı{% endif %}</span>
+                    <i class="fas fa-chevron-down text-[9px] text-gray-400 ml-1"></i>
+                </button>
+                <button class="followers-btn" title="Takipçiler">
+                    <i class="fas fa-user text-[11px]"></i>
+                    <span id="followers-count">1 takipçi</span>
+                    <i class="fas fa-chevron-down text-[9px] text-gray-400"></i>
+                </button>
+                <div class="flex">
+                    <button class="btn-deal-new" onclick="openNewDealModal()">
+                        <i class="fas fa-plus text-xs"></i>
+                        Anlaşma
+                    </button>
+                    <button class="btn-deal-arrow" onclick="openNewDealModal()">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
                 </div>
+                <button class="btn-icon-sm" title="Daha fazla seçenek">
+                    <i class="fas fa-ellipsis-h text-xs"></i>
+                </button>
             </div>
         </header>
-        
-        <!-- LEFT SIDEBAR: col-span-3 (25%) -->
-        <aside class="col-span-3 row-start-2 bg-white border border-gray-200 rounded-b-xl shadow-sm overflow-y-auto">
-            <!-- Header -->
-            <div class="px-5 py-4 border-b border-gray-200">
-                <div class="flex items-center justify-between mb-3">
-                    <a href="/contacts" class="text-gray-500 hover:text-gray-700 transition-colors text-base font-medium">
-                        <i class="fas fa-arrow-left mr-1"></i> Geri
-                    </a>
-                    <div class="flex items-center gap-1">
-                        <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-all">
-                            <i class="fas fa-star text-xs"></i>
-                        </button>
-                        <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-all">
-                            <i class="fas fa-ellipsis-h text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Contact Avatar & Name -->
-                <div class="flex items-start gap-3 mb-4">
-                    <div id="contact-avatar" class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
-                        {{ contact.first_name[0] if contact.first_name else 'K' }}{{ contact.last_name[0] if contact.last_name else 'K' }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h1
-                            id="contact-name-display"
-                            class="text-2xl leading-tight font-bold text-gray-900 truncate cursor-text"
-                            title="Düzenlemek için çift tıklayın"
-                            ondblclick="startNameEdit()"
-                        >{{ contact.full_name }}</h1>
-                        <input
-                            id="contact-name-input"
-                            type="text"
-                            class="hidden w-full text-2xl leading-tight font-bold text-gray-900 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value="{{ contact.full_name }}"
-                            maxlength="200"
-                        >
-                        <p class="text-sm text-gray-600 truncate mt-1">{{ contact.company.name if contact.company else 'Kuruluş yok' }}</p>
-                        <p class="text-xs text-gray-400 mt-1">İsmi düzenlemek için çift tıklayın</p>
-                    </div>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="flex items-center gap-2">
-                    <button onclick="sendEmail()" class="flex-1 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-all flex items-center justify-center gap-1.5">
-                        <i class="fas fa-envelope text-xs"></i>
-                        <span>E-posta</span>
-                    </button>
-                    <button onclick="makeCall()" class="flex-1 px-3 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition-all flex items-center justify-center gap-1.5">
-                        <i class="fas fa-phone text-xs"></i>
-                        <span>Ara</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Özet Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('summary')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Özet</span>
-                    <span class="flex items-center gap-3">
-                        <i class="fas fa-cog text-sm text-gray-400"></i>
-                        <i id="summary-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                    </span>
-                </button>
-                <div id="summary-content" class="px-5 py-4 space-y-3 text-sm">
-                    <a href="#" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
-                        <span>Etiket ekle</span>
-                    </a>
 
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-3 group">
-                            <i class="fas fa-envelope text-gray-500 w-4 text-center"></i>
-                            <div class="flex-1 min-w-0">
-                                <a id="summary-email-display" href="mailto:{{ contact.email or '' }}" ondblclick="event.preventDefault(); startInlineEdit('contact.email')" class="text-blue-600 hover:text-blue-700">{{ (contact.email + ' (iş)') if contact.email else '-' }}</a>
-                                <input id="summary-email-input" type="email" class="hidden w-full px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.email or '' }}">
+        <!-- ── Two-Column Layout ── -->
+        <div class="flex flex-1 overflow-hidden">
+
+            <!-- ── Left Contact Sidebar ── -->
+            <aside class="contact-sidebar">
+
+                <!-- Avatar + Name + Quick Actions -->
+                <div class="sidebar-avatar-section">
+                    <div class="relative">
+                        <div class="contact-avatar-lg" id="sidebar-avatar">
+                            {{ contact.first_name[0]|upper if contact.first_name else 'K' }}{{ contact.last_name[0]|upper if contact.last_name else '' }}
+                        </div>
+                        <button class="absolute bottom-0 right-0 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-all" title="Fotoğraf ekle">
+                            <i class="fas fa-camera text-[10px] text-gray-500"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <div class="contact-full-name-sidebar" ondblclick="startNameEdit()" title="Düzenlemek için çift tıklayın">{{ contact.full_name }}</div>
+                        <div class="contact-company-sidebar">
+                            {% if contact.company %}<a href="/companies/{{ contact.company.id }}" class="hover:text-blue-600 transition-colors">{{ contact.company.name }}</a>{% else %}<span class="text-gray-400">Kuruluş yok</span>{% endif %}
+                            {% if contact.job_title %} · {{ contact.job_title }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="quick-action-btns">
+                        <button class="quick-action-btn email" onclick="sendEmail()"><i class="fas fa-envelope text-xs"></i> E-posta</button>
+                        <button class="quick-action-btn call" onclick="makeCall()"><i class="fas fa-phone text-xs"></i> Ara</button>
+                        {% if contact.whatsapp_phone %}<button class="quick-action-btn whatsapp" onclick="openWhatsApp()"><i class="fab fa-whatsapp text-xs"></i> WA</button>{% endif %}
+                    </div>
+                </div>
+
+                <!-- ── ÖZET Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('summary')">
+                        <span class="sidebar-section-title">Özet</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation(); openSectionEditor('summary')" title="Düzenle"><i class="fas fa-cog"></i></button>
+                            <i id="summary-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform rotate-180"></i>
+                        </div>
+                    </div>
+                    <div id="summary-content" class="sidebar-section-body">
+                        <div class="mb-2">
+                            <a href="#" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                <i class="fas fa-tag text-[10px]"></i> Etiket ekle
+                            </a>
+                        </div>
+                        <div class="sidebar-info-row group">
+                            <i class="fas fa-envelope"></i>
+                            <a id="summary-email-display" href="mailto:{{ contact.email or '' }}" ondblclick="event.preventDefault(); startInlineEdit('contact.email')" class="truncate flex-1">{{ (contact.email) if contact.email else '-' }}</a>
+                            <input id="summary-email-input" type="email" class="hidden flex-1 px-2 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.email or '' }}">
+                            <button class="edit-btn" onclick="startInlineEdit('contact.email')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="sidebar-info-row group">
+                            <i class="fas fa-phone"></i>
+                            <a id="summary-phone-display" href="tel:{{ contact.phone or '' }}" ondblclick="event.preventDefault(); startInlineEdit('contact.phone')" class="flex-1">{{ contact.phone or '-' }}</a>
+                            <input id="summary-phone-input" type="text" class="hidden flex-1 px-2 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.phone or '' }}">
+                            <button class="edit-btn" onclick="startInlineEdit('contact.phone')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                        {% if contact.whatsapp_phone %}
+                        <div class="sidebar-info-row">
+                            <i class="fab fa-whatsapp text-green-500"></i>
+                            <span class="flex-1 text-gray-700">{{ contact.whatsapp_phone }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="sidebar-info-row group">
+                            <i class="fas fa-building"></i>
+                            {% if contact.company %}
+                            <a id="summary-company-display" href="/companies/{{ contact.company.id }}" ondblclick="event.preventDefault(); openSectionEditor('organization')" class="flex-1 font-medium">{{ contact.company.name }}</a>
+                            {% else %}
+                            <button id="summary-company-display" type="button" onclick="openOrganizationModal('create')" class="flex-1 text-blue-600 hover:text-blue-700 text-left">Kuruluş ekle</button>
+                            {% endif %}
+                            <button class="edit-btn" onclick="openSectionEditor('organization')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── AYRINTILAR Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('details')">
+                        <span class="sidebar-section-title">Ayrıntılar</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation();" title="Filtrele"><i class="fas fa-sliders-h"></i></button>
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation(); openSectionEditor('details')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation();" title="Daha fazla"><i class="fas fa-ellipsis-h"></i></button>
+                            <i id="details-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform rotate-180"></i>
+                        </div>
+                    </div>
+                    <div id="details-content" class="sidebar-section-body">
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Ad</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-first-name" ondblclick="startInlineEdit('contact.first_name')" class="sidebar-field-value flex-1 cursor-text">{{ contact.first_name or '-' }}</span>
+                                <input id="details-first-name-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.first_name or '' }}">
                             </div>
-                            <button type="button" onclick="startInlineEdit('contact.email')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="E-posta düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
                         </div>
-
-                        <div class="flex items-center gap-3 group">
-                            <i class="fas fa-phone text-gray-500 w-4 text-center"></i>
-                            <div class="flex-1 min-w-0">
-                                <a id="summary-phone-display" href="tel:{{ contact.phone or '' }}" ondblclick="event.preventDefault(); startInlineEdit('contact.phone')" class="text-blue-600 hover:text-blue-700">{{ contact.phone or '-' }}</a>
-                                <input id="summary-phone-input" type="text" class="hidden w-full px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.phone or '' }}">
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Soyad</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-last-name" ondblclick="startInlineEdit('contact.last_name')" class="sidebar-field-value flex-1 cursor-text">{{ contact.last_name or '-' }}</span>
+                                <input id="details-last-name-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.last_name or '' }}">
                             </div>
-                            <button type="button" onclick="startInlineEdit('contact.phone')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Telefon düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
                         </div>
-
-                        <div class="flex items-center gap-3 group">
-                            <i class="fas fa-building text-gray-500 w-4 text-center"></i>
-                            <div class="flex-1 min-w-0">
-                                {% if contact.company %}
-                                <a id="summary-company-display" href="/companies" ondblclick="event.preventDefault(); openSectionEditor('organization')" class="text-blue-600 hover:text-blue-700 font-semibold">{{ contact.company.name }}</a>
-                                {% else %}
-                                <button id="summary-company-display" type="button" ondblclick="openOrganizationModal('create')" onclick="openOrganizationModal('create')" class="text-blue-600 hover:text-blue-700 font-medium">Kuruluş ekle</button>
-                                {% endif %}
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">E-posta</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-email" ondblclick="startInlineEdit('details.email')" class="sidebar-field-value flex-1 truncate cursor-text">{{ contact.email or '-' }}</span>
+                                <input id="details-email-input" type="email" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.email or '' }}">
                             </div>
-                            <button type="button" onclick="openSectionEditor('organization')" class="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Kuruluş düzenle">
-                                <i class="fas fa-pen text-xs"></i>
-                            </button>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Ayrıntılar Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('details')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Ayrıntılar</span>
-                    <i id="details-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="details-content" class="px-5 py-3">
-                    <div class="grid grid-cols-[90px_1fr] gap-y-2 gap-x-3 text-sm">
-                        <div class="text-gray-500">Adı</div>
-                        <div class="flex items-center justify-between gap-2 group w-full">
-                            <span id="details-first-name" ondblclick="startInlineEdit('contact.first_name')" class="text-gray-900 font-medium flex-1">{{ contact.first_name or '-' }}</span>
-                            <input id="details-first-name-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.first_name or '' }}">
-                            <button type="button" onclick="startInlineEdit('contact.first_name')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Ad düzenle"><i class="fas fa-pen text-[10px]"></i></button>
-                        </div>
-                        
-                        <div class="text-gray-500">Soyadı</div>
-                        <div class="flex items-center justify-between gap-2 group w-full">
-                            <span id="details-last-name" ondblclick="startInlineEdit('contact.last_name')" class="text-gray-900 font-medium flex-1">{{ contact.last_name or '-' }}</span>
-                            <input id="details-last-name-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.last_name or '' }}">
-                            <button type="button" onclick="startInlineEdit('contact.last_name')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Soyad düzenle"><i class="fas fa-pen text-[10px]"></i></button>
-                        </div>
-                        
-                        <div class="text-gray-500">E-posta</div>
-                        <div class="flex items-center justify-between gap-2 min-w-0 group w-full">
-                            <span id="details-email" ondblclick="startInlineEdit('details.email')" class="text-gray-900 font-medium truncate flex-1">{{ contact.email or '-' }}</span>
-                            <input id="details-email-input" type="email" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.email or '' }}">
-                            <button type="button" onclick="startInlineEdit('details.email')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="E-posta düzenle"><i class="fas fa-pen text-[10px]"></i></button>
-                        </div>
-                        
-                        <div class="text-gray-500">Telefon</div>
-                        <div class="flex items-center justify-between gap-2 group w-full">
-                            <span id="details-phone" ondblclick="startInlineEdit('details.phone')" class="text-gray-900 font-medium flex-1">{{ contact.phone or '-' }}</span>
-                            <input id="details-phone-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.phone or '' }}">
-                            <button type="button" onclick="startInlineEdit('details.phone')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Telefon düzenle"><i class="fas fa-pen text-[10px]"></i></button>
-                        </div>
-                        
-                        <div class="text-gray-500">Unvan</div>
-                        <div class="flex items-center justify-between gap-2 group w-full">
-                            <span id="details-job-title" ondblclick="startInlineEdit('contact.job_title')" class="text-gray-900 font-medium flex-1">{{ contact.job_title or '-' }}</span>
-                            <input id="details-job-title-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.job_title or '' }}">
-                            <button type="button" onclick="startInlineEdit('contact.job_title')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Unvan düzenle"><i class="fas fa-pen text-[10px]"></i></button>
-                        </div>
-                        
-                        <div class="text-gray-500">Atanan</div>
-                        <div id="contact-assignment-selector" class="flex-1"></div>
-                        </div>
-                        
-                        <div class="text-gray-500">Rol</div>
-                        <div class="flex items-center justify-between gap-2 group w-full">
-                            <span id="details-role" ondblclick="startInlineEdit('contact.role')" class="text-gray-900 font-medium flex-1">{{ contact.role or '-' }}</span>
-                            <input id="details-role-input" type="text" class="hidden w-full max-w-[240px] px-2 py-1 border border-blue-300 rounded text-sm" value="{{ contact.role or '' }}">
-                            <button type="button" onclick="startInlineEdit('contact.role')" class="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all" title="Rol düzenle"><i class="fas fa-pen text-[10px]"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Kuruluş Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('organization')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Kuruluş</span>
-                    <i id="organization-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="organization-content" class="hidden px-5 py-3 text-sm">
-                    <div id="organization-body"></div>
-                </div>
-            </div>
-            
-            <!-- Anlaşmalar Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('deals')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Anlaşmalar</span>
-                    <i id="deals-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="deals-content" class="hidden px-5 py-3">
-                    <div id="deals-list" class="space-y-2 text-sm">
-                        <div class="text-gray-500">Yükleniyor...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Genel Bakış Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('overview')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Genel bakış</span>
-                    <i id="overview-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="overview-content" class="hidden px-5 py-3 space-y-2 text-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-500">Lead Score</span>
-                        <span class="text-gray-900 font-medium">{{ contact.lead_score or 0 }}</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-500">Rol</span>
-                        <span class="text-gray-900 font-medium">{{ contact.role or '-' }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Akıllı Bcc Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('smart-bcc')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Akıllı Bcc</span>
-                    <i id="smart-bcc-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="smart-bcc-content" class="hidden px-5 py-3 text-sm text-gray-600">
-                    Bu kişi için Akıllı Bcc kaydı bulunmuyor.
-                </div>
-            </div>
-
-            <!-- Müşteri Adayları Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('leads')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Müşteri Adayları</span>
-                    <i id="leads-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="leads-content" class="hidden px-5 py-3 text-sm text-gray-600">
-                    Bu kişiye bağlı müşteri adayı yok.
-                </div>
-            </div>
-
-            <!-- Projeler Section -->
-            <div class="border-b border-gray-200">
-                <button onclick="toggleSection('projects')" class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
-                    <span class="text-base font-semibold text-gray-800">Projeler</span>
-                    <i id="projects-icon" class="fas fa-chevron-down text-xs text-gray-400 transition-transform"></i>
-                </button>
-                <div id="projects-content" class="hidden px-5 py-3 text-sm space-y-2">
-                    <div class="text-gray-600">Bu kişiyle ilgili proje yok.</div>
-                    <div class="pt-2 border-t border-gray-100 text-gray-500">
-                        <div>Güncellenme: {{ contact.updated_at.strftime('%d.%m.%Y %H:%M') if contact.updated_at else '-' }}</div>
-                        <div>Oluşturulma: {{ contact.created_at.strftime('%d.%m.%Y %H:%M') if contact.created_at else '-' }}</div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-        
-        <!-- RIGHT MAIN CONTENT: col-span-9 (75%) -->
-        <main class="col-span-9 row-start-2 flex flex-col overflow-hidden bg-transparent border-0 rounded-none shadow-none">
-
-            <!-- Top Navigation Tabs -->
-            <div class="px-4 pt-4">
-                <div class="activity-card-container">
-                    <div class="tabs-header no-scrollbar">
-                        <button data-tab="activity" class="tab-button tab-item active" aria-selected="true">
-                            <i class="fas fa-calendar-check text-sm"></i> Etkinlik
-                        </button>
-                        <button data-tab="notes" class="tab-button tab-item" aria-selected="false">
-                            <i class="far fa-sticky-note text-sm"></i> Notlar
-                        </button>
-                        <button data-tab="meeting" class="tab-button tab-item" aria-selected="false">
-                            <i class="far fa-calendar text-sm"></i> Toplantı planlayıcı
-                        </button>
-                        <button data-tab="call" class="tab-button tab-item" aria-selected="false">
-                            <i class="fas fa-phone text-sm"></i> Arama
-                        </button>
-                        <button data-tab="email" class="tab-button tab-item" aria-selected="false">
-                            <i class="far fa-envelope text-sm"></i> E-posta
-                        </button>
-                        <button data-tab="files" class="tab-button tab-item" aria-selected="false">
-                            <i class="fas fa-paperclip text-sm"></i> Dosyalar
-                        </button>
-                        <button data-tab="documents" class="tab-button tab-item" aria-selected="false">
-                            <i class="far fa-file-lines text-sm"></i> Belgeler
-                        </button>
-                    </div>
-                    <div class="input-section">
-                        <input
-                            type="text"
-                            class="activity-input"
-                            value="Bir etkinlik eklemek için buraya tıklayın..."
-                            readonly
-                            onclick="openActivityModal()"
-                            onfocus="openActivityModal()"
-                        >
-                    </div>
-                </div>
-            </div>
-            
-            <!-- TAB CONTENT CONTAINER -->
-            <div class="flex-1 overflow-hidden">
-                
-                <!-- ACTIVITY TAB -->
-                <div id="activity-tab" class="tab-content h-full flex flex-col">
-                    <!-- Timeline -->
-                    <div class="flex-1 overflow-y-auto">
-                        <div class="px-4 pt-8 pb-4 space-y-8">
-                            <div class="flex items-center justify-between">
-                                <button type="button" class="inline-flex items-center gap-2 text-[22px] font-semibold text-gray-900">
-                                    <span>Odak</span>
-                                    <i class="fas fa-chevron-right text-xs text-gray-500"></i>
-                                </button>
-                                <label class="inline-flex items-center gap-3 cursor-pointer select-none">
-                                    <span class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200">
-                                        <input type="checkbox" class="peer sr-only">
-                                        <span class="absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5"></span>
-                                    </span>
-                                    <span class="text-sm text-gray-800">Tüm ögeleri genişlet</span>
-                                </label>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Telefon</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-phone" ondblclick="startInlineEdit('details.phone')" class="sidebar-field-value flex-1 cursor-text">{{ contact.phone or '-' }}</span>
+                                <input id="details-phone-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.phone or '' }}">
                             </div>
-
-                            <div>
-                                <button onclick="toggleContactDetailHistory()" class="inline-flex items-center gap-2 text-[22px] font-semibold text-gray-900 hover:text-blue-600 transition-colors">
-                                    <span>Geçmiş</span>
-                                    <i id="contactDetailHistoryChevron" class="fas fa-chevron-right text-xs text-gray-500"></i>
-                                </button>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Unvan</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-job-title" ondblclick="startInlineEdit('contact.job_title')" class="sidebar-field-value flex-1 cursor-text">{{ contact.job_title or '-' }}</span>
+                                <input id="details-job-title-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.job_title or '' }}">
                             </div>
-                            <div id="contactDetailHistoryContent" class="hidden p-0">
-                                <div class="history-container">
-                                    <div class="history-filters no-scrollbar">
-                                        <button class="filter-btn active" data-history-filter="all" onclick="setHistoryFilter('all')">Tümü</button>
-                                        <button class="filter-btn" data-history-filter="activities" onclick="setHistoryFilter('activities')">Etkinlikler (0)</button>
-                                        <button class="filter-btn" data-history-filter="notes" onclick="setHistoryFilter('notes')">Notlar (0)</button>
-                                    </div>
-                                    <div class="timeline-wrapper" id="activity-items">
-                                        <div class="text-sm text-gray-500 text-center py-8">Yükleniyor...</div>
-                                    </div>
-                                    <div class="pt-4 text-center">
-                                        <button
-                                            id="timeline-load-more-btn"
-                                            type="button"
-                                            onclick="loadMoreTimeline()"
-                                            class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                                            style="display: none;"
-                                        >
-                                            Daha Fazla Yükle
-                                        </button>
-                                    </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Rol</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-role" ondblclick="startInlineEdit('contact.role')" class="sidebar-field-value flex-1 cursor-text">{{ contact.role or '-' }}</span>
+                                <input id="details-role-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ contact.role or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Kaynak</span>
+                            <span class="sidebar-field-value">{{ contact.lead_source or '-' }}</span>
+                        </div>
+                        <div class="sidebar-field-row mt-1">
+                            <span class="sidebar-field-label">Atanan</span>
+                            <div id="contact-assignment-selector" class="flex-1"></div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Oluşturma</span>
+                            <span class="sidebar-field-value text-gray-500">{{ contact.created_at.strftime('%d.%m.%Y') if contact.created_at else '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── KURULUŞ Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('organization')">
+                        <span class="sidebar-section-title">Kuruluş</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation(); openSectionEditor('organization')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation();" title="Daha fazla"><i class="fas fa-ellipsis-h"></i></button>
+                            <i id="organization-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div id="organization-content" class="hidden sidebar-section-body">
+                        <div id="organization-body"></div>
+                    </div>
+                </div>
+
+                <!-- ── ANLAŞMALAR Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('deals')">
+                        <span class="sidebar-section-title">Anlaşmalar</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation(); openNewDealModal()" title="Yeni Anlaşma"><i class="fas fa-plus"></i></button>
+                            <i id="deals-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div id="deals-content" class="hidden sidebar-section-body">
+                        <div id="deals-list" class="space-y-2">
+                            <div class="text-xs text-gray-400 py-1">Yükleniyor...</div>
+                        </div>
+                        <button onclick="openNewDealModal()" class="mt-2 w-full text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 py-1">
+                            <i class="fas fa-plus text-[10px]"></i> Tüm anlaşmaları gör
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── GENEL BAKIŞ Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('overview')">
+                        <span class="sidebar-section-title">Genel Bakış</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation();" title="Yenile"><i class="fas fa-rotate-right"></i></button>
+                            <i id="overview-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div id="overview-content" class="hidden sidebar-section-body">
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Lead Skoru</span>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold text-gray-800">{{ contact.lead_score or 0 }}/100</span>
                                 </div>
+                                <div class="lead-score-bar">
+                                    <div class="lead-score-fill" style="width: {{ [(contact.lead_score or 0), 100]|min }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row mt-2">
+                            <span class="sidebar-field-label">Yaşam Döngüsü</span>
+                            <span class="sidebar-field-value">{{ {'lead':'Aday','qualified_lead':'Nitelikli Aday','customer':'Müşteri','evangelist':'Savunucu'}.get(contact.lifecycle_stage, contact.lifecycle_stage or '-') }}</span>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Güncellenme</span>
+                            <span class="sidebar-field-value text-gray-500">{{ contact.updated_at.strftime('%d.%m.%Y') if contact.updated_at else '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── AKILLI BCC Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('smart-bcc')">
+                        <span class="sidebar-section-title">Akıllı Bcc</span>
+                        <i id="smart-bcc-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                    </div>
+                    <div id="smart-bcc-content" class="hidden sidebar-section-body">
+                        <p class="text-xs text-gray-500">Bu kişi için Akıllı Bcc kaydı bulunmuyor.</p>
+                    </div>
+                </div>
+
+                <!-- ── MÜŞTERİ ADAYLARI Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('leads')">
+                        <span class="sidebar-section-title">Müşteri Adayları</span>
+                        <i id="leads-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                    </div>
+                    <div id="leads-content" class="hidden sidebar-section-body">
+                        <p class="text-xs text-gray-500">Bu kişiye bağlı müşteri adayı yok.</p>
+                    </div>
+                </div>
+
+                <!-- ── PROJELER Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('projects')">
+                        <span class="sidebar-section-title">Projeler</span>
+                        <i id="projects-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                    </div>
+                    <div id="projects-content" class="hidden sidebar-section-body">
+                        <p class="text-xs text-gray-500">Bu kişiyle ilgili proje yok.</p>
+                    </div>
+                </div>
+
+                <!-- Bottom padding -->
+                <div class="h-8"></div>
+            </aside>
+
+            <!-- ── Right Main Content ── -->
+            <main class="flex-1 flex flex-col overflow-hidden">
+
+                <!-- Tab Bar -->
+                <div class="content-tab-bar">
+                    <button data-tab="activity" class="tab-btn tab-button active" aria-selected="true">
+                        <i class="fas fa-calendar-check"></i> Etkinlik
+                    </button>
+                    <button data-tab="notes" class="tab-btn tab-button" aria-selected="false">
+                        <i class="far fa-sticky-note"></i> Notlar
+                    </button>
+                    <button data-tab="meeting" class="tab-btn tab-button" aria-selected="false">
+                        <i class="far fa-calendar"></i> Toplantı planlayıcı
+                    </button>
+                    <button data-tab="call" class="tab-btn tab-button" aria-selected="false">
+                        <i class="fas fa-phone"></i> Arama
+                    </button>
+                    <button data-tab="email" class="tab-btn tab-button" aria-selected="false">
+                        <i class="far fa-envelope"></i> E-posta
+                    </button>
+                    <button data-tab="files" class="tab-btn tab-button" aria-selected="false">
+                        <i class="fas fa-paperclip"></i> Dosyalar
+                    </button>
+                    <button data-tab="documents" class="tab-btn tab-button" aria-selected="false">
+                        <i class="far fa-file-lines"></i> Belgeler
+                    </button>
+                </div>
+
+                <!-- Activity Input -->
+                <div class="activity-input-wrapper">
+                    <input type="text" class="activity-input-box" value="Bir etkinlik eklemek için buraya tıklayın..." readonly onclick="openActivityModal()" onfocus="openActivityModal()">
+                </div>
+
+                <!-- Tab Content Container -->
+                <div class="flex-1 overflow-y-auto">
+
+                <!-- ── ACTIVITY TAB ── -->
+                <div id="activity-tab" class="tab-content p-5 space-y-6">
+
+                    <!-- Odak Section -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <button type="button" class="timeline-section-title" onclick="toggleFocusSection()">
+                                Odak <i id="focusChevron" class="fas fa-chevron-down chevron transition-transform"></i>
+                            </button>
+                            <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                                <div class="relative inline-flex h-5 w-9 items-center rounded-full bg-gray-200">
+                                    <input type="checkbox" class="peer sr-only" id="expand-all-toggle">
+                                    <span class="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </div>
+                                <span class="text-xs text-gray-600">Tüm ögeleri genişlet</span>
+                            </label>
+                        </div>
+                        <div id="focus-section-content">
+                            <div id="focus-activities-list">
+                                <div class="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+                                    <i class="fas fa-calendar-check text-2xl mb-2 block text-gray-300"></i>
+                                    <span>Yaklaşan etkinlik yok — <button onclick="openActivityModal()" class="text-blue-600 hover:underline">Etkinlik ekle</button></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Geçmiş Section -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <button onclick="toggleContactDetailHistory()" class="timeline-section-title hover:text-blue-600 transition-colors">
+                                Geçmiş <i id="contactDetailHistoryChevron" class="fas fa-chevron-down chevron transition-transform rotate-180"></i>
+                            </button>
+                        </div>
+                        <div id="contactDetailHistoryContent" class="">
+                            <!-- History filter tabs -->
+                            <div class="history-filter-bar">
+                                <button class="hf-btn active" data-history-filter="all" onclick="setHistoryFilter('all')">Tümü</button>
+                                <button class="hf-btn" data-history-filter="activities" onclick="setHistoryFilter('activities')">Etkinlikler (0)</button>
+                                <button class="hf-btn" data-history-filter="notes" onclick="setHistoryFilter('notes')">Notlar (0)</button>
+                                <button class="hf-btn" data-history-filter="emails" onclick="setHistoryFilter('emails')">E-postalar</button>
+                                <button class="hf-btn" data-history-filter="files" onclick="setHistoryFilter('files')">Dosyalar</button>
+                                <button class="hf-btn" data-history-filter="documents" onclick="setHistoryFilter('documents')">Belgeler</button>
+                                <button class="hf-btn" data-history-filter="deals_hist" onclick="setHistoryFilter('deals_hist')">Anlaşmalar</button>
+                                <button class="hf-btn" data-history-filter="changelog" onclick="setHistoryFilter('changelog')">Değişiklik günlüğü</button>
+                            </div>
+                            <div class="timeline-wrapper" id="activity-items">
+                                <div class="text-sm text-gray-400 text-center py-8">Yükleniyor...</div>
+                            </div>
+                            <div class="pt-4 text-center">
+                                <button id="timeline-load-more-btn" type="button" onclick="loadMoreTimeline()" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" style="display:none;">
+                                    <i class="fas fa-chevron-down mr-2 text-xs"></i> Daha Fazla Yükle
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1181,12 +1469,16 @@
             const display = document.getElementById('contact-name-display');
             const input = document.getElementById('contact-name-input');
             const avatar = document.getElementById('contact-avatar');
+            const sidebarAvatar = document.getElementById('sidebar-avatar');
+            const sidebarName = document.querySelector('.contact-full-name-sidebar');
             const firstNameField = document.getElementById('details-first-name');
             const lastNameField = document.getElementById('details-last-name');
 
             if (display) display.textContent = fullName;
             if (input) input.value = fullName;
             if (avatar) avatar.textContent = initials;
+            if (sidebarAvatar) sidebarAvatar.textContent = initials;
+            if (sidebarName) sidebarName.textContent = fullName;
             if (firstNameField) firstNameField.textContent = STATE.firstName || '-';
             if (lastNameField) lastNameField.textContent = STATE.lastName || '-';
 
@@ -2042,12 +2334,10 @@
 
             if (shouldOpen) {
                 content.classList.remove('hidden');
-                chevron.classList.remove('fa-chevron-right');
-                chevron.classList.add('fa-chevron-down');
+                chevron.classList.add('rotate-180');
             } else {
                 content.classList.add('hidden');
-                chevron.classList.remove('fa-chevron-down');
-                chevron.classList.add('fa-chevron-right');
+                chevron.classList.remove('rotate-180');
             }
         }
 
@@ -2103,14 +2393,14 @@
             }
             
             if (STATE.deals.length === 0) {
-                dealsList.innerHTML = '<div class="text-gray-500">Henüz anlaşma yok</div>';
+                dealsList.innerHTML = '<div class="text-xs text-gray-400 py-2">Henüz anlaşma yok</div>';
             } else {
                 dealsList.innerHTML = STATE.deals.map(deal => `
-                    <div class="p-2 bg-gray-50 rounded border border-gray-200">
-                        <div class="text-xs font-semibold text-gray-900 mb-1">${deal.name || '-'}</div>
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-gray-600">${deal.value || '0'} TRY</span>
-                            <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded">${(deal.stage && deal.stage.name) ? deal.stage.name : (deal.stage || 'Yeni')}</span>
+                    <div class="deal-card" onclick="window.location.href='/pipeline'">
+                        <div class="deal-card-name">${deal.name || '-'}</div>
+                        <div class="deal-card-meta">
+                            <span class="deal-card-value">${Number(deal.value || 0).toLocaleString('tr-TR')} TRY</span>
+                            <span class="deal-stage-badge">${(deal.stage && deal.stage.name) ? deal.stage.name : (deal.stage || 'Yeni')}</span>
                         </div>
                     </div>
                 `).join('');
@@ -2451,6 +2741,34 @@
                         </div>
                     </div>
                 `;
+            }
+        }
+
+        // ============================================================================
+        // MISSING / NEW HELPER FUNCTIONS
+        // ============================================================================
+        function openNewDealModal() {
+            showToast('Yeni anlaşma oluşturma sayfasına yönlendiriliyorsunuz...', 'success');
+            setTimeout(() => { window.location.href = `/pipeline?contact_id=${STATE.contactId}`; }, 800);
+        }
+
+        function openWhatsApp() {
+            const phone = STATE.phone ? STATE.phone.replace(/\D/g, '') : '';
+            if (!phone) { showToast('WhatsApp numarası bulunamadı', 'error'); return; }
+            window.open(`https://wa.me/${phone}`, '_blank');
+        }
+
+        function toggleFocusSection() {
+            const content = document.getElementById('focus-section-content');
+            const chevron = document.getElementById('focusChevron');
+            if (!content || !chevron) return;
+            const isHidden = content.classList.contains('hidden');
+            if (isHidden) {
+                content.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
             }
         }
 
