@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ company.name }} - Şirket Detayı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: { 50:'#eff6ff',100:'#dbeafe',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .contact-page-header {
+            background: #fff; border-bottom: 1px solid #e5e7eb;
+            padding: 0 20px; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0; position: sticky; top: 0; z-index: 30;
+        }
+        .contact-page-header .contact-title-area { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .contact-page-header .back-btn {
+            color: #6b7280; font-size: 13px; font-weight: 500;
+            display: flex; align-items: center; gap: 6px;
+            text-decoration: none; flex-shrink: 0;
+            padding: 4px 8px; border-radius: 4px; transition: background 0.15s;
+        }
+        .contact-page-header .back-btn:hover { background: #f3f4f6; color: #374151; }
+        .contact-avatar-sm {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            color: #fff; font-size: 13px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .contact-page-header h1 {
+            font-size: 17px; font-weight: 700; color: #111827;
+            cursor: pointer; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: 280px;
+        }
+        .contact-page-header h1:hover { color: #2563eb; }
+        .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .header-assignee-btn {
+            display: flex; align-items: center; gap: 6px;
+            border: 1px solid #e5e7eb; border-radius: 20px;
+            padding: 5px 12px 5px 8px; font-size: 12px; color: #374151;
+            background: #fff; cursor: pointer; transition: background 0.15s;
+        }
+        .header-assignee-btn:hover { background: #f9fafb; }
+        .assignee-avatar {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #e0e7ff; color: #4338ca;
+            font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .followers-btn {
+            border: 1px solid #e5e7eb; border-radius: 20px; padding: 5px 12px;
+            font-size: 12px; color: #374151; background: #fff; cursor: pointer;
+            display: flex; align-items: center; gap: 5px; transition: background 0.15s;
+        }
+        .followers-btn:hover { background: #f9fafb; }
+        .btn-deal-new {
+            background: #22c55e; color: #fff; border: none;
+            border-radius: 4px 0 0 4px; padding: 7px 14px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 6px; transition: background 0.15s;
+        }
+        .btn-deal-new:hover { background: #16a34a; }
+        .btn-deal-arrow {
+            background: #22c55e; color: #fff; border: none;
+            border-left: 1px solid rgba(255,255,255,0.3);
+            border-radius: 0 4px 4px 0; padding: 7px 9px; cursor: pointer; transition: background 0.15s;
+        }
+        .btn-deal-arrow:hover { background: #16a34a; }
+        .btn-icon-sm {
+            width: 32px; height: 32px; border-radius: 4px;
+            border: 1px solid #e5e7eb; background: #fff; color: #6b7280;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 13px; transition: background 0.15s;
+        }
+        .btn-icon-sm:hover { background: #f9fafb; color: #374151; }
+
+        .contact-sidebar {
+            width: 280px; min-width: 280px; background: #fff;
+            border-right: 1px solid #e5e7eb; overflow-y: auto; flex-shrink: 0;
+        }
+        .sidebar-avatar-section {
+            padding: 20px 16px 16px; border-bottom: 1px solid #f3f4f6;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .contact-avatar-lg {
+            width: 64px; height: 64px; border-radius: 12px;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            color: #fff; font-size: 20px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; cursor: default;
+        }
+        .contact-full-name-sidebar {
+            font-size: 18px; font-weight: 700; color: #111827;
+            text-align: center; cursor: pointer; line-height: 1.3;
+        }
+        .contact-full-name-sidebar:hover { color: #2563eb; }
+        .contact-company-sidebar { font-size: 13px; color: #6b7280; text-align: center; margin-top: -4px; }
+        .quick-action-btns { display: flex; gap: 8px; width: 100%; }
+        .quick-action-btn {
+            flex: 1; padding: 7px 0; border-radius: 5px; font-size: 12px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            gap: 5px; border: none; transition: all 0.15s;
+        }
+        .quick-action-btn.website { background: #2563eb; color: #fff; }
+        .quick-action-btn.website:hover { background: #1d4ed8; }
+        .quick-action-btn.call { background: #22c55e; color: #fff; }
+        .quick-action-btn.call:hover { background: #16a34a; }
+
+        .sidebar-section { border-bottom: 1px solid #f3f4f6; }
+        .sidebar-section-header {
+            width: 100%; padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; user-select: none; transition: background 0.1s;
+        }
+        .sidebar-section-header:hover { background: #f9fafb; }
+        .sidebar-section-title {
+            font-size: 12px; font-weight: 700; color: #374151;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .sidebar-section-icons { display: flex; align-items: center; gap: 4px; }
+        .sidebar-icon-btn {
+            width: 22px; height: 22px; border-radius: 3px;
+            border: none; background: none; color: #9ca3af;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 11px; transition: all 0.1s;
+        }
+        .sidebar-icon-btn:hover { background: #f3f4f6; color: #374151; }
+        .sidebar-section-body { padding: 4px 16px 12px; }
+        .sidebar-field-row {
+            display: grid; grid-template-columns: 90px 1fr;
+            gap: 4px 8px; align-items: start; padding: 3px 0;
+        }
+        .sidebar-field-label { font-size: 12px; color: #9ca3af; padding-top: 2px; }
+        .sidebar-field-value { font-size: 13px; color: #111827; font-weight: 500; }
+        .sidebar-field-value a { color: #2563eb; text-decoration: none; }
+        .sidebar-field-value a:hover { text-decoration: underline; }
+        .sidebar-info-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 5px 0; font-size: 13px; color: #374151;
+        }
+        .sidebar-info-row i { width: 14px; text-align: center; color: #9ca3af; font-size: 12px; }
+        .sidebar-info-row a { color: #2563eb; text-decoration: none; }
+        .sidebar-info-row a:hover { text-decoration: underline; }
+        .sidebar-info-row .edit-btn {
+            margin-left: auto; opacity: 0;
+            width: 22px; height: 22px; border-radius: 3px;
+            border: 1px solid #e5e7eb; background: #fff; color: #6b7280;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 10px; transition: all 0.1s;
+        }
+        .sidebar-info-row:hover .edit-btn { opacity: 1; }
+        .contact-card {
+            background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+            padding: 8px 10px; margin-bottom: 6px; cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .contact-card:hover { border-color: #93c5fd; background: #eff6ff; }
+        .contact-card-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff; font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .contact-card-info { min-width: 0; }
+        .contact-card-name { font-size: 12px; font-weight: 600; color: #111827; }
+        .contact-card-role { font-size: 11px; color: #6b7280; }
+        .deal-card {
+            background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+            padding: 10px 12px; margin-bottom: 6px; cursor: pointer; transition: all 0.15s;
+        }
+        .deal-card:hover { border-color: #93c5fd; background: #eff6ff; }
+        .deal-card-name { font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+        .deal-card-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; }
+        .deal-card-value { color: #374151; font-weight: 600; }
+        .deal-stage-badge {
+            padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600;
+            background: #dcfce7; color: #166534;
+        }
+
+        .content-tab-bar {
+            background: #fff; border-bottom: 1px solid #e5e7eb; padding: 0;
+            display: flex; align-items: center; overflow-x: auto; flex-shrink: 0;
+        }
+        .content-tab-bar::-webkit-scrollbar { display: none; }
+        .tab-btn {
+            padding: 14px 16px 13px; font-size: 13px; font-weight: 500;
+            color: #6b7280; background: none; border: none;
+            border-bottom: 2px solid transparent; cursor: pointer;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+            transition: color 0.15s; margin-bottom: -1px;
+        }
+        .tab-btn:hover { color: #374151; }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+        .tab-btn i { font-size: 12px; }
+
+        .activity-input-wrapper {
+            background: #fff; border-bottom: 1px solid #f3f4f6; padding: 12px 20px;
+        }
+        .activity-input-box {
+            width: 100%; border: 1px solid #e5e7eb; border-radius: 6px;
+            padding: 10px 14px; font-size: 13px; color: #9ca3af; outline: none;
+            background: #fafafa; cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .activity-input-box:hover, .activity-input-box:focus {
+            border-color: #93c5fd; background: #fff; color: #374151;
+        }
+
+        .timeline-section-title {
+            font-size: 16px; font-weight: 700; color: #111827;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .timeline-section-title .chevron { font-size: 11px; color: #6b7280; }
+        .history-filter-bar {
+            display: flex; align-items: center; gap: 2px;
+            padding: 0 0 12px; overflow-x: auto; flex-shrink: 0;
+            border-bottom: 1px solid #f3f4f6; margin-bottom: 16px;
+        }
+        .history-filter-bar::-webkit-scrollbar { display: none; }
+        .hf-btn {
+            padding: 5px 12px; font-size: 12px; font-weight: 600; color: #6b7280;
+            background: none; border: none; border-radius: 20px;
+            cursor: pointer; white-space: nowrap; transition: all 0.15s;
+        }
+        .hf-btn:hover { background: #f3f4f6; color: #374151; }
+        .hf-btn.active { background: #eff6ff; color: #2563eb; }
+        .timeline-wrapper { position: relative; padding-left: 36px; }
+        .timeline-wrapper::before {
+            content: ''; position: absolute; top: 0; bottom: 0; left: 16px;
+            border-left: 2px dashed #e5e7eb; z-index: 1;
+        }
+        .timeline-item { position: relative; margin-bottom: 20px; }
+        .timeline-marker {
+            position: absolute; left: -36px; z-index: 2;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .large-marker {
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 1px solid #e5e7eb; background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .timeline-content { flex-grow: 1; min-width: 0; }
+        .card-content { border-radius: 6px; padding: 10px 14px; border: 1px solid #e5e7eb; }
+        .white-card { background: #fff; }
+        .yellow-card { background: #fefce8; border-color: #fde047; }
+        .meta-text { font-size: 11px; color: #9ca3af; display: block; margin-top: 4px; }
+
+        /* Toast */
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.2s ease; }
+        .toast.success { background: #22c55e; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="font-sans antialiased flex h-screen overflow-hidden bg-gray-50">
+
+    <!-- ── App Nav Sidebar (64px) ── -->
+    <aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-5 z-30 flex-shrink-0 shadow-sm">
+        <a href="/" class="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg mb-7 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-xl">🐧</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-3 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-base"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-base"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-base"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-purple-600 bg-purple-50 rounded-xl shadow-sm" title="Şirketler"><i class="fas fa-building text-base"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-base"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-base"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-filter text-base"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-base"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-base"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-base"></i></a>
+        </nav>
+        <div class="flex flex-col gap-3 w-full px-3 pb-2">
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-gear text-base"></i></a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış"><i class="fas fa-sign-out-alt text-base"></i></a>
+        </div>
+    </aside>
+
+    <!-- ── Main Area ── -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- ── Page Header ── -->
+        <header class="contact-page-header">
+            <div class="contact-title-area">
+                <a href="/companies" class="back-btn">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                    <span>Şirketler</span>
+                </a>
+                <span class="text-gray-300 text-lg">/</span>
+                <div class="contact-avatar-sm" id="company-avatar-header">
+                    {{ (company.name[0]|upper) if company.name else 'Ş' }}
+                </div>
+                <h1 id="company-name-display" ondblclick="startNameEdit()" title="Düzenlemek için çift tıklayın">{{ company.name }}</h1>
+                <input id="company-name-input" type="text" class="hidden text-base font-bold text-gray-900 bg-white border border-blue-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-60" value="{{ company.name }}" maxlength="200">
+                {% if company.industry %}
+                <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">{{ company.industry }}</span>
+                {% endif %}
+            </div>
+            <div class="header-actions">
+                <button class="header-assignee-btn" title="Sorumlu kişi">
+                    <div class="assignee-avatar" id="header-assignee-avatar">
+                        {% if company.assignee %}{{ company.assignee.name[0]|upper if company.assignee.name else '?' }}{% else %}?{% endif %}
+                    </div>
+                    <span id="header-assignee-name">{% if company.assignee %}{{ company.assignee.name or 'Atanmadı' }}{% else %}Atanmadı{% endif %}</span>
+                    <i class="fas fa-chevron-down text-[9px] text-gray-400 ml-1"></i>
+                </button>
+                <button class="followers-btn" title="Takipçiler">
+                    <i class="fas fa-user text-[11px]"></i>
+                    <span>1 takipçi</span>
+                    <i class="fas fa-chevron-down text-[9px] text-gray-400"></i>
+                </button>
+                <div class="flex">
+                    <button class="btn-deal-new" onclick="openNewDealModal()">
+                        <i class="fas fa-plus text-xs"></i>
+                        Anlaşma
+                    </button>
+                    <button class="btn-deal-arrow" onclick="openNewDealModal()">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                </div>
+                <button class="btn-icon-sm" title="Daha fazla seçenek">
+                    <i class="fas fa-ellipsis-h text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ── Two-Column Layout ── -->
+        <div class="flex flex-1 overflow-hidden">
+
+            <!-- ── Left Sidebar ── -->
+            <aside class="contact-sidebar">
+
+                <!-- Avatar + Name + Quick Actions -->
+                <div class="sidebar-avatar-section">
+                    <div class="contact-avatar-lg" id="sidebar-company-avatar">
+                        {{ (company.name[0]|upper) if company.name else 'Ş' }}
+                    </div>
+                    <div>
+                        <div class="contact-full-name-sidebar" ondblclick="startNameEdit()" title="Düzenlemek için çift tıklayın" id="sidebar-company-name">{{ company.name }}</div>
+                        <div class="contact-company-sidebar">
+                            {% if company.industry %}{{ company.industry }}{% endif %}
+                            {% if company.size %} · {{ company.size }} kişi{% endif %}
+                        </div>
+                    </div>
+                    <div class="quick-action-btns">
+                        {% if company.website %}
+                        <button class="quick-action-btn website" onclick="openWebsite()"><i class="fas fa-globe text-xs"></i> Web</button>
+                        {% endif %}
+                        {% if company.phone %}
+                        <button class="quick-action-btn call" onclick="callCompany()"><i class="fas fa-phone text-xs"></i> Ara</button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ── ÖZET Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('summary')">
+                        <span class="sidebar-section-title">Özet</span>
+                        <div class="sidebar-section-icons">
+                            <i id="summary-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform rotate-180"></i>
+                        </div>
+                    </div>
+                    <div id="summary-content" class="sidebar-section-body">
+                        <div class="sidebar-info-row group">
+                            <i class="fas fa-phone"></i>
+                            <a id="summary-phone-display" href="tel:{{ company.phone or '' }}" ondblclick="event.preventDefault(); startInlineEdit('company.phone')" class="flex-1">{{ company.phone or '-' }}</a>
+                            <input id="summary-phone-input" type="text" class="hidden flex-1 px-2 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.phone or '' }}">
+                            <button class="edit-btn" onclick="startInlineEdit('company.phone')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="sidebar-info-row group">
+                            <i class="fas fa-globe"></i>
+                            {% if company.website %}
+                            <a id="summary-website-display" href="{{ company.website }}" target="_blank" class="flex-1 truncate">{{ company.website }}</a>
+                            {% else %}
+                            <span id="summary-website-display" class="flex-1 text-gray-400">-</span>
+                            {% endif %}
+                            <input id="summary-website-input" type="text" class="hidden flex-1 px-2 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.website or '' }}">
+                            <button class="edit-btn" onclick="startInlineEdit('company.website')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="sidebar-info-row group">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span id="summary-address-display" ondblclick="startInlineEdit('company.address')" class="flex-1 cursor-text">{{ company.address or '-' }}</span>
+                            <input id="summary-address-input" type="text" class="hidden flex-1 px-2 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.address or '' }}">
+                            <button class="edit-btn" onclick="startInlineEdit('company.address')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                        {% if company.parent_company %}
+                        <div class="sidebar-info-row">
+                            <i class="fas fa-building"></i>
+                            <a href="/companies/{{ company.parent_company.id }}" class="flex-1 font-medium">{{ company.parent_company.name }}</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ── AYRINTILAR Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('details')">
+                        <span class="sidebar-section-title">Ayrıntılar</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation();" title="Düzenle"><i class="fas fa-pen"></i></button>
+                            <i id="details-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform rotate-180"></i>
+                        </div>
+                    </div>
+                    <div id="details-content" class="sidebar-section-body">
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Ad</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-name" ondblclick="startInlineEdit('company.name')" class="sidebar-field-value flex-1 cursor-text">{{ company.name or '-' }}</span>
+                                <input id="details-name-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.name or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Sektör</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-industry" ondblclick="startInlineEdit('company.industry')" class="sidebar-field-value flex-1 cursor-text">{{ company.industry or '-' }}</span>
+                                <input id="details-industry-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.industry or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Boyut</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-size" ondblclick="startInlineEdit('company.size')" class="sidebar-field-value flex-1 cursor-text">{{ company.size or '-' }}</span>
+                                <input id="details-size-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.size or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Telefon</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-phone" ondblclick="startInlineEdit('company.phone')" class="sidebar-field-value flex-1 cursor-text">{{ company.phone or '-' }}</span>
+                                <input id="details-phone-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.phone or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Web Sitesi</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-website" ondblclick="startInlineEdit('company.website')" class="sidebar-field-value flex-1 cursor-text truncate">{{ company.website or '-' }}</span>
+                                <input id="details-website-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.website or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Adres</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-address" ondblclick="startInlineEdit('company.address')" class="sidebar-field-value flex-1 cursor-text">{{ company.address or '-' }}</span>
+                                <input id="details-address-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.address or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Ana Şirket</span>
+                            <span class="sidebar-field-value">
+                                {% if company.parent_company %}<a href="/companies/{{ company.parent_company.id }}">{{ company.parent_company.name }}</a>{% else %}-{% endif %}
+                            </span>
+                        </div>
+                        <div class="sidebar-field-row mt-1">
+                            <span class="sidebar-field-label">Atanan</span>
+                            <span class="sidebar-field-value">{% if company.assignee %}{{ company.assignee.name }}{% else %}<span class="text-gray-400">Atanmadı</span>{% endif %}</span>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Oluşturma</span>
+                            <span class="sidebar-field-value text-gray-500">{{ company.created_at.strftime('%d.%m.%Y') if company.created_at else '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── KİŞİLER Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('contacts')">
+                        <span class="sidebar-section-title">Kişiler <span id="contacts-count-badge" class="ml-1 text-gray-400 font-normal normal-case text-xs">({{ company.contacts|selectattr('is_deleted', 'equalto', False)|list|length }})</span></span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation(); window.location.href='/contacts?company_id={{ company.id }}'" title="Tüm kişileri gör"><i class="fas fa-arrow-up-right-from-square"></i></button>
+                            <i id="contacts-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div id="contacts-content" class="hidden sidebar-section-body">
+                        {% set active_contacts = company.contacts|selectattr('is_deleted', 'equalto', False)|list %}
+                        {% if active_contacts %}
+                            {% for c in active_contacts[:5] %}
+                            <div class="contact-card" onclick="window.location.href='/contacts/{{ c.id }}'">
+                                <div class="contact-card-avatar">{{ c.first_name[0]|upper if c.first_name else '?' }}{{ c.last_name[0]|upper if c.last_name else '' }}</div>
+                                <div class="contact-card-info">
+                                    <div class="contact-card-name">{{ c.first_name }} {{ c.last_name or '' }}</div>
+                                    <div class="contact-card-role">{{ c.job_title or c.role or '' }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if active_contacts|length > 5 %}
+                            <a href="/contacts?company_id={{ company.id }}" class="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 mt-1">
+                                <i class="fas fa-plus text-[10px]"></i> {{ active_contacts|length - 5 }} kişi daha
+                            </a>
+                            {% endif %}
+                        {% else %}
+                        <p class="text-xs text-gray-400 py-1">Henüz kişi yok.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ── ANLAŞMALAR Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('deals')">
+                        <span class="sidebar-section-title">Anlaşmalar</span>
+                        <div class="sidebar-section-icons">
+                            <button class="sidebar-icon-btn" onclick="event.stopPropagation(); openNewDealModal()" title="Yeni Anlaşma"><i class="fas fa-plus"></i></button>
+                            <i id="deals-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div id="deals-content" class="hidden sidebar-section-body">
+                        <div id="deals-list" class="space-y-2">
+                            <div class="text-xs text-gray-400 py-1">Yükleniyor...</div>
+                        </div>
+                        <button onclick="openNewDealModal()" class="mt-2 w-full text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 py-1">
+                            <i class="fas fa-plus text-[10px]"></i> Yeni anlaşma ekle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── GENEL BAKIŞ Section ── -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('overview')">
+                        <span class="sidebar-section-title">Genel Bakış</span>
+                        <i id="overview-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                    </div>
+                    <div id="overview-content" class="hidden sidebar-section-body">
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Kişi Sayısı</span>
+                            <span class="sidebar-field-value">{{ company.contacts|selectattr('is_deleted', 'equalto', False)|list|length }}</span>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Anlaşma</span>
+                            <span class="sidebar-field-value" id="overview-deals-count">{{ company.deals|length }}</span>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">Güncellenme</span>
+                            <span class="sidebar-field-value text-gray-500">{{ company.updated_at.strftime('%d.%m.%Y') if company.updated_at else '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── BAĞLI ŞİRKETLER Section ── -->
+                {% if company.subsidiaries %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header" onclick="toggleSection('subsidiaries')">
+                        <span class="sidebar-section-title">Bağlı Şirketler <span class="ml-1 text-gray-400 font-normal normal-case text-xs">({{ company.subsidiaries|length }})</span></span>
+                        <i id="subsidiaries-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                    </div>
+                    <div id="subsidiaries-content" class="hidden sidebar-section-body">
+                        {% for sub in company.subsidiaries %}
+                        <div class="contact-card" onclick="window.location.href='/companies/{{ sub.id }}'">
+                            <div class="contact-card-avatar" style="border-radius:6px; background: linear-gradient(135deg,#0ea5e9,#2563eb);">{{ sub.name[0]|upper }}</div>
+                            <div class="contact-card-info">
+                                <div class="contact-card-name">{{ sub.name }}</div>
+                                <div class="contact-card-role">{{ sub.industry or '' }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Bottom padding -->
+                <div class="h-8"></div>
+            </aside>
+
+            <!-- ── Right Main Content ── -->
+            <main class="flex-1 flex flex-col overflow-hidden">
+
+                <!-- Tab Bar -->
+                <div class="content-tab-bar">
+                    <button data-tab="activity" class="tab-btn tab-button active" aria-selected="true">
+                        <i class="fas fa-calendar-check"></i> Etkinlik
+                    </button>
+                    <button data-tab="notes" class="tab-btn tab-button" aria-selected="false">
+                        <i class="far fa-sticky-note"></i> Notlar
+                    </button>
+                    <button data-tab="call" class="tab-btn tab-button" aria-selected="false">
+                        <i class="fas fa-phone"></i> Arama
+                    </button>
+                    <button data-tab="email" class="tab-btn tab-button" aria-selected="false">
+                        <i class="far fa-envelope"></i> E-posta
+                    </button>
+                    <button data-tab="files" class="tab-btn tab-button" aria-selected="false">
+                        <i class="fas fa-paperclip"></i> Dosyalar
+                    </button>
+                </div>
+
+                <!-- Activity Input -->
+                <div class="activity-input-wrapper">
+                    <input type="text" class="activity-input-box" value="Bir etkinlik eklemek için buraya tıklayın..." readonly onclick="openActivityModal()" onfocus="openActivityModal()">
+                </div>
+
+                <!-- Tab Content Container -->
+                <div class="flex-1 overflow-y-auto">
+
+                <!-- ── ACTIVITY TAB ── -->
+                <div id="activity-tab" class="tab-content p-5 space-y-6">
+                    <!-- Geçmiş Section -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <button class="timeline-section-title" onclick="toggleHistory()">
+                                Geçmiş <i class="chevron fas fa-chevron-up rotate-180 transition-transform" id="history-chevron"></i>
+                            </button>
+                        </div>
+                        <div id="historyContent" class="">
+                            <div class="history-filter-bar">
+                                <button class="hf-btn active" onclick="setFilter('all', this)">Tümü</button>
+                                <button class="hf-btn" onclick="setFilter('note', this)">Notlar</button>
+                                <button class="hf-btn" onclick="setFilter('activity', this)">Etkinlikler</button>
+                            </div>
+                            <div class="timeline-wrapper" id="activity-items">
+                                <div class="text-sm text-gray-400 text-center py-8">Yükleniyor...</div>
+                            </div>
+                            <div class="pt-4 text-center">
+                                <button id="timeline-load-more-btn" class="hidden text-xs text-blue-600 hover:text-blue-700 font-semibold px-4 py-2 border border-blue-200 rounded-full hover:bg-blue-50 transition-all" onclick="loadMoreTimeline()">
+                                    Daha fazla yükle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOTES TAB -->
+                <div id="notes-tab" class="tab-content hidden h-full flex flex-col">
+                    <div class="p-4 border-b border-gray-200">
+                        <div class="border border-yellow-300 rounded-md bg-yellow-50 overflow-hidden">
+                            <div class="flex items-center gap-2 p-2 border-b border-yellow-200 bg-white/50">
+                                <i class="far fa-sticky-note text-yellow-500 text-sm"></i>
+                                <span class="text-xs font-semibold text-yellow-700">Yeni Not</span>
+                            </div>
+                            <textarea id="note-textarea" rows="4" placeholder="Şirket hakkında bir not ekleyin..." class="w-full p-3 text-sm bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400"></textarea>
+                            <div class="flex justify-end p-2">
+                                <button id="save-note-btn" onclick="saveNote()" class="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 transition-colors">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4">
+                        <div id="notes-items" class="space-y-3">
+                            <div class="text-sm text-gray-400 text-center py-8">Henüz not yok</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CALL TAB -->
+                <div id="call-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6 max-w-2xl">
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Giden arama</label>
+                            <div class="flex gap-3 items-center">
+                                <div class="flex-1 border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-2 bg-gray-50">
+                                    <i class="fas fa-phone text-gray-400"></i>
+                                    <span class="text-sm text-gray-700">{{ company.phone or 'Telefon numarası yok' }}</span>
+                                </div>
+                                {% if company.phone %}
+                                <a href="tel:{{ company.phone }}" class="bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                                    <i class="fas fa-phone text-sm"></i> Ara
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EMAIL TAB -->
+                <div id="email-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6 max-w-4xl">
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i class="far fa-envelope text-3xl text-blue-400"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">E-posta Entegrasyonu</h3>
+                            <p class="text-sm text-gray-500">Bu şirkete bağlı kişilere e-posta göndermek için kişi sayfalarını kullanın.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FILES TAB -->
+                <div id="files-tab" class="tab-content hidden h-full overflow-y-auto">
+                    <div class="p-6">
+                        <div class="text-center py-16">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i class="fas fa-paperclip text-3xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Dosya Yok</h3>
+                            <p class="text-sm text-gray-500 mb-6">Bu şirkete henüz dosya eklenmemiş.</p>
+                        </div>
+                    </div>
+                </div>
+
+                </div><!-- end flex-1 overflow-y-auto -->
+            </main>
+        </div><!-- end two-column -->
+    </div><!-- end main area -->
+
+    <!-- ── Activity Modal ── -->
+    <div id="activity-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div class="flex items-center justify-between p-5 border-b border-gray-100">
+                <h3 class="text-base font-semibold text-gray-900">Etkinlik Ekle</h3>
+                <button onclick="closeActivityModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Etkinlik Türü</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="selectActivity('call',this)" class="activity-type-btn active px-3 py-1.5 rounded-full text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-700"><i class="fas fa-phone mr-1"></i>Arama</button>
+                        <button onclick="selectActivity('meeting',this)" class="activity-type-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"><i class="fas fa-users mr-1"></i>Toplantı</button>
+                        <button onclick="selectActivity('email',this)" class="activity-type-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"><i class="far fa-envelope mr-1"></i>E-posta</button>
+                        <button onclick="selectActivity('task',this)" class="activity-type-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"><i class="fas fa-check mr-1"></i>Görev</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Konu</label>
+                    <input id="activity-title" type="text" placeholder="Etkinlik konusu..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Tarih</label>
+                        <input id="activity-date" type="date" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Saat</label>
+                        <input id="activity-time" type="time" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Not</label>
+                    <textarea id="activity-notes" rows="3" placeholder="Etkinlik notu..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 p-5 border-t border-gray-100">
+                <button onclick="closeActivityModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">İptal</button>
+                <button onclick="saveActivity()" class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script>
+        // ============================================================================
+        // STATE
+        // ============================================================================
+        const STATE = {
+            companyId: {{ company.id }},
+            companyName: '{{ company.name|replace("'", "\\'") }}',
+            currentTab: 'activity',
+            timeline: [],
+            timelinePage: 1,
+            timelineHasMore: false,
+            currentFilter: 'all',
+            deals: [],
+            selectedActivityType: 'call',
+        };
+
+        // ============================================================================
+        // UTILITIES
+        // ============================================================================
+        function formatDate(iso) {
+            if (!iso) return '';
+            try {
+                const d = new Date(iso);
+                const now = new Date();
+                const diffMs = now - d;
+                const diffMin = Math.floor(diffMs / 60000);
+                const diffH = Math.floor(diffMin / 60);
+                const diffD = Math.floor(diffH / 24);
+                if (diffMin < 1) return 'Az önce';
+                if (diffMin < 60) return `${diffMin} dk önce`;
+                if (diffH < 24) return `${diffH} sa önce`;
+                if (diffD < 7) return `${diffD} gün önce`;
+                return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+            } catch { return iso; }
+        }
+
+        function showToast(msg, type = 'success') {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function getInitials(name) {
+            if (!name) return 'Ş';
+            return name.split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
+        }
+
+        // ============================================================================
+        // TAB NAVIGATION
+        // ============================================================================
+        function initTabNavigation() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tab = button.getAttribute('data-tab');
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-selected', 'false');
+                    });
+                    button.classList.add('active');
+                    button.setAttribute('aria-selected', 'true');
+                    STATE.currentTab = tab;
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                    const selected = document.getElementById(`${tab}-tab`);
+                    if (selected) selected.classList.remove('hidden');
+                    if (tab === 'notes') renderNotesList();
+                });
+            });
+        }
+
+        // ============================================================================
+        // SIDEBAR ACCORDION
+        // ============================================================================
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            if (!content) return;
+            const isHidden = content.classList.contains('hidden');
+            content.classList.toggle('hidden', !isHidden);
+            if (icon) icon.classList.toggle('rotate-180', isHidden);
+        }
+
+        // ============================================================================
+        // INLINE EDITING
+        // ============================================================================
+        const FIELD_MAP = {
+            'company.name':     { display: ['details-name', 'sidebar-company-name', 'company-name-display'], input: 'details-name-input',     api: 'name' },
+            'company.phone':    { display: ['summary-phone-display', 'details-phone'],  input: 'summary-phone-input',    api: 'phone' },
+            'company.website':  { display: ['summary-website-display', 'details-website'], input: 'summary-website-input', api: 'website' },
+            'company.address':  { display: ['summary-address-display', 'details-address'], input: 'summary-address-input', api: 'address' },
+            'company.industry': { display: ['details-industry'], input: 'details-industry-input', api: 'industry' },
+            'company.size':     { display: ['details-size'],     input: 'details-size-input',     api: 'size' },
+        };
+
+        function startInlineEdit(fieldKey) {
+            const map = FIELD_MAP[fieldKey];
+            if (!map) return;
+            const inputEl = document.getElementById(map.input);
+            if (!inputEl) return;
+            inputEl.classList.remove('hidden');
+            inputEl.focus();
+            inputEl.select();
+        }
+
+        async function saveInlineField(fieldKey, value) {
+            const map = FIELD_MAP[fieldKey];
+            if (!map) return;
+            const payload = { [map.api]: value };
+            try {
+                const response = await fetch(`/api/v1/companies/${STATE.companyId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Save failed');
+                const data = await response.json();
+                // Update display elements
+                map.display.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value || '-';
+                });
+                // Hide input
+                const inputEl = document.getElementById(map.input);
+                if (inputEl) inputEl.classList.add('hidden');
+                showToast('Kaydedildi');
+            } catch (e) {
+                showToast('Kayıt başarısız', 'error');
+                const inputEl = document.getElementById(map.input);
+                if (inputEl) inputEl.classList.add('hidden');
+            }
+        }
+
+        function startNameEdit() {
+            const nameInput = document.getElementById('company-name-input');
+            const nameDisplay = document.getElementById('company-name-display');
+            nameDisplay.classList.add('hidden');
+            nameInput.classList.remove('hidden');
+            nameInput.focus();
+            nameInput.select();
+        }
+
+        async function saveNameEdit() {
+            const nameInput = document.getElementById('company-name-input');
+            const nameDisplay = document.getElementById('company-name-display');
+            const newName = nameInput.value.trim();
+            if (!newName) { nameInput.classList.add('hidden'); nameDisplay.classList.remove('hidden'); return; }
+            try {
+                const response = await fetch(`/api/v1/companies/${STATE.companyId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                });
+                if (!response.ok) throw new Error();
+                nameDisplay.textContent = newName;
+                document.getElementById('sidebar-company-name').textContent = newName;
+                document.getElementById('company-avatar-header').textContent = newName[0].toUpperCase();
+                document.getElementById('sidebar-company-avatar').textContent = newName[0].toUpperCase();
+                document.title = `${newName} - Şirket Detayı`;
+                STATE.companyName = newName;
+                showToast('Şirket adı güncellendi');
+            } catch {
+                showToast('Kayıt başarısız', 'error');
+            } finally {
+                nameInput.classList.add('hidden');
+                nameDisplay.classList.remove('hidden');
+            }
+        }
+
+        // ============================================================================
+        // TIMELINE
+        // ============================================================================
+        async function initTimeline() {
+            await loadTimeline(1);
+        }
+
+        async function loadTimeline(page) {
+            try {
+                const response = await fetch(`/api/companies/${STATE.companyId}/timeline?page=${page}&per_page=20`);
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                if (page === 1) {
+                    STATE.timeline = data.data || [];
+                } else {
+                    STATE.timeline = [...STATE.timeline, ...(data.data || [])];
+                }
+                STATE.timelinePage = page;
+                STATE.timelineHasMore = data.meta ? data.meta.has_next : false;
+                renderTimeline();
+            } catch {
+                document.getElementById('activity-items').innerHTML = '<div class="text-sm text-gray-400 text-center py-8">Yüklenemedi</div>';
+            }
+        }
+
+        function loadMoreTimeline() {
+            if (STATE.timelineHasMore) loadTimeline(STATE.timelinePage + 1);
+        }
+
+        function setFilter(filter, btn) {
+            STATE.currentFilter = filter;
+            document.querySelectorAll('.hf-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderTimeline();
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('activity-items');
+            let items = STATE.timeline;
+            if (STATE.currentFilter !== 'all') {
+                items = items.filter(i => i.type === STATE.currentFilter);
+            }
+            const btn = document.getElementById('timeline-load-more-btn');
+            if (btn) btn.classList.toggle('hidden', !STATE.timelineHasMore);
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-400 text-center py-12"><i class="far fa-clock text-3xl block mb-3"></i>Henüz kayıt yok</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(item => {
+                if (item.type === 'note') {
+                    return `
+                    <div class="timeline-item flex gap-3">
+                        <div class="timeline-marker">
+                            <div class="large-marker flex items-center justify-center">
+                                <i class="far fa-sticky-note text-yellow-500 text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="card-content yellow-card">
+                                <p class="text-sm text-gray-800 whitespace-pre-wrap">${escapeHtml(item.content)}</p>
+                                <span class="meta-text">${item.user_name || 'Kullanıcı'} · ${formatDate(item.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    return `
+                    <div class="timeline-item flex gap-3">
+                        <div class="timeline-marker">
+                            <div class="large-marker flex items-center justify-center">
+                                <i class="fas fa-bolt text-blue-400 text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="card-content white-card">
+                                <p class="text-sm text-gray-700">${escapeHtml(item.description || '')}</p>
+                                <span class="meta-text">${item.user_name || 'Sistem'} · ${formatDate(item.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        function renderNotesList() {
+            const container = document.getElementById('notes-items');
+            const notes = STATE.timeline.filter(i => i.type === 'note');
+            if (notes.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-400 text-center py-8">Henüz not yok</div>';
+                return;
+            }
+            container.innerHTML = notes.map(n => `
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-sm text-gray-800 whitespace-pre-wrap">${escapeHtml(n.content)}</p>
+                    <span class="text-xs text-gray-400 mt-2 block">${n.user_name} · ${formatDate(n.created_at)}</span>
+                </div>`).join('');
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function toggleHistory() {
+            const content = document.getElementById('historyContent');
+            const chevron = document.getElementById('history-chevron');
+            const hidden = content.classList.toggle('hidden');
+            if (chevron) chevron.classList.toggle('rotate-180', !hidden);
+        }
+
+        // ============================================================================
+        // SAVE NOTE
+        // ============================================================================
+        async function saveNote() {
+            const textarea = document.getElementById('note-textarea');
+            const content = textarea.value.trim();
+            if (!content) { showToast('Lütfen bir not yazın', 'error'); return; }
+            const saveBtn = document.getElementById('save-note-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Kaydediliyor...';
+            try {
+                const response = await fetch(`/api/companies/${STATE.companyId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                if (!response.ok) throw new Error();
+                const note = await response.json();
+                STATE.timeline.unshift(note);
+                textarea.value = '';
+                renderNotesList();
+                renderTimeline();
+                showToast('Not kaydedildi');
+            } catch {
+                showToast('Not kaydedilemedi', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Kaydet';
+            }
+        }
+
+        // ============================================================================
+        // DEALS
+        // ============================================================================
+        async function loadDeals() {
+            const dealsList = document.getElementById('deals-list');
+            if (!dealsList) return;
+            try {
+                const response = await fetch(`/api/v1/deals?company_id=${STATE.companyId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    STATE.deals = data.deals || [];
+                } else {
+                    STATE.deals = [];
+                }
+            } catch {
+                STATE.deals = [];
+            }
+            if (STATE.deals.length === 0) {
+                dealsList.innerHTML = '<div class="text-xs text-gray-400 py-2">Henüz anlaşma yok</div>';
+            } else {
+                dealsList.innerHTML = STATE.deals.map(deal => `
+                    <div class="deal-card" onclick="window.location.href='/pipeline'">
+                        <div class="deal-card-name">${escapeHtml(deal.name || '-')}</div>
+                        <div class="deal-card-meta">
+                            <span class="deal-card-value">${Number(deal.value || 0).toLocaleString('tr-TR')} TRY</span>
+                            <span class="deal-stage-badge">${escapeHtml((deal.stage && deal.stage.name) ? deal.stage.name : (deal.stage || 'Yeni'))}</span>
+                        </div>
+                    </div>`).join('');
+            }
+        }
+
+        // ============================================================================
+        // QUICK ACTIONS
+        // ============================================================================
+        function openWebsite() {
+            const url = '{{ company.website or "" }}';
+            if (!url) { showToast('Web sitesi bulunamadı', 'error'); return; }
+            window.open(url.startsWith('http') ? url : 'https://' + url, '_blank');
+        }
+
+        function callCompany() {
+            const phone = '{{ company.phone or "" }}';
+            if (!phone) { showToast('Telefon numarası bulunamadı', 'error'); return; }
+            window.location.href = `tel:${phone}`;
+        }
+
+        function openNewDealModal() {
+            showToast('Yeni anlaşma oluşturma yakında eklenecek');
+        }
+
+        // ============================================================================
+        // ACTIVITY MODAL
+        // ============================================================================
+        function openActivityModal() {
+            document.getElementById('activity-modal').classList.remove('hidden');
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('activity-date').value = today;
+        }
+
+        function closeActivityModal() {
+            document.getElementById('activity-modal').classList.add('hidden');
+        }
+
+        function selectActivity(type, btn) {
+            STATE.selectedActivityType = type;
+            document.querySelectorAll('.activity-type-btn').forEach(b => {
+                b.className = 'activity-type-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700';
+            });
+            btn.className = 'activity-type-btn active px-3 py-1.5 rounded-full text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-700';
+        }
+
+        async function saveActivity() {
+            const title = document.getElementById('activity-title').value.trim();
+            if (!title) { showToast('Lütfen konu girin', 'error'); return; }
+            const noteContent = `[${STATE.selectedActivityType.toUpperCase()}] ${title}`;
+            try {
+                const response = await fetch(`/api/companies/${STATE.companyId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: noteContent })
+                });
+                if (!response.ok) throw new Error();
+                const note = await response.json();
+                STATE.timeline.unshift(note);
+                renderTimeline();
+                closeActivityModal();
+                document.getElementById('activity-title').value = '';
+                showToast('Etkinlik kaydedildi');
+            } catch {
+                showToast('Etkinlik kaydedilemedi', 'error');
+            }
+        }
+
+        // ============================================================================
+        // INIT
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Company detail page initialized for company ID:', STATE.companyId);
+            initTabNavigation();
+            initTimeline();
+            loadDeals();
+
+            // Name edit blur/enter
+            const nameInput = document.getElementById('company-name-input');
+            if (nameInput) {
+                nameInput.addEventListener('blur', () => saveNameEdit());
+                nameInput.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(); }
+                    if (e.key === 'Escape') { nameInput.classList.add('hidden'); document.getElementById('company-name-display').classList.remove('hidden'); }
+                });
+            }
+
+            // Inline field inputs
+            Object.entries(FIELD_MAP).forEach(([fieldKey, map]) => {
+                const input = document.getElementById(map.input);
+                if (!input) return;
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') { e.preventDefault(); saveInlineField(fieldKey, input.value.trim()); }
+                    if (e.key === 'Escape') { input.classList.add('hidden'); }
+                });
+                input.addEventListener('blur', () => {
+                    if (!input.classList.contains('hidden')) {
+                        saveInlineField(fieldKey, input.value.trim());
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

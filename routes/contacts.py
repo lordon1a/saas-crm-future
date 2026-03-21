@@ -882,6 +882,126 @@ def get_contact(contact_id):
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+@contacts_bp.route('/companies/<int:company_id>')
+@login_required
+def view_company_page(company_id):
+    """View company detail page"""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return redirect('/login')
+
+        from models_crm import Company
+        from flask import render_template, redirect
+
+        company = Company.query.filter_by(
+            id=company_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+
+        if not company:
+            return "Company not found", 404
+
+        return render_template('company_detail.html', company=company)
+
+    except Exception as e:
+        logger.error(f"Error viewing company: {str(e)}")
+        return str(e), 500
+
+
+@contacts_bp.route('/api/companies/<int:company_id>/timeline', methods=['GET'])
+@login_required
+def get_company_timeline(company_id):
+    """Get notes timeline for a company."""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        try:
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz parametre'}), 400
+
+        page = max(1, page)
+        per_page = min(max(1, per_page), 100)
+
+        from models_crm import Company
+        from models_contact_timeline import CompanyNote
+
+        company = Company.query.filter_by(
+            id=company_id, workspace_id=workspace_id, is_deleted=False
+        ).first()
+        if not company:
+            return jsonify({'error': 'Company not found'}), 404
+
+        notes_page = CompanyNote.query.filter_by(
+            company_id=company_id, workspace_id=workspace_id
+        ).order_by(CompanyNote.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        timeline = [n.to_dict() for n in notes_page.items]
+        return jsonify({
+            'data': timeline,
+            'meta': {
+                'current_page': page,
+                'total_pages': notes_page.pages or 1,
+                'has_next': notes_page.has_next
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting company timeline: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/companies/<int:company_id>/notes', methods=['POST'])
+@login_required
+def create_company_note(company_id):
+    """Create a note for a company."""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        data = request.get_json() or {}
+        content = (data.get('content') or '').strip()
+        if not content:
+            return jsonify({'error': 'Not içeriği boş olamaz'}), 400
+
+        from models_crm import Company
+        from models_contact_timeline import CompanyNote
+
+        company = Company.query.filter_by(
+            id=company_id, workspace_id=workspace_id, is_deleted=False
+        ).first()
+        if not company:
+            return jsonify({'error': 'Company not found'}), 404
+
+        note = CompanyNote(
+            workspace_id=workspace_id,
+            company_id=company_id,
+            user_id=user_id,
+            content=content,
+        )
+        try:
+            db.session.add(note)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+        return jsonify(note.to_dict()), 201
+
+    except Exception as e:
+        logger.error(f"Error creating company note: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
 @contacts_bp.route('/contacts/<int:contact_id>')
 @login_required
 def view_contact_page(contact_id):

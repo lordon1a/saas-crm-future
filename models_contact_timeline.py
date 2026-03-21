@@ -1,6 +1,6 @@
 """
-Contact Timeline Models - Enterprise Grade
-Handles notes and activity logs for contact detail page
+Contact & Company Timeline Models - Enterprise Grade
+Handles notes and activity logs for contact/company detail pages
 """
 from models import db
 from datetime import datetime
@@ -83,4 +83,37 @@ class ContactActivityLog(db.Model):
             'user_name': self.user.name if self.user else 'System',
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'type': 'activity'
+        }
+
+
+class CompanyNote(db.Model):
+    """
+    Notes attached to companies.
+    Used in company detail page timeline.
+    """
+    __tablename__ = 'company_notes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='company_notes', lazy='joined')
+
+    def __repr__(self):
+        return f'<CompanyNote id={self.id} company_id={self.company_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'content': self.content,
+            'user_id': self.user_id,
+            'user_name': self.user.name if self.user else 'Unknown',
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'type': 'note'
         }
