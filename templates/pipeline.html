@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
     <title>WhatsApp CRM - Pipeline</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -208,6 +209,12 @@
                 </div>
             </div>
             <div class="flex items-center gap-3" id="headerActions">
+                <button onclick="openDeletedDealsModal()" class="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-all flex items-center gap-2" title="Cop kutusundaki anlasmalar">
+                    <i class="fas fa-trash-restore"></i> Çöp Kutusu
+                </button>
+                <button onclick="openClosedDealsModal()" class="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-all flex items-center gap-2" title="Kazanilan/kaybedilen anlasmalar">
+                    <i class="fas fa-box-archive"></i> Kapananlar
+                </button>
                 <button id="autoTaskBtn" onclick="createAutoTasksForRottingDeals()" class="relative px-3.5 py-2 text-amber-600 hover:bg-amber-50 rounded-xl text-xs font-semibold transition-all flex items-center gap-2" title="Create reminder tasks for stale deals">
                     <i class="fas fa-bell"></i> Auto-Tasks
                     <span id="rottingDealsBadge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">0</span>
@@ -259,6 +266,11 @@
                 <div>
                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Value</p>
                     <p class="text-2xl font-bold text-slate-800" id="totalValue">$0</p>
+                </div>
+                <div class="h-10 w-px bg-slate-200"></div>
+                <div>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Commit / Best / Pipe</p>
+                    <p class="text-sm font-bold text-slate-700" id="forecastCategorySplit">$0 / $0 / $0</p>
                 </div>
                 <div class="ml-auto">
                     <button onclick="toggleAnalytics()" class="px-3 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 rounded-lg transition-all flex items-center gap-2">
@@ -368,6 +380,7 @@
                         <span class="text-sm text-slate-500"><i class="fas fa-building mr-1"></i><span id="dealModalCompany">Company</span></span>
                         <span class="text-sm font-bold text-emerald-600"><span id="dealModalValue">$0</span></span>
                         <span class="px-2.5 py-1 bg-brand-50 text-brand-700 rounded-lg text-xs font-bold border border-brand-100" id="dealModalStage">Stage</span>
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 bg-slate-100" id="dealModalStatusBadge">Açık</span>
                         <button id="dealFollowBtn" onclick="toggleDealFollow()" class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
                             <i class="fas fa-bell mr-1"></i> Takip Et
                         </button>
@@ -410,7 +423,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Durum</p>
-                            <p class="text-sm text-slate-700">Açık</p>
+                            <p class="text-sm text-slate-700" id="dealModalStatusText">Açık</p>
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Primary Contact</p>
@@ -420,13 +433,54 @@
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Atanan</p>
                             <div id="deal-assignment-selector"></div>
                         </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Next Step</p>
+                            <p class="text-sm text-slate-700" id="dealModalNextStep">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Next Step Due</p>
+                            <p class="text-sm text-slate-700" id="dealModalNextStepDue">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Revenue</p>
+                            <p class="text-sm text-slate-700" id="dealModalRevenue">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Forecast Category</p>
+                            <p class="text-sm text-slate-700" id="dealModalForecastCategory">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Last Activity</p>
+                            <p class="text-sm text-slate-700" id="dealModalLastActivity">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Churn Risk</p>
+                            <p class="text-sm text-slate-700" id="dealModalChurnRisk">-</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Deal Sonucu</p>
+                            <span class="text-[11px] text-slate-400">Kapanış + Aktivite Planlama</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <button type="button" onclick="openOutcomeModal('won')" class="px-3 py-2 text-sm font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-lg hover:bg-emerald-200 transition-colors">
+                                <i class="fas fa-trophy mr-1"></i> Kazanıldı Olarak Kapat
+                            </button>
+                            <button type="button" onclick="openOutcomeModal('lost')" class="px-3 py-2 text-sm font-bold text-red-700 bg-red-100 border border-red-200 rounded-lg hover:bg-red-200 transition-colors">
+                                <i class="fas fa-times-circle mr-1"></i> Kaybedildi Olarak Kapat
+                            </button>
+                            <button type="button" id="dealReopenBtn" onclick="reopenCurrentDeal()" class="hidden md:col-span-2 px-3 py-2 text-sm font-bold text-blue-700 bg-blue-100 border border-blue-200 rounded-lg hover:bg-blue-200 transition-colors">
+                                <i class="fas fa-rotate-left mr-1"></i> Yeniden Aç (Reopen)
+                            </button>
+                        </div>
                     </div>
                     <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
                         <div class="flex items-center justify-between mb-3">
                             <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Stakeholderlar</p>
                             <span class="text-[10px] font-semibold text-slate-400" id="dealStakeholderCount">0 kisi</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-[1fr_170px_auto] gap-2 mb-3">
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_140px_100px_100px_auto] gap-2 mb-3">
                             <div class="relative">
                                 <input type="text" id="stakeholderContactSearch" placeholder="Kisi ara ve ekle" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500">
                                 <div id="stakeholderContactResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-44 overflow-y-auto z-10"></div>
@@ -439,10 +493,13 @@
                                 <option value="Procurement">Procurement</option>
                                 <option value="Legal">Legal</option>
                             </select>
+                            <input type="number" id="stakeholderInfluence" min="0" max="100" value="50" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500" placeholder="Influence">
+                            <input type="number" id="stakeholderWeight" min="0" max="100" value="50" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500" placeholder="Weight">
                             <button type="button" onclick="addDealStakeholder()" class="px-3 py-2 text-xs font-bold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors">
                                 Ekle
                             </button>
                         </div>
+                        <div id="dealCommitteeSummary" class="mb-3 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">Committee score: -</div>
                         <label class="inline-flex items-center gap-2 text-xs text-slate-600 mb-3">
                             <input id="stakeholderPrimary" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
                             Primary olarak ata
@@ -450,7 +507,11 @@
                         <div id="dealStakeholdersList" class="space-y-2"></div>
                         <p id="dealStakeholdersEmpty" class="text-xs text-slate-400">Henuz stakeholder eklenmemis.</p>
                     </div>
-                    <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                    <button type="button" id="dealAdvancedToggleBtn" onclick="toggleDealAdvancedPanel()" class="mt-6 w-full px-4 py-2.5 text-left rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all text-sm font-semibold text-slate-700 flex items-center justify-between">
+                        <span><i class="fas fa-layer-group mr-2 text-slate-500"></i> Gelismis Satis Alanlari</span>
+                        <i class="fas fa-chevron-down text-xs text-slate-400" id="dealAdvancedToggleIcon"></i>
+                    </button>
+                    <div class="deal-advanced-block hidden mt-6 p-4 bg-white rounded-xl border border-slate-200">
                         <div class="flex items-center justify-between mb-2">
                             <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">QuickBooks Invoice</p>
                             <span id="qbInvoiceBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">Yok</span>
@@ -458,7 +519,37 @@
                         <p class="text-sm font-semibold text-slate-700" id="qbInvoiceRef">Henüz oluşturulmadı</p>
                         <p class="text-xs text-slate-500 mt-1" id="qbInvoiceMeta">Deal won olduğunda otomatik oluşturulur.</p>
                     </div>
-                    <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <div class="deal-advanced-block hidden mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">CPQ / Line Items</p>
+                            <button type="button" onclick="createDealQuote()" class="px-2.5 py-1 text-[11px] font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700">Quote Olustur</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_90px_110px_auto] gap-2 mb-3">
+                            <select id="dealLineItemProduct" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500"></select>
+                            <input type="number" id="dealLineItemQty" min="0.01" step="0.01" value="1" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500" placeholder="Adet">
+                            <input type="number" id="dealLineItemUnitPrice" min="0" step="0.01" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500" placeholder="Birim fiyat">
+                            <button type="button" onclick="addDealLineItem()" class="px-3 py-2 text-xs font-bold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors">Ekle</button>
+                        </div>
+                        <div id="dealLineItemsList" class="space-y-2"></div>
+                        <div class="mt-3">
+                            <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">Quotes</p>
+                            <div id="dealQuotesList" class="space-y-1"></div>
+                        </div>
+                    </div>
+                    <div class="deal-advanced-block hidden mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Win/Loss Close</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-[120px_1fr_auto] gap-2">
+                            <select id="dealCloseStatus" class="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500">
+                                <option value="won">Won</option>
+                                <option value="lost" selected>Lost</option>
+                            </select>
+                            <select id="dealCloseReasonId" class="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500"></select>
+                            <button type="button" onclick="closeDealWithTaxonomy()" class="px-3 py-2 text-xs font-bold text-white bg-slate-700 rounded-lg hover:bg-slate-800 transition-colors">Kapat</button>
+                        </div>
+                    </div>
+                    <div class="deal-advanced-block hidden mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
                         <p class="text-xs text-blue-600"><i class="fas fa-info-circle mr-1"></i> Daha fazla detay yakında eklenecek (notlar, aktiviteler, vb.)</p>
                     </div>
                 </div>
@@ -518,6 +609,138 @@
             <!-- Files List -->
             <div class="flex-1 overflow-y-auto p-6">
                 <div id="drivePickerFilesList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outcome Schedule Modal -->
+    <div id="dealOutcomeModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[80] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-8 py-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg" id="dealOutcomeTitle">Aktivite Planla</h3>
+                    <p class="text-xs text-slate-400 mt-1" id="dealOutcomeSubtitle">Deal kapanışından sonra takip planlayın</p>
+                </div>
+                <button onclick="closeOutcomeModal()" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-0 flex-1 overflow-hidden">
+                <div class="p-6 overflow-y-auto">
+                    <div id="dealOutcomeHint" class="mb-4 p-3 rounded-lg text-sm border"></div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Aktivite Başlığı</label>
+                            <input id="dealOutcomeTaskTitle" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tür</label>
+                                <select id="dealOutcomeTaskType" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                    <option value="follow_up">Follow Up</option>
+                                    <option value="call">Call</option>
+                                    <option value="meeting">Meeting</option>
+                                    <option value="email">Email</option>
+                                    <option value="task">Task</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Öncelik</label>
+                                <select id="dealOutcomePriority" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                    <option value="high">High</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Atanan</label>
+                                <select id="dealOutcomeAssignee" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500"></select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Başlangıç</label>
+                                <input id="dealOutcomeStart" type="datetime-local" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bitiş</label>
+                                <input id="dealOutcomeEnd" type="datetime-local" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kapanış Sebebi</label>
+                            <select id="dealOutcomeReasonId" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Not</label>
+                            <textarea id="dealOutcomeNotes" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" placeholder="Detay notu..."></textarea>
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input id="dealOutcomeCreateTask" type="checkbox" checked class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            Takvimde takip aktivitesi oluştur
+                        </label>
+                    </div>
+                </div>
+                <div class="bg-slate-50 border-l border-slate-200 p-5 overflow-y-auto">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase mb-3">Özet</h4>
+                    <div class="space-y-2 text-sm">
+                        <p><span class="text-slate-400">Deal:</span> <span class="font-semibold text-slate-700" id="dealOutcomeDealName">-</span></p>
+                        <p><span class="text-slate-400">Şirket:</span> <span class="font-semibold text-slate-700" id="dealOutcomeCompanyName">-</span></p>
+                        <p><span class="text-slate-400">Contact:</span> <span class="font-semibold text-slate-700" id="dealOutcomeContactName">-</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-8 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-white">
+                <button onclick="closeOutcomeModal()" class="px-5 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50">İptal</button>
+                <button onclick="submitOutcomeAndSchedule()" class="px-5 py-2 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Closed Deals Modal -->
+    <div id="closedDealsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[84] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Kapanan Deal'lar</h3>
+                    <p class="text-xs text-slate-500">Kazanılan/kaybedilen deal'ları buradan yeniden açabilirsiniz.</p>
+                </div>
+                <button onclick="closeClosedDealsModal()" class="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto">
+                <div id="closedDealsList" class="space-y-2"></div>
+                <p id="closedDealsEmpty" class="hidden text-sm text-slate-400 py-8 text-center">Kapanan deal bulunamadı.</p>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button onclick="closeClosedDealsModal()" class="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recycle Bin Modal -->
+    <div id="deletedDealsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[85] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Çöp Kutusu</h3>
+                    <p class="text-xs text-slate-500">Silinen anlaşmaları geri yükleyin.</p>
+                </div>
+                <button onclick="closeDeletedDealsModal()" class="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto">
+                <div id="deletedDealsList" class="space-y-2"></div>
+                <p id="deletedDealsEmpty" class="hidden text-sm text-slate-400 py-8 text-center">Çöp kutusunda anlaşma yok.</p>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button onclick="closeDeletedDealsModal()" class="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100">
+                    Kapat
+                </button>
             </div>
         </div>
     </div>
@@ -665,6 +888,55 @@
                             </label>
                             <input type="date" id="dealCloseDate" placeholder="DD.MM.YYYY" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
                         </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">Next Step <span class="text-red-500">*</span></label>
+                            <input type="text" id="dealNextStep" placeholder="Bir sonraki aksiyon" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">Next Step Due</label>
+                            <input type="datetime-local" id="dealNextStepDueAt" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-2">Forecast</label>
+                                <select id="dealForecastCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                    <option value="pipeline">pipeline</option>
+                                    <option value="best_case">best_case</option>
+                                    <option value="commit">commit</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-2">Revenue Type</label>
+                                <select id="dealRevenueType" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                    <option value="one_time">one_time</option>
+                                    <option value="recurring">recurring</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-2">MRR</label>
+                                <input type="number" id="dealMrr" min="0" step="0.01" value="0" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-2">ARR</label>
+                                <input type="number" id="dealArr" min="0" step="0.01" value="0" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-2">Renewal Date</label>
+                                <input type="date" id="dealRenewalDate" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-2">Churn Risk</label>
+                                <select id="dealChurnRisk" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                    <option value="low">low</option>
+                                    <option value="medium">medium</option>
+                                    <option value="high">high</option>
+                                </select>
+                            </div>
+                        </div>
 
                         <!-- Sorumlu kişi -->
                         <div>
@@ -771,6 +1043,55 @@
                         <label class="block text-xs font-medium text-slate-600 mb-2">Beklenen Kapanış Tarihi</label>
                         <input type="date" id="editDealCloseDate" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
                     </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-2">Next Step <span class="text-red-500">*</span></label>
+                        <input type="text" id="editDealNextStep" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-2">Next Step Due</label>
+                        <input type="datetime-local" id="editDealNextStepDueAt" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">Forecast</label>
+                            <select id="editDealForecastCategory" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                <option value="pipeline">pipeline</option>
+                                <option value="best_case">best_case</option>
+                                <option value="commit">commit</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">Revenue Type</label>
+                            <select id="editDealRevenueType" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                <option value="one_time">one_time</option>
+                                <option value="recurring">recurring</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">MRR</label>
+                            <input type="number" id="editDealMrr" min="0" step="0.01" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">ARR</label>
+                            <input type="number" id="editDealArr" min="0" step="0.01" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">Renewal Date</label>
+                            <input type="date" id="editDealRenewalDate" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-2">Churn Risk</label>
+                            <select id="editDealChurnRisk" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                                <option value="low">low</option>
+                                <option value="medium">medium</option>
+                                <option value="high">high</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <div>
                         <label class="block text-xs font-medium text-slate-600 mb-2">Primary Contact</label>
@@ -811,6 +1132,8 @@
     <script>
         let currentPipeline = null;
         let deals = [];
+        let deletedDeals = [];
+        let closedDeals = [];
         let currentView = 'kanban';
 
         // Analytics render function
@@ -821,6 +1144,11 @@
             document.getElementById('dealCount').textContent = `${analytics.open_deals} Deal${analytics.open_deals !== 1 ? 's' : ''}`;
             document.getElementById('totalValue').textContent = 
                 `$${analytics.total_value.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            const split = analytics.by_category || {};
+            const splitEl = document.getElementById('forecastCategorySplit');
+            if (splitEl) {
+                splitEl.textContent = `$${Number(split.commit || 0).toLocaleString('en-US')} / $${Number(split.best_case || 0).toLocaleString('en-US')} / $${Number(split.pipeline || 0).toLocaleString('en-US')}`;
+            }
         }
 
         function switchView(view) {
@@ -1141,6 +1469,12 @@
         let stakeholderSearchTimeout = null;
         let stakeholderSearchBound = false;
         let editDealContactOptionsLoaded = false;
+        let dealProducts = [];
+        let dealLineItems = [];
+        let dealQuotes = [];
+        let closeReasonsCache = { won: [], lost: [] };
+        let selectedAddDealContact = null;
+        let currentOutcomeStatus = 'won';
 
         function escapeHtml(value) {
             if (value === null || value === undefined) return '';
@@ -1150,6 +1484,250 @@
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#39;');
+        }
+
+        function toggleDealAdvancedPanel(forceState = null) {
+            const blocks = document.querySelectorAll('.deal-advanced-block');
+            const icon = document.getElementById('dealAdvancedToggleIcon');
+            if (!blocks.length) return;
+
+            const isCurrentlyHidden = blocks[0].classList.contains('hidden');
+            const shouldShow = forceState === null ? isCurrentlyHidden : !!forceState;
+
+            blocks.forEach((block) => {
+                if (shouldShow) {
+                    block.classList.remove('hidden');
+                } else {
+                    block.classList.add('hidden');
+                }
+            });
+
+            if (icon) {
+                icon.className = shouldShow
+                    ? 'fas fa-chevron-up text-xs text-slate-400'
+                    : 'fas fa-chevron-down text-xs text-slate-400';
+            }
+        }
+
+        function getDealStatusLabel(status) {
+            if (status === 'won') return 'Kazanıldı';
+            if (status === 'lost') return 'Kaybedildi';
+            return 'Açık';
+        }
+
+        function renderDealStatusBadge(status) {
+            const badge = document.getElementById('dealModalStatusBadge');
+            const text = document.getElementById('dealModalStatusText');
+            if (!badge || !text) return;
+
+            const normalized = status || 'open';
+            text.textContent = getDealStatusLabel(normalized);
+            if (normalized === 'won') {
+                badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-emerald-200 text-emerald-700 bg-emerald-100';
+            } else if (normalized === 'lost') {
+                badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-red-200 text-red-700 bg-red-100';
+            } else {
+                badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 bg-slate-100';
+            }
+            badge.textContent = getDealStatusLabel(normalized);
+        }
+
+        function updateDealOutcomeActionVisibility(status) {
+            const reopenBtn = document.getElementById('dealReopenBtn');
+            if (!reopenBtn) return;
+            const isOpen = (status || 'open') === 'open';
+            if (isOpen) {
+                reopenBtn.classList.add('hidden');
+            } else {
+                reopenBtn.classList.remove('hidden');
+            }
+        }
+
+        async function loadOutcomeAssignees() {
+            const select = document.getElementById('dealOutcomeAssignee');
+            if (!select) return;
+            try {
+                const res = await fetch('/api/v1/calendar/team');
+                const data = await res.json();
+                const users = data.users || [];
+                select.innerHTML = users.map((u) => `<option value="${u.id}">${escapeHtml(u.name || `User #${u.id}`)}</option>`).join('');
+                if (currentDeal && currentDeal.owner_id) {
+                    select.value = String(currentDeal.owner_id);
+                }
+            } catch (error) {
+                console.error('Error loading outcome assignees:', error);
+                select.innerHTML = '';
+            }
+        }
+
+        async function loadOutcomeReasons(status) {
+            const category = status === 'won' ? 'win' : 'loss';
+            const select = document.getElementById('dealOutcomeReasonId');
+            if (!select) return;
+            try {
+                const res = await fetch(`/api/v1/win-loss-reasons?category=${category}`);
+                const data = await res.json();
+                const reasons = data.reasons || [];
+                if (!reasons.length) {
+                    select.innerHTML = '<option value="">Reason bulunamadı</option>';
+                    return;
+                }
+                select.innerHTML = reasons.map((r) => `<option value="${r.id}">${escapeHtml(r.label)}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading outcome reasons:', error);
+                select.innerHTML = '<option value="">Reason yüklenemedi</option>';
+            }
+        }
+
+        async function openOutcomeModal(status) {
+            if (!currentDeal) return;
+            currentOutcomeStatus = status === 'lost' ? 'lost' : 'won';
+            const modal = document.getElementById('dealOutcomeModal');
+            const title = document.getElementById('dealOutcomeTitle');
+            const subtitle = document.getElementById('dealOutcomeSubtitle');
+            const hint = document.getElementById('dealOutcomeHint');
+            const startEl = document.getElementById('dealOutcomeStart');
+            const endEl = document.getElementById('dealOutcomeEnd');
+            const taskTitleEl = document.getElementById('dealOutcomeTaskTitle');
+            const notesEl = document.getElementById('dealOutcomeNotes');
+
+            const now = new Date();
+            now.setMinutes(0, 0, 0);
+            const start = new Date(now.getTime() + 60 * 60 * 1000);
+            const end = new Date(start.getTime() + 30 * 60 * 1000);
+            startEl.value = toDateTimeLocalValue(start.toISOString());
+            endEl.value = toDateTimeLocalValue(end.toISOString());
+
+            if (currentOutcomeStatus === 'won') {
+                title.textContent = 'Kazanılan Deal Sonrası Aktivite Planla';
+                subtitle.textContent = 'Müşteriyle devam süreci için takip planlayın';
+                hint.className = 'mb-4 p-3 rounded-lg text-sm border bg-emerald-50 text-emerald-700 border-emerald-200';
+                hint.textContent = 'Bu anlaşma kazanıldı. Onboarding / kickoff / upsell için bir takip aktivitesi planlayın.';
+                taskTitleEl.value = `Follow up: ${currentDeal.name}`;
+            } else {
+                title.textContent = 'Kaybedilen Deal Sonrası Aktivite Planla';
+                subtitle.textContent = 'Geri kazanım veya kapanış notu planlayın';
+                hint.className = 'mb-4 p-3 rounded-lg text-sm border bg-red-50 text-red-700 border-red-200';
+                hint.textContent = 'Bu anlaşma kaybedildi. Retrospektif / win-back için takip aktivitesi planlayın.';
+                taskTitleEl.value = `Win-back follow up: ${currentDeal.name}`;
+            }
+
+            notesEl.value = '';
+            document.getElementById('dealOutcomeCreateTask').checked = true;
+            document.getElementById('dealOutcomeDealName').textContent = currentDeal.name || '-';
+            document.getElementById('dealOutcomeCompanyName').textContent = (currentDeal.company && currentDeal.company.name) || '-';
+            document.getElementById('dealOutcomeContactName').textContent = (currentDeal.contact && currentDeal.contact.full_name) || '-';
+
+            await Promise.all([
+                loadOutcomeAssignees(),
+                loadOutcomeReasons(currentOutcomeStatus)
+            ]);
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeOutcomeModal() {
+            const modal = document.getElementById('dealOutcomeModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function submitOutcomeAndSchedule() {
+            if (!currentDeal) return;
+            const reasonId = Number(document.getElementById('dealOutcomeReasonId')?.value || 0);
+            const createTask = !!document.getElementById('dealOutcomeCreateTask')?.checked;
+            const taskTitle = (document.getElementById('dealOutcomeTaskTitle')?.value || '').trim();
+            const startAt = document.getElementById('dealOutcomeStart')?.value || '';
+            const endAt = document.getElementById('dealOutcomeEnd')?.value || '';
+            const assigneeId = Number(document.getElementById('dealOutcomeAssignee')?.value || 0);
+            const taskType = document.getElementById('dealOutcomeTaskType')?.value || 'follow_up';
+            const priority = document.getElementById('dealOutcomePriority')?.value || 'medium';
+            const notes = (document.getElementById('dealOutcomeNotes')?.value || '').trim();
+
+            if (!reasonId) {
+                showToast('Kapanış sebebi seçin', 'error');
+                return;
+            }
+            if (createTask) {
+                if (!taskTitle) {
+                    showToast('Aktivite başlığı zorunlu', 'error');
+                    return;
+                }
+                if (!startAt || !endAt) {
+                    showToast('Başlangıç ve bitiş zamanı zorunlu', 'error');
+                    return;
+                }
+            }
+
+            try {
+                if (createTask) {
+                    const taskRes = await fetch('/api/v1/tasks', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: taskTitle,
+                            description: notes || null,
+                            assignee_id: assigneeId || null,
+                            company_id: currentDeal.company ? currentDeal.company.id : null,
+                            deal_id: currentDeal.id,
+                            contact_id: currentDeal.contact_id || null,
+                            status: 'not_started',
+                            priority: priority,
+                            start_time: startAt,
+                            end_time: endAt,
+                            due_date: endAt,
+                            task_type: taskType,
+                            timezone: 'Europe/Istanbul'
+                        })
+                    });
+                    const taskData = await taskRes.json();
+                    if (!taskRes.ok) {
+                        throw new Error(taskData.error || 'Aktivite oluşturulamadı');
+                    }
+                }
+
+                const closeRes = await fetch(`/api/v1/deals/${currentDeal.id}/close`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: currentOutcomeStatus,
+                        win_loss_reason_id: reasonId
+                    })
+                });
+                const closeData = await closeRes.json();
+                if (!closeRes.ok) {
+                    throw new Error(closeData.error || 'Deal kapatılamadı');
+                }
+
+                showToast(currentOutcomeStatus === 'won' ? 'Deal kazanıldı ve akış planlandı' : 'Deal kaybedildi ve akış planlandı', 'success');
+                closeOutcomeModal();
+                closeDealModal();
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error submitting outcome flow:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        function toDateTimeLocalValue(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            if (Number.isNaN(d.getTime())) return '';
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().slice(0, 16);
+        }
+
+        async function resolveCompanyName(companyId) {
+            if (!companyId) return '';
+            try {
+                const res = await fetch(`/api/v1/companies/${companyId}`);
+                const data = await res.json();
+                if (res.ok && data && data.name) return data.name;
+            } catch (error) {
+                console.error('Error resolving company name:', error);
+            }
+            return `Company #${companyId}`;
         }
 
         function showDealDetails(dealId) {
@@ -1162,6 +1740,7 @@
             const modal = document.getElementById('dealModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            toggleDealAdvancedPanel(false);
             
             // Populate deal info
             document.getElementById('dealModalTitle').textContent = deal.name;
@@ -1170,6 +1749,14 @@
             document.getElementById('dealModalStage').textContent = deal.stage.name;
             document.getElementById('dealModalCloseDate').textContent = deal.expected_close_date ? 
                 new Date(deal.expected_close_date).toLocaleDateString('tr-TR') : 'Belirtilmemiş';
+            document.getElementById('dealModalNextStep').textContent = deal.next_step || '-';
+            document.getElementById('dealModalNextStepDue').textContent = deal.next_step_due_at ? new Date(deal.next_step_due_at).toLocaleString('tr-TR') : '-';
+            document.getElementById('dealModalForecastCategory').textContent = deal.forecast_category || '-';
+            document.getElementById('dealModalRevenue').textContent = `${deal.revenue_type || 'one_time'} | MRR: ${Number(deal.mrr || 0).toLocaleString('en-US')} | ARR: ${Number(deal.arr || 0).toLocaleString('en-US')}`;
+            document.getElementById('dealModalLastActivity').textContent = deal.last_activity_at ? new Date(deal.last_activity_at).toLocaleString('tr-TR') : '-';
+            document.getElementById('dealModalChurnRisk').textContent = deal.churn_risk || '-';
+            renderDealStatusBadge(deal.status);
+            updateDealOutcomeActionVisibility(deal.status);
             
             // Switch to overview tab
             const primaryContactEl = document.getElementById('dealModalPrimaryContact');
@@ -1184,6 +1771,15 @@
             loadDealQuickBooksInvoice(dealId);
             loadDealFollowStatus(dealId);
             loadDealStakeholders(dealId);
+            loadDealProducts();
+            loadDealLineItems(dealId);
+            loadDealQuotes(dealId);
+            loadCloseReasons(deal.status || 'open');
+            const closeStatusEl = document.getElementById('dealCloseStatus');
+            if (closeStatusEl) {
+                closeStatusEl.value = deal.status === 'won' ? 'won' : 'lost';
+                closeStatusEl.onchange = () => loadCloseReasons(closeStatusEl.value);
+            }
             initStakeholderSearch();
             
             // Initialize team member selector for deal assignment
@@ -1305,12 +1901,24 @@
                     throw new Error(data.error || 'Stakeholder listesi yuklenemedi');
                 }
                 dealStakeholders = data.stakeholders || [];
+                renderCommitteeSummary(data.committee || null);
                 renderDealStakeholders();
             } catch (error) {
                 console.error('Error loading deal stakeholders:', error);
                 dealStakeholders = [];
+                renderCommitteeSummary(null);
                 renderDealStakeholders();
             }
+        }
+
+        function renderCommitteeSummary(committee) {
+            const el = document.getElementById('dealCommitteeSummary');
+            if (!el) return;
+            if (!committee) {
+                el.textContent = 'Committee score: -';
+                return;
+            }
+            el.textContent = `Committee score: ${committee.committee_score || 0} / 100 • Kisi: ${committee.member_count || 0} • Seviye: ${committee.strength || 'none'}`;
         }
 
         function renderDealStakeholders() {
@@ -1337,7 +1945,7 @@
                                 ${item.is_primary ? '<span class="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-emerald-100 text-emerald-700">Primary</span>' : ''}
                             </p>
                             <p class="text-xs text-slate-500 truncate">
-                                ${escapeHtml(item.role || contact.job_title || '-')}
+                                ${escapeHtml(item.role || contact.job_title || '-')} • influence: ${Number(item.influence_score || 0)} • weight: ${Number(item.decision_weight || 0)}
                             </p>
                         </div>
                         <button type="button" onclick="setDealStakeholderPrimary(${item.contact_id})" class="px-2 py-1 text-[11px] font-semibold rounded border border-slate-200 text-slate-600 hover:bg-white">
@@ -1355,6 +1963,8 @@
             if (!currentDeal) return;
             const roleEl = document.getElementById('stakeholderRole');
             const primaryEl = document.getElementById('stakeholderPrimary');
+            const influenceEl = document.getElementById('stakeholderInfluence');
+            const weightEl = document.getElementById('stakeholderWeight');
             const input = document.getElementById('stakeholderContactSearch');
 
             if (!selectedStakeholderContact || !selectedStakeholderContact.id) {
@@ -1365,7 +1975,9 @@
             const payload = {
                 contact_id: Number(selectedStakeholderContact.id),
                 role: roleEl.value || null,
-                is_primary: !!primaryEl.checked
+                is_primary: !!primaryEl.checked,
+                influence_score: Math.max(0, Math.min(100, Number(influenceEl?.value || 50))),
+                decision_weight: Math.max(0, Math.min(100, Number(weightEl?.value || 50)))
             };
 
             try {
@@ -1383,6 +1995,8 @@
                 input.value = '';
                 primaryEl.checked = false;
                 roleEl.value = '';
+                if (influenceEl) influenceEl.value = '50';
+                if (weightEl) weightEl.value = '50';
                 await loadDealStakeholders(currentDeal.id);
                 await loadPipeline();
             } catch (error) {
@@ -1431,6 +2045,424 @@
                 await loadPipeline();
             } catch (error) {
                 console.error('Error removing stakeholder:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function loadDealProducts() {
+            try {
+                const res = await fetch('/api/v1/products');
+                const data = await res.json();
+                dealProducts = data.products || [];
+            } catch (error) {
+                console.error('Error loading products:', error);
+                dealProducts = [];
+            }
+            renderDealProductOptions();
+        }
+
+        function renderDealProductOptions() {
+            const select = document.getElementById('dealLineItemProduct');
+            if (!select) return;
+            if (!dealProducts.length) {
+                select.innerHTML = '<option value="">Urun bulunamadi</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">Urun secin</option>' + dealProducts.map((p) => (
+                `<option value="${p.id}" data-price="${Number(p.unit_price || 0)}">${escapeHtml(p.name)} (${Number(p.unit_price || 0).toLocaleString('en-US')})</option>`
+            )).join('');
+            select.onchange = () => {
+                const option = select.options[select.selectedIndex];
+                const price = option ? Number(option.getAttribute('data-price') || 0) : 0;
+                const priceEl = document.getElementById('dealLineItemUnitPrice');
+                if (priceEl && price > 0) priceEl.value = price;
+            };
+        }
+
+        async function loadDealLineItems(dealId) {
+            try {
+                const res = await fetch(`/api/v1/deals/${dealId}/line-items`);
+                const data = await res.json();
+                dealLineItems = data.line_items || [];
+            } catch (error) {
+                console.error('Error loading line items:', error);
+                dealLineItems = [];
+            }
+            renderDealLineItems();
+        }
+
+        function renderDealLineItems() {
+            const container = document.getElementById('dealLineItemsList');
+            if (!container) return;
+            if (!dealLineItems.length) {
+                container.innerHTML = '<p class="text-xs text-slate-400">Henüz line item yok.</p>';
+                return;
+            }
+            container.innerHTML = dealLineItems.map((item) => `
+                <div class="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(item.item_name || '-')}</p>
+                        <p class="text-xs text-slate-500">Qty: ${Number(item.quantity || 0)} • Unit: ${Number(item.unit_price || 0).toLocaleString('en-US')}</p>
+                    </div>
+                    <p class="text-sm font-bold text-emerald-600">${Number(item.total_amount || 0).toLocaleString('en-US')}</p>
+                    <button type="button" onclick="removeDealLineItem(${item.id})" class="w-7 h-7 rounded text-red-500 hover:bg-red-50">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function addDealLineItem() {
+            if (!currentDeal) return;
+            const productId = Number(document.getElementById('dealLineItemProduct')?.value || 0);
+            const qty = Number(document.getElementById('dealLineItemQty')?.value || 1);
+            const unitPrice = Number(document.getElementById('dealLineItemUnitPrice')?.value || 0);
+            if (!productId) {
+                showToast('Lutfen urun secin', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/line-items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: qty,
+                        unit_price: unitPrice,
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Line item eklenemedi');
+                await loadDealLineItems(currentDeal.id);
+                await loadPipeline();
+                showToast('Line item eklendi', 'success');
+            } catch (error) {
+                console.error('Error adding line item:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function removeDealLineItem(lineItemId) {
+            if (!currentDeal) return;
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/line-items/${lineItemId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Line item silinemedi');
+                await loadDealLineItems(currentDeal.id);
+                await loadPipeline();
+                showToast('Line item silindi', 'success');
+            } catch (error) {
+                console.error('Error removing line item:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function loadDealQuotes(dealId) {
+            try {
+                const res = await fetch(`/api/v1/deals/${dealId}/quotes`);
+                const data = await res.json();
+                dealQuotes = data.quotes || [];
+            } catch (error) {
+                console.error('Error loading quotes:', error);
+                dealQuotes = [];
+            }
+            renderDealQuotes();
+        }
+
+        function renderDealQuotes() {
+            const container = document.getElementById('dealQuotesList');
+            if (!container) return;
+            if (!dealQuotes.length) {
+                container.innerHTML = '<p class="text-xs text-slate-400">Henüz quote yok.</p>';
+                return;
+            }
+            container.innerHTML = dealQuotes.map((q) => (
+                `<div class="text-xs text-slate-600 border border-slate-200 rounded px-2 py-1.5 bg-slate-50">${escapeHtml(q.quote_number)} • ${escapeHtml(q.status)} • ${Number(q.grand_total || 0).toLocaleString('en-US')}</div>`
+            )).join('');
+        }
+
+        async function createDealQuote() {
+            if (!currentDeal) return;
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/quotes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Quote olusturulamadi');
+                await loadDealQuotes(currentDeal.id);
+                showToast('Quote olusturuldu', 'success');
+            } catch (error) {
+                console.error('Error creating quote:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function loadCloseReasons(statusValue) {
+            const status = statusValue === 'won' ? 'won' : (statusValue === 'lost' ? 'lost' : 'lost');
+            const category = status === 'won' ? 'win' : 'loss';
+            try {
+                const res = await fetch(`/api/v1/win-loss-reasons?category=${category}`);
+                const data = await res.json();
+                closeReasonsCache[status] = data.reasons || [];
+            } catch (error) {
+                console.error('Error loading close reasons:', error);
+                closeReasonsCache[status] = [];
+            }
+            renderCloseReasons(status);
+        }
+
+        function renderCloseReasons(status) {
+            const select = document.getElementById('dealCloseReasonId');
+            if (!select) return;
+            const reasons = closeReasonsCache[status] || [];
+            if (!reasons.length) {
+                select.innerHTML = '<option value="">Reason bulunamadi</option>';
+                return;
+            }
+            select.innerHTML = reasons.map((r) => `<option value="${r.id}">${escapeHtml(r.label)}</option>`).join('');
+        }
+
+        async function closeDealWithTaxonomy() {
+            if (!currentDeal) return;
+            const status = document.getElementById('dealCloseStatus')?.value || 'lost';
+            const reasonId = Number(document.getElementById('dealCloseReasonId')?.value || 0);
+            if (!reasonId) {
+                showToast('Reason seciniz', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/close`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: status,
+                        win_loss_reason_id: reasonId
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Deal kapatilamadi');
+                showToast('Deal kapatildi', 'success');
+                closeDealModal();
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error closing deal:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function reopenCurrentDeal() {
+            if (!currentDeal) return;
+            const ok = confirm(`"${currentDeal.name}" anlaşmasını yeniden açmak istiyor musunuz?`);
+            if (!ok) return;
+
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/reopen`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Deal yeniden açılamadı');
+                showToast('Deal yeniden açıldı', 'success');
+                closeDealModal();
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error reopening deal:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function openDeletedDealsModal() {
+            const modal = document.getElementById('deletedDealsModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            await loadDeletedDeals();
+        }
+
+        async function openClosedDealsModal() {
+            const modal = document.getElementById('closedDealsModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            await loadClosedDeals();
+        }
+
+        function closeClosedDealsModal() {
+            const modal = document.getElementById('closedDealsModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function closeDeletedDealsModal() {
+            const modal = document.getElementById('deletedDealsModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function loadDeletedDeals() {
+            try {
+                const res = await fetch('/api/v1/deals/deleted?limit=200');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Çöp kutusu yüklenemedi');
+                deletedDeals = data.deals || [];
+                renderDeletedDeals();
+            } catch (error) {
+                console.error('Error loading deleted deals:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function loadClosedDeals() {
+            try {
+                const [wonRes, lostRes] = await Promise.all([
+                    fetch('/api/v1/deals?status=won&per_page=200'),
+                    fetch('/api/v1/deals?status=lost&per_page=200')
+                ]);
+                const wonData = await wonRes.json();
+                const lostData = await lostRes.json();
+                if (!wonRes.ok) throw new Error(wonData.error || 'Won deal listesi alınamadı');
+                if (!lostRes.ok) throw new Error(lostData.error || 'Lost deal listesi alınamadı');
+                closedDeals = [...(wonData.deals || []), ...(lostData.deals || [])]
+                    .sort((a, b) => new Date(b.closed_at || b.updated_at || 0) - new Date(a.closed_at || a.updated_at || 0));
+                renderClosedDeals();
+            } catch (error) {
+                console.error('Error loading closed deals:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        function renderDeletedDeals() {
+            const container = document.getElementById('deletedDealsList');
+            const emptyState = document.getElementById('deletedDealsEmpty');
+            if (!container || !emptyState) return;
+
+            if (!deletedDeals.length) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = deletedDeals.map((deal) => {
+                const deletedAt = deal.deleted_at ? new Date(deal.deleted_at).toLocaleString('tr-TR') : '-';
+                const statusLabel = getDealStatusLabel(deal.status);
+                const statusClass = deal.status === 'won'
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : (deal.status === 'lost' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+                return `
+                    <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(deal.name || '-')}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                ${escapeHtml((deal.company && deal.company.name) || 'Company yok')} • ${Number(deal.value || 0).toLocaleString('en-US')} • Silinme: ${deletedAt}
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 rounded-lg text-[11px] font-bold border ${statusClass}">${statusLabel}</span>
+                        <button onclick="restoreDeletedDeal(${deal.id})" class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-200 rounded-lg hover:bg-blue-200 transition-colors">
+                            Geri Yükle
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderClosedDeals() {
+            const container = document.getElementById('closedDealsList');
+            const emptyState = document.getElementById('closedDealsEmpty');
+            if (!container || !emptyState) return;
+
+            if (!closedDeals.length) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            container.innerHTML = closedDeals.map((deal) => {
+                const closedAt = deal.closed_at ? new Date(deal.closed_at).toLocaleString('tr-TR') : '-';
+                const statusLabel = getDealStatusLabel(deal.status);
+                const statusClass = deal.status === 'won'
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : 'bg-red-100 text-red-700 border-red-200';
+                return `
+                    <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(deal.name || '-')}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                ${escapeHtml((deal.company && deal.company.name) || 'Company yok')} • ${Number(deal.value || 0).toLocaleString('en-US')} • Kapanış: ${closedAt}
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 rounded-lg text-[11px] font-bold border ${statusClass}">${statusLabel}</span>
+                        <button onclick="reopenDealById(${deal.id})" class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-200 rounded-lg hover:bg-blue-200 transition-colors">
+                            Yeniden Aç
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function reopenDealById(dealId) {
+            try {
+                const res = await fetch(`/api/v1/deals/${dealId}/reopen`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Deal yeniden açılamadı');
+                showToast('Deal yeniden açıldı', 'success');
+                await loadClosedDeals();
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error reopening deal by id:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function restoreDeletedDeal(dealId) {
+            try {
+                const res = await fetch(`/api/v1/deals/${dealId}/untrash`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Deal geri yüklenemedi');
+                showToast('Deal geri yüklendi', 'success');
+                await loadDeletedDeals();
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error restoring deleted deal:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function showDealHygieneSummary() {
+            try {
+                const res = await fetch('/api/v1/deals/hygiene?stale_days=7');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Hijyen verisi alinamadi');
+                const missing = (data.missing_next_step || []).length;
+                const stale = (data.stale_last_activity || []).length;
+                const overdue = (data.overdue_next_step || []).length;
+                showToast(`Hijyen: next_step eksik ${missing}, stale ${stale}, overdue ${overdue}`, 'info');
+            } catch (error) {
+                console.error('Error loading hygiene summary:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function showDealDuplicateSummary() {
+            try {
+                const res = await fetch('/api/v1/deals/duplicates');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Duplicate verisi alinamadi');
+                const groups = data.duplicate_groups || [];
+                const pairCount = groups.reduce((acc, g) => acc + ((g.candidate_pairs || []).length), 0);
+                showToast(`Duplicate aday group: ${groups.length}, pair: ${pairCount}`, groups.length ? 'info' : 'success');
+            } catch (error) {
+                console.error('Error loading duplicate summary:', error);
                 showToast(error.message, 'error');
             }
         }
@@ -1531,8 +2563,9 @@
             if (!confirmed) return;
             
             try {
-                const response = await fetch(`/api/v1/deals/${dealId}`, {
-                    method: 'DELETE'
+                const response = await fetch(`/api/v1/deals/${dealId}/trash`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 if (!response.ok) {
@@ -1565,6 +2598,14 @@
             document.getElementById('editDealValue').value = currentDeal.value || 0;
             document.getElementById('editDealCurrency').value = currentDeal.currency || 'TRY';
             document.getElementById('editDealCloseDate').value = currentDeal.expected_close_date || '';
+            document.getElementById('editDealNextStep').value = currentDeal.next_step || '';
+            document.getElementById('editDealNextStepDueAt').value = toDateTimeLocalValue(currentDeal.next_step_due_at);
+            document.getElementById('editDealForecastCategory').value = currentDeal.forecast_category || 'pipeline';
+            document.getElementById('editDealRevenueType').value = currentDeal.revenue_type || 'one_time';
+            document.getElementById('editDealMrr').value = currentDeal.mrr || 0;
+            document.getElementById('editDealArr').value = currentDeal.arr || 0;
+            document.getElementById('editDealRenewalDate').value = currentDeal.renewal_date || '';
+            document.getElementById('editDealChurnRisk').value = currentDeal.churn_risk || 'low';
             document.getElementById('editDealTags').value = currentDeal.tags || '';
             loadEditDealContacts(currentDeal.contact_id || null);
             
@@ -1594,6 +2635,7 @@
             
             const title = document.getElementById('editDealTitle').value.trim();
             const value = document.getElementById('editDealValue').value;
+            const nextStep = (document.getElementById('editDealNextStep').value || '').trim();
             
             if (!title) {
                 showToast('Lütfen anlaşma başlığı girin', 'error');
@@ -1604,12 +2646,24 @@
                 showToast('Lütfen geçerli bir değer girin', 'error');
                 return;
             }
+            if (!nextStep) {
+                showToast('Next step zorunlu', 'error');
+                return;
+            }
             
             const payload = {
                 name: title,
                 value: parseFloat(value),
                 expected_close_date: document.getElementById('editDealCloseDate').value || null,
-                contact_id: document.getElementById('editDealContact').value ? parseInt(document.getElementById('editDealContact').value) : null
+                contact_id: document.getElementById('editDealContact').value ? parseInt(document.getElementById('editDealContact').value) : null,
+                next_step: nextStep,
+                next_step_due_at: document.getElementById('editDealNextStepDueAt').value || null,
+                forecast_category: document.getElementById('editDealForecastCategory').value || 'pipeline',
+                revenue_type: document.getElementById('editDealRevenueType').value || 'one_time',
+                mrr: parseFloat(document.getElementById('editDealMrr').value || '0'),
+                arr: parseFloat(document.getElementById('editDealArr').value || '0'),
+                renewal_date: document.getElementById('editDealRenewalDate').value || null,
+                churn_risk: document.getElementById('editDealChurnRisk').value || 'low'
             };
             
             try {
@@ -2017,6 +3071,7 @@
             document.getElementById('dealContactId').value = '';
             document.getElementById('dealCompanyId').value = '';
             document.getElementById('dealStageId').value = '';
+            selectedAddDealContact = null;
         }
 
         function renderDealStages() {
@@ -2090,6 +3145,8 @@
             input.addEventListener('input', () => {
                 clearTimeout(contactSearchTimeout);
                 const query = input.value.trim();
+                selectedAddDealContact = null;
+                document.getElementById('dealContactId').value = '';
                 
                 if (query.length < 2) {
                     results.classList.add('hidden');
@@ -2114,7 +3171,13 @@
                             const initial = displayName.charAt(0).toUpperCase();
                             
                             return `
-                                <div class="p-3 hover:bg-brand-50 cursor-pointer transition-colors flex items-center gap-3" onclick='selectContact(${JSON.stringify({id: contact.id, name: displayName, phone: displayPhone})})'>
+                                <div class="p-3 hover:bg-brand-50 cursor-pointer transition-colors flex items-center gap-3" onclick='selectContact(${JSON.stringify({
+                                    id: contact.id,
+                                    name: displayName,
+                                    phone: displayPhone,
+                                    company_id: contact.company_id || null,
+                                    company_name: contact.company_name || (contact.company && contact.company.name) || ''
+                                })})'>
                                     <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold">
                                         ${initial}
                                     </div>
@@ -2140,10 +3203,18 @@
             });
         }
 
-        function selectContact(contact) {
+        async function selectContact(contact) {
+            selectedAddDealContact = contact;
             document.getElementById('dealContactSearch').value = contact.name;
             document.getElementById('dealContactId').value = contact.id;
             document.getElementById('dealContactResults').classList.add('hidden');
+
+            // Keep company in sync with selected contact to prevent mismatch errors.
+            if (contact.company_id) {
+                document.getElementById('dealCompanyId').value = String(contact.company_id);
+                const companyName = contact.company_name || await resolveCompanyName(contact.company_id);
+                document.getElementById('dealCompanySearch').value = companyName || '';
+            }
         }
 
         // Company Search with Debounce
@@ -2200,6 +3271,14 @@
         }
 
         function selectCompany(company) {
+            if (
+                selectedAddDealContact &&
+                selectedAddDealContact.company_id &&
+                Number(selectedAddDealContact.company_id) !== Number(company.id)
+            ) {
+                showToast('Secilen kisi farkli bir sirkete bagli. Once kisiyi degistirin.', 'error');
+                return;
+            }
             document.getElementById('dealCompanySearch').value = company.name;
             document.getElementById('dealCompanyId').value = company.id;
             document.getElementById('dealCompanyResults').classList.add('hidden');
@@ -2212,6 +3291,7 @@
             const title = document.getElementById('dealTitle').value.trim();
             const value = document.getElementById('dealValue').value;
             const stageId = document.getElementById('dealStageId').value;
+            const nextStep = (document.getElementById('dealNextStep').value || '').trim();
             
             if (!contactId) {
                 showToast('Lütfen bir irtibat kişisi seçin', 'error');
@@ -2220,6 +3300,14 @@
             
             if (!companyId) {
                 showToast('Lütfen bir kuruluş seçin', 'error');
+                return;
+            }
+            if (
+                selectedAddDealContact &&
+                selectedAddDealContact.company_id &&
+                Number(selectedAddDealContact.company_id) !== Number(companyId)
+            ) {
+                showToast('Contact ve company eslesmiyor. Contactin kendi sirketini secin.', 'error');
                 return;
             }
             
@@ -2237,6 +3325,10 @@
                 showToast('Lütfen bir aşama seçin', 'error');
                 return;
             }
+            if (!nextStep) {
+                showToast('Next step zorunlu', 'error');
+                return;
+            }
             
             // Prepare payload with new fields
             const payload = {
@@ -2248,6 +3340,14 @@
                 stage_id: parseInt(stageId),
                 pipeline_id: currentPipeline.id,
                 expected_close_date: document.getElementById('dealCloseDate').value || null,
+                next_step: nextStep,
+                next_step_due_at: document.getElementById('dealNextStepDueAt').value || null,
+                forecast_category: document.getElementById('dealForecastCategory').value || 'pipeline',
+                revenue_type: document.getElementById('dealRevenueType').value || 'one_time',
+                mrr: parseFloat(document.getElementById('dealMrr').value || '0'),
+                arr: parseFloat(document.getElementById('dealArr').value || '0'),
+                renewal_date: document.getElementById('dealRenewalDate').value || null,
+                churn_risk: document.getElementById('dealChurnRisk').value || 'low',
                 tags: document.getElementById('dealTags').value || null,
                 status: 'open'
                 // owner_id will be set by backend from session
@@ -2524,6 +3624,9 @@
             if (e.target.id === 'dealModal') closeDealModal();
             if (e.target.id === 'drivePickerModal') closeDrivePickerModal();
             if (e.target.id === 'addDealModal') closeAddDealModal();
+            if (e.target.id === 'dealOutcomeModal') closeOutcomeModal();
+            if (e.target.id === 'closedDealsModal') closeClosedDealsModal();
+            if (e.target.id === 'deletedDealsModal') closeDeletedDealsModal();
         };
 
         // Custom Fields for Deals

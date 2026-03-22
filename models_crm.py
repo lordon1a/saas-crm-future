@@ -77,9 +77,19 @@ class Deal(db.Model):
     pipeline_id = db.Column(db.Integer, db.ForeignKey('pipelines.id'), nullable=False, index=True)
     stage_id = db.Column(db.Integer, db.ForeignKey('deal_stages.id'), nullable=False, index=True)
     value = db.Column(db.Numeric(12, 2), default=0)
+    revenue_type = db.Column(db.String(20), default='one_time', nullable=False, index=True)  # one_time, recurring
+    mrr = db.Column(db.Numeric(12, 2), default=0)
+    arr = db.Column(db.Numeric(12, 2), default=0)
+    renewal_date = db.Column(db.Date, nullable=True, index=True)
+    churn_risk = db.Column(db.String(20), default='low', nullable=False, index=True)  # low, medium, high
     expected_close_date = db.Column(db.Date)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    next_step = db.Column(db.String(500), nullable=True)
+    next_step_due_at = db.Column(db.DateTime, nullable=True, index=True)
+    last_activity_at = db.Column(db.DateTime, nullable=True, index=True)
+    forecast_category = db.Column(db.String(20), default='pipeline', nullable=False, index=True)  # pipeline, best_case, commit
     status = db.Column(db.String(20), default='open', nullable=False, index=True)  # open, won, lost
+    win_loss_reason_id = db.Column(db.Integer, db.ForeignKey('win_loss_reasons.id'), nullable=True, index=True)
     win_loss_reason = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -92,7 +102,10 @@ class Deal(db.Model):
     # Relationships
     stage = db.relationship('DealStage', foreign_keys=[stage_id], backref='deals')
     primary_contact = db.relationship('Contact', foreign_keys=[contact_id], backref='deals')
+    win_loss_reason_ref = db.relationship('WinLossReason', foreign_keys=[win_loss_reason_id], backref='deals')
     stakeholder_links = db.relationship('DealContact', backref='deal', lazy=True, cascade='all, delete-orphan')
+    line_items = db.relationship('DealLineItem', backref='deal', lazy=True, cascade='all, delete-orphan')
+    quotes = db.relationship('Quote', backref='deal', lazy=True, cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='deal', lazy=True, cascade='all, delete-orphan', foreign_keys='Task.deal_id')
     activities = db.relationship('Activity', backref='deal', lazy=True, cascade='all, delete-orphan', foreign_keys='Activity.deal_id')
     
@@ -320,6 +333,8 @@ class DealContact(db.Model):
     deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=False, index=True)
     contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False, index=True)
     role = db.Column(db.String(100), nullable=True)  # Decision Maker, Champion, Procurement, etc.
+    influence_score = db.Column(db.Integer, default=50, nullable=False)  # 0..100
+    decision_weight = db.Column(db.Integer, default=50, nullable=False)  # 0..100
     is_primary = db.Column(db.Boolean, default=False, nullable=False, index=True)
     added_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -334,6 +349,162 @@ class DealContact(db.Model):
 
     def __repr__(self):
         return f'<DealContact deal={self.deal_id} contact={self.contact_id} primary={self.is_primary}>'
+
+
+# ============================================================================
+# SALES TAXONOMY / CPQ
+# ============================================================================
+
+class WinLossReason(db.Model):
+    """
+    Categorized win/loss reason taxonomy.
+    """
+    __tablename__ = 'win_loss_reasons'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    category = db.Column(db.String(20), nullable=False, index=True)  # win, loss
+    code = db.Column(db.String(100), nullable=False)
+    label = db.Column(db.String(200), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'category', 'code', name='uix_workspace_reason_code'),
+    )
+
+    def __repr__(self):
+        return f'<WinLossReason {self.category}:{self.code}>'
+
+
+class Product(db.Model):
+    """
+    Product catalog for line-item based pipeline management.
+    """
+    __tablename__ = 'products'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    sku = db.Column(db.String(100), nullable=True, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    currency = db.Column(db.String(10), default='TRY', nullable=False)
+    unit_price = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'sku', name='uix_workspace_product_sku'),
+    )
+
+    def __repr__(self):
+        return f'<Product {self.name}>'
+
+
+class DealLineItem(db.Model):
+    """
+    Deal line items linked to catalog products or custom one-off items.
+    """
+    __tablename__ = 'deal_line_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True, index=True)
+    item_name = db.Column(db.String(200), nullable=False)
+    quantity = db.Column(db.Numeric(12, 2), default=1, nullable=False)
+    unit_price = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    discount_pct = db.Column(db.Numeric(5, 2), default=0, nullable=False)
+    tax_pct = db.Column(db.Numeric(5, 2), default=0, nullable=False)
+    total_amount = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    product = db.relationship('Product', foreign_keys=[product_id], backref='deal_line_items')
+
+    def __repr__(self):
+        return f'<DealLineItem deal={self.deal_id} item={self.item_name}>'
+
+
+class Quote(db.Model):
+    """
+    Sales quote linked to a deal.
+    """
+    __tablename__ = 'quotes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=False, index=True)
+    quote_number = db.Column(db.String(100), nullable=False, index=True)
+    status = db.Column(db.String(20), default='draft', nullable=False, index=True)  # draft, sent, accepted, rejected, expired
+    valid_until = db.Column(db.Date, nullable=True, index=True)
+    currency = db.Column(db.String(10), default='TRY', nullable=False)
+    subtotal = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    discount_total = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    tax_total = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    grand_total = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'quote_number', name='uix_workspace_quote_number'),
+    )
+
+    def __repr__(self):
+        return f'<Quote {self.quote_number}>'
+
+
+class QuoteLineItem(db.Model):
+    """
+    Line items for quote documents.
+    """
+    __tablename__ = 'quote_line_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True, index=True)
+    item_name = db.Column(db.String(200), nullable=False)
+    quantity = db.Column(db.Numeric(12, 2), default=1, nullable=False)
+    unit_price = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    discount_pct = db.Column(db.Numeric(5, 2), default=0, nullable=False)
+    tax_pct = db.Column(db.Numeric(5, 2), default=0, nullable=False)
+    total_amount = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    quote = db.relationship('Quote', foreign_keys=[quote_id], backref=db.backref('line_items', lazy=True, cascade='all, delete-orphan'))
+    product = db.relationship('Product', foreign_keys=[product_id], backref='quote_line_items')
+
+    def __repr__(self):
+        return f'<QuoteLineItem quote={self.quote_id} item={self.item_name}>'
+
+
+# ============================================================================
+# DEAL MERGE HISTORY
+# ============================================================================
+
+class DealMergeHistory(db.Model):
+    """
+    Tracks deal merge operations.
+    """
+    __tablename__ = 'deal_merge_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    primary_deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=False, index=True)
+    merged_deal_id = db.Column(db.Integer, nullable=False, index=True)
+    merged_data_json = db.Column(db.Text, nullable=False)
+    merged_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    primary_deal = db.relationship('Deal', foreign_keys=[primary_deal_id], backref='merge_history')
+
+    def __repr__(self):
+        return f'<DealMergeHistory primary={self.primary_deal_id} merged={self.merged_deal_id}>'
 
 
 # ============================================================================

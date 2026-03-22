@@ -7,13 +7,17 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from sqlalchemy import and_, or_
 from models import db
-from models_crm import Pipeline, DealStage, Deal, Activity, Contact, DealContact
+from models_crm import Pipeline, DealStage, Deal, Activity, Contact, DealContact, WinLossReason
 
 logger = logging.getLogger(__name__)
 
 
 class PipelineService:
     """Service for managing pipelines and deals"""
+
+    VALID_FORECAST_CATEGORIES = {'pipeline', 'best_case', 'commit'}
+    VALID_REVENUE_TYPES = {'one_time', 'recurring'}
+    VALID_CHURN_RISKS = {'low', 'medium', 'high'}
 
     @staticmethod
     def _emit_webhook_event(workspace_id: int, event_type: str, payload: Dict[str, Any]):
@@ -43,6 +47,22 @@ class PipelineService:
         for field in required_fields:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
+
+        next_step = str(data.get('next_step') or '').strip()
+        if not next_step:
+            raise ValueError("next_step is required for open deals")
+
+        revenue_type = str(data.get('revenue_type') or 'one_time').strip().lower()
+        if revenue_type not in PipelineService.VALID_REVENUE_TYPES:
+            raise ValueError("revenue_type must be one_time or recurring")
+
+        forecast_category = str(data.get('forecast_category') or 'pipeline').strip().lower()
+        if forecast_category not in PipelineService.VALID_FORECAST_CATEGORIES:
+            raise ValueError("forecast_category must be pipeline, best_case, or commit")
+
+        churn_risk = str(data.get('churn_risk') or 'low').strip().lower()
+        if churn_risk not in PipelineService.VALID_CHURN_RISKS:
+            raise ValueError("churn_risk must be low, medium, or high")
         
         # Validate company exists and belongs to workspace
         from models_crm import Company
@@ -115,8 +135,17 @@ class PipelineService:
                 pipeline_id=data['pipeline_id'],
                 stage_id=stage_id,
                 value=data.get('value', 0),
+                revenue_type=revenue_type,
+                mrr=data.get('mrr', 0),
+                arr=data.get('arr', 0),
+                renewal_date=data.get('renewal_date'),
+                churn_risk=churn_risk,
                 expected_close_date=data.get('expected_close_date'),
                 owner_id=data['owner_id'],
+                next_step=next_step,
+                next_step_due_at=data.get('next_step_due_at'),
+                last_activity_at=datetime.utcnow(),
+                forecast_category=forecast_category,
                 status='open'
             )
             
@@ -206,6 +235,30 @@ class PipelineService:
         
         if not deal:
             raise ValueError(f"Deal {deal_id} not found")
+
+        if 'revenue_type' in data:
+            revenue_type = str(data.get('revenue_type') or '').strip().lower()
+            if revenue_type not in PipelineService.VALID_REVENUE_TYPES:
+                raise ValueError("revenue_type must be one_time or recurring")
+            data['revenue_type'] = revenue_type
+
+        if 'forecast_category' in data:
+            forecast_category = str(data.get('forecast_category') or '').strip().lower()
+            if forecast_category not in PipelineService.VALID_FORECAST_CATEGORIES:
+                raise ValueError("forecast_category must be pipeline, best_case, or commit")
+            data['forecast_category'] = forecast_category
+
+        if 'churn_risk' in data:
+            churn_risk = str(data.get('churn_risk') or '').strip().lower()
+            if churn_risk not in PipelineService.VALID_CHURN_RISKS:
+                raise ValueError("churn_risk must be low, medium, or high")
+            data['churn_risk'] = churn_risk
+
+        if 'next_step' in data and deal.status == 'open':
+            next_step = str(data.get('next_step') or '').strip()
+            if not next_step:
+                raise ValueError("next_step cannot be empty for open deals")
+            data['next_step'] = next_step
         
         # Track changes for activity log
         changes = {}
@@ -227,7 +280,11 @@ class PipelineService:
                         f"not deal company {deal.company_id}"
                     )
 
-        for field in ['name', 'value', 'expected_close_date', 'owner_id', 'contact_id']:
+        for field in [
+            'name', 'value', 'expected_close_date', 'owner_id', 'contact_id',
+            'revenue_type', 'mrr', 'arr', 'renewal_date', 'churn_risk',
+            'next_step', 'next_step_due_at', 'forecast_category'
+        ]:
             if field in data and getattr(deal, field) != data[field]:
                 old_value = getattr(deal, field)
                 setattr(deal, field, data[field])
@@ -414,7 +471,7 @@ class PipelineService:
         return deal
     
     @staticmethod
-    def close_deal(workspace_id: int, deal_id: int, status: str, win_loss_reason: str, user_id: int) -> Deal:
+    def close_deal(workspace_id: int, deal_id: int, status: str, win_loss_reason: str, user_id: int, win_loss_reason_id: Optional[int] = None) -> Deal:
         """
         Close a deal as won or lost.
         
@@ -431,11 +488,12 @@ class PipelineService:
         Raises:
             ValueError: If deal not found, invalid status, or missing reason
         """
+        status = str(status or '').strip().lower()
         if status not in ['won', 'lost']:
             raise ValueError(f"Invalid status: {status}. Must be 'won' or 'lost'")
         
-        if not win_loss_reason or not win_loss_reason.strip():
-            raise ValueError("Win/loss reason is required when closing a deal")
+        if not win_loss_reason_id:
+            raise ValueError("win_loss_reason_id is required when closing a deal")
         
         deal = Deal.query.filter_by(
             id=deal_id,
@@ -445,10 +503,24 @@ class PipelineService:
         
         if not deal:
             raise ValueError(f"Deal {deal_id} not found")
+
+        reason_obj = WinLossReason.query.filter_by(
+            id=win_loss_reason_id,
+            workspace_id=workspace_id,
+            is_active=True
+        ).first()
+        if not reason_obj:
+            raise ValueError("Invalid win_loss_reason_id")
+        expected_reason_category = 'win' if status == 'won' else 'loss'
+        if reason_obj.category != expected_reason_category:
+            raise ValueError("win_loss_reason_id category must match deal close status")
+        if not win_loss_reason or not win_loss_reason.strip():
+            win_loss_reason = reason_obj.label
         
         try:
             deal.status = status
             deal.win_loss_reason = win_loss_reason
+            deal.win_loss_reason_id = reason_obj.id if reason_obj else None
             deal.closed_at = datetime.utcnow()
             deal.updated_at = datetime.utcnow()
             
@@ -479,7 +551,9 @@ class PipelineService:
                 'pipeline_id': deal.pipeline_id,
                 'stage_id': deal.stage_id,
                 'status': deal.status,
+                'forecast_category': deal.forecast_category,
                 'win_loss_reason': deal.win_loss_reason,
+                'win_loss_reason_id': deal.win_loss_reason_id,
                 'closed_at': deal.closed_at.isoformat() if deal.closed_at else None,
                 'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
             })
@@ -487,6 +561,141 @@ class PipelineService:
             logger.warning(f"Webhook dispatch failed (non-blocking): {webhook_error}")
         
         return deal
+
+    @staticmethod
+    def reopen_deal(workspace_id: int, deal_id: int, user_id: int) -> Deal:
+        """
+        Reopen a won/lost deal back to open state.
+        """
+        deal = Deal.query.filter_by(
+            id=deal_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not deal:
+            raise ValueError(f"Deal {deal_id} not found")
+        if deal.status == 'open':
+            return deal
+
+        previous_status = deal.status
+        previous_reason = deal.win_loss_reason
+        try:
+            deal.status = 'open'
+            deal.closed_at = None
+            deal.win_loss_reason = None
+            deal.win_loss_reason_id = None
+            deal.updated_at = datetime.utcnow()
+            if not deal.last_activity_at:
+                deal.last_activity_at = datetime.utcnow()
+
+            PipelineService._create_activity(
+                workspace_id=workspace_id,
+                deal_id=deal.id,
+                user_id=user_id,
+                activity_type='system',
+                subject=f'Deal reopened: {deal.name}',
+                body=f'Previous status: {str(previous_status).upper()}'
+                     + (f'\nPrevious reason: {previous_reason}' if previous_reason else '')
+            )
+
+            db.session.commit()
+            logger.info("Reopened deal %s from %s", deal.id, previous_status)
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Failed to reopen deal: %s", e)
+            raise
+
+        try:
+            PipelineService._emit_webhook_event(workspace_id, 'deal.updated', {
+                'deal_id': deal.id,
+                'name': deal.name,
+                'status': deal.status,
+                'closed_at': None,
+                'win_loss_reason': None,
+                'win_loss_reason_id': None,
+                'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
+            })
+        except Exception as webhook_error:
+            logger.warning("Webhook dispatch failed (non-blocking): %s", webhook_error)
+
+        return deal
+
+    @staticmethod
+    def soft_delete_deal(workspace_id: int, deal_id: int, user_id: int) -> Deal:
+        deal = Deal.query.filter_by(
+            id=deal_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not deal:
+            raise ValueError(f"Deal {deal_id} not found")
+
+        try:
+            deal.is_deleted = True
+            deal.deleted_at = datetime.utcnow()
+            deal.updated_at = datetime.utcnow()
+
+            PipelineService._create_activity(
+                workspace_id=workspace_id,
+                deal_id=deal.id,
+                user_id=user_id,
+                activity_type='system',
+                subject=f'Deal deleted: {deal.name}',
+                body='Deal moved to recycle bin'
+            )
+
+            db.session.commit()
+            logger.info("Soft deleted deal %s", deal.id)
+            return deal
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Failed to soft delete deal: %s", e)
+            raise
+
+    @staticmethod
+    def restore_deleted_deal(workspace_id: int, deal_id: int, user_id: int) -> Deal:
+        deal = Deal.query.filter_by(
+            id=deal_id,
+            workspace_id=workspace_id,
+            is_deleted=True,
+        ).first()
+        if not deal:
+            raise ValueError(f"Deleted deal {deal_id} not found")
+
+        try:
+            deal.is_deleted = False
+            deal.deleted_at = None
+            deal.updated_at = datetime.utcnow()
+            if not deal.last_activity_at:
+                deal.last_activity_at = datetime.utcnow()
+
+            PipelineService._create_activity(
+                workspace_id=workspace_id,
+                deal_id=deal.id,
+                user_id=user_id,
+                activity_type='system',
+                subject=f'Deal restored: {deal.name}',
+                body='Deal restored from recycle bin'
+            )
+
+            db.session.commit()
+            logger.info("Restored deal %s from recycle bin", deal.id)
+            return deal
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Failed to restore deal: %s", e)
+            raise
+
+    @staticmethod
+    def list_deleted_deals(workspace_id: int, limit: int = 100) -> List[Deal]:
+        safe_limit = max(1, min(int(limit or 100), 500))
+        return Deal.query.filter_by(
+            workspace_id=workspace_id,
+            is_deleted=True
+        ).order_by(
+            Deal.deleted_at.desc(),
+            Deal.updated_at.desc()
+        ).limit(safe_limit).all()
     
     @staticmethod
     def get_deals(workspace_id: int, filters: Optional[Dict[str, Any]] = None) -> List[Deal]:
@@ -515,6 +724,12 @@ class PipelineService:
                 query = query.filter_by(contact_id=filters['contact_id'])
             if 'pipeline_id' in filters:
                 query = query.filter_by(pipeline_id=filters['pipeline_id'])
+            if 'forecast_category' in filters:
+                query = query.filter_by(forecast_category=filters['forecast_category'])
+            if 'revenue_type' in filters:
+                query = query.filter_by(revenue_type=filters['revenue_type'])
+            if 'churn_risk' in filters:
+                query = query.filter_by(churn_risk=filters['churn_risk'])
         
         return query.order_by(Deal.created_at.desc()).all()
     
@@ -573,7 +788,12 @@ class PipelineService:
         return {
             'total_forecast': total_forecast,
             'total_deals': len(deals),
-            'by_stage': by_stage
+            'by_stage': by_stage,
+            'by_category': {
+                'pipeline': round(sum(float(d.value) for d in deals if d.forecast_category == 'pipeline'), 2),
+                'best_case': round(sum(float(d.value) for d in deals if d.forecast_category == 'best_case'), 2),
+                'commit': round(sum(float(d.value) for d in deals if d.forecast_category == 'commit'), 2),
+            }
         }
     
     @staticmethod
@@ -619,6 +839,10 @@ class PipelineService:
             body=body
         )
         db.session.add(activity)
+        deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+        if deal:
+            deal.last_activity_at = datetime.utcnow()
+            deal.updated_at = datetime.utcnow()
         return activity
     
     @staticmethod

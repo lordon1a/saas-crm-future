@@ -4,9 +4,10 @@ API endpoints for pipeline and deal management
 """
 from flask import Blueprint, request, jsonify, session
 from models import db
-from models_crm import Pipeline, DealStage, Deal, Company, Contact
+from models_crm import Pipeline, DealStage, Deal, Company, Contact, DealLineItem, Quote, Product, WinLossReason
 from services.pipeline_service import PipelineService
 from services.deal_contact_service import DealContactService
+from services.pipeline_advanced_service import PipelineAdvancedService
 from services.quickbooks_service import QuickBooksService
 from services.collaboration_service import CollaborationService
 from functools import wraps
@@ -145,6 +146,12 @@ def get_deals():
                 filters['pipeline_id'] = int(request.args.get('pipeline_id'))
             except (TypeError, ValueError):
                 return jsonify({'error': 'Geçersiz parametre formatı, tamsayı bekleniyor.'}), 400
+        if request.args.get('forecast_category'):
+            filters['forecast_category'] = request.args.get('forecast_category')
+        if request.args.get('revenue_type'):
+            filters['revenue_type'] = request.args.get('revenue_type')
+        if request.args.get('churn_risk'):
+            filters['churn_risk'] = request.args.get('churn_risk')
         
         # Build query
         query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
@@ -183,6 +190,12 @@ def get_deals():
                 query = query.filter(Deal.contact_id == filters['contact_id'])
         if filters.get('pipeline_id'):
             query = query.filter_by(pipeline_id=filters['pipeline_id'])
+        if filters.get('forecast_category'):
+            query = query.filter_by(forecast_category=filters['forecast_category'])
+        if filters.get('revenue_type'):
+            query = query.filter_by(revenue_type=filters['revenue_type'])
+        if filters.get('churn_risk'):
+            query = query.filter_by(churn_risk=filters['churn_risk'])
         
         # Eager load relationships
         from models import db
@@ -200,6 +213,7 @@ def get_deals():
         
         result = []
         for deal in pagination.items:
+            committee = DealContactService.calculate_committee_score(workspace_id, deal.id)
             result.append({
                 'id': deal.id,
                 'name': deal.name,
@@ -223,10 +237,23 @@ def get_deals():
                     'probability': deal.stage.probability
                 },
                 'value': float(deal.value),
+                'revenue_type': deal.revenue_type,
+                'mrr': float(deal.mrr or 0),
+                'arr': float(deal.arr or 0),
+                'renewal_date': deal.renewal_date.isoformat() if deal.renewal_date else None,
+                'churn_risk': deal.churn_risk,
                 'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
                 'owner_id': deal.owner_id,
+                'next_step': deal.next_step,
+                'next_step_due_at': deal.next_step_due_at.isoformat() if deal.next_step_due_at else None,
+                'last_activity_at': deal.last_activity_at.isoformat() if deal.last_activity_at else None,
+                'forecast_category': deal.forecast_category,
                 'status': deal.status,
+                'win_loss_reason_id': deal.win_loss_reason_id,
                 'win_loss_reason': deal.win_loss_reason,
+                'committee_score': committee['committee_score'],
+                'committee_member_count': committee['member_count'],
+                'committee_strength': committee['strength'],
                 'created_at': deal.created_at.isoformat(),
                 'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
                 'closed_at': deal.closed_at.isoformat() if deal.closed_at else None,
@@ -273,6 +300,8 @@ def get_deal(deal_id):
         logger.warning(f"Access denied: user {user.id} attempted to read deal {deal_id}")
         return jsonify({'error': 'Access denied to this deal'}), 403
     
+    committee = DealContactService.calculate_committee_score(workspace_id, deal_id)
+
     return jsonify({
         'id': deal.id,
         'name': deal.name,
@@ -296,10 +325,23 @@ def get_deal(deal_id):
             'probability': deal.stage.probability
         },
         'value': float(deal.value),
+        'revenue_type': deal.revenue_type,
+        'mrr': float(deal.mrr or 0),
+        'arr': float(deal.arr or 0),
+        'renewal_date': deal.renewal_date.isoformat() if deal.renewal_date else None,
+        'churn_risk': deal.churn_risk,
         'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
         'owner_id': deal.owner_id,
+        'next_step': deal.next_step,
+        'next_step_due_at': deal.next_step_due_at.isoformat() if deal.next_step_due_at else None,
+        'last_activity_at': deal.last_activity_at.isoformat() if deal.last_activity_at else None,
+        'forecast_category': deal.forecast_category,
         'status': deal.status,
+        'win_loss_reason_id': deal.win_loss_reason_id,
         'win_loss_reason': deal.win_loss_reason,
+        'committee_score': committee['committee_score'],
+        'committee_member_count': committee['member_count'],
+        'committee_strength': committee['strength'],
         'created_at': deal.created_at.isoformat(),
         'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
         'closed_at': deal.closed_at.isoformat() if deal.closed_at else None
@@ -320,12 +362,16 @@ def create_deal():
     """
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
-    data = request.get_json()
+    data = request.get_json() or {}
     
     try:
         # Parse expected_close_date if provided
         if 'expected_close_date' in data and data['expected_close_date']:
             data['expected_close_date'] = datetime.fromisoformat(data['expected_close_date']).date()
+        if 'renewal_date' in data and data['renewal_date']:
+            data['renewal_date'] = datetime.fromisoformat(data['renewal_date']).date()
+        if 'next_step_due_at' in data and data['next_step_due_at']:
+            data['next_step_due_at'] = datetime.fromisoformat(data['next_step_due_at'])
         
         # Set owner_id to current user if not provided
         if 'owner_id' not in data:
@@ -431,8 +477,16 @@ def create_deal():
             'pipeline_id': deal.pipeline_id,
             'stage_id': deal.stage_id,
             'value': float(deal.value),
+            'revenue_type': deal.revenue_type,
+            'mrr': float(deal.mrr or 0),
+            'arr': float(deal.arr or 0),
+            'renewal_date': deal.renewal_date.isoformat() if deal.renewal_date else None,
+            'churn_risk': deal.churn_risk,
             'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
             'owner_id': deal.owner_id,
+            'next_step': deal.next_step,
+            'next_step_due_at': deal.next_step_due_at.isoformat() if deal.next_step_due_at else None,
+            'forecast_category': deal.forecast_category,
             'status': deal.status,
             'created_at': deal.created_at.isoformat()
         }), 201
@@ -462,12 +516,16 @@ def update_deal(deal_id):
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
     user = get_current_user_from_session()
-    data = request.get_json()
+    data = request.get_json() or {}
     
     try:
         # Parse expected_close_date if provided
         if 'expected_close_date' in data and data['expected_close_date']:
             data['expected_close_date'] = datetime.fromisoformat(data['expected_close_date']).date()
+        if 'renewal_date' in data and data['renewal_date']:
+            data['renewal_date'] = datetime.fromisoformat(data['renewal_date']).date()
+        if 'next_step_due_at' in data and data['next_step_due_at']:
+            data['next_step_due_at'] = datetime.fromisoformat(data['next_step_due_at'])
         
         # Get deal
         deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
@@ -488,9 +546,17 @@ def update_deal(deal_id):
             'id': deal.id,
             'name': deal.name,
             'value': float(deal.value),
+            'revenue_type': deal.revenue_type,
+            'mrr': float(deal.mrr or 0),
+            'arr': float(deal.arr or 0),
+            'renewal_date': deal.renewal_date.isoformat() if deal.renewal_date else None,
+            'churn_risk': deal.churn_risk,
             'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
             'owner_id': deal.owner_id,
             'contact_id': deal.contact_id,
+            'next_step': deal.next_step,
+            'next_step_due_at': deal.next_step_due_at.isoformat() if deal.next_step_due_at else None,
+            'forecast_category': deal.forecast_category,
             'updated_at': deal.updated_at.isoformat()
         }
 
@@ -606,7 +672,12 @@ def list_deal_contacts(deal_id):
 
     try:
         stakeholders = DealContactService.list_stakeholders(workspace_id, deal_id)
-        return jsonify({'deal_id': deal_id, 'stakeholders': stakeholders}), 200
+        committee = DealContactService.calculate_committee_score(workspace_id, deal_id)
+        return jsonify({
+            'deal_id': deal_id,
+            'stakeholders': stakeholders,
+            'committee': committee,
+        }), 200
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -649,12 +720,18 @@ def add_deal_contact(deal_id):
             user_id=user_id,
             role=data.get('role'),
             is_primary=data.get('is_primary') if 'is_primary' in data else None,
+            influence_score=data.get('influence_score') if 'influence_score' in data else None,
+            decision_weight=data.get('decision_weight') if 'decision_weight' in data else None,
         )
+        committee = DealContactService.calculate_committee_score(workspace_id, deal_id)
         return jsonify({
             'deal_id': deal_id,
             'contact_id': link.contact_id,
             'role': link.role,
             'is_primary': bool(link.is_primary),
+            'influence_score': link.influence_score,
+            'decision_weight': link.decision_weight,
+            'committee': committee,
             'created_at': link.created_at.isoformat() if link.created_at else None,
             'updated_at': link.updated_at.isoformat() if link.updated_at else None,
         }), 201
@@ -682,8 +759,8 @@ def update_deal_contact(deal_id, contact_id):
         logger.warning(f"Access denied: user {user.id} attempted to update stakeholder for deal {deal_id}")
         return jsonify({'error': 'Access denied to this deal'}), 403
 
-    if 'role' not in data and 'is_primary' not in data:
-        return jsonify({'error': 'At least one field is required: role or is_primary'}), 400
+    if 'role' not in data and 'is_primary' not in data and 'influence_score' not in data and 'decision_weight' not in data:
+        return jsonify({'error': 'At least one field is required: role, is_primary, influence_score, or decision_weight'}), 400
 
     try:
         link = DealContactService.update_stakeholder(
@@ -692,12 +769,18 @@ def update_deal_contact(deal_id, contact_id):
             contact_id=contact_id,
             role=data.get('role') if 'role' in data else None,
             is_primary=data.get('is_primary') if 'is_primary' in data else None,
+            influence_score=data.get('influence_score') if 'influence_score' in data else None,
+            decision_weight=data.get('decision_weight') if 'decision_weight' in data else None,
         )
+        committee = DealContactService.calculate_committee_score(workspace_id, deal_id)
         return jsonify({
             'deal_id': deal_id,
             'contact_id': link.contact_id,
             'role': link.role,
             'is_primary': bool(link.is_primary),
+            'influence_score': link.influence_score,
+            'decision_weight': link.decision_weight,
+            'committee': committee,
             'updated_at': link.updated_at.isoformat() if link.updated_at else None,
         }), 200
     except ValueError as e:
@@ -724,7 +807,8 @@ def remove_deal_contact(deal_id, contact_id):
 
     try:
         DealContactService.remove_stakeholder(workspace_id, deal_id, contact_id)
-        return jsonify({'message': 'Stakeholder removed'}), 200
+        committee = DealContactService.calculate_committee_score(workspace_id, deal_id)
+        return jsonify({'message': 'Stakeholder removed', 'committee': committee}), 200
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -737,19 +821,19 @@ def remove_deal_contact(deal_id, contact_id):
 def close_deal(deal_id):
     """
     Close a deal as won or lost.
-    Required: status ('won' or 'lost'), win_loss_reason
+    Required: status ('won' or 'lost'), win_loss_reason_id
     """
     from utils.permissions import check_entity_access, get_current_user_from_session
     
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
     user = get_current_user_from_session()
-    data = request.get_json()
+    data = request.get_json() or {}
     
     if 'status' not in data:
         return jsonify({'error': 'status is required'}), 400
-    if 'win_loss_reason' not in data:
-        return jsonify({'error': 'win_loss_reason is required'}), 400
+    if 'win_loss_reason_id' not in data:
+        return jsonify({'error': 'win_loss_reason_id is required'}), 400
     
     try:
         # Get deal
@@ -768,14 +852,16 @@ def close_deal(deal_id):
             workspace_id,
             deal_id,
             data['status'],
-            data['win_loss_reason'],
-            user_id
+            data.get('win_loss_reason'),
+            user_id,
+            data.get('win_loss_reason_id')
         )
         
         # Prepare response data before async operations
         response_data = {
             'id': deal.id,
             'status': deal.status,
+            'win_loss_reason_id': deal.win_loss_reason_id,
             'win_loss_reason': deal.win_loss_reason,
             'closed_at': deal.closed_at.isoformat(),
             'updated_at': deal.updated_at.isoformat()
@@ -815,6 +901,127 @@ def close_deal(deal_id):
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Unexpected error closing deal: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/reopen', methods=['POST'])
+@login_required_api
+def reopen_deal(deal_id):
+    """Reopen a won/lost deal back to open."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    user = get_current_user_from_session()
+
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'write'):
+        logger.warning(f"Access denied: user {user.id} attempted to reopen deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    try:
+        reopened = PipelineService.reopen_deal(workspace_id, deal_id, user_id)
+        return jsonify({
+            'id': reopened.id,
+            'status': reopened.status,
+            'win_loss_reason_id': reopened.win_loss_reason_id,
+            'win_loss_reason': reopened.win_loss_reason,
+            'closed_at': reopened.closed_at.isoformat() if reopened.closed_at else None,
+            'updated_at': reopened.updated_at.isoformat() if reopened.updated_at else None,
+            'message': 'Deal yeniden açıldı'
+        }), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error reopening deal: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/deleted', methods=['GET'])
+@login_required_api
+def list_deleted_deals():
+    """List deals in recycle bin."""
+    workspace_id = session.get('workspace_id')
+    limit = request.args.get('limit', 100, type=int)
+
+    try:
+        deleted_deals = PipelineService.list_deleted_deals(workspace_id, limit=limit)
+        return jsonify({
+            'deals': [{
+                'id': deal.id,
+                'name': deal.name,
+                'value': float(deal.value or 0),
+                'status': deal.status,
+                'company': {
+                    'id': deal.company.id,
+                    'name': deal.company.name
+                } if deal.company else None,
+                'deleted_at': deal.deleted_at.isoformat() if deal.deleted_at else None,
+                'updated_at': deal.updated_at.isoformat() if deal.updated_at else None,
+                'closed_at': deal.closed_at.isoformat() if deal.closed_at else None,
+            } for deal in deleted_deals]
+        }), 200
+    except Exception as e:
+        logger.error(f"Error listing deleted deals: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/trash', methods=['POST'])
+@login_required_api
+def trash_deal(deal_id):
+    """Move deal to recycle bin."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    user = get_current_user_from_session()
+
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'delete'):
+        logger.warning(f"Access denied: user {user.id} attempted to trash deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    try:
+        PipelineService.soft_delete_deal(workspace_id, deal_id, user_id)
+        return jsonify({'message': 'Deal çöp kutusuna taşındı'}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error trashing deal: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/untrash', methods=['POST'])
+@login_required_api
+def untrash_deal(deal_id):
+    """Restore a deal from recycle bin."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    user = get_current_user_from_session()
+
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=True).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'delete'):
+        logger.warning(f"Access denied: user {user.id} attempted to untrash deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    try:
+        PipelineService.restore_deleted_deal(workspace_id, deal_id, user_id)
+        return jsonify({'message': 'Deal geri yüklendi'}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error untrashing deal: {e}")
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
@@ -903,14 +1110,20 @@ def get_analytics():
         total_value = sum(float(deal.value) for deal in deals)
         open_deals = len(deals)
         weighted_forecast = sum(
-            float(deal.value) * (deal.stage.probability if deal.stage else 0.0)
+            float(deal.value) * ((deal.stage.probability / 100.0) if deal.stage else 0.0)
             for deal in deals
         )
+        by_category = {
+            'pipeline': round(sum(float(d.value) for d in deals if d.forecast_category == 'pipeline'), 2),
+            'best_case': round(sum(float(d.value) for d in deals if d.forecast_category == 'best_case'), 2),
+            'commit': round(sum(float(d.value) for d in deals if d.forecast_category == 'commit'), 2),
+        }
         
         return jsonify({
             'total_value': round(total_value, 2),
             'open_deals': open_deals,
-            'weighted_forecast': round(weighted_forecast, 2)
+            'weighted_forecast': round(weighted_forecast, 2),
+            'by_category': by_category
         }), 200
         
     except Exception as e:
@@ -936,6 +1149,279 @@ def get_forecast():
         return jsonify(forecast), 200
     except Exception as e:
         logger.error(f"Error calculating forecast: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/win-loss-reasons', methods=['GET'])
+@login_required_api
+def list_win_loss_reasons():
+    """List active win/loss taxonomy reasons."""
+    workspace_id = session.get('workspace_id')
+    category = request.args.get('category')
+    try:
+        reasons = PipelineAdvancedService.list_win_loss_reasons(workspace_id, category)
+        return jsonify({
+            'reasons': [{
+                'id': r.id,
+                'category': r.category,
+                'code': r.code,
+                'label': r.label,
+                'is_active': bool(r.is_active),
+            } for r in reasons]
+        }), 200
+    except Exception as e:
+        logger.error(f"Error listing win/loss reasons: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/win-loss-reasons', methods=['POST'])
+@login_required_api
+def create_win_loss_reason():
+    """Create a win/loss reason taxonomy row."""
+    workspace_id = session.get('workspace_id')
+    data = request.get_json() or {}
+    try:
+        reason = PipelineAdvancedService.create_win_loss_reason(workspace_id, data)
+        return jsonify({
+            'id': reason.id,
+            'category': reason.category,
+            'code': reason.code,
+            'label': reason.label,
+            'is_active': bool(reason.is_active),
+        }), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating win/loss reason: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/hygiene', methods=['GET'])
+@login_required_api
+def get_deal_hygiene():
+    """Return sales hygiene report (next step / stale activity)."""
+    workspace_id = session.get('workspace_id')
+    stale_days = request.args.get('stale_days', default=7, type=int)
+    try:
+        report = PipelineAdvancedService.get_hygiene_report(workspace_id, stale_days)
+        return jsonify(report), 200
+    except Exception as e:
+        logger.error(f"Error building deal hygiene report: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/duplicates', methods=['GET'])
+@login_required_api
+def find_deal_duplicates():
+    """Find likely duplicate deals."""
+    workspace_id = session.get('workspace_id')
+    try:
+        groups = PipelineAdvancedService.find_deal_duplicates(workspace_id)
+        return jsonify({'duplicate_groups': groups}), 200
+    except Exception as e:
+        logger.error(f"Error finding deal duplicates: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/merge', methods=['POST'])
+@login_required_api
+def merge_deals():
+    """Merge two deals. Body: { primary_id, secondary_id }"""
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    data = request.get_json() or {}
+    primary_id = data.get('primary_id')
+    secondary_id = data.get('secondary_id')
+    if not primary_id or not secondary_id:
+        return jsonify({'error': 'primary_id and secondary_id are required'}), 400
+    try:
+        deal = PipelineAdvancedService.merge_deals(workspace_id, int(primary_id), int(secondary_id), user_id)
+        return jsonify({
+            'message': 'Deals merged successfully',
+            'deal': {
+                'id': deal.id,
+                'name': deal.name,
+                'value': float(deal.value),
+                'status': deal.status,
+            }
+        }), 200
+    except (ValueError, LookupError) as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error merging deals: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/products', methods=['GET'])
+@login_required_api
+def list_products():
+    """List active products for CPQ catalog."""
+    workspace_id = session.get('workspace_id')
+    search = request.args.get('search')
+    active_only = request.args.get('active_only', default='true').lower() != 'false'
+    try:
+        products = PipelineAdvancedService.list_products(workspace_id, search, active_only)
+        return jsonify({
+            'products': [{
+                'id': p.id,
+                'sku': p.sku,
+                'name': p.name,
+                'description': p.description,
+                'currency': p.currency,
+                'unit_price': float(p.unit_price),
+                'is_active': bool(p.is_active),
+            } for p in products]
+        }), 200
+    except Exception as e:
+        logger.error(f"Error listing products: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/products', methods=['POST'])
+@login_required_api
+def create_product():
+    """Create product row for CPQ catalog."""
+    workspace_id = session.get('workspace_id')
+    data = request.get_json() or {}
+    try:
+        product = PipelineAdvancedService.create_product(workspace_id, data)
+        return jsonify({
+            'id': product.id,
+            'sku': product.sku,
+            'name': product.name,
+            'description': product.description,
+            'currency': product.currency,
+            'unit_price': float(product.unit_price),
+            'is_active': bool(product.is_active),
+        }), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating product: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/line-items', methods=['GET'])
+@login_required_api
+def list_deal_line_items(deal_id):
+    """List line items for a deal."""
+    workspace_id = session.get('workspace_id')
+    try:
+        items = PipelineAdvancedService.list_deal_line_items(workspace_id, deal_id)
+        return jsonify({
+            'line_items': [{
+                'id': i.id,
+                'deal_id': i.deal_id,
+                'product_id': i.product_id,
+                'item_name': i.item_name,
+                'quantity': float(i.quantity),
+                'unit_price': float(i.unit_price),
+                'discount_pct': float(i.discount_pct),
+                'tax_pct': float(i.tax_pct),
+                'total_amount': float(i.total_amount),
+            } for i in items]
+        }), 200
+    except Exception as e:
+        logger.error(f"Error listing line items: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/line-items', methods=['POST'])
+@login_required_api
+def add_deal_line_item(deal_id):
+    """Add a line item to deal and recalculate amount."""
+    workspace_id = session.get('workspace_id')
+    data = request.get_json() or {}
+    try:
+        item = PipelineAdvancedService.add_deal_line_item(workspace_id, deal_id, data)
+        return jsonify({
+            'id': item.id,
+            'deal_id': item.deal_id,
+            'product_id': item.product_id,
+            'item_name': item.item_name,
+            'quantity': float(item.quantity),
+            'unit_price': float(item.unit_price),
+            'discount_pct': float(item.discount_pct),
+            'tax_pct': float(item.tax_pct),
+            'total_amount': float(item.total_amount),
+        }), 201
+    except (ValueError, LookupError) as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error adding line item: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/line-items/<int:line_item_id>', methods=['DELETE'])
+@login_required_api
+def delete_deal_line_item(deal_id, line_item_id):
+    """Delete a line item from deal."""
+    workspace_id = session.get('workspace_id')
+    try:
+        PipelineAdvancedService.remove_deal_line_item(workspace_id, deal_id, line_item_id)
+        return jsonify({'message': 'Line item removed'}), 200
+    except (ValueError, LookupError) as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error deleting line item: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/quotes', methods=['GET'])
+@login_required_api
+def list_deal_quotes(deal_id):
+    """List quotes created for a deal."""
+    workspace_id = session.get('workspace_id')
+    try:
+        quotes = PipelineAdvancedService.list_quotes(workspace_id, deal_id)
+        return jsonify({
+            'quotes': [{
+                'id': q.id,
+                'deal_id': q.deal_id,
+                'quote_number': q.quote_number,
+                'status': q.status,
+                'valid_until': q.valid_until.isoformat() if q.valid_until else None,
+                'currency': q.currency,
+                'subtotal': float(q.subtotal),
+                'discount_total': float(q.discount_total),
+                'tax_total': float(q.tax_total),
+                'grand_total': float(q.grand_total),
+                'notes': q.notes,
+                'created_at': q.created_at.isoformat() if q.created_at else None,
+            } for q in quotes]
+        }), 200
+    except Exception as e:
+        logger.error(f"Error listing quotes: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/quotes', methods=['POST'])
+@login_required_api
+def create_deal_quote(deal_id):
+    """Create quote from deal line-items."""
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    data = request.get_json() or {}
+    if data.get('valid_until'):
+        data['valid_until'] = datetime.fromisoformat(data['valid_until']).date()
+    try:
+        quote = PipelineAdvancedService.create_quote_from_deal(workspace_id, deal_id, user_id, data)
+        return jsonify({
+            'id': quote.id,
+            'deal_id': quote.deal_id,
+            'quote_number': quote.quote_number,
+            'status': quote.status,
+            'valid_until': quote.valid_until.isoformat() if quote.valid_until else None,
+            'currency': quote.currency,
+            'subtotal': float(quote.subtotal),
+            'discount_total': float(quote.discount_total),
+            'tax_total': float(quote.tax_total),
+            'grand_total': float(quote.grand_total),
+        }), 201
+    except (ValueError, LookupError) as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating deal quote: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 

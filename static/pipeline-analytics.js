@@ -27,9 +27,7 @@ async function loadPipelineAnalytics() {
         if (!response.ok) throw new Error('Failed to fetch analytics');
         
         const result = await response.json();
-        if (!result.success) throw new Error(result.error || 'Unknown error');
-        
-        const data = result.data;
+        const data = await normalizeAnalyticsPayload(result);
         
         // Update KPI cards
         updateAnalyticsKPIs(data);
@@ -43,19 +41,79 @@ async function loadPipelineAnalytics() {
     }
 }
 
+async function normalizeAnalyticsPayload(result) {
+    // Backward compatible: old format { success, data } and new direct format.
+    if (result && typeof result === 'object' && result.success === true && result.data) {
+        return result.data;
+    }
+
+    if (!result || typeof result !== 'object') {
+        throw new Error('Unknown error');
+    }
+    if (result.error) {
+        throw new Error(result.error);
+    }
+
+    // New backend payload:
+    // { total_value, open_deals, weighted_forecast, by_category }
+    const pipelineId = window.currentPipeline ? window.currentPipeline.id : null;
+    const dealsUrl = '/api/v1/deals' + (pipelineId ? `?pipeline_id=${pipelineId}&per_page=100` : '?per_page=100');
+    const [openRes, wonRes, lostRes] = await Promise.all([
+        fetch(dealsUrl),
+        fetch('/api/v1/deals' + (pipelineId ? `?pipeline_id=${pipelineId}&status=won&per_page=100` : '?status=won&per_page=100')),
+        fetch('/api/v1/deals' + (pipelineId ? `?pipeline_id=${pipelineId}&status=lost&per_page=100` : '?status=lost&per_page=100')),
+    ]);
+
+    const openJson = openRes.ok ? await openRes.json() : { deals: [] };
+    const wonJson = wonRes.ok ? await wonRes.json() : { deals: [] };
+    const lostJson = lostRes.ok ? await lostRes.json() : { deals: [] };
+
+    const openDeals = (openJson && (openJson.deals || openJson.data || [])) || [];
+    const wonDeals = (wonJson && (wonJson.deals || wonJson.data || [])) || [];
+    const lostDeals = (lostJson && (lostJson.deals || lostJson.data || [])) || [];
+
+    const stageMap = new Map();
+    openDeals.forEach((deal) => {
+        const stageName = deal.stage && deal.stage.name ? deal.stage.name : 'Unknown';
+        const prev = stageMap.get(stageName) || 0;
+        stageMap.set(stageName, prev + 1);
+    });
+    const stageRows = Array.from(stageMap.entries()).map(([stage_name, deal_count]) => ({ stage_name, deal_count }));
+
+    return {
+        conversion_rate: {
+            won_count: wonDeals.length,
+            total_closed: wonDeals.length + lostDeals.length,
+            rate: (wonDeals.length + lostDeals.length) > 0
+                ? (wonDeals.length * 100 / (wonDeals.length + lostDeals.length))
+                : 0
+        },
+        avg_sales_cycle_days: 0,
+        funnel: {
+            stages: stageRows
+        },
+        win_loss_ratio: {
+            won: wonDeals.length,
+            lost: lostDeals.length
+        }
+    };
+}
+
 // Update KPI cards
 function updateAnalyticsKPIs(data) {
     // Win Rate
-    const winRate = data.conversion_rate.rate || 0;
+    const conversion = data.conversion_rate || {};
+    const winRate = conversion.rate || 0;
     document.getElementById('analyticsWinRate').textContent = winRate.toFixed(1) + '%';
-    document.getElementById('analyticsWonCount').textContent = data.conversion_rate.won_count || 0;
-    document.getElementById('analyticsTotalClosed').textContent = data.conversion_rate.total_closed || 0;
+    document.getElementById('analyticsWonCount').textContent = conversion.won_count || 0;
+    document.getElementById('analyticsTotalClosed').textContent = conversion.total_closed || 0;
     
     // Avg Sales Cycle
     document.getElementById('analyticsAvgCycle').textContent = (data.avg_sales_cycle_days || 0) + ' days';
     
     // Total Contacts (from funnel data)
-    const totalContacts = data.funnel.stages.reduce((sum, stage) => sum + stage.deal_count, 0);
+    const stages = (data.funnel && data.funnel.stages) ? data.funnel.stages : [];
+    const totalContacts = stages.reduce((sum, stage) => sum + (stage.deal_count || 0), 0);
     document.getElementById('analyticsTotalContacts').textContent = totalContacts;
 }
 
@@ -67,8 +125,9 @@ function renderWinLossChart(winLossData) {
         winLossChart.destroy();
     }
     
-    const wonCount = winLossData.won || 0;
-    const lostCount = winLossData.lost || 0;
+    const safeWinLoss = winLossData || {};
+    const wonCount = safeWinLoss.won || 0;
+    const lostCount = safeWinLoss.lost || 0;
     
     winLossChart = new Chart(ctx, {
         type: 'doughnut',

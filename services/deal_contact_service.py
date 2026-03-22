@@ -39,6 +39,8 @@ class DealContactService:
                 'contact_id': link.contact_id,
                 'is_primary': bool(link.is_primary),
                 'role': link.role,
+                'influence_score': link.influence_score,
+                'decision_weight': link.decision_weight,
                 'created_at': link.created_at.isoformat() if link.created_at else None,
                 'updated_at': link.updated_at.isoformat() if link.updated_at else None,
                 'contact': {
@@ -53,7 +55,48 @@ class DealContactService:
         return results
 
     @staticmethod
-    def add_stakeholder(workspace_id, deal_id, contact_id, user_id, role=None, is_primary=None):
+    def calculate_committee_score(workspace_id, deal_id):
+        """
+        Calculate buying committee score using influence and decision weight.
+        Score range: 0..100
+        """
+        links = DealContact.query.filter_by(
+            workspace_id=workspace_id,
+            deal_id=deal_id,
+        ).all()
+        if not links:
+            return {
+                'committee_score': 0.0,
+                'member_count': 0,
+                'strength': 'none',
+            }
+
+        weighted_points = 0.0
+        total_weight = 0.0
+        for link in links:
+            influence = max(0, min(100, int(link.influence_score or 0)))
+            weight = max(0, min(100, int(link.decision_weight or 0)))
+            weighted_points += influence * weight
+            total_weight += weight
+
+        committee_score = round((weighted_points / total_weight), 2) if total_weight > 0 else 0.0
+        if committee_score >= 75:
+            strength = 'strong'
+        elif committee_score >= 50:
+            strength = 'medium'
+        elif committee_score > 0:
+            strength = 'weak'
+        else:
+            strength = 'none'
+
+        return {
+            'committee_score': committee_score,
+            'member_count': len(links),
+            'strength': strength,
+        }
+
+    @staticmethod
+    def add_stakeholder(workspace_id, deal_id, contact_id, user_id, role=None, is_primary=None, influence_score=None, decision_weight=None):
         """Add or update a stakeholder link for a deal."""
         deal = Deal.query.filter_by(
             id=deal_id,
@@ -88,6 +131,8 @@ class DealContactService:
                     deal_id=deal_id,
                     contact_id=contact_id,
                     role=role,
+                    influence_score=int(influence_score) if influence_score is not None else 50,
+                    decision_weight=int(decision_weight) if decision_weight is not None else 50,
                     is_primary=bool(is_primary) if is_primary is not None else False,
                     added_by=user_id,
                 )
@@ -95,6 +140,10 @@ class DealContactService:
             else:
                 if role is not None:
                     link.role = role
+                if influence_score is not None:
+                    link.influence_score = max(0, min(100, int(influence_score)))
+                if decision_weight is not None:
+                    link.decision_weight = max(0, min(100, int(decision_weight)))
                 if is_primary is not None:
                     link.is_primary = bool(is_primary)
                 link.updated_at = datetime.utcnow()
@@ -121,7 +170,7 @@ class DealContactService:
             raise
 
     @staticmethod
-    def update_stakeholder(workspace_id, deal_id, contact_id, role=None, is_primary=None):
+    def update_stakeholder(workspace_id, deal_id, contact_id, role=None, is_primary=None, influence_score=None, decision_weight=None):
         """Update stakeholder metadata (role/primary)."""
         link = DealContact.query.filter_by(
             workspace_id=workspace_id,
@@ -142,6 +191,10 @@ class DealContactService:
         try:
             if role is not None:
                 link.role = role
+            if influence_score is not None:
+                link.influence_score = max(0, min(100, int(influence_score)))
+            if decision_weight is not None:
+                link.decision_weight = max(0, min(100, int(decision_weight)))
 
             if is_primary is not None:
                 is_primary = bool(is_primary)
