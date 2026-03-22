@@ -209,6 +209,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-3" id="headerActions">
+                <button onclick="openBulkDocGenModal()" class="px-3.5 py-2 text-purple-600 hover:bg-purple-50 rounded-xl text-xs font-semibold transition-all flex items-center gap-2" title="Toplu belge üretimi">
+                    <i class="fas fa-file-invoice"></i> Toplu Belge Üret
+                </button>
                 <button onclick="openDeletedDealsModal()" class="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-all flex items-center gap-2" title="Cop kutusundaki anlasmalar">
                     <i class="fas fa-trash-restore"></i> Çöp Kutusu
                 </button>
@@ -4055,6 +4058,320 @@
     <script src="/static/pipeline-enhancements.js"></script>
     <script src="/static/pipeline-analytics.js"></script>
     <script src="/static/team-selector.js"></script>
+
+    <!-- Bulk DocGen Modal -->
+    <div id="bulkDocGenModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-900">Toplu Belge Üretimi</h3>
+                    <button onclick="closeBulkDocGenModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- Filter Selection -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-filter mr-2 text-gray-400"></i>Hangi Deal'lar İçin?
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 cursor-pointer transition-all">
+                            <input type="radio" name="bulkFilter" value="won" checked class="w-4 h-4 text-purple-600">
+                            <div class="ml-3">
+                                <div class="font-semibold text-gray-900">Tüm Kazanılan Deal'lar</div>
+                                <div class="text-sm text-gray-500">Status = "Won" olan tüm anlaşmalar</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 cursor-pointer transition-all">
+                            <input type="radio" name="bulkFilter" value="stage" class="w-4 h-4 text-purple-600">
+                            <div class="ml-3">
+                                <div class="font-semibold text-gray-900">Belirli Stage'deki Deal'lar</div>
+                                <div class="text-sm text-gray-500">Seçili stage'deki tüm anlaşmalar</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 cursor-pointer transition-all">
+                            <input type="radio" name="bulkFilter" value="date" class="w-4 h-4 text-purple-600">
+                            <div class="ml-3">
+                                <div class="font-semibold text-gray-900">Tarih Aralığı</div>
+                                <div class="text-sm text-gray-500">Belirli tarihler arasında oluşturulan deal'lar</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Stage Selection (conditional) -->
+                <div id="stageSelection" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-layer-group mr-2 text-gray-400"></i>Stage Seçin
+                    </label>
+                    <select id="stageSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <option value="">Stage yükleniyor...</option>
+                    </select>
+                </div>
+
+                <!-- Date Range Selection (conditional) -->
+                <div id="dateRangeSelection" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-calendar-range mr-2 text-gray-400"></i>Tarih Aralığı
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="date" id="startDate" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <input type="date" id="endDate" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+                </div>
+
+                <!-- Document Type -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-file-alt mr-2 text-gray-400"></i>Belge Tipi
+                    </label>
+                    <select id="docTypeSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <option value="contract">Sözleşme</option>
+                        <option value="quote">Teklif</option>
+                        <option value="invoice">Fatura</option>
+                        <option value="report">Rapor</option>
+                    </select>
+                </div>
+
+                <!-- Template Selection -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-file-alt mr-2 text-gray-400"></i>Şablon Seçin
+                    </label>
+                    <select id="bulkTemplateSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <option value="">Şablon yükleniyor...</option>
+                    </select>
+                </div>
+
+                <!-- Format Selection -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-file-export mr-2 text-gray-400"></i>Çıktı Formatı
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button data-bulk-format="docx" class="bulk-format-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+                            <i class="fas fa-file-word text-2xl text-blue-600 mb-2"></i>
+                            <div class="text-sm font-semibold">DOCX</div>
+                        </button>
+                        <button data-bulk-format="pptx" class="bulk-format-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-center">
+                            <i class="fas fa-file-powerpoint text-2xl text-orange-600 mb-2"></i>
+                            <div class="text-sm font-semibold">PPTX</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div class="flex gap-3">
+                        <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5"></i>
+                        <div class="text-sm text-amber-900">
+                            <p class="font-semibold mb-1">Dikkat:</p>
+                            <p>Toplu belge üretimi zaman alabilir. İşlem tamamlandığında bildirim alacaksınız.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-gray-50 rounded-b-2xl flex gap-3 sticky bottom-0">
+                <button onclick="closeBulkDocGenModal()" class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-semibold">
+                    İptal
+                </button>
+                <button onclick="generateBulkDocuments()" id="bulkGenerateBtn" class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-magic mr-2"></i>Toplu Oluştur
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Bulk DocGen functionality
+        let bulkSelectedFormat = 'docx';
+        let bulkTemplates = [];
+
+        // Format selection for bulk
+        document.querySelectorAll('.bulk-format-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.bulk-format-btn').forEach(b => {
+                    b.classList.remove('border-blue-500', 'bg-blue-50', 'border-orange-500', 'bg-orange-50');
+                    b.classList.add('border-gray-300');
+                });
+                
+                bulkSelectedFormat = this.dataset.bulkFormat;
+                if (bulkSelectedFormat === 'docx') {
+                    this.classList.remove('border-gray-300');
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                } else {
+                    this.classList.remove('border-gray-300');
+                    this.classList.add('border-orange-500', 'bg-orange-50');
+                }
+            });
+        });
+
+        // Set default format
+        document.querySelector('[data-bulk-format="docx"]').click();
+
+        // Filter radio change handler
+        document.querySelectorAll('input[name="bulkFilter"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('stageSelection').classList.add('hidden');
+                document.getElementById('dateRangeSelection').classList.add('hidden');
+                
+                if (this.value === 'stage') {
+                    document.getElementById('stageSelection').classList.remove('hidden');
+                    loadStagesForBulk();
+                } else if (this.value === 'date') {
+                    document.getElementById('dateRangeSelection').classList.remove('hidden');
+                }
+            });
+        });
+
+        function openBulkDocGenModal() {
+            document.getElementById('bulkDocGenModal').classList.remove('hidden');
+            loadBulkTemplates();
+        }
+
+        function closeBulkDocGenModal() {
+            document.getElementById('bulkDocGenModal').classList.add('hidden');
+        }
+
+        async function loadBulkTemplates() {
+            try {
+                const response = await fetch('/api/docgen/templates', {
+                    headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Template yüklenemedi');
+                
+                const data = await response.json();
+                bulkTemplates = data.templates || [];
+                
+                const select = document.getElementById('bulkTemplateSelect');
+                select.innerHTML = bulkTemplates.length > 0
+                    ? '<option value="">Şablon seçin...</option>' + bulkTemplates.map(t => 
+                        `<option value="${t.id}">${t.name}</option>`
+                    ).join('')
+                    : '<option value="">Henüz şablon yok</option>';
+                    
+            } catch (error) {
+                console.error('Template yükleme hatası:', error);
+                showToast('Template yüklenemedi', 'error');
+            }
+        }
+
+        async function loadStagesForBulk() {
+            try {
+                const response = await fetch('/api/pipeline/stages');
+                if (!response.ok) throw new Error('Stage yüklenemedi');
+                
+                const stages = await response.json();
+                const select = document.getElementById('stageSelect');
+                select.innerHTML = '<option value="">Stage seçin...</option>' + 
+                    stages.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                    
+            } catch (error) {
+                console.error('Stage yükleme hatası:', error);
+                showToast('Stage yüklenemedi', 'error');
+            }
+        }
+
+        async function generateBulkDocuments() {
+            const templateId = document.getElementById('bulkTemplateSelect').value;
+            const filterType = document.querySelector('input[name="bulkFilter"]:checked').value;
+            
+            if (!templateId) {
+                showToast('Lütfen bir şablon seçin', 'error');
+                return;
+            }
+
+            // Build filter criteria
+            const criteria = { filter_type: filterType };
+            
+            if (filterType === 'stage') {
+                const stageId = document.getElementById('stageSelect').value;
+                if (!stageId) {
+                    showToast('Lütfen bir stage seçin', 'error');
+                    return;
+                }
+                criteria.stage_id = parseInt(stageId);
+            } else if (filterType === 'date') {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                if (!startDate || !endDate) {
+                    showToast('Lütfen tarih aralığını seçin', 'error');
+                    return;
+                }
+                criteria.start_date = startDate;
+                criteria.end_date = endDate;
+            }
+
+            const btn = document.getElementById('bulkGenerateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Oluşturuluyor...';
+
+            try {
+                const response = await fetch('/api/docgen/bulk-generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        template_id: parseInt(templateId),
+                        entity_type: 'deal',
+                        output_format: bulkSelectedFormat,
+                        criteria: criteria
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Toplu belge oluşturulamadı');
+                }
+
+                const result = await response.json();
+                
+                showToast(`${result.success_count} belge başarıyla oluşturuldu!`, 'success');
+                closeBulkDocGenModal();
+                
+                // Show download links if available
+                if (result.documents && result.documents.length > 0) {
+                    setTimeout(() => {
+                        result.documents.forEach(doc => {
+                            if (doc.download_url) {
+                                window.open(doc.download_url, '_blank');
+                            }
+                        });
+                    }, 500);
+                }
+                
+            } catch (error) {
+                console.error('Toplu belge oluşturma hatası:', error);
+                showToast(error.message || 'Toplu belge oluşturulamadı', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Toplu Oluştur';
+            }
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeBulkDocGenModal();
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('bulkDocGenModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBulkDocGenModal();
+            }
+        });
+    </script>
 </body>
 </html>
 
