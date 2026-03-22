@@ -90,10 +90,36 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                 'id': deal.id,
                 'name': deal.name,
                 'value': float(deal.value) if deal.value else 0,
-                'description': deal.next_step or '',
+                'value_formatted': f"{float(deal.value):,.2f}" if deal.value else "0.00",
+                'currency': 'TRY',
                 'status': deal.status,
-                'created_at': deal.created_at.strftime('%Y-%m-%d') if deal.created_at else ''
+                'revenue_type': deal.revenue_type or 'one_time',
+                'mrr': float(deal.mrr) if deal.mrr else 0,
+                'arr': float(deal.arr) if deal.arr else 0,
+                'forecast_category': deal.forecast_category or 'pipeline',
+                'churn_risk': deal.churn_risk or 'low',
+                'next_step': deal.next_step or '',
+                'expected_close_date': deal.expected_close_date.strftime('%Y-%m-%d') if deal.expected_close_date else '',
+                'renewal_date': deal.renewal_date.strftime('%Y-%m-%d') if deal.renewal_date else '',
+                'created_at': deal.created_at.strftime('%Y-%m-%d') if deal.created_at else '',
+                'updated_at': deal.updated_at.strftime('%Y-%m-%d') if deal.updated_at else '',
+                'closed_at': deal.closed_at.strftime('%Y-%m-%d') if deal.closed_at else '',
+                'stage_entered_at': deal.stage_entered_at.strftime('%Y-%m-%d') if deal.stage_entered_at else '',
+                'days_in_stage': deal.days_in_current_stage() if hasattr(deal, 'days_in_current_stage') else 0,
+                'is_rotting': deal.is_rotting() if hasattr(deal, 'is_rotting') else False,
+                'weighted_value': deal.get_weighted_value() if hasattr(deal, 'get_weighted_value') else 0,
+                'win_loss_reason': deal.win_loss_reason or ''
             }
+            
+            # Add stage info
+            if deal.stage:
+                context['deal']['stage_name'] = deal.stage.name
+                context['deal']['stage_probability'] = deal.stage.probability
+                context['deal']['stage_order'] = deal.stage.order
+            
+            # Add pipeline info
+            if deal.pipeline:
+                context['deal']['pipeline_name'] = deal.pipeline.name
             
             # Fetch related contact
             if deal.contact_id:
@@ -102,9 +128,21 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                     context['contact'] = {
                         'id': contact.id,
                         'name': contact.full_name,
+                        'first_name': contact.first_name,
+                        'last_name': contact.last_name or '',
                         'email': contact.email or '',
                         'phone': contact.phone or '',
-                        'job_title': contact.job_title or ''
+                        'whatsapp_phone': contact.whatsapp_phone or '',
+                        'telegram_chat_id': contact.telegram_chat_id or '',
+                        'job_title': contact.job_title or '',
+                        'role': contact.role or '',
+                        'lead_score': contact.lead_score or 0,
+                        'lead_source': contact.lead_source or '',
+                        'lifecycle_stage': contact.lifecycle_stage or 'lead',
+                        'is_starred': contact.is_starred or False,
+                        'created_at': contact.created_at.strftime('%Y-%m-%d') if contact.created_at else '',
+                        'qualified_at': contact.qualified_at.strftime('%Y-%m-%d') if contact.qualified_at else '',
+                        'converted_at': contact.converted_at.strftime('%Y-%m-%d') if contact.converted_at else ''
                     }
             
             # Fetch related company
@@ -115,9 +153,12 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                         'id': company.id,
                         'name': company.name,
                         'industry': company.industry or '',
+                        'size': company.size or '',
                         'website': company.website or '',
                         'phone': company.phone or '',
-                        'address': company.address or ''
+                        'address': company.address or '',
+                        'created_at': company.created_at.strftime('%Y-%m-%d') if company.created_at else '',
+                        'updated_at': company.updated_at.strftime('%Y-%m-%d') if company.updated_at else ''
                     }
     
     elif record_type == 'contact':
@@ -126,9 +167,23 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
             context['contact'] = {
                 'id': contact.id,
                 'name': contact.full_name,
+                'first_name': contact.first_name,
+                'last_name': contact.last_name or '',
                 'email': contact.email or '',
                 'phone': contact.phone or '',
-                'job_title': contact.job_title or ''
+                'whatsapp_phone': contact.whatsapp_phone or '',
+                'telegram_chat_id': contact.telegram_chat_id or '',
+                'job_title': contact.job_title or '',
+                'role': contact.role or '',
+                'lead_score': contact.lead_score or 0,
+                'lead_source': contact.lead_source or '',
+                'lifecycle_stage': contact.lifecycle_stage or 'lead',
+                'is_starred': contact.is_starred or False,
+                'created_at': contact.created_at.strftime('%Y-%m-%d') if contact.created_at else '',
+                'updated_at': contact.updated_at.strftime('%Y-%m-%d') if contact.updated_at else '',
+                'qualified_at': contact.qualified_at.strftime('%Y-%m-%d') if contact.qualified_at else '',
+                'converted_at': contact.converted_at.strftime('%Y-%m-%d') if contact.converted_at else '',
+                'last_activity_at': contact.last_activity_at.strftime('%Y-%m-%d') if contact.last_activity_at else ''
             }
             
             # Fetch related company
@@ -139,9 +194,12 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                         'id': company.id,
                         'name': company.name,
                         'industry': company.industry or '',
+                        'size': company.size or '',
                         'website': company.website or '',
                         'phone': company.phone or '',
-                        'address': company.address or ''
+                        'address': company.address or '',
+                        'created_at': company.created_at.strftime('%Y-%m-%d') if company.created_at else '',
+                        'updated_at': company.updated_at.strftime('%Y-%m-%d') if company.updated_at else ''
                     }
     
     elif record_type == 'company':
@@ -151,9 +209,12 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                 'id': company.id,
                 'name': company.name,
                 'industry': company.industry or '',
+                'size': company.size or '',
                 'website': company.website or '',
                 'phone': company.phone or '',
-                'address': company.address or ''
+                'address': company.address or '',
+                'created_at': company.created_at.strftime('%Y-%m-%d') if company.created_at else '',
+                'updated_at': company.updated_at.strftime('%Y-%m-%d') if company.updated_at else ''
             }
     
     elif record_type == 'quote':
@@ -164,9 +225,19 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                 'id': quote.id,
                 'quote_number': quote.quote_number,
                 'status': quote.status,
-                'grand_total': float(quote.grand_total) if quote.grand_total else 0,
                 'currency': quote.currency,
-                'valid_until': quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else ''
+                'subtotal': float(quote.subtotal) if quote.subtotal else 0,
+                'subtotal_formatted': f"{float(quote.subtotal):,.2f}" if quote.subtotal else "0.00",
+                'discount_total': float(quote.discount_total) if quote.discount_total else 0,
+                'discount_total_formatted': f"{float(quote.discount_total):,.2f}" if quote.discount_total else "0.00",
+                'tax_total': float(quote.tax_total) if quote.tax_total else 0,
+                'tax_total_formatted': f"{float(quote.tax_total):,.2f}" if quote.tax_total else "0.00",
+                'grand_total': float(quote.grand_total) if quote.grand_total else 0,
+                'grand_total_formatted': f"{float(quote.grand_total):,.2f}" if quote.grand_total else "0.00",
+                'notes': quote.notes or '',
+                'valid_until': quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '',
+                'created_at': quote.created_at.strftime('%Y-%m-%d') if quote.created_at else '',
+                'updated_at': quote.updated_at.strftime('%Y-%m-%d') if quote.updated_at else ''
             }
             
             # Fetch related deal
@@ -177,7 +248,9 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                         'id': deal.id,
                         'name': deal.name,
                         'value': float(deal.value) if deal.value else 0,
-                        'description': deal.next_step or ''
+                        'value_formatted': f"{float(deal.value):,.2f}" if deal.value else "0.00",
+                        'status': deal.status,
+                        'next_step': deal.next_step or ''
                     }
                     
                     # Fetch contact and company from deal
@@ -187,8 +260,11 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                             context['contact'] = {
                                 'id': contact.id,
                                 'name': contact.full_name,
+                                'first_name': contact.first_name,
+                                'last_name': contact.last_name or '',
                                 'email': contact.email or '',
-                                'phone': contact.phone or ''
+                                'phone': contact.phone or '',
+                                'job_title': contact.job_title or ''
                             }
                     
                     if deal.company_id:
@@ -197,8 +273,10 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                             context['company'] = {
                                 'id': company.id,
                                 'name': company.name,
+                                'industry': company.industry or '',
                                 'website': company.website or '',
-                                'phone': company.phone or ''
+                                'phone': company.phone or '',
+                                'address': company.address or ''
                             }
     
     elif record_type == 'task':
@@ -210,7 +288,11 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                 'title': task.title,
                 'description': task.description or '',
                 'status': task.status,
-                'due_date': task.due_date.strftime('%Y-%m-%d') if task.due_date else ''
+                'priority': task.priority or 'medium',
+                'due_date': task.due_date.strftime('%Y-%m-%d') if task.due_date else '',
+                'completed_at': task.completed_at.strftime('%Y-%m-%d') if task.completed_at else '',
+                'created_at': task.created_at.strftime('%Y-%m-%d') if task.created_at else '',
+                'updated_at': task.updated_at.strftime('%Y-%m-%d') if task.updated_at else ''
             }
             
             # Fetch related deal if exists
@@ -220,7 +302,20 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                     context['deal'] = {
                         'id': deal.id,
                         'name': deal.name,
-                        'value': float(deal.value) if deal.value else 0
+                        'value': float(deal.value) if deal.value else 0,
+                        'value_formatted': f"{float(deal.value):,.2f}" if deal.value else "0.00",
+                        'status': deal.status
+                    }
+            
+            # Fetch related contact if exists
+            if hasattr(task, 'contact_id') and task.contact_id:
+                contact = Contact.query.filter_by(id=task.contact_id, workspace_id=workspace_id).first()
+                if contact:
+                    context['contact'] = {
+                        'id': contact.id,
+                        'name': contact.full_name,
+                        'email': contact.email or '',
+                        'phone': contact.phone or ''
                     }
     
     elif record_type == 'product':
@@ -233,7 +328,11 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                 'sku': product.sku or '',
                 'description': product.description or '',
                 'unit_price': float(product.unit_price) if product.unit_price else 0,
-                'currency': product.currency
+                'unit_price_formatted': f"{float(product.unit_price):,.2f}" if product.unit_price else "0.00",
+                'currency': product.currency,
+                'is_active': product.is_active,
+                'created_at': product.created_at.strftime('%Y-%m-%d') if product.created_at else '',
+                'updated_at': product.updated_at.strftime('%Y-%m-%d') if product.updated_at else ''
             }
     
     return context
