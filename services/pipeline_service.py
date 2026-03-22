@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from sqlalchemy import and_, or_
 from models import db
-from models_crm import Pipeline, DealStage, Deal, Activity
+from models_crm import Pipeline, DealStage, Deal, Activity, Contact, DealContact
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class PipelineService:
         
         Args:
             workspace_id: Workspace ID
-            data: Deal data (name, company_id, pipeline_id, value, expected_close_date, owner_id)
+            data: Deal data (name, company_id, pipeline_id, value, expected_close_date, owner_id, contact_id)
         
         Returns:
             Deal: Created deal instance
@@ -55,6 +55,22 @@ class PipelineService:
         if not company:
             raise ValueError(f"Company {data['company_id']} not found in workspace")
         
+        # Validate contact (optional)
+        contact_id = data.get('contact_id')
+        if contact_id is not None:
+            contact = Contact.query.filter_by(
+                id=contact_id,
+                workspace_id=workspace_id,
+                is_deleted=False,
+            ).first()
+            if not contact:
+                raise ValueError(f"Contact {contact_id} not found in workspace")
+            if contact.company_id and contact.company_id != data['company_id']:
+                raise ValueError(
+                    f"Contact {contact_id} belongs to company {contact.company_id}, "
+                    f"not company {data['company_id']}"
+                )
+
         # Get pipeline
         pipeline = Pipeline.query.filter_by(
             id=data['pipeline_id'],
@@ -95,6 +111,7 @@ class PipelineService:
                 workspace_id=workspace_id,
                 name=data['name'],
                 company_id=data['company_id'],
+                contact_id=contact_id,
                 pipeline_id=data['pipeline_id'],
                 stage_id=stage_id,
                 value=data.get('value', 0),
@@ -105,6 +122,29 @@ class PipelineService:
             
             db.session.add(deal)
             db.session.flush()  # Get deal.id
+
+            # Keep deal_contacts synchronized with primary deal contact
+            if contact_id is not None:
+                stakeholder = DealContact.query.filter_by(
+                    workspace_id=workspace_id,
+                    deal_id=deal.id,
+                    contact_id=contact_id,
+                ).first()
+                if not stakeholder:
+                    stakeholder = DealContact(
+                        workspace_id=workspace_id,
+                        deal_id=deal.id,
+                        contact_id=contact_id,
+                        is_primary=True,
+                        added_by=data['owner_id'],
+                    )
+                    db.session.add(stakeholder)
+                DealContact.query.filter(
+                    DealContact.workspace_id == workspace_id,
+                    DealContact.deal_id == deal.id,
+                    DealContact.contact_id != contact_id,
+                    DealContact.is_primary.is_(True),
+                ).update({DealContact.is_primary: False}, synchronize_session=False)
             
             # Create activity
             PipelineService._create_activity(
@@ -129,6 +169,7 @@ class PipelineService:
                 'deal_id': deal.id,
                 'name': deal.name,
                 'company_id': deal.company_id,
+                'contact_id': deal.contact_id,
                 'pipeline_id': deal.pipeline_id,
                 'stage_id': deal.stage_id,
                 'value': float(deal.value),
@@ -170,7 +211,23 @@ class PipelineService:
         changes = {}
         
         # Update fields
-        for field in ['name', 'value', 'expected_close_date', 'owner_id']:
+        if 'contact_id' in data:
+            new_contact_id = data.get('contact_id')
+            if new_contact_id is not None:
+                contact = Contact.query.filter_by(
+                    id=new_contact_id,
+                    workspace_id=workspace_id,
+                    is_deleted=False,
+                ).first()
+                if not contact:
+                    raise ValueError(f"Contact {new_contact_id} not found in workspace")
+                if contact.company_id and contact.company_id != deal.company_id:
+                    raise ValueError(
+                        f"Contact {new_contact_id} belongs to company {contact.company_id}, "
+                        f"not deal company {deal.company_id}"
+                    )
+
+        for field in ['name', 'value', 'expected_close_date', 'owner_id', 'contact_id']:
             if field in data and getattr(deal, field) != data[field]:
                 old_value = getattr(deal, field)
                 setattr(deal, field, data[field])
@@ -190,6 +247,38 @@ class PipelineService:
                     subject=f'Deal updated: {deal.name}',
                     body=f'Changes: {change_desc}'
                 )
+
+                if 'contact_id' in changes:
+                    new_contact_id = data.get('contact_id')
+                    if new_contact_id is None:
+                        DealContact.query.filter(
+                            DealContact.workspace_id == workspace_id,
+                            DealContact.deal_id == deal.id,
+                            DealContact.is_primary.is_(True),
+                        ).update({DealContact.is_primary: False}, synchronize_session=False)
+                    else:
+                        stakeholder = DealContact.query.filter_by(
+                            workspace_id=workspace_id,
+                            deal_id=deal.id,
+                            contact_id=new_contact_id,
+                        ).first()
+                        if not stakeholder:
+                            stakeholder = DealContact(
+                                workspace_id=workspace_id,
+                                deal_id=deal.id,
+                                contact_id=new_contact_id,
+                                is_primary=True,
+                                added_by=user_id,
+                            )
+                            db.session.add(stakeholder)
+                        else:
+                            stakeholder.is_primary = True
+                        DealContact.query.filter(
+                            DealContact.workspace_id == workspace_id,
+                            DealContact.deal_id == deal.id,
+                            DealContact.contact_id != new_contact_id,
+                            DealContact.is_primary.is_(True),
+                        ).update({DealContact.is_primary: False}, synchronize_session=False)
                 
                 db.session.commit()
                 logger.info(f"Updated deal {deal.id}: {changes}")
@@ -204,6 +293,7 @@ class PipelineService:
                     'deal_id': deal.id,
                     'name': deal.name,
                     'company_id': deal.company_id,
+                    'contact_id': deal.contact_id,
                     'pipeline_id': deal.pipeline_id,
                     'stage_id': deal.stage_id,
                     'value': float(deal.value),
@@ -308,6 +398,7 @@ class PipelineService:
                     'deal_id': deal.id,
                     'name': deal.name,
                     'company_id': deal.company_id,
+                    'contact_id': deal.contact_id,
                     'pipeline_id': deal.pipeline_id,
                     'stage_id': deal.stage_id,
                     'status': deal.status,
@@ -384,6 +475,7 @@ class PipelineService:
                 'deal_id': deal.id,
                 'name': deal.name,
                 'company_id': deal.company_id,
+                'contact_id': deal.contact_id,
                 'pipeline_id': deal.pipeline_id,
                 'stage_id': deal.stage_id,
                 'status': deal.status,
@@ -403,7 +495,7 @@ class PipelineService:
         
         Args:
             workspace_id: Workspace ID
-            filters: Optional filters (stage_id, owner_id, status, company_id)
+            filters: Optional filters (stage_id, owner_id, status, company_id, contact_id)
         
         Returns:
             List[Deal]: List of deals
@@ -419,6 +511,8 @@ class PipelineService:
                 query = query.filter_by(status=filters['status'])
             if 'company_id' in filters:
                 query = query.filter_by(company_id=filters['company_id'])
+            if 'contact_id' in filters:
+                query = query.filter_by(contact_id=filters['contact_id'])
             if 'pipeline_id' in filters:
                 query = query.filter_by(pipeline_id=filters['pipeline_id'])
         

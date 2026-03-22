@@ -73,6 +73,7 @@ class Deal(db.Model):
     workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
     name = db.Column(db.String(200), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)
     pipeline_id = db.Column(db.Integer, db.ForeignKey('pipelines.id'), nullable=False, index=True)
     stage_id = db.Column(db.Integer, db.ForeignKey('deal_stages.id'), nullable=False, index=True)
     value = db.Column(db.Numeric(12, 2), default=0)
@@ -90,6 +91,8 @@ class Deal(db.Model):
     
     # Relationships
     stage = db.relationship('DealStage', foreign_keys=[stage_id], backref='deals')
+    primary_contact = db.relationship('Contact', foreign_keys=[contact_id], backref='deals')
+    stakeholder_links = db.relationship('DealContact', backref='deal', lazy=True, cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='deal', lazy=True, cascade='all, delete-orphan', foreign_keys='Task.deal_id')
     activities = db.relationship('Activity', backref='deal', lazy=True, cascade='all, delete-orphan', foreign_keys='Activity.deal_id')
     
@@ -300,6 +303,37 @@ class ContactTag(db.Model):
 
     def __repr__(self):
         return f'<ContactTag contact={self.contact_id} tag={self.tag_id}>'
+
+
+# ============================================================================
+# DEAL CONTACTS (BUYING COMMITTEE / STAKEHOLDERS)
+# ============================================================================
+
+class DealContact(db.Model):
+    """
+    Many-to-many link between deals and contacts for stakeholder tracking.
+    """
+    __tablename__ = 'deal_contacts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False, index=True)
+    role = db.Column(db.String(100), nullable=True)  # Decision Maker, Champion, Procurement, etc.
+    is_primary = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    added_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    contact = db.relationship('Contact', foreign_keys=[contact_id], backref='deal_stakeholder_links')
+
+    __table_args__ = (
+        db.UniqueConstraint('deal_id', 'contact_id', name='uix_deal_contact'),
+        db.Index('idx_deal_contact_workspace', 'workspace_id', 'deal_id'),
+    )
+
+    def __repr__(self):
+        return f'<DealContact deal={self.deal_id} contact={self.contact_id} primary={self.is_primary}>'
 
 
 # ============================================================================

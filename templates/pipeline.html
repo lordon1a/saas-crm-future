@@ -412,10 +412,43 @@
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Durum</p>
                             <p class="text-sm text-slate-700">Açık</p>
                         </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-2">Primary Contact</p>
+                            <p class="text-sm text-slate-700" id="dealModalPrimaryContact">-</p>
+                        </div>
                         <div class="col-span-2">
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Atanan</p>
                             <div id="deal-assignment-selector"></div>
                         </div>
+                    </div>
+                    <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Stakeholderlar</p>
+                            <span class="text-[10px] font-semibold text-slate-400" id="dealStakeholderCount">0 kisi</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_170px_auto] gap-2 mb-3">
+                            <div class="relative">
+                                <input type="text" id="stakeholderContactSearch" placeholder="Kisi ara ve ekle" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500">
+                                <div id="stakeholderContactResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-44 overflow-y-auto z-10"></div>
+                            </div>
+                            <select id="stakeholderRole" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-500">
+                                <option value="">Rol secin</option>
+                                <option value="Decision Maker">Decision Maker</option>
+                                <option value="Champion">Champion</option>
+                                <option value="Influencer">Influencer</option>
+                                <option value="Procurement">Procurement</option>
+                                <option value="Legal">Legal</option>
+                            </select>
+                            <button type="button" onclick="addDealStakeholder()" class="px-3 py-2 text-xs font-bold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors">
+                                Ekle
+                            </button>
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-xs text-slate-600 mb-3">
+                            <input id="stakeholderPrimary" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            Primary olarak ata
+                        </label>
+                        <div id="dealStakeholdersList" class="space-y-2"></div>
+                        <p id="dealStakeholdersEmpty" class="text-xs text-slate-400">Henuz stakeholder eklenmemis.</p>
                     </div>
                     <div class="mt-6 p-4 bg-white rounded-xl border border-slate-200">
                         <div class="flex items-center justify-between mb-2">
@@ -737,6 +770,13 @@
                     <div>
                         <label class="block text-xs font-medium text-slate-600 mb-2">Beklenen Kapanış Tarihi</label>
                         <input type="date" id="editDealCloseDate" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-2">Primary Contact</label>
+                        <select id="editDealContact" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500">
+                            <option value="">SeÃ§iniz...</option>
+                        </select>
                     </div>
 
                     <!-- Tags -->
@@ -1096,6 +1136,21 @@
         let driveAttachments = [];
         let dealCustomFields = [];
         let currentDealFollowed = false;
+        let dealStakeholders = [];
+        let selectedStakeholderContact = null;
+        let stakeholderSearchTimeout = null;
+        let stakeholderSearchBound = false;
+        let editDealContactOptionsLoaded = false;
+
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
 
         function showDealDetails(dealId) {
             const deal = deals.find(d => d.id === dealId);
@@ -1117,6 +1172,10 @@
                 new Date(deal.expected_close_date).toLocaleDateString('tr-TR') : 'Belirtilmemiş';
             
             // Switch to overview tab
+            const primaryContactEl = document.getElementById('dealModalPrimaryContact');
+            if (primaryContactEl) {
+                primaryContactEl.textContent = deal.contact ? (deal.contact.full_name || '-') : '-';
+            }
             switchDealTab('overview');
             
             // Load drive attachments
@@ -1124,6 +1183,8 @@
             loadDealCustomFields(dealId);
             loadDealQuickBooksInvoice(dealId);
             loadDealFollowStatus(dealId);
+            loadDealStakeholders(dealId);
+            initStakeholderSearch();
             
             // Initialize team member selector for deal assignment
             setTimeout(async () => {
@@ -1161,6 +1222,204 @@
                     }
                 });
             }, 100);
+        }
+
+        function initStakeholderSearch() {
+            if (stakeholderSearchBound) return;
+            const input = document.getElementById('stakeholderContactSearch');
+            const results = document.getElementById('stakeholderContactResults');
+            if (!input || !results) return;
+
+            stakeholderSearchBound = true;
+            input.addEventListener('input', () => {
+                clearTimeout(stakeholderSearchTimeout);
+                const query = input.value.trim();
+                selectedStakeholderContact = null;
+                if (query.length < 2) {
+                    results.classList.add('hidden');
+                    results.innerHTML = '';
+                    return;
+                }
+
+                stakeholderSearchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(query)}&limit=8`);
+                        const data = await res.json();
+                        const contacts = Array.isArray(data) ? data : (data.contacts || data.data || []);
+                        if (!contacts.length) {
+                            results.innerHTML = '<div class="p-3 text-xs text-slate-400 text-center">Sonuc bulunamadi</div>';
+                            results.classList.remove('hidden');
+                            return;
+                        }
+                        results.innerHTML = contacts.map(contact => {
+                            const displayName = contact.full_name || contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Isimsiz';
+                            const displayMeta = contact.email || contact.phone || contact.whatsapp_phone || '';
+                            return `
+                                <button type="button" class="w-full text-left p-2.5 hover:bg-brand-50 transition-colors" onclick='selectStakeholderContact(${JSON.stringify({
+                                    id: contact.id,
+                                    name: displayName,
+                                    email: contact.email || '',
+                                    phone: contact.phone || contact.whatsapp_phone || ''
+                                })})'>
+                                    <div class="text-sm font-medium text-slate-700">${escapeHtml(displayName)}</div>
+                                    <div class="text-xs text-slate-500">${escapeHtml(displayMeta)}</div>
+                                </button>
+                            `;
+                        }).join('');
+                        results.classList.remove('hidden');
+                    } catch (error) {
+                        console.error('Stakeholder search error:', error);
+                    }
+                }, 250);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !results.contains(e.target)) {
+                    results.classList.add('hidden');
+                }
+            });
+        }
+
+        function selectStakeholderContact(contact) {
+            selectedStakeholderContact = contact;
+            const input = document.getElementById('stakeholderContactSearch');
+            const results = document.getElementById('stakeholderContactResults');
+            input.value = contact.name;
+            results.classList.add('hidden');
+        }
+
+        async function loadDealStakeholders(dealId) {
+            try {
+                const res = await fetch(`/api/v1/deals/${dealId}/contacts`);
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Stakeholder listesi yuklenemedi');
+                }
+                dealStakeholders = data.stakeholders || [];
+                renderDealStakeholders();
+            } catch (error) {
+                console.error('Error loading deal stakeholders:', error);
+                dealStakeholders = [];
+                renderDealStakeholders();
+            }
+        }
+
+        function renderDealStakeholders() {
+            const container = document.getElementById('dealStakeholdersList');
+            const empty = document.getElementById('dealStakeholdersEmpty');
+            const count = document.getElementById('dealStakeholderCount');
+            if (!container || !empty || !count) return;
+
+            count.textContent = `${dealStakeholders.length} kisi`;
+            if (!dealStakeholders.length) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            container.innerHTML = dealStakeholders.map(item => {
+                const contact = item.contact || {};
+                return `
+                    <div class="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate">
+                                ${escapeHtml(contact.full_name || 'Isimsiz')}
+                                ${item.is_primary ? '<span class="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-emerald-100 text-emerald-700">Primary</span>' : ''}
+                            </p>
+                            <p class="text-xs text-slate-500 truncate">
+                                ${escapeHtml(item.role || contact.job_title || '-')}
+                            </p>
+                        </div>
+                        <button type="button" onclick="setDealStakeholderPrimary(${item.contact_id})" class="px-2 py-1 text-[11px] font-semibold rounded border border-slate-200 text-slate-600 hover:bg-white">
+                            Primary Yap
+                        </button>
+                        <button type="button" onclick="removeDealStakeholder(${item.contact_id})" class="w-7 h-7 rounded text-red-500 hover:bg-red-50">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function addDealStakeholder() {
+            if (!currentDeal) return;
+            const roleEl = document.getElementById('stakeholderRole');
+            const primaryEl = document.getElementById('stakeholderPrimary');
+            const input = document.getElementById('stakeholderContactSearch');
+
+            if (!selectedStakeholderContact || !selectedStakeholderContact.id) {
+                showToast('Lutfen bir kisi secin', 'error');
+                return;
+            }
+
+            const payload = {
+                contact_id: Number(selectedStakeholderContact.id),
+                role: roleEl.value || null,
+                is_primary: !!primaryEl.checked
+            };
+
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/contacts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Stakeholder eklenemedi');
+                }
+                showToast('Stakeholder eklendi', 'success');
+                selectedStakeholderContact = null;
+                input.value = '';
+                primaryEl.checked = false;
+                roleEl.value = '';
+                await loadDealStakeholders(currentDeal.id);
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error adding stakeholder:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function setDealStakeholderPrimary(contactId) {
+            if (!currentDeal) return;
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/contacts/${contactId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_primary: true })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Primary guncellenemedi');
+                }
+                showToast('Primary stakeholder guncellendi', 'success');
+                await loadDealStakeholders(currentDeal.id);
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error setting primary stakeholder:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function removeDealStakeholder(contactId) {
+            if (!currentDeal) return;
+            try {
+                const res = await fetch(`/api/v1/deals/${currentDeal.id}/contacts/${contactId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Stakeholder silinemedi');
+                }
+                showToast('Stakeholder kaldirildi', 'success');
+                await loadDealStakeholders(currentDeal.id);
+                await loadPipeline();
+            } catch (error) {
+                console.error('Error removing stakeholder:', error);
+                showToast(error.message, 'error');
+            }
         }
 
         async function loadDealFollowStatus(dealId) {
@@ -1238,10 +1497,12 @@
             }
         }
 
-        function closeDealModal() {
+        function closeDealModal(keepCurrentDeal = false) {
             document.getElementById('dealModal').classList.add('hidden');
             document.getElementById('dealModal').classList.remove('flex');
-            currentDeal = null;
+            if (!keepCurrentDeal) {
+                currentDeal = null;
+            }
         }
 
         async function confirmDeleteDeal() {
@@ -1292,6 +1553,7 @@
             document.getElementById('editDealCurrency').value = currentDeal.currency || 'TRY';
             document.getElementById('editDealCloseDate').value = currentDeal.expected_close_date || '';
             document.getElementById('editDealTags').value = currentDeal.tags || '';
+            loadEditDealContacts(currentDeal.contact_id || null);
             
             // Show edit modal
             const modal = document.getElementById('editDealModal');
@@ -1299,7 +1561,7 @@
             modal.classList.add('flex');
             
             // Close detail modal
-            closeDealModal();
+            closeDealModal(true);
         }
 
         function closeEditDealModal() {
@@ -1333,7 +1595,8 @@
             const payload = {
                 name: title,
                 value: parseFloat(value),
-                expected_close_date: document.getElementById('editDealCloseDate').value || null
+                expected_close_date: document.getElementById('editDealCloseDate').value || null,
+                contact_id: document.getElementById('editDealContact').value ? parseInt(document.getElementById('editDealContact').value) : null
             };
             
             try {
@@ -1360,6 +1623,32 @@
                 console.error('Error updating deal:', error);
                 showToast(`✗ ${error.message}`, 'error');
             }
+        }
+
+        async function loadEditDealContacts(selectedContactId) {
+            const select = document.getElementById('editDealContact');
+            if (!select) return;
+
+            if (!editDealContactOptionsLoaded) {
+                try {
+                    const res = await fetch('/api/v1/contacts?per_page=200');
+                    const data = await res.json();
+                    const contacts = Array.isArray(data) ? data : (data.contacts || data.data || []);
+                    select.innerHTML = '<option value="">SeÃ§iniz...</option>';
+                    contacts.forEach((contact) => {
+                        const option = document.createElement('option');
+                        option.value = String(contact.id);
+                        option.textContent = contact.full_name || contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || `Contact #${contact.id}`;
+                        select.appendChild(option);
+                    });
+                    editDealContactOptionsLoaded = true;
+                } catch (error) {
+                    console.error('Error loading edit contact options:', error);
+                    showToast('Contact listesi yuklenemedi', 'error');
+                }
+            }
+
+            select.value = selectedContactId ? String(selectedContactId) : '';
         }
 
         function switchDealTab(tabName) {

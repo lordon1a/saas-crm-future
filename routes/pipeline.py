@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, session
 from models import db
 from models_crm import Pipeline, DealStage, Deal, Company, Contact
 from services.pipeline_service import PipelineService
+from services.deal_contact_service import DealContactService
 from services.quickbooks_service import QuickBooksService
 from services.collaboration_service import CollaborationService
 from functools import wraps
@@ -158,11 +159,28 @@ def get_deals():
         if filters.get('company_id'):
             query = query.filter_by(company_id=filters['company_id'])
         if filters.get('contact_id'):
-            query = query.join(Contact, Contact.company_id == Deal.company_id).filter(
-                Contact.id == filters['contact_id'],
-                Contact.workspace_id == workspace_id,
-                Contact.is_deleted == False,
-            )
+            contact_filter = Contact.query.filter_by(
+                id=filters['contact_id'],
+                workspace_id=workspace_id,
+                is_deleted=False,
+            ).first()
+            if not contact_filter:
+                return jsonify({'error': 'Contact not found'}), 404
+
+            if contact_filter.company_id:
+                # Backward-compatible behavior:
+                # include legacy deals without contact_id that were linked by company only.
+                query = query.filter(
+                    db.or_(
+                        Deal.contact_id == filters['contact_id'],
+                        db.and_(
+                            Deal.contact_id.is_(None),
+                            Deal.company_id == contact_filter.company_id
+                        )
+                    )
+                )
+            else:
+                query = query.filter(Deal.contact_id == filters['contact_id'])
         if filters.get('pipeline_id'):
             query = query.filter_by(pipeline_id=filters['pipeline_id'])
         
@@ -170,6 +188,7 @@ def get_deals():
         from models import db
         query = query.options(
             db.joinedload(Deal.company),
+            db.joinedload(Deal.primary_contact),
             db.joinedload(Deal.pipeline),
             db.joinedload(Deal.stage)
         )
@@ -188,6 +207,13 @@ def get_deals():
                     'id': deal.company.id,
                     'name': deal.company.name
                 } if deal.company else None,
+                'contact_id': deal.contact_id,
+                'contact': {
+                    'id': deal.primary_contact.id,
+                    'full_name': deal.primary_contact.full_name,
+                    'email': deal.primary_contact.email,
+                    'phone': deal.primary_contact.phone
+                } if deal.primary_contact else None,
                 'pipeline_id': deal.pipeline_id,
                 'pipeline_name': deal.pipeline.name,
                 'stage': {
@@ -254,6 +280,13 @@ def get_deal(deal_id):
             'id': deal.company.id,
             'name': deal.company.name
         } if deal.company else None,
+        'contact_id': deal.contact_id,
+        'contact': {
+            'id': deal.primary_contact.id,
+            'full_name': deal.primary_contact.full_name,
+            'email': deal.primary_contact.email,
+            'phone': deal.primary_contact.phone
+        } if deal.primary_contact else None,
         'pipeline_id': deal.pipeline_id,
         'pipeline_name': deal.pipeline.name,
         'stage': {
@@ -278,8 +311,8 @@ def get_deal(deal_id):
 def create_deal():
     """
     Create a new deal.
-    Required: name, contact_id, pipeline_id
-    Optional: company_id, value, expected_close_date, stage_id
+    Required: name, pipeline_id
+    Optional: contact_id, company_id, value, expected_close_date, stage_id
     
     If contact_id is provided but company_id is not:
     - If contact is a CRM Contact with company, use that company
@@ -316,6 +349,7 @@ def create_deal():
                 # CRM Contact found
                 if crm_contact.company_id:
                     data['company_id'] = crm_contact.company_id
+                    data['contact_id'] = crm_contact.id
                 else:
                     # Create a company for this contact
                     try:
@@ -333,6 +367,7 @@ def create_deal():
                         db.session.commit()
                         
                         data['company_id'] = company.id
+                        data['contact_id'] = crm_contact.id
                         logger.info(f"Created company {company.id} for contact {crm_contact.id}")
                     except Exception as e:
                         db.session.rollback()
@@ -373,6 +408,7 @@ def create_deal():
                         db.session.commit()
                         
                         data['company_id'] = company.id
+                        data['contact_id'] = crm_contact.id
                         logger.info(f"Created CRM Contact {crm_contact.id} and Company {company.id} from Customer {customer.id}")
                     except Exception as e:
                         db.session.rollback()
@@ -391,6 +427,7 @@ def create_deal():
             'id': deal.id,
             'name': deal.name,
             'company_id': deal.company_id,
+            'contact_id': deal.contact_id,
             'pipeline_id': deal.pipeline_id,
             'stage_id': deal.stage_id,
             'value': float(deal.value),
@@ -418,7 +455,7 @@ def create_deal():
 def update_deal(deal_id):
     """
     Update a deal.
-    Allowed fields: name, value, expected_close_date, owner_id
+    Allowed fields: name, value, expected_close_date, owner_id, contact_id
     """
     from utils.permissions import check_entity_access, get_current_user_from_session
     
@@ -453,6 +490,7 @@ def update_deal(deal_id):
             'value': float(deal.value),
             'expected_close_date': deal.expected_close_date.isoformat() if deal.expected_close_date else None,
             'owner_id': deal.owner_id,
+            'contact_id': deal.contact_id,
             'updated_at': deal.updated_at.isoformat()
         }
 
@@ -548,6 +586,149 @@ def move_deal_stage(deal_id):
     except Exception as e:
         logger.error(f"Unexpected error moving deal stage: {e}")
         db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/contacts', methods=['GET'])
+@login_required_api
+def list_deal_contacts(deal_id):
+    """List stakeholders for a deal."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'read'):
+        logger.warning(f"Access denied: user {user.id} attempted to list stakeholders for deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    try:
+        stakeholders = DealContactService.list_stakeholders(workspace_id, deal_id)
+        return jsonify({'deal_id': deal_id, 'stakeholders': stakeholders}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error listing deal stakeholders: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/contacts', methods=['POST'])
+@login_required_api
+def add_deal_contact(deal_id):
+    """Add or upsert a stakeholder for a deal."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    user = get_current_user_from_session()
+    data = request.get_json() or {}
+
+    contact_id = data.get('contact_id')
+    if not contact_id:
+        return jsonify({'error': 'contact_id is required'}), 400
+
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'write'):
+        logger.warning(f"Access denied: user {user.id} attempted to add stakeholder for deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    try:
+        contact_id = int(contact_id)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'contact_id must be an integer'}), 400
+
+    try:
+        link = DealContactService.add_stakeholder(
+            workspace_id=workspace_id,
+            deal_id=deal_id,
+            contact_id=contact_id,
+            user_id=user_id,
+            role=data.get('role'),
+            is_primary=data.get('is_primary') if 'is_primary' in data else None,
+        )
+        return jsonify({
+            'deal_id': deal_id,
+            'contact_id': link.contact_id,
+            'role': link.role,
+            'is_primary': bool(link.is_primary),
+            'created_at': link.created_at.isoformat() if link.created_at else None,
+            'updated_at': link.updated_at.isoformat() if link.updated_at else None,
+        }), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error adding stakeholder to deal: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/contacts/<int:contact_id>', methods=['PATCH'])
+@login_required_api
+def update_deal_contact(deal_id, contact_id):
+    """Update stakeholder metadata on a deal."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    data = request.get_json() or {}
+
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'write'):
+        logger.warning(f"Access denied: user {user.id} attempted to update stakeholder for deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    if 'role' not in data and 'is_primary' not in data:
+        return jsonify({'error': 'At least one field is required: role or is_primary'}), 400
+
+    try:
+        link = DealContactService.update_stakeholder(
+            workspace_id=workspace_id,
+            deal_id=deal_id,
+            contact_id=contact_id,
+            role=data.get('role') if 'role' in data else None,
+            is_primary=data.get('is_primary') if 'is_primary' in data else None,
+        )
+        return jsonify({
+            'deal_id': deal_id,
+            'contact_id': link.contact_id,
+            'role': link.role,
+            'is_primary': bool(link.is_primary),
+            'updated_at': link.updated_at.isoformat() if link.updated_at else None,
+        }), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating stakeholder on deal: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/deals/<int:deal_id>/contacts/<int:contact_id>', methods=['DELETE'])
+@login_required_api
+def remove_deal_contact(deal_id, contact_id):
+    """Remove stakeholder from a deal."""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    if not deal:
+        return jsonify({'error': 'Deal not found'}), 404
+    if not check_entity_access(user, deal, 'write'):
+        logger.warning(f"Access denied: user {user.id} attempted to remove stakeholder for deal {deal_id}")
+        return jsonify({'error': 'Access denied to this deal'}), 403
+
+    try:
+        DealContactService.remove_stakeholder(workspace_id, deal_id, contact_id)
+        return jsonify({'message': 'Stakeholder removed'}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error removing stakeholder from deal: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 
