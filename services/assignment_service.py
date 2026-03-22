@@ -26,6 +26,15 @@ class AssignmentService:
         'task': Task,
         'conversation': Conversation
     }
+
+    # Entity type to assignment field mapping
+    ENTITY_ASSIGNMENT_FIELD_MAP = {
+        'contact': 'assigned_to',
+        'company': 'assigned_to',
+        'deal': 'owner_id',
+        'task': 'assignee_id',
+        'conversation': 'assigned_to',
+    }
     
     # ============================================================================
     # ASSIGNMENT OPERATIONS
@@ -76,8 +85,10 @@ class AssignmentService:
         if not assignee:
             raise ValueError("Assignee not found or inactive in workspace")
         
+        assignment_field = AssignmentService.ENTITY_ASSIGNMENT_FIELD_MAP[entity_type]
+
         # Get old assignee for activity log
-        old_assignee_id = entity.assigned_to
+        old_assignee_id = getattr(entity, assignment_field, None)
         old_assignee_name = None
         if old_assignee_id:
             old_assignee = User.query.get(old_assignee_id)
@@ -85,7 +96,7 @@ class AssignmentService:
                 old_assignee_name = old_assignee.name
         
         # Update entity assignment
-        entity.assigned_to = assignee_id
+        setattr(entity, assignment_field, assignee_id)
         
         # Create activity record
         activity = AssignmentService._create_assignment_activity(
@@ -145,8 +156,10 @@ class AssignmentService:
         if not entity:
             raise ValueError(f"{entity_type.capitalize()} not found")
         
+        assignment_field = AssignmentService.ENTITY_ASSIGNMENT_FIELD_MAP[entity_type]
+
         # Get old assignee for activity log
-        old_assignee_id = entity.assigned_to
+        old_assignee_id = getattr(entity, assignment_field, None)
         old_assignee_name = None
         if old_assignee_id:
             old_assignee = User.query.get(old_assignee_id)
@@ -154,7 +167,10 @@ class AssignmentService:
                 old_assignee_name = old_assignee.name
         
         # Remove assignment
-        entity.assigned_to = None
+        # Deal owner_id is non-nullable; skip unassign for deals.
+        if entity_type == 'deal':
+            raise ValueError("Deal entities cannot be unassigned. Please choose an owner.")
+        setattr(entity, assignment_field, None)
         
         # Create activity record
         activity = AssignmentService._create_assignment_activity(
@@ -234,7 +250,8 @@ class AssignmentService:
         query = model.query.filter_by(workspace_id=workspace_id)
         
         if assignee_id is not None:
-            query = query.filter_by(assigned_to=assignee_id)
+            assignment_field = AssignmentService.ENTITY_ASSIGNMENT_FIELD_MAP[entity_type]
+            query = query.filter(getattr(model, assignment_field) == assignee_id)
         
         # Apply entity-specific filters (exclude deleted items)
         if hasattr(model, 'is_deleted'):
@@ -392,10 +409,11 @@ class AssignmentService:
         
         for entity_type in AssignmentService.SUPPORTED_ENTITY_TYPES:
             model = AssignmentService.ENTITY_MODEL_MAP[entity_type]
+            assignment_field = AssignmentService.ENTITY_ASSIGNMENT_FIELD_MAP[entity_type]
             
-            query = model.query.filter_by(
-                workspace_id=workspace_id,
-                assigned_to=user_id
+            query = model.query.filter(
+                model.workspace_id == workspace_id,
+                getattr(model, assignment_field) == user_id
             )
             
             # Exclude deleted items

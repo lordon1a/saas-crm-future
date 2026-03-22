@@ -1204,7 +1204,7 @@
                         const response = await fetch(`/api/assignments/deal/${deal.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ assigned_to: memberId })
+                            body: JSON.stringify({ assignee_id: memberId })
                         });
                         
                         if (response.ok) {
@@ -1243,7 +1243,10 @@
 
                 stakeholderSearchTimeout = setTimeout(async () => {
                     try {
-                        const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(query)}&limit=8`);
+                        const companyFilter = currentDeal && currentDeal.company && currentDeal.company.id
+                            ? `&company_id=${currentDeal.company.id}`
+                            : '';
+                        const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(query)}&limit=8${companyFilter}`);
                         const data = await res.json();
                         const contacts = Array.isArray(data) ? data : (data.contacts || data.data || []);
                         if (!contacts.length) {
@@ -1258,6 +1261,7 @@
                                 <button type="button" class="w-full text-left p-2.5 hover:bg-brand-50 transition-colors" onclick='selectStakeholderContact(${JSON.stringify({
                                     id: contact.id,
                                     name: displayName,
+                                    company_id: contact.company_id,
                                     email: contact.email || '',
                                     phone: contact.phone || contact.whatsapp_phone || ''
                                 })})'>
@@ -1281,6 +1285,11 @@
         }
 
         function selectStakeholderContact(contact) {
+            const dealCompanyId = currentDeal && currentDeal.company ? currentDeal.company.id : null;
+            if (dealCompanyId && contact.company_id && Number(contact.company_id) !== Number(dealCompanyId)) {
+                showToast('Secilen kisi bu dealin sirketine bagli degil', 'error');
+                return;
+            }
             selectedStakeholderContact = contact;
             const input = document.getElementById('stakeholderContactSearch');
             const results = document.getElementById('stakeholderContactResults');
@@ -1378,7 +1387,11 @@
                 await loadPipeline();
             } catch (error) {
                 console.error('Error adding stakeholder:', error);
-                showToast(error.message, 'error');
+                if (error.message && error.message.includes('belongs to company')) {
+                    showToast('Kisi bu dealin sirketiyle uyusmuyor. Once sirketi eslestirin.', 'error');
+                } else {
+                    showToast(error.message, 'error');
+                }
             }
         }
 

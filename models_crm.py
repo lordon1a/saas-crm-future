@@ -361,6 +361,30 @@ class ContactMergeHistory(db.Model):
 
 
 # ============================================================================
+# COMPANY MERGE HISTORY
+# ============================================================================
+
+class CompanyMergeHistory(db.Model):
+    """
+    Tracks company merge operations for audit and rollback analysis.
+    """
+    __tablename__ = 'company_merge_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    primary_company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    merged_company_id = db.Column(db.Integer, nullable=False, index=True)
+    merged_data_json = db.Column(db.Text, nullable=False)
+    merged_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    primary_company = db.relationship('Company', foreign_keys=[primary_company_id], backref='merge_history')
+
+    def __repr__(self):
+        return f'<CompanyMergeHistory primary={self.primary_company_id} merged={self.merged_company_id}>'
+
+
+# ============================================================================
 # CUSTOMER PORTAL
 # ============================================================================
 

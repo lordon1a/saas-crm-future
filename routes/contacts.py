@@ -3757,6 +3757,81 @@ def set_contact_tags(contact_id):
 
 
 # ============================================================================
+# COMPANY MERGE ENDPOINTS
+# ============================================================================
+
+@contacts_bp.route('/api/v1/companies/duplicates', methods=['GET'])
+@login_required
+def find_company_duplicates():
+    """Find duplicate companies in the workspace."""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        company_id = request.args.get('company_id', type=int)
+
+        from services.company_merge_service import CompanyMergeService
+        groups = CompanyMergeService.find_duplicates(workspace_id, company_id)
+        return jsonify({'duplicate_groups': groups}), 200
+
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        logger.error(f"Error finding company duplicates: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+@contacts_bp.route('/api/v1/companies/merge', methods=['POST'])
+@login_required
+def merge_companies():
+    """Merge two companies. Body: { primary_id, secondary_id, field_overrides? }"""
+    try:
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        if not workspace_id or not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        primary_id = data.get('primary_id')
+        secondary_id = data.get('secondary_id')
+        if not primary_id or not secondary_id:
+            return jsonify({'error': 'primary_id and secondary_id are required'}), 400
+
+        from services.company_merge_service import CompanyMergeService
+        company = CompanyMergeService.merge_companies(
+            workspace_id=workspace_id,
+            primary_id=primary_id,
+            secondary_id=secondary_id,
+            user_id=user_id,
+            field_overrides=data.get('field_overrides'),
+        )
+
+        return jsonify({
+            'message': 'Companies merged successfully',
+            'company': {
+                'id': company.id,
+                'name': company.name,
+                'industry': company.industry,
+                'size': company.size,
+                'website': company.website,
+                'phone': company.phone,
+            }
+        }), 200
+
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error merging companies: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
+# ============================================================================
 # CONTACT MERGE ENDPOINTS
 # ============================================================================
 

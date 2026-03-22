@@ -74,7 +74,8 @@ def assign_entity(entity_type, entity_id):
         if data is None:
             return jsonify({'error': 'Request body is required'}), 400
         
-        assignee_id = data.get('assignee_id')
+        # Backward compatibility: accept both assignee_id and assigned_to payload keys.
+        assignee_id = data.get('assignee_id', data.get('assigned_to'))
         
         # Handle unassignment
         if assignee_id is None:
