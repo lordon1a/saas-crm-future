@@ -9,6 +9,7 @@ let currentFilter = '';
 let currentTag = '';
 let currentSearch = '';
 let currentChannel = 'all';
+let currentSlaFilter = '';
 let currentInboxItemType = 'whatsapp';
 let currentSendChannel = 'whatsapp';
 let currentLastMessageId = 0;
@@ -30,6 +31,67 @@ let lastScrollPosition = 0;
 const initialUrlParams = new URLSearchParams(window.location.search);
 let pendingConversationPublicId = (initialUrlParams.get('conversationId') || '').trim() || null;
 let currentConversationPublicId = null;
+const COLLAPSIBLE_SECTIONS_STORAGE_KEY = 'inbox_collapsible_sections_v2';
+const COLLAPSIBLE_SECTION_IDS = ['views', 'sla', 'channels', 'stages'];
+const COLLAPSIBLE_SECTION_DEFAULTS = {
+    views: true,
+    sla: false,
+    channels: true,
+    stages: false,
+};
+
+function readCollapsibleSectionsState() {
+    try {
+        const raw = localStorage.getItem(COLLAPSIBLE_SECTIONS_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function writeCollapsibleSectionsState(nextState) {
+    try {
+        localStorage.setItem(COLLAPSIBLE_SECTIONS_STORAGE_KEY, JSON.stringify(nextState || {}));
+    } catch (_) {
+        // no-op
+    }
+}
+
+function setCollapsibleSectionOpen(sectionId, isOpen) {
+    const content = document.querySelector(`[data-collapsible-content="${sectionId}"]`);
+    const toggle = document.querySelector(`[data-section-toggle="${sectionId}"]`);
+    if (!content || !toggle) return;
+
+    content.classList.toggle('hidden', !isOpen);
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    const icon = toggle.querySelector('i');
+    if (icon) {
+        icon.classList.toggle('rotate-180', isOpen);
+    }
+}
+
+function initCollapsibleSections() {
+    const saved = readCollapsibleSectionsState();
+
+    COLLAPSIBLE_SECTION_IDS.forEach((sectionId) => {
+        const toggle = document.querySelector(`[data-section-toggle="${sectionId}"]`);
+        if (!toggle) return;
+
+        const isOpen = saved[sectionId] === true
+            || (saved[sectionId] === undefined && COLLAPSIBLE_SECTION_DEFAULTS[sectionId] === true);
+        setCollapsibleSectionOpen(sectionId, isOpen);
+
+        toggle.addEventListener('click', () => {
+            const currentState = readCollapsibleSectionsState();
+            const nextOpen = !(currentState[sectionId] === true);
+            currentState[sectionId] = nextOpen;
+            writeCollapsibleSectionsState(currentState);
+            setCollapsibleSectionOpen(sectionId, nextOpen);
+        });
+    });
+}
 
 function setConversationUrl(conversationPublicId, mode = 'push') {
     const url = new URL(window.location.href);
@@ -245,7 +307,16 @@ async function loadConversations() {
         const json = await response.json();
         const data = json.data || {};
         let conversations = data.items || [];
-        const counts = data.counts || { total: 0, open: 0, pending: 0, whatsapp: 0, telegram: 0, email: 0 };
+        const counts = data.counts || {
+            total: 0,
+            open: 0,
+            pending: 0,
+            whatsapp: 0,
+            telegram: 0,
+            email: 0,
+            sla_overdue: 0,
+            sla_at_risk: 0,
+        };
 
         if (currentFilter) {
             conversations = conversations.filter(c => c.item_type !== 'email' && c.status === currentFilter);
@@ -266,6 +337,19 @@ async function loadConversations() {
                 return hay.includes(q);
             });
         }
+        if (currentSlaFilter) {
+            conversations = conversations.filter(c => {
+                if (c.item_type === 'email') return false;
+                const status = (c.sla && c.sla.status) || '';
+                if (currentSlaFilter === 'overdue') {
+                    return status === 'overdue' || status === 'breached';
+                }
+                if (currentSlaFilter === 'at_risk') {
+                    return status === 'at_risk';
+                }
+                return true;
+            });
+        }
 
         const allCountEl = document.getElementById('allCount');
         const openCountEl = document.getElementById('openCount');
@@ -277,10 +361,16 @@ async function loadConversations() {
         const waEl = document.getElementById('channelWhatsappCount');
         const tgEl = document.getElementById('channelTelegramCount');
         const emEl = document.getElementById('channelEmailCount');
+        const slaAllEl = document.getElementById('slaAllCount');
+        const slaOverdueEl = document.getElementById('slaOverdueCount');
+        const slaRiskEl = document.getElementById('slaAtRiskCount');
         if (allEl) allEl.textContent = counts.total;
         if (waEl) waEl.textContent = counts.whatsapp;
         if (tgEl) tgEl.textContent = counts.telegram || 0;
         if (emEl) emEl.textContent = counts.email;
+        if (slaAllEl) slaAllEl.textContent = (counts.sla_overdue || 0) + (counts.sla_at_risk || 0);
+        if (slaOverdueEl) slaOverdueEl.textContent = counts.sla_overdue || 0;
+        if (slaRiskEl) slaRiskEl.textContent = counts.sla_at_risk || 0;
 
         const listEl = document.getElementById('conversationList');
         if (!listEl) return;
@@ -350,6 +440,15 @@ async function loadConversations() {
             // Unread styling
             const nameClass = hasUnread ? "font-bold text-slate-900" : "font-semibold text-slate-700";
             const previewClass = hasUnread ? "text-slate-800 font-medium" : "text-slate-500";
+            const sla = conv.sla || {};
+            let slaBadge = '';
+            if (conv.item_type !== 'email' && sla && sla.has_sla) {
+                if (sla.status === 'overdue' || sla.status === 'breached') {
+                    slaBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-red-50 text-red-700 border-red-200/60">SLA İHLAL</span>';
+                } else if (sla.status === 'at_risk') {
+                    slaBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-amber-50 text-amber-700 border-amber-200/60">SLA RİSK</span>';
+                }
+            }
             let channelBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200/50">WA</span>';
             if (conv.item_type === 'email') {
                 channelBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-blue-50 text-blue-700 border-blue-200/50">EMAIL</span>';
@@ -368,6 +467,7 @@ async function loadConversations() {
                         <div class="flex items-center gap-2 min-w-0">
                             <h4 class="text-sm truncate ${nameClass}">${escapeHtml(name)}</h4>
                             ${channelBadge}
+                            ${slaBadge}
                             ${crmBadge}
                         </div>
                         <span class="text-[11px] text-slate-400 whitespace-nowrap ml-2">${formatTimeAgo(conv.created_at || conv.last_message_at || new Date().toISOString())}</span>
@@ -1561,6 +1661,15 @@ document.querySelectorAll('.channel-tab').forEach(tab => {
     });
 });
 
+document.querySelectorAll('.sla-filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.sla-filter-tab').forEach(t => t.classList.remove('active', 'bg-white', 'shadow-sm', 'text-brand-600'));
+        tab.classList.add('active', 'bg-white', 'shadow-sm', 'text-brand-600');
+        currentSlaFilter = tab.dataset.sla || '';
+        loadConversations();
+    });
+});
+
 document.getElementById('sendChannelSelect')?.addEventListener('change', (e) => {
     currentSendChannel = (e.target.value || 'whatsapp').toLowerCase();
 });
@@ -1791,6 +1900,7 @@ window.testMessageInjection = function(testMessage) {
     handleIncomingSocketMessage(payload);
 };
 
+initCollapsibleSections();
 loadConversations();
 loadQuickReplies();
 loadUserInfo();

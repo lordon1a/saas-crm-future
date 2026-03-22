@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import smtplib
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.message import EmailMessage
 
 from jinja2 import Template
@@ -67,6 +67,9 @@ class LogEmailProvider(BaseEmailProvider):
 
 
 class EmailHubService:
+    DEFAULT_FIRST_RESPONSE_SLA_MINUTES = 15
+    SLA_AT_RISK_THRESHOLD_MINUTES = 5
+
     @staticmethod
     def _provider():
         provider_name = (getattr(Config, 'EMAIL_PROVIDER', '') or '').strip().lower()
@@ -610,6 +613,73 @@ You're receiving this because you were assigned to this {entity_type}.
         return Message.query.filter_by(conversation_id=conversation_id, sender_type='customer', is_read=False).count()
 
     @staticmethod
+    def _conversation_sla_snapshot(conversation_id, now_utc):
+        """
+        Compute first-response SLA status for a conversation without schema changes.
+        """
+        first_customer_msg = Message.query.filter_by(
+            conversation_id=conversation_id,
+            sender_type='customer',
+        ).order_by(Message.created_at.asc()).first()
+
+        if not first_customer_msg or not first_customer_msg.created_at:
+            return {
+                'has_sla': False,
+                'status': 'na',
+                'minutes_target': EmailHubService.DEFAULT_FIRST_RESPONSE_SLA_MINUTES,
+                'first_customer_at': None,
+                'first_agent_at': None,
+                'remaining_seconds': None,
+                'breach_seconds': None,
+            }
+
+        first_agent_msg = Message.query.filter(
+            Message.conversation_id == conversation_id,
+            Message.sender_type != 'customer',
+            Message.created_at >= first_customer_msg.created_at
+        ).order_by(Message.created_at.asc()).first()
+
+        target_delta = timedelta(minutes=EmailHubService.DEFAULT_FIRST_RESPONSE_SLA_MINUTES)
+        due_at = first_customer_msg.created_at + target_delta
+
+        if first_agent_msg and first_agent_msg.created_at:
+            response_seconds = int((first_agent_msg.created_at - first_customer_msg.created_at).total_seconds())
+            breach_seconds = max(0, int((first_agent_msg.created_at - due_at).total_seconds()))
+            status = 'breached' if breach_seconds > 0 else 'met'
+            return {
+                'has_sla': True,
+                'status': status,
+                'minutes_target': EmailHubService.DEFAULT_FIRST_RESPONSE_SLA_MINUTES,
+                'first_customer_at': first_customer_msg.created_at.isoformat(),
+                'first_agent_at': first_agent_msg.created_at.isoformat(),
+                'remaining_seconds': 0 if status == 'met' else None,
+                'breach_seconds': breach_seconds,
+                'response_seconds': response_seconds,
+            }
+
+        remaining_seconds = int((due_at - now_utc).total_seconds())
+        if remaining_seconds <= 0:
+            status = 'overdue'
+            breach_seconds = abs(remaining_seconds)
+            remaining_seconds = 0
+        elif remaining_seconds <= int(EmailHubService.SLA_AT_RISK_THRESHOLD_MINUTES * 60):
+            status = 'at_risk'
+            breach_seconds = None
+        else:
+            status = 'ok'
+            breach_seconds = None
+
+        return {
+            'has_sla': True,
+            'status': status,
+            'minutes_target': EmailHubService.DEFAULT_FIRST_RESPONSE_SLA_MINUTES,
+            'first_customer_at': first_customer_msg.created_at.isoformat(),
+            'first_agent_at': None,
+            'remaining_seconds': remaining_seconds,
+            'breach_seconds': breach_seconds,
+        }
+
+    @staticmethod
     def get_unified_inbox(workspace_id, channel='all', limit=50, offset=0):
         channel = (channel or 'all').strip().lower()
         if channel not in {'all', 'whatsapp', 'telegram', 'email'}:
@@ -621,6 +691,9 @@ You're receiving this because you were assigned to this {entity_type}.
 
         open_count = 0
         pending_count = 0
+        sla_overdue_count = 0
+        sla_at_risk_count = 0
+        now_utc = datetime.utcnow()
 
         if channel in {'all', 'whatsapp', 'telegram'}:
             conversations = Conversation.query.filter_by(workspace_id=workspace_id).order_by(Conversation.last_message_at.desc()).all()
@@ -646,6 +719,7 @@ You're receiving this because you were assigned to this {entity_type}.
                 item = {
                     'item_id': f'wa-{conv.id}',
                     'item_type': 'telegram' if latest_channel == 'telegram' else 'whatsapp',
+                    'primary_channel': latest_channel,
                     'conversation_id': conv.id,
                     'conversation_public_id': conv.public_id,
                     'status': conv.status,
@@ -657,6 +731,11 @@ You're receiving this because you were assigned to this {entity_type}.
                     'unread_count': EmailHubService._conversation_unread(conv.id),
                     'created_at': conv.last_message_at.isoformat() if conv.last_message_at else None,
                 }
+                item['sla'] = EmailHubService._conversation_sla_snapshot(conv.id, now_utc)
+                if item['sla']['status'] in {'overdue', 'breached'}:
+                    sla_overdue_count += 1
+                elif item['sla']['status'] == 'at_risk':
+                    sla_at_risk_count += 1
                 if item['item_type'] == 'telegram':
                     telegram_items.append(item)
                 else:
@@ -670,6 +749,7 @@ You're receiving this because you were assigned to this {entity_type}.
                 email_items.append({
                     'item_id': f'es-{row.id}',
                     'item_type': 'email',
+                    'primary_channel': 'email',
                     'email_source': 'synced',
                     'email_id': row.id,
                     'direction': 'sent' if row.is_sent else 'received',
@@ -681,12 +761,14 @@ You're receiving this because you were assigned to this {entity_type}.
                     'contact_id': row.contact_id,
                     'company_id': row.company_id,
                     'created_at': (row.received_at or row.synced_at).isoformat() if (row.received_at or row.synced_at) else None,
+                    'sla': {'has_sla': False, 'status': 'na'},
                 })
 
             for row in outbound_rows:
                 email_items.append({
                     'item_id': f'out-{row.id}',
                     'item_type': 'email',
+                    'primary_channel': 'email',
                     'email_source': 'outbound',
                     'email_id': row.id,
                     'direction': 'sent',
@@ -700,6 +782,7 @@ You're receiving this because you were assigned to this {entity_type}.
                     'company_id': row.company_id,
                     'deal_id': row.deal_id,
                     'created_at': (row.sent_at or row.created_at).isoformat() if (row.sent_at or row.created_at) else None,
+                    'sla': {'has_sla': False, 'status': 'na'},
                 })
 
         items = whatsapp_items + telegram_items + email_items
@@ -717,6 +800,8 @@ You're receiving this because you were assigned to this {entity_type}.
                 'whatsapp': len(whatsapp_items),
                 'telegram': len(telegram_items),
                 'email': len(email_items),
+                'sla_overdue': sla_overdue_count,
+                'sla_at_risk': sla_at_risk_count,
             },
             'channel': channel,
             'limit': limit,

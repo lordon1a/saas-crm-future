@@ -305,8 +305,13 @@
         </div>
         <nav class="flex-1 overflow-y-auto px-4 space-y-6">
             <div>
-                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Görünümler</p>
-                <div class="space-y-1">
+                <div class="px-2 mb-3 flex items-center justify-between">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Görünümler</p>
+                    <button type="button" class="w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-all" data-section-toggle="views" aria-expanded="false" aria-label="Görünümler aç/kapat">
+                        <i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+                    </button>
+                </div>
+                <div class="space-y-1 hidden" data-collapsible-content="views">
                     <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all filter-tab active bg-white shadow-sm text-brand-600" data-status="">
                         <div class="flex items-center gap-2"><i class="fas fa-inbox w-4"></i> Tümü</div>
                         <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold" id="allCount">0</span>
@@ -322,8 +327,46 @@
                 </div>
             </div>
             <div>
-                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Kanal</p>
-                <div class="space-y-1">
+                <div class="px-2 mb-3 flex items-center justify-between">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SLA</p>
+                    <button type="button" class="w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-all" data-section-toggle="sla" aria-expanded="false" aria-label="SLA aç/kapat">
+                        <i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+                    </button>
+                </div>
+                <div class="px-2 mb-2">
+                    <div class="relative inline-block group">
+                        <button type="button" class="inline-flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-700 transition-all" aria-label="SLA bilgisi">
+                            <i class="fas fa-circle-info text-[10px]"></i>
+                            SLA nedir?
+                        </button>
+                        <div class="absolute left-0 top-5 z-30 hidden group-hover:block w-56 p-2.5 rounded-lg border border-slate-200 bg-white shadow-lg text-[11px] leading-4 text-slate-600 normal-case">
+                            SLA, müşteriye ilk yanıt süresini takip eder. Süre dolmaya yakınsa Risk, geçince İhlal görünür.
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-1 hidden" data-collapsible-content="sla">
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all sla-filter-tab active bg-white shadow-sm text-brand-600" data-sla="">
+                        <div class="flex items-center gap-2"><i class="fas fa-shield-halved w-4 text-slate-400"></i> Tümü</div>
+                        <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold" id="slaAllCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all sla-filter-tab text-slate-600 hover:bg-white/50" data-sla="overdue">
+                        <div class="flex items-center gap-2"><i class="fas fa-triangle-exclamation w-4 text-red-500"></i> İhlal</div>
+                        <span class="bg-red-50 text-red-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="slaOverdueCount">0</span>
+                    </button>
+                    <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all sla-filter-tab text-slate-600 hover:bg-white/50" data-sla="at_risk">
+                        <div class="flex items-center gap-2"><i class="fas fa-hourglass-half w-4 text-amber-500"></i> Risk</div>
+                        <span class="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0.5 rounded font-bold" id="slaAtRiskCount">0</span>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <div class="px-2 mb-3 flex items-center justify-between">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kanal</p>
+                    <button type="button" class="w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-all" data-section-toggle="channels" aria-expanded="false" aria-label="Kanal aç/kapat">
+                        <i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+                    </button>
+                </div>
+                <div class="space-y-1 hidden" data-collapsible-content="channels">
                     <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all channel-tab active bg-white shadow-sm text-brand-600" data-channel="all">
                         <div class="flex items-center gap-2"><i class="fas fa-layer-group w-4"></i> Tümü</div>
                         <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold" id="channelAllCount">0</span>
@@ -343,8 +386,13 @@
                 </div>
             </div>
             <div>
-                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Aşamalar</p>
-                <div class="space-y-1">
+                <div class="px-2 mb-3 flex items-center justify-between">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Aşamalar</p>
+                    <button type="button" class="w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-all" data-section-toggle="stages" aria-expanded="false" aria-label="Aşamalar aç/kapat">
+                        <i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+                    </button>
+                </div>
+                <div class="space-y-1 hidden" data-collapsible-content="stages">
                     <button class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-white/50 filter-tab" data-tag="yeni_siparis">
                         <span class="w-2 h-2 rounded-full bg-amber-400"></span> Yeni Sipariş
                     </button>
