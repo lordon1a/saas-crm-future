@@ -315,6 +315,26 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added closed_at column")
             
+            # Check if contact_id column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='contact_id'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add contact_id column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN contact_id INTEGER REFERENCES contacts(id)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_contact_id 
+                    ON deals(contact_id)
+                """)
+                conn.commit()
+                logger.info("✓ Added contact_id column to deals")
+            
             # === CONTACTS TABLE MIGRATIONS ===
             # Check if display_order column exists
             cur.execute("""
