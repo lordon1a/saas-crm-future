@@ -2054,3 +2054,90 @@ class LoginAttempt(db.Model):
     
     def __repr__(self):
         return f'<LoginAttempt {self.email} - {"success" if self.success else "failed"} at {self.attempted_at}>'
+
+
+# ============================================================================
+# DOCUMENT GENERATION (DocGen)
+# ============================================================================
+
+class DocTemplate(db.Model):
+    """
+    Document templates for automated document generation.
+    Supports DOCX, PPTX, and HTML templates with Jinja2 placeholders.
+    """
+    __tablename__ = 'doc_templates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    file_path = db.Column(db.String(500), nullable=False)  # disk / S3 path
+    file_type = db.Column(db.String(10), nullable=False)  # docx | pptx | html
+    object_type = db.Column(db.String(100))  # e.g. "Contact", "Deal", "Quote"
+    field_map = db.Column(db.JSON)  # {placeholder: crm_field}
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    version = db.Column(db.Integer, default=1, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    documents = db.relationship('GeneratedDocument', backref='template', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<DocTemplate {self.name} ({self.file_type})>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'file_type': self.file_type,
+            'object_type': self.object_type,
+            'field_map': self.field_map,
+            'version': self.version,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class GeneratedDocument(db.Model):
+    """
+    Tracks generated documents from templates.
+    Links to CRM records (Contact, Deal, Quote, etc.)
+    """
+    __tablename__ = 'generated_documents'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('doc_templates.id'), nullable=False, index=True)
+    record_id = db.Column(db.Integer, nullable=False, index=True)  # CRM record ID
+    record_type = db.Column(db.String(100), index=True)  # e.g. "Contact", "Deal"
+    output_path = db.Column(db.String(500))  # generated file path
+    output_type = db.Column(db.String(10))  # pdf | docx | pptx
+    status = db.Column(db.String(20), default='pending', nullable=False, index=True)  # pending|processing|done|error
+    error_msg = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    completed_at = db.Column(db.DateTime)
+
+    __table_args__ = (
+        db.Index('idx_generated_doc_record', 'workspace_id', 'record_type', 'record_id'),
+        db.Index('idx_generated_doc_status', 'workspace_id', 'status', 'created_at'),
+    )
+
+    def __repr__(self):
+        return f'<GeneratedDocument {self.id} - {self.record_type}:{self.record_id} ({self.status})>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'template_id': self.template_id,
+            'record_id': self.record_id,
+            'record_type': self.record_type,
+            'output_type': self.output_type,
+            'status': self.status,
+            'error_msg': self.error_msg,
+            'created_at': self.created_at.isoformat(),
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'download_url': f'/docgen/download/{self.id}' if self.status == 'done' else None,
+        }

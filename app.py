@@ -149,6 +149,7 @@ from routes.notifications import notifications_bp
 from routes import custom_fields as custom_fields_route
 from routes import team as team_route
 from routes import assignments as assignments_route
+from routes import docgen as docgen_route
 from routes.scheduled_messages import scheduled_messages_bp
 from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
@@ -1186,6 +1187,24 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Login attempts migration failed (may already exist): {e}")
             
+            # === DOCGEN TABLES (DOCUMENT GENERATION) ===
+            # Import and run the migration
+            try:
+                from migrations.add_docgen_tables import upgrade as docgen_upgrade
+                
+                # Reconnect for this migration
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                logger.info("Running migration: add DocGen tables...")
+                docgen_upgrade(conn, cur)
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ DocGen migration completed")
+            except Exception as e:
+                logger.warning(f"DocGen migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 
@@ -1327,11 +1346,16 @@ app.register_blueprint(team_route.bp)
 app.register_blueprint(assignments_route.bp)
 from routes.super_admin import bp as super_admin_bp
 app.register_blueprint(super_admin_bp)
+from routes import docgen as docgen_route
+app.register_blueprint(docgen_route.bp)
 app.register_blueprint(search_bp)
 
 # CSRF Exemptions for webhooks (external services)
 csrf.exempt(webhook.bp)
 csrf.exempt(telegram_bp)
+# DocGen API endpoints (uses session auth, not CSRF tokens)
+from routes import docgen as docgen_route
+csrf.exempt(docgen_route.bp)
 
 # Initialize TaskScheduler for background jobs (notifications, overdue tasks)
 TaskScheduler.init_scheduler(app)
@@ -1707,6 +1731,106 @@ def automation():
 @login_required
 def pipeline():
     return render_template('pipeline.html')
+
+
+@app.route('/deals/<int:deal_id>')
+@login_required
+def deal_detail(deal_id):
+    """Render deal detail page"""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    from models_crm import Deal
+    
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    
+    deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id, is_deleted=False).first()
+    
+    if not deal:
+        flash('Anlaşma bulunamadı', 'error')
+        return redirect(url_for('pipeline'))
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(user, deal, 'read'):
+        logger.warning(f"Access denied: user {user.id} attempted to read deal {deal_id}")
+        flash('Bu anlaşmaya erişim yetkiniz yok', 'error')
+        return redirect(url_for('pipeline'))
+    
+    return render_template('deal_detail.html', deal=deal)
+
+
+@app.route('/quotes/<int:quote_id>')
+@login_required
+def quote_detail(quote_id):
+    """Render quote detail page"""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    from models_crm import Quote
+    
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    
+    quote = Quote.query.filter_by(id=quote_id, workspace_id=workspace_id).first()
+    
+    if not quote:
+        flash('Teklif bulunamadı', 'error')
+        return redirect(url_for('pipeline'))
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(user, quote, 'read'):
+        logger.warning(f"Access denied: user {user.id} attempted to read quote {quote_id}")
+        flash('Bu teklife erişim yetkiniz yok', 'error')
+        return redirect(url_for('pipeline'))
+    
+    return render_template('quote_detail.html', quote=quote)
+
+
+@app.route('/tasks/<int:task_id>')
+@login_required
+def task_detail(task_id):
+    """Render task detail page"""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    from models_crm import Task
+    
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    
+    task = Task.query.filter_by(id=task_id, workspace_id=workspace_id, is_deleted=False).first()
+    
+    if not task:
+        flash('Görev bulunamadı', 'error')
+        return redirect(url_for('tasks_page'))
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(user, task, 'read'):
+        logger.warning(f"Access denied: user {user.id} attempted to read task {task_id}")
+        flash('Bu göreve erişim yetkiniz yok', 'error')
+        return redirect(url_for('tasks_page'))
+    
+    return render_template('task_detail.html', task=task)
+
+
+@app.route('/products/<int:product_id>')
+@login_required
+def product_detail(product_id):
+    """Render product detail page"""
+    from utils.permissions import check_entity_access, get_current_user_from_session
+    from models_crm import Product
+    
+    workspace_id = session.get('workspace_id')
+    user = get_current_user_from_session()
+    
+    product = Product.query.filter_by(id=product_id, workspace_id=workspace_id, is_deleted=False).first()
+    
+    if not product:
+        flash('Ürün bulunamadı', 'error')
+        return redirect(url_for('pipeline'))
+    
+    # SECURITY: Check entity access (IDOR protection)
+    if not check_entity_access(user, product, 'read'):
+        logger.warning(f"Access denied: user {user.id} attempted to read product {product_id}")
+        flash('Bu ürüne erişim yetkiniz yok', 'error')
+        return redirect(url_for('pipeline'))
+    
+    return render_template('product_detail.html', product=product)
 
 
 @app.route('/tasks')

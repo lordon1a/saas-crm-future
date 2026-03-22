@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <title>{{ deal.name }} - Anlaşma Detayı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+        .deal-page-header {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0 20px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+        .deal-title-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+        .back-btn {
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            flex-shrink: 0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+        .back-btn:hover { background: #f3f4f6; color: #374151; }
+        .deal-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .deal-page-header h1 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 280px;
+        }
+        .stage-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #dcfce7;
+            color: #166534;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.15s;
+        }
+        .btn-icon:hover { background: #f9fafb; color: #374151; }
+
+        .deal-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: #fff;
+            border-right: 1px solid #e5e7eb;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .sidebar-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+        .sidebar-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .sidebar-field-label {
+            font-size: 11px;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+        .sidebar-field-value {
+            font-size: 13px;
+            color: #111827;
+            font-weight: 500;
+        }
+        .sidebar-field-value a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .sidebar-field-value a:hover {
+            text-decoration: underline;
+        }
+
+        .deal-content {
+            flex: 1;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        .content-tabs {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0 20px;
+            display: flex;
+            gap: 24px;
+        }
+        .tab-btn {
+            padding: 14px 0;
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b7280;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .tab-btn:hover { color: #374151; }
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            font-weight: 600;
+        }
+        .tab-content {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased flex h-screen overflow-hidden bg-gray-50">
+
+    <!-- App Nav Sidebar (64px) -->
+    <aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-5 z-30 flex-shrink-0 shadow-sm">
+        <a href="/" class="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg mb-7 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-xl">🐧</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-3 w-full px-3">
+            <a href="/" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-base"></i></a>
+            <a href="/analytics" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-base"></i></a>
+            <a href="/contacts" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-base"></i></a>
+            <a href="/companies" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-base"></i></a>
+            <a href="/broadcast" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-base"></i></a>
+            <a href="/automation" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-base"></i></a>
+            <a href="/pipeline" class="w-10 h-10 flex items-center justify-center text-purple-600 bg-purple-50 rounded-xl shadow-sm" title="Pipeline"><i class="fas fa-filter text-base"></i></a>
+            <a href="/tasks" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-base"></i></a>
+            <a href="/documents" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Dökümanlar"><i class="fas fa-file-lines text-base"></i></a>
+            <a href="/channels" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Kanallar"><i class="fas fa-plug text-base"></i></a>
+        </nav>
+        <div class="flex flex-col gap-3 w-full px-3 pb-2">
+            <a href="/settings" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-gear text-base"></i></a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış"><i class="fas fa-sign-out-alt text-base"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Area -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Deal Page Header -->
+        <header class="deal-page-header">
+            <div class="deal-title-area">
+                <a href="/pipeline" class="back-btn">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                    <span>Pipeline</span>
+                </a>
+                <span class="text-gray-300 text-lg">/</span>
+                <div class="deal-avatar">
+                    <i class="fas fa-handshake text-sm"></i>
+                </div>
+                <h1>{{ deal.name }}</h1>
+                {% if deal.stage %}
+                <span class="stage-badge">{{ deal.stage.name }}</span>
+                {% endif %}
+            </div>
+            <div class="header-actions">
+                <button class="btn-primary">
+                    <i class="fas fa-file-invoice text-xs"></i>
+                    Teklif Oluştur
+                </button>
+                <button class="btn-icon" title="Daha fazla">
+                    <i class="fas fa-ellipsis-h text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Two-Column Layout -->
+        <div class="flex flex-1 overflow-hidden">
+
+            <!-- Left Sidebar -->
+            <aside class="deal-sidebar">
+                
+                <!-- Deal Info Section -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Anlaşma Bilgileri</div>
+                    
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Değer</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.value %}
+                                {{ "{:,.2f}".format(deal.value) }} ₺
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Şirket</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.company %}
+                                <a href="/companies/{{ deal.company.id }}">{{ deal.company.name }}</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">İlgili Kişi</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.primary_contact %}
+                                <a href="/contacts/{{ deal.primary_contact.id }}">{{ deal.primary_contact.full_name }}</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Beklenen Kapanış</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.expected_close_date %}
+                                {{ deal.expected_close_date.strftime('%d.%m.%Y') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Pipeline</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.pipeline %}
+                                {{ deal.pipeline.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Durum</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.status == 'open' %}
+                                <span class="text-blue-600">Açık</span>
+                            {% elif deal.status == 'won' %}
+                                <span class="text-green-600">Kazanıldı</span>
+                            {% elif deal.status == 'lost' %}
+                                <span class="text-red-600">Kaybedildi</span>
+                            {% else %}
+                                {{ deal.status }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revenue Info (if recurring) -->
+                {% if deal.revenue_type == 'recurring' %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Gelir Bilgileri</div>
+                    
+                    {% if deal.mrr %}
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">MRR (Aylık)</div>
+                        <div class="sidebar-field-value">{{ "{:,.2f}".format(deal.mrr) }} ₺</div>
+                    </div>
+                    {% endif %}
+
+                    {% if deal.arr %}
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">ARR (Yıllık)</div>
+                        <div class="sidebar-field-value">{{ "{:,.2f}".format(deal.arr) }} ₺</div>
+                    </div>
+                    {% endif %}
+
+                    {% if deal.renewal_date %}
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Yenileme Tarihi</div>
+                        <div class="sidebar-field-value">{{ deal.renewal_date.strftime('%d.%m.%Y') }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if deal.churn_risk %}
+                    <div class="sidebar-field">
+                        <div class="sidebar-field-label">Kayıp Riski</div>
+                        <div class="sidebar-field-value">
+                            {% if deal.churn_risk == 'low' %}
+                                <span class="text-green-600">Düşük</span>
+                            {% elif deal.churn_risk == 'medium' %}
+                                <span class="text-yellow-600">Orta</span>
+                            {% elif deal.churn_risk == 'high' %}
+                                <span class="text-red-600">Yüksek</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Next Step -->
+                {% if deal.next_step %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Sonraki Adım</div>
+                    <div class="text-sm text-gray-700">{{ deal.next_step }}</div>
+                    {% if deal.next_step_due_at %}
+                    <div class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-clock"></i> {{ deal.next_step_due_at.strftime('%d.%m.%Y %H:%M') }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+            </aside>
+
+            <!-- Main Content -->
+            <div class="deal-content">
+                
+                <!-- Tabs -->
+                <div class="content-tabs">
+                    <button class="tab-btn active" onclick="switchTab('overview')">Genel Bakış</button>
+                    <button class="tab-btn" onclick="switchTab('activities')">Aktiviteler</button>
+                    <button class="tab-btn" onclick="switchTab('quotes')">Teklifler</button>
+                    <button class="tab-btn" onclick="switchTab('products')">Ürünler</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <div id="overview-tab">
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Anlaşma Özeti</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="text-sm text-gray-500">Oluşturulma</div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ deal.created_at.strftime('%d.%m.%Y %H:%M') if deal.created_at else '-' }}
+                                    </div>
+                                </div>
+                                {% if deal.updated_at %}
+                                <div>
+                                    <div class="text-sm text-gray-500">Son Güncelleme</div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ deal.updated_at.strftime('%d.%m.%Y %H:%M') }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if deal.stage_entered_at %}
+                                <div>
+                                    <div class="text-sm text-gray-500">Mevcut Aşamada</div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ deal.days_in_current_stage() }} gün
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="activities-tab" class="hidden">
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Aktiviteler</h3>
+                            <p class="text-sm text-gray-500">Aktivite geçmişi yakında eklenecek...</p>
+                        </div>
+                    </div>
+
+                    <div id="quotes-tab" class="hidden">
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Teklifler</h3>
+                            <p class="text-sm text-gray-500">Teklif listesi yakında eklenecek...</p>
+                        </div>
+                    </div>
+
+                    <div id="products-tab" class="hidden">
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Ürünler</h3>
+                            <p class="text-sm text-gray-500">Ürün listesi yakında eklenecek...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('[id$="-tab"]').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+    </script>
+
+</body>
+</html>

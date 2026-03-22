@@ -387,6 +387,10 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 ml-4">
+                    <button onclick="viewDealDetail()" class="px-4 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-all flex items-center gap-2 text-sm font-semibold" title="Detayları Gör">
+                        <i class="fas fa-external-link-alt text-xs"></i>
+                        <span>Detayları Gör</span>
+                    </button>
                     <button onclick="openEditDealModal()" class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 hover:text-brand-700 hover:bg-brand-100 transition-all flex items-center justify-center" title="Düzenle">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -2548,6 +2552,15 @@
             if (!keepCurrentDeal) {
                 currentDeal = null;
             }
+        }
+
+        function viewDealDetail() {
+            if (!currentDeal) {
+                showToast('Lütfen önce bir anlaşma seçin', 'error');
+                return;
+            }
+            // Redirect to deal detail page
+            window.location.href = `/deals/${currentDeal.id}`;
         }
 
         async function confirmDeleteDeal() {

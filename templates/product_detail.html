@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ product.name }} - Ürün Detayı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/pipeline" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ product.name }}</h1>
+                        {% if product.sku %}
+                        <p class="text-sm text-gray-500">SKU: {{ product.sku }}</p>
+                        {% endif %}
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold
+                        {% if product.is_active %}bg-green-100 text-green-700
+                        {% else %}bg-gray-100 text-gray-700
+                        {% endif %}">
+                        {% if product.is_active %}AKTİF{% else %}PASİF{% endif %}
+                    </span>
+                </div>
+                <div class="flex gap-2">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-plus mr-2"></i>Teklife Ekle
+                    </button>
+                    <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                        <i class="fas fa-edit mr-2"></i>Düzenle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="max-w-5xl mx-auto p-6">
+            <div class="grid grid-cols-3 gap-6">
+                <!-- Main Content -->
+                <div class="col-span-2 space-y-6">
+                    <!-- Description -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Açıklama</h3>
+                        {% if product.description %}
+                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ product.description }}</p>
+                        {% else %}
+                            <p class="text-sm text-gray-500 italic">Açıklama eklenmemiş</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Usage Stats -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Kullanım İstatistikleri</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-gray-900">0</div>
+                                <div class="text-xs text-gray-500 mt-1">Aktif Teklifler</div>
+                            </div>
+                            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-gray-900">0</div>
+                                <div class="text-xs text-gray-500 mt-1">Toplam Satış</div>
+                            </div>
+                            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-gray-900">0 ₺</div>
+                                <div class="text-xs text-gray-500 mt-1">Toplam Gelir</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Product Info -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-sm font-semibold text-gray-500 mb-4">Ürün Bilgileri</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">Fiyat</div>
+                                <div class="text-lg font-bold text-gray-900">
+                                    {% if product.price %}
+                                        {{ "{:,.2f}".format(product.price) }} {{ product.currency or 'TRY' }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if product.cost %}
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">Maliyet</div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ "{:,.2f}".format(product.cost) }} {{ product.currency or 'TRY' }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if product.sku %}
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">SKU</div>
+                                <div class="text-sm font-medium text-gray-900">{{ product.sku }}</div>
+                            </div>
+                            {% endif %}
+                            {% if product.category %}
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">Kategori</div>
+                                <div class="text-sm font-medium text-gray-900">{{ product.category }}</div>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">Durum</div>
+                                <div class="text-sm font-medium">
+                                    <span class="px-2 py-1 rounded text-xs font-semibold
+                                        {% if product.is_active %}bg-green-100 text-green-700
+                                        {% else %}bg-gray-100 text-gray-700
+                                        {% endif %}">
+                                        {% if product.is_active %}Aktif{% else %}Pasif{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">Oluşturulma</div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ product.created_at.strftime('%d.%m.%Y') if product.created_at else '-' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing Info -->
+                    {% if product.price and product.cost %}
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-sm font-semibold text-gray-500 mb-4">Kar Marjı</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Fiyat:</span>
+                                <span class="font-medium">{{ "{:,.2f}".format(product.price) }} ₺</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Maliyet:</span>
+                                <span class="font-medium">{{ "{:,.2f}".format(product.cost) }} ₺</span>
+                            </div>
+                            <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
+                                <span class="text-gray-600">Kar:</span>
+                                <span class="font-bold text-green-600">{{ "{:,.2f}".format(product.price - product.cost) }} ₺</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Kar Marjı:</span>
+                                <span class="font-bold text-green-600">
+                                    {{ "{:.1f}".format(((product.price - product.cost) / product.price * 100) if product.price > 0 else 0) }}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

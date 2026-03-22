@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ quote.quote_number }} - Teklif Detayı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/pipeline" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ quote.quote_number }}</h1>
+                        <p class="text-sm text-gray-500">
+                            {% if quote.deal %}
+                                <a href="/deals/{{ quote.deal.id }}" class="text-blue-600 hover:underline">{{ quote.deal.name }}</a>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold
+                        {% if quote.status == 'draft' %}bg-gray-100 text-gray-700
+                        {% elif quote.status == 'sent' %}bg-blue-100 text-blue-700
+                        {% elif quote.status == 'accepted' %}bg-green-100 text-green-700
+                        {% elif quote.status == 'rejected' %}bg-red-100 text-red-700
+                        {% elif quote.status == 'expired' %}bg-orange-100 text-orange-700
+                        {% endif %}">
+                        {{ quote.status|upper }}
+                    </span>
+                </div>
+                <div class="flex gap-2">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-file-pdf mr-2"></i>PDF İndir
+                    </button>
+                    <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                        <i class="fas fa-edit mr-2"></i>Düzenle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="max-w-4xl mx-auto p-6">
+            <div class="bg-white rounded-lg shadow-sm p-8">
+                <!-- Quote Info -->
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 mb-2">Teklif Bilgileri</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Teklif No:</span>
+                                <span class="text-sm font-medium">{{ quote.quote_number }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Oluşturulma:</span>
+                                <span class="text-sm font-medium">{{ quote.created_at.strftime('%d.%m.%Y') if quote.created_at else '-' }}</span>
+                            </div>
+                            {% if quote.valid_until %}
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Geçerlilik:</span>
+                                <span class="text-sm font-medium">{{ quote.valid_until.strftime('%d.%m.%Y') }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 mb-2">Müşteri Bilgileri</h3>
+                        <div class="space-y-2">
+                            {% if quote.deal and quote.deal.company %}
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Şirket:</span>
+                                <span class="text-sm font-medium">
+                                    <a href="/companies/{{ quote.deal.company.id }}" class="text-blue-600 hover:underline">
+                                        {{ quote.deal.company.name }}
+                                    </a>
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% if quote.deal and quote.deal.primary_contact %}
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">İlgili Kişi:</span>
+                                <span class="text-sm font-medium">
+                                    <a href="/contacts/{{ quote.deal.primary_contact.id }}" class="text-blue-600 hover:underline">
+                                        {{ quote.deal.primary_contact.full_name }}
+                                    </a>
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Kalemler</h3>
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ürün/Hizmet</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Miktar</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Birim Fiyat</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Toplam</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% if quote.line_items %}
+                                {% for item in quote.line_items %}
+                                <tr>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ item.description or '-' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ item.quantity }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ "{:,.2f}".format(item.unit_price) }} {{ quote.currency }}</td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 text-right">{{ "{:,.2f}".format(item.total) }} {{ quote.currency }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-500">Henüz kalem eklenmemiş</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals -->
+                <div class="border-t border-gray-200 pt-4">
+                    <div class="flex justify-end">
+                        <div class="w-64 space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Ara Toplam:</span>
+                                <span class="font-medium">{{ "{:,.2f}".format(quote.subtotal) }} {{ quote.currency }}</span>
+                            </div>
+                            {% if quote.discount_total > 0 %}
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">İndirim:</span>
+                                <span class="font-medium text-red-600">-{{ "{:,.2f}".format(quote.discount_total) }} {{ quote.currency }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">KDV:</span>
+                                <span class="font-medium">{{ "{:,.2f}".format(quote.tax_total) }} {{ quote.currency }}</span>
+                            </div>
+                            <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
+                                <span>Genel Toplam:</span>
+                                <span class="text-blue-600">{{ "{:,.2f}".format(quote.grand_total) }} {{ quote.currency }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                {% if quote.notes %}
+                <div class="mt-8 pt-8 border-t border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-500 mb-2">Notlar</h3>
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ quote.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
