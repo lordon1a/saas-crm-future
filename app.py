@@ -335,6 +335,194 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added contact_id column to deals")
             
+            # Check if next_step column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='next_step'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add next_step column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN next_step VARCHAR(500)
+                """)
+                conn.commit()
+                logger.info("✓ Added next_step column")
+            
+            # Check if next_step_due_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='next_step_due_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add next_step_due_at column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN next_step_due_at TIMESTAMP
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_next_step_due_at 
+                    ON deals(next_step_due_at)
+                """)
+                conn.commit()
+                logger.info("✓ Added next_step_due_at column")
+            
+            # Check if last_activity_at column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='last_activity_at'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add last_activity_at column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN last_activity_at TIMESTAMP
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_last_activity_at 
+                    ON deals(last_activity_at)
+                """)
+                conn.commit()
+                logger.info("✓ Added last_activity_at column")
+            
+            # Check if revenue_type column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='revenue_type'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add revenue_type column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN revenue_type VARCHAR(20) DEFAULT 'one_time' NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_revenue_type 
+                    ON deals(revenue_type)
+                """)
+                conn.commit()
+                logger.info("✓ Added revenue_type column")
+            
+            # Check if mrr column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='mrr'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add mrr column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN mrr NUMERIC(12, 2) DEFAULT 0
+                """)
+                conn.commit()
+                logger.info("✓ Added mrr column")
+            
+            # Check if arr column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='arr'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add arr column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN arr NUMERIC(12, 2) DEFAULT 0
+                """)
+                conn.commit()
+                logger.info("✓ Added arr column")
+            
+            # Check if renewal_date column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='renewal_date'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add renewal_date column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN renewal_date DATE
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_renewal_date 
+                    ON deals(renewal_date)
+                """)
+                conn.commit()
+                logger.info("✓ Added renewal_date column")
+            
+            # Check if churn_risk column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='churn_risk'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add churn_risk column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN churn_risk VARCHAR(20) DEFAULT 'low' NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_churn_risk 
+                    ON deals(churn_risk)
+                """)
+                conn.commit()
+                logger.info("✓ Added churn_risk column")
+            
+            # Check if forecast_category column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='forecast_category'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add forecast_category column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN forecast_category VARCHAR(20) DEFAULT 'pipeline' NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_forecast_category 
+                    ON deals(forecast_category)
+                """)
+                conn.commit()
+                logger.info("✓ Added forecast_category column")
+            
+            # Check if win_loss_reason_id column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='win_loss_reason_id'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add win_loss_reason_id column...")
+                cur.execute("""
+                    ALTER TABLE deals 
+                    ADD COLUMN win_loss_reason_id INTEGER REFERENCES win_loss_reasons(id)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_deals_win_loss_reason_id 
+                    ON deals(win_loss_reason_id)
+                """)
+                conn.commit()
+                logger.info("✓ Added win_loss_reason_id column")
+            
             # === CONTACTS TABLE MIGRATIONS ===
             # Check if display_order column exists
             cur.execute("""
