@@ -126,13 +126,13 @@ const DocGen = {
     },
 
     async generateFromTemplate(templateId) {
-        const recordType = prompt('Kayıt tipi (deal/contact/company/quote):', 'deal');
+        const recordType = prompt('Kayıt tipi (deal/contact/company/quote/task/product):', 'deal');
         if (!recordType) return;
         
         const recordId = prompt('Kayıt ID:', '1');
         if (!recordId) return;
         
-        const outputType = prompt('Çıktı formatı (pdf/docx/pptx):', 'pdf');
+        const outputType = prompt('Çıktı formatı (docx/pptx):\n\nNOT: PDF dönüştürme şu an desteklenmiyor, DOCX kullanın.', 'docx');
         if (!outputType) return;
         
         try {

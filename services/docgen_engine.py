@@ -103,8 +103,19 @@ def docx_to_pdf(docx_path: str, output_path: str) -> str:
     Convert a rendered .docx to PDF via LibreOffice (headless).
     Requires: apt-get install libreoffice
     Alternative if LibreOffice not available: use python-docx2pdf on Windows/Mac.
+    
+    NOTE: This function requires LibreOffice to be installed on the server.
+    On Render Free Tier, LibreOffice is not available by default.
     """
     import subprocess
+    
+    # Check if libreoffice is available
+    try:
+        result = subprocess.run(['which', 'libreoffice'], capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            raise FileNotFoundError("LibreOffice not installed. PDF conversion not available. Please use DOCX output instead.")
+    except Exception as e:
+        raise FileNotFoundError(f"LibreOffice not available: {e}. Please use DOCX output instead.")
 
     out_dir = str(Path(output_path).parent)
     result = subprocess.run(
@@ -146,10 +157,17 @@ def generate_document(template, record_data: dict, output_type: str = None) -> s
     if template.file_type == 'docx':
         if output_type == 'pdf':
             # Render docx first, then convert
-            tmp_docx = output_path.replace('.pdf', '_tmp.docx')
-            render_docx(template_path, context, tmp_docx)
-            docx_to_pdf(tmp_docx, output_path)
-            os.remove(tmp_docx)
+            # Note: PDF conversion requires LibreOffice which may not be available on all platforms
+            try:
+                tmp_docx = output_path.replace('.pdf', '_tmp.docx')
+                render_docx(template_path, context, tmp_docx)
+                docx_to_pdf(tmp_docx, output_path)
+                os.remove(tmp_docx)
+            except FileNotFoundError as e:
+                # LibreOffice not available - fall back to DOCX
+                logger.warning(f"PDF conversion not available: {e}. Generating DOCX instead.")
+                output_path = output_path.replace('.pdf', '.docx')
+                render_docx(template_path, context, output_path)
         else:
             render_docx(template_path, context, output_path)
 
