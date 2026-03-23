@@ -297,6 +297,10 @@ const DocGen = {
     }
 };
 
+// Global fonksiyonları expose et
+window.DocGen = DocGen;
+window.loadDocgenTemplates = () => DocGen.loadTemplates();
+
 // Sayfa yüklendiğinde başlat
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => DocGen.init());
