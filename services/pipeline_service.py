@@ -536,6 +536,37 @@ class PipelineService:
             
             db.session.commit()
             logger.info(f"Closed deal {deal.id} as {status}: {win_loss_reason}")
+            
+            # Trigger automation for won deals (DocGen)
+            if status == 'won':
+                try:
+                    from services.automation_engine import AutomationEngine
+                    from models_automation import AutomationRule
+                    
+                    # Find automation rules for deal won event
+                    automation_rules = AutomationRule.query.filter_by(
+                        workspace_id=workspace_id,
+                        trigger_type='deal_won',
+                        is_active=True
+                    ).all()
+                    
+                    context = {
+                        'deal_id': deal.id,
+                        'deal_name': deal.name,
+                        'deal_value': deal.value,
+                        'company_id': deal.company_id,
+                        'contact_id': deal.contact_id
+                    }
+                    
+                    for rule in automation_rules:
+                        try:
+                            AutomationEngine.execute_rule(rule, context=context)
+                        except Exception as rule_error:
+                            logger.warning(f"Automation rule {rule.id} failed (non-blocking): {rule_error}")
+                            
+                except Exception as automation_error:
+                    logger.warning(f"Automation trigger failed (non-blocking): {automation_error}")
+                    
         except Exception as e:
             db.session.rollback()
             logger.error(f"Failed to close deal: {e}")

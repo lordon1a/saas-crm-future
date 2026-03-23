@@ -151,6 +151,9 @@ class AutomationEngine:
             elif action_type == 'update_customer':
                 return AutomationEngine._action_update_customer(action, conversation)
             
+            elif action_type == 'generate_document':
+                return AutomationEngine._action_generate_document(action, conversation, context)
+            
             else:
                 logger.warning(f"Unknown action type: {action_type}")
                 return {'status': 'skipped', 'reason': 'unknown_action_type'}
@@ -263,6 +266,67 @@ class AutomationEngine:
         db.session.commit()
         
         return {'status': 'success', 'updates': updates}
+    
+    @staticmethod
+    def _action_generate_document(action: Dict, conversation, context):
+        """Belge üret aksiyonu - Deal/Quote için otomatik belge oluşturur"""
+        from services.docgen_engine import DocGenEngine
+        from models_crm import Deal, Quote
+        
+        template_id = action.get('template_id')
+        entity_type = action.get('entity_type', 'deal')  # 'deal' or 'quote'
+        entity_id = action.get('entity_id')
+        output_format = action.get('output_format', 'docx')
+        
+        if not template_id:
+            return {'status': 'skipped', 'reason': 'missing_template_id'}
+        
+        # Context'ten entity_id'yi al (deal/quote status değişikliğinde)
+        if not entity_id and context:
+            if entity_type == 'deal' and 'deal_id' in context:
+                entity_id = context['deal_id']
+            elif entity_type == 'quote' and 'quote_id' in context:
+                entity_id = context['quote_id']
+        
+        if not entity_id:
+            return {'status': 'skipped', 'reason': 'missing_entity_id'}
+        
+        try:
+            # Entity'yi al
+            if entity_type == 'deal':
+                entity = Deal.query.get(entity_id)
+            elif entity_type == 'quote':
+                entity = Quote.query.get(entity_id)
+            else:
+                return {'status': 'failed', 'reason': 'invalid_entity_type'}
+            
+            if not entity:
+                return {'status': 'failed', 'reason': 'entity_not_found'}
+            
+            # Belge üret
+            docgen = DocGenEngine()
+            result = docgen.generate_document(
+                template_id=template_id,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                output_format=output_format,
+                workspace_id=entity.workspace_id
+            )
+            
+            if result.get('success'):
+                logger.info(f"Auto-generated document for {entity_type} {entity_id}: {result.get('filename')}")
+                return {
+                    'status': 'success',
+                    'document_id': result.get('document_id'),
+                    'filename': result.get('filename'),
+                    'download_url': result.get('download_url')
+                }
+            else:
+                return {'status': 'failed', 'error': result.get('error', 'Unknown error')}
+                
+        except Exception as e:
+            logger.error(f"Error generating document: {e}")
+            return {'status': 'failed', 'error': str(e)}
 
 
 class AutoReplyEngine:
