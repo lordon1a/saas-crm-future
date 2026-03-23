@@ -214,6 +214,17 @@
 						<form id="docgenTemplateUploadForm" class="space-y-2">
 							<input id="docgenTemplateFile" type="file" accept=".docx,.pptx" required class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
 							<input id="docgenTemplateName" type="text" placeholder="Sablon adi" required class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+							
+							<!-- Template Category -->
+							<select id="docgenTemplateCategory" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+								<option value="">Kategori seçin</option>
+								<option value="contract">📄 Sözleşme</option>
+								<option value="quote">💰 Teklif</option>
+								<option value="invoice">🧾 Fatura</option>
+								<option value="report">📊 Rapor</option>
+								<option value="other">📋 Diğer</option>
+							</select>
+							
 							<select id="docgenObjectType" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
 								<option value="deal">Deal</option>
 								<option value="contact">Contact</option>
@@ -221,6 +232,13 @@
 								<option value="quote">Quote</option>
 							</select>
 							<textarea id="docgenTemplateDesc" rows="2" placeholder="Aciklama (opsiyonel)" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2"></textarea>
+							
+							<!-- Default Template Checkbox -->
+							<label class="flex items-center gap-2 text-sm text-slate-700">
+								<input id="docgenIsDefault" type="checkbox" class="accent-brand-600">
+								<span>Varsayılan şablon olarak ayarla</span>
+							</label>
+							
 							<button type="submit" class="w-full px-3 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700">
 								<i class="fas fa-upload mr-2"></i>Sablon Yukle
 							</button>
@@ -233,8 +251,16 @@
 				</div>
 
 				<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-					<div class="px-5 py-4 border-b border-slate-200">
+					<div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
 						<h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Yuklu Sablonlar</h3>
+						<select id="templateCategoryFilter" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+							<option value="">Tüm Kategoriler</option>
+							<option value="contract">Sözleşme</option>
+							<option value="quote">Teklif</option>
+							<option value="invoice">Fatura</option>
+							<option value="report">Rapor</option>
+							<option value="other">Diğer</option>
+						</select>
 					</div>
 					<div id="docgenTemplateList" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
 						<div class="p-6 text-sm text-slate-500">Yukleniyor...</div>

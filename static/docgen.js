@@ -5,6 +5,7 @@
 
 const DocGen = {
     API_BASE: '/api/docgen',
+    currentCategoryFilter: '',
     
     async api(path, options) {
         const res = await fetch(path, options || {});
@@ -15,11 +16,38 @@ const DocGen = {
         }
         return data;
     },
+    
+    getCategoryIcon(category) {
+        const icons = {
+            'contract': '📄',
+            'quote': '💰',
+            'invoice': '🧾',
+            'report': '📊',
+            'other': '📋'
+        };
+        return icons[category] || '📄';
+    },
+    
+    getCategoryName(category) {
+        const names = {
+            'contract': 'Sözleşme',
+            'quote': 'Teklif',
+            'invoice': 'Fatura',
+            'report': 'Rapor',
+            'other': 'Diğer'
+        };
+        return names[category] || category;
+    },
 
     async loadTemplates() {
         try {
             const data = await this.api(`${this.API_BASE}/templates`);
-            const templates = data.templates || [];
+            let templates = data.templates || [];
+            
+            // Apply category filter
+            if (this.currentCategoryFilter) {
+                templates = templates.filter(t => t.category === this.currentCategoryFilter);
+            }
             
             const container = document.getElementById('docgenTemplateList');
             if (!container) return;
@@ -30,22 +58,35 @@ const DocGen = {
             }
             
             container.innerHTML = templates.map(t => `
-                <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-bold text-slate-800 truncate">${t.name}</p>
-                        <p class="text-xs text-slate-500">
-                            ${t.object_type || 'general'} | ${t.file_type} | v${t.version || 1}
-                            ${t.is_active ? '<span class="text-green-600">● Aktif</span>' : '<span class="text-slate-400">○ Pasif</span>'}
-                        </p>
+                <div class="p-4 hover:bg-slate-50 transition-colors">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-lg">${this.getCategoryIcon(t.category)}</span>
+                                <p class="text-sm font-bold text-slate-800 truncate">${t.name}</p>
+                                ${t.is_default ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">VARSAYILAN</span>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-500">
+                                ${this.getCategoryName(t.category)} | ${t.object_type || 'general'} | ${t.file_type} | v${t.version || 1}
+                            </p>
+                            ${t.description ? `<p class="text-xs text-slate-600 mt-1">${t.description}</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-1">
+                            ${t.is_active ? '<span class="w-2 h-2 bg-green-500 rounded-full" title="Aktif"></span>' : '<span class="w-2 h-2 bg-slate-300 rounded-full" title="Pasif"></span>'}
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="DocGen.generateFromTemplate(${t.id})" 
-                            class="px-3 py-1.5 text-xs font-semibold bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                            <i class="fas fa-file-export mr-1"></i>Oluştur
+                    <div class="flex items-center gap-2 mt-3">
+                        <button onclick="DocGen.previewTemplate(${t.id})" 
+                            class="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
+                            <i class="fas fa-eye mr-1"></i>Önizle
+                        </button>
+                        <button onclick="DocGen.setDefaultTemplate(${t.id})" 
+                            class="px-3 py-1.5 text-xs font-semibold ${t.is_default ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'} rounded-lg hover:bg-amber-200">
+                            <i class="fas fa-star mr-1"></i>${t.is_default ? 'Varsayılan' : 'Varsayılan Yap'}
                         </button>
                         <button onclick="DocGen.toggleTemplate(${t.id}, ${!t.is_active})" 
                             class="px-2.5 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-50">
-                            ${t.is_active ? 'Pasifleştir' : 'Aktifleştir'}
+                            ${t.is_active ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}
                         </button>
                         <button onclick="DocGen.deleteTemplate(${t.id})" 
                             class="px-2.5 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
@@ -66,18 +107,27 @@ const DocGen = {
         
         const fileInput = document.getElementById('docgenTemplateFile');
         const nameInput = document.getElementById('docgenTemplateName');
+        const categoryInput = document.getElementById('docgenTemplateCategory');
         const objectTypeInput = document.getElementById('docgenObjectType');
         const descInput = document.getElementById('docgenTemplateDesc');
+        const isDefaultInput = document.getElementById('docgenIsDefault');
         
         if (!fileInput.files[0]) {
             alert('Lütfen bir dosya seçin');
             return;
         }
         
+        if (!categoryInput.value) {
+            alert('Lütfen bir kategori seçin');
+            return;
+        }
+        
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('name', nameInput.value.trim());
+        formData.append('category', categoryInput.value);
         formData.append('object_type', objectTypeInput.value);
+        formData.append('is_default', isDefaultInput.checked ? 'true' : 'false');
         if (descInput.value.trim()) {
             formData.append('description', descInput.value.trim());
         }
@@ -94,6 +144,101 @@ const DocGen = {
         } catch (err) {
             alert('Şablon yükleme hatası: ' + err.message);
         }
+    },
+    
+    async setDefaultTemplate(templateId) {
+        try {
+            await this.api(`${this.API_BASE}/templates/${templateId}/set-default`, {
+                method: 'POST'
+            });
+            
+            await this.loadTemplates();
+        } catch (err) {
+            alert('Varsayılan şablon ayarlama hatası: ' + err.message);
+        }
+    },
+    
+    async previewTemplate(templateId) {
+        try {
+            const data = await this.api(`${this.API_BASE}/templates/${templateId}`);
+            const template = data.template;
+            
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                    <div class="p-6 border-b border-gray-200 sticky top-0 bg-white">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xl font-bold text-gray-900">Şablon Önizleme</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-4xl">${this.getCategoryIcon(template.category)}</span>
+                            <div>
+                                <h4 class="text-lg font-bold text-gray-900">${template.name}</h4>
+                                <p class="text-sm text-gray-500">${this.getCategoryName(template.category)}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="font-semibold text-gray-700">Dosya Tipi:</span>
+                                <span class="text-gray-600">${template.file_type}</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-gray-700">Versiyon:</span>
+                                <span class="text-gray-600">v${template.version || 1}</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-gray-700">Kayıt Tipi:</span>
+                                <span class="text-gray-600">${template.object_type}</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-gray-700">Durum:</span>
+                                <span class="text-gray-600">${template.is_active ? '✅ Aktif' : '⏸️ Pasif'}</span>
+                            </div>
+                        </div>
+                        ${template.description ? `
+                            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                <p class="text-sm font-semibold text-slate-700 mb-1">Açıklama:</p>
+                                <p class="text-sm text-slate-600">${template.description}</p>
+                            </div>
+                        ` : ''}
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p class="text-sm font-semibold text-blue-900 mb-2">Kullanılabilir Placeholder'lar:</p>
+                            <div class="text-xs text-blue-800 space-y-1">
+                                <p>• <code>{{${template.object_type}.name}}</code> - Kayıt adı</p>
+                                <p>• <code>{{${template.object_type}.created_at}}</code> - Oluşturulma tarihi</p>
+                                <p>• <code>{{contact.email}}</code> - İlgili kişi email</p>
+                                <p>• <code>{{company.name}}</code> - Şirket adı</p>
+                                <p>• <code>{{user.name}}</code> - Kullanıcı adı</p>
+                                <p>• <code>{{workspace.company_name}}</code> - Workspace adı</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 bg-gray-50 border-t border-gray-200 flex gap-3">
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-semibold">
+                            Kapat
+                        </button>
+                        <button onclick="DocGen.downloadTemplate(${templateId})" class="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-semibold">
+                            <i class="fas fa-download mr-2"></i>İndir
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+        } catch (err) {
+            alert('Önizleme hatası: ' + err.message);
+        }
+    },
+    
+    async downloadTemplate(templateId) {
+        window.open(`${this.API_BASE}/templates/${templateId}/download`, '_blank');
     },
 
     async toggleTemplate(templateId, isActive) {
@@ -125,42 +270,20 @@ const DocGen = {
         }
     },
 
-    async generateFromTemplate(templateId) {
-        const recordType = prompt('Kayıt tipi (deal/contact/company/quote/task/product):', 'deal');
-        if (!recordType) return;
-        
-        const recordId = prompt('Kayıt ID:', '1');
-        if (!recordId) return;
-        
-        const outputType = prompt('Çıktı formatı (docx/pptx):\n\nNOT: PDF dönüştürme şu an desteklenmiyor, DOCX kullanın.', 'docx');
-        if (!outputType) return;
-        
-        try {
-            const data = await this.api(`${this.API_BASE}/generate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    template_id: templateId,
-                    record_type: recordType,
-                    record_id: parseInt(recordId),
-                    output_type: outputType
-                })
-            });
-            
-            if (data.document && data.document.id) {
-                alert('Doküman oluşturuldu! İndiriliyor...');
-                window.open(`${this.API_BASE}/download/${data.document.id}`, '_blank');
-            }
-        } catch (err) {
-            alert('Doküman oluşturma hatası: ' + err.message);
-        }
-    },
-
     init() {
         // Upload form event listener
         const uploadForm = document.getElementById('docgenTemplateUploadForm');
         if (uploadForm) {
             uploadForm.addEventListener('submit', (e) => this.uploadTemplate(e));
+        }
+        
+        // Category filter event listener
+        const categoryFilter = document.getElementById('templateCategoryFilter');
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', (e) => {
+                this.currentCategoryFilter = e.target.value;
+                this.loadTemplates();
+            });
         }
         
         // İlk yükleme
