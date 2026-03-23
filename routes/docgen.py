@@ -6,7 +6,7 @@ Handles template management and document generation for CRM records
 import os
 import json
 from datetime import datetime
-from flask import Blueprint, request, jsonify, send_file, abort, session
+from flask import Blueprint, request, jsonify, send_file, abort, session, render_template, redirect, url_for
 from werkzeug.utils import secure_filename
 from functools import wraps
 
@@ -74,14 +74,22 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
             'name': user.name,
             'email': user.email or ''
         }
+        # Add top-level user fields for easier access
+        context['current_user_name'] = user.name
+        context['current_user_email'] = user.email or ''
     
     # Fetch workspace info
     workspace = Workspace.query.get(workspace_id)
     if workspace:
         context['workspace'] = {
             'id': workspace.id,
-            'name': workspace.company_name
+            'name': workspace.company_name,
+            'company_name': workspace.company_name,
+            'email': workspace.email or ''
         }
+        # Add top-level workspace fields for easier access
+        context['workspace_name'] = workspace.company_name
+        context['workspace_email'] = workspace.email or ''
     
     # Fetch primary record based on record_type
     if record_type == 'deal':
@@ -109,7 +117,8 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                 'days_in_stage': deal.days_in_current_stage() if hasattr(deal, 'days_in_current_stage') else 0,
                 'is_rotting': deal.is_rotting() if hasattr(deal, 'is_rotting') else False,
                 'weighted_value': deal.get_weighted_value() if hasattr(deal, 'get_weighted_value') else 0,
-                'win_loss_reason': deal.win_loss_reason or ''
+                'win_loss_reason': deal.win_loss_reason or '',
+                'validity_days': 30  # Default validity period for quotes
             }
             
             # Add stage info
@@ -129,6 +138,7 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                     context['contact'] = {
                         'id': contact.id,
                         'name': contact.full_name,
+                        'full_name': contact.full_name,
                         'first_name': contact.first_name,
                         'last_name': contact.last_name or '',
                         'email': contact.email or '',
@@ -706,11 +716,16 @@ def download(doc_id):
     return send_file(doc.output_path, as_attachment=True)
 
 
-@bp.route('/templates', methods=['GET'])
-@login_required_api
+@bp.route('/template-manager', methods=['GET'])
 @require_app('docgen')
 def docgen_templates_page():
     """Render DocGen template management page."""
+    # Check authentication
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+    if not session.get('workspace_id'):
+        return redirect(url_for('auth.login'))
+    
     return render_template('docgen_templates.html')
 
 
