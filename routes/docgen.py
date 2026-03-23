@@ -167,6 +167,7 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                     context['company'] = {
                         'id': company.id,
                         'name': company.name,
+                        'email': company.email or '',
                         'industry': company.industry or '',
                         'size': company.size or '',
                         'website': company.website or '',
@@ -208,6 +209,7 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
                     context['company'] = {
                         'id': company.id,
                         'name': company.name,
+                        'email': company.email or '',
                         'industry': company.industry or '',
                         'size': company.size or '',
                         'website': company.website or '',
