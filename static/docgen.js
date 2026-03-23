@@ -44,6 +44,12 @@ const DocGen = {
             const data = await this.api(`${this.API_BASE}/templates`);
             let templates = data.templates || [];
             
+            // Update template count
+            const countEl = document.getElementById('templateCount');
+            if (countEl) {
+                countEl.textContent = templates.length;
+            }
+            
             // Apply category filter
             if (this.currentCategoryFilter) {
                 templates = templates.filter(t => t.category === this.currentCategoryFilter);

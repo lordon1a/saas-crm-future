@@ -706,6 +706,14 @@ def download(doc_id):
     return send_file(doc.output_path, as_attachment=True)
 
 
+@bp.route('/templates', methods=['GET'])
+@login_required_api
+@require_app('docgen')
+def docgen_templates_page():
+    """Render DocGen template management page."""
+    return render_template('docgen_templates.html')
+
+
 @bp.route('/documents', methods=['GET'])
 @login_required_api
 @require_app('docgen')
