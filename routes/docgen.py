@@ -84,12 +84,11 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
         context['workspace'] = {
             'id': workspace.id,
             'name': workspace.company_name,
-            'company_name': workspace.company_name,
-            'email': workspace.email or ''
+            'company_name': workspace.company_name
         }
         # Add top-level workspace fields for easier access
         context['workspace_name'] = workspace.company_name
-        context['workspace_email'] = workspace.email or ''
+        context['workspace_email'] = ''  # Workspace doesn't have email field
     
     # Fetch primary record based on record_type
     if record_type == 'deal':
