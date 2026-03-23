@@ -152,6 +152,7 @@ class Company(db.Model):
     size = db.Column(db.String(50))  # 1-10, 11-50, 51-200, 201-500, 500+
     parent_company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=True)
     website = db.Column(db.String(255))
+    email = db.Column(db.String(255))
     phone = db.Column(db.String(50))
     address = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

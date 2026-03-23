@@ -1223,6 +1223,23 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Workspace apps migration failed (may already exist): {e}")
             
+            # === COMPANY EMAIL MIGRATION ===
+            try:
+                from migrations.add_company_email import upgrade as company_email_upgrade
+                
+                # Reconnect for this migration
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                logger.info("Running migration: add email to companies table...")
+                company_email_upgrade(db)
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ Company email migration completed")
+            except Exception as e:
+                logger.warning(f"Company email migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 
