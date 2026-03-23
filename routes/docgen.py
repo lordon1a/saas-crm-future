@@ -580,6 +580,102 @@ def generate_bulk():
         return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/bulk-generate', methods=['POST'])
+@login_required_api
+def bulk_generate_with_criteria():
+    """
+    Bulk generation with filter criteria (for Pipeline page).
+    Body: { template_id, entity_type, output_format, criteria: {filter_type, stage_id?, start_date?, end_date?} }
+    """
+    workspace_id = session.get('workspace_id')
+    user_id = session.get('user_id')
+    data = request.get_json()
+    
+    template_id = data.get('template_id')
+    entity_type = data.get('entity_type', 'deal')
+    output_format = data.get('output_format', 'docx')
+    criteria = data.get('criteria', {})
+    
+    if not template_id:
+        return jsonify({'error': 'template_id is required'}), 400
+    
+    template = DocTemplate.query.filter_by(id=template_id, workspace_id=workspace_id).first()
+    if not template:
+        return jsonify({'error': 'Template not found'}), 404
+    
+    # Build query based on criteria
+    from models_crm import Deal
+    query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
+    
+    filter_type = criteria.get('filter_type', 'won')
+    
+    if filter_type == 'won':
+        query = query.filter_by(status='won')
+    elif filter_type == 'stage':
+        stage_id = criteria.get('stage_id')
+        if not stage_id:
+            return jsonify({'error': 'stage_id required for stage filter'}), 400
+        query = query.filter_by(stage_id=stage_id)
+    elif filter_type == 'date':
+        start_date = criteria.get('start_date')
+        end_date = criteria.get('end_date')
+        if not start_date or not end_date:
+            return jsonify({'error': 'start_date and end_date required for date filter'}), 400
+        query = query.filter(Deal.created_at >= start_date, Deal.created_at <= end_date)
+    
+    deals = query.all()
+    
+    if not deals:
+        return jsonify({'error': 'No deals found matching criteria', 'success_count': 0}), 404
+    
+    created_docs = []
+    success_count = 0
+    
+    try:
+        for deal in deals:
+            # Build nested context from CRM records
+            context = _build_nested_context(workspace_id, user_id, entity_type, deal.id)
+            
+            doc = GeneratedDocument(
+                workspace_id=workspace_id,
+                template_id=template_id,
+                record_id=deal.id,
+                record_type=entity_type,
+                output_type=output_format,
+                status='processing',
+            )
+            db.session.add(doc)
+            db.session.flush()
+
+            try:
+                output_path = generate_document(template, context, output_format)
+                doc.output_path = output_path
+                doc.status = 'done'
+                doc.completed_at = datetime.utcnow()
+                success_count += 1
+                created_docs.append({
+                    'id': doc.id,
+                    'filename': os.path.basename(output_path),
+                    'download_url': f'/api/docgen/download/{doc.id}'
+                })
+            except Exception as e:
+                doc.status = 'error'
+                doc.error_msg = str(e)
+                logger.error(f"Error generating document for deal {deal.id}: {e}")
+
+        db.session.commit()
+        return jsonify({
+            'success_count': success_count,
+            'total_count': len(deals),
+            'documents': created_docs
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error in bulk generation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ═══ DOWNLOAD + STATUS ═══
 
 @bp.route('/download/<int:doc_id>', methods=['GET'])

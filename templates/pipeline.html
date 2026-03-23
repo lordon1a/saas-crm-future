@@ -4314,7 +4314,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Oluşturuluyor...';
 
             try {
-                const response = await fetch('/api/docgen/bulk-generate', {
+                const response = await fetch('/api/docgen/generate/bulk', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
