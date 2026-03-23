@@ -81,14 +81,19 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
     # Fetch workspace info
     workspace = Workspace.query.get(workspace_id)
     if workspace:
+        # Get workspace owner's email (first user with owner role)
+        owner = User.query.filter_by(workspace_id=workspace_id, role='owner').first()
+        workspace_email = owner.email if owner else ''
+        
         context['workspace'] = {
             'id': workspace.id,
             'name': workspace.company_name,
-            'company_name': workspace.company_name
+            'company_name': workspace.company_name,
+            'email': workspace_email
         }
         # Add top-level workspace fields for easier access
         context['workspace_name'] = workspace.company_name
-        context['workspace_email'] = ''  # Workspace doesn't have email field
+        context['workspace_email'] = workspace_email
     
     # Fetch primary record based on record_type
     if record_type == 'deal':
