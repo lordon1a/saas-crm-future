@@ -40,9 +40,11 @@
                     </span>
                 </div>
                 <div class="flex gap-2">
+                    {% if 'docgen' in installed_apps %}
                     <button onclick="openDocGenModal()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm">
                         <i class="fas fa-file-invoice mr-2"></i>Profesyonel Teklif Oluştur
                     </button>
+                    {% endif %}
                     <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         <i class="fas fa-file-pdf mr-2"></i>PDF İndir
                     </button>

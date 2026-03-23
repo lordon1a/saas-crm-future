@@ -13,11 +13,12 @@ from functools import wraps
 from models import db
 from models_crm import DocTemplate, GeneratedDocument
 from services.docgen_engine import generate_document, UPLOAD_FOLDER
+from utils.app_guard import require_app
 import logging
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('docgen', __name__, url_prefix='/api/docgen')
+bp = Blueprint('docgen', __name__)
 
 ALLOWED_EXTENSIONS = {'docx', 'pptx', 'html'}
 
@@ -342,6 +343,7 @@ def _build_nested_context(workspace_id, user_id, record_type, record_id):
 
 @bp.route('/templates', methods=['GET'])
 @login_required_api
+@require_app('docgen')
 def list_templates():
     """List all active templates for current workspace, optionally filtered by object_type."""
     workspace_id = session.get('workspace_id')
@@ -357,6 +359,7 @@ def list_templates():
 
 @bp.route('/templates', methods=['POST'])
 @login_required_api
+@require_app('docgen')
 def create_template():
     """
     Upload a new template.
@@ -404,6 +407,7 @@ def create_template():
 
 @bp.route('/templates/<int:template_id>', methods=['PUT'])
 @login_required_api
+@require_app('docgen')
 def update_template(template_id):
     """Update template metadata (not the file itself)."""
     workspace_id = session.get('workspace_id')
@@ -431,6 +435,7 @@ def update_template(template_id):
 
 @bp.route('/templates/<int:template_id>', methods=['DELETE'])
 @login_required_api
+@require_app('docgen')
 def delete_template(template_id):
     """Soft-delete a template."""
     workspace_id = session.get('workspace_id')
@@ -453,6 +458,7 @@ def delete_template(template_id):
 
 @bp.route('/generate', methods=['POST'])
 @login_required_api
+@require_app('docgen')
 def generate():
     """
     Generate a document for a single CRM record.
@@ -515,6 +521,7 @@ def generate():
 
 @bp.route('/generate/bulk', methods=['POST'])
 @login_required_api
+@require_app('docgen')
 def generate_bulk():
     """
     Queue bulk generation for multiple records.
@@ -582,6 +589,7 @@ def generate_bulk():
 
 @bp.route('/bulk-generate', methods=['POST'])
 @login_required_api
+@require_app('docgen')
 def bulk_generate_with_criteria():
     """
     Bulk generation with filter criteria (for Pipeline page).
@@ -680,6 +688,7 @@ def bulk_generate_with_criteria():
 
 @bp.route('/download/<int:doc_id>', methods=['GET'])
 @login_required_api
+@require_app('docgen')
 def download(doc_id):
     """Download a generated document."""
     workspace_id = session.get('workspace_id')
@@ -699,6 +708,7 @@ def download(doc_id):
 
 @bp.route('/documents', methods=['GET'])
 @login_required_api
+@require_app('docgen')
 def list_documents():
     """List generated documents for current workspace, filterable by record_id or record_type."""
     workspace_id = session.get('workspace_id')
@@ -722,6 +732,7 @@ def list_documents():
 
 @bp.route('/documents/<int:doc_id>/status', methods=['GET'])
 @login_required_api
+@require_app('docgen')
 def doc_status(doc_id):
     """Poll the status of a single document."""
     workspace_id = session.get('workspace_id')

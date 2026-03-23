@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <title>Uygulama Mağazası - CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { margin: 0; padding: 0; }
+        .app-card { transition: all 0.3s ease; }
+        .app-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .toast { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    </style>
+</head>
+<body class="bg-gray-50 flex">
+    
+    <!-- Sidebar -->
+    {% include '_sidebar_light.html' %}
+    
+    <!-- Main Content -->
+    <div class="flex-1 overflow-y-auto">
+        <div class="max-w-7xl mx-auto p-6 md:p-8">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(category_filter=['marketplace_success']) %}
+            {% if messages %}
+            <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 animate-fade-in">
+                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                <span class="text-green-800 font-medium">{{ messages[0] }} — Artık tüm sayfalarda aktif.</span>
+            </div>
+            {% endif %}
+            {% endwith %}
+            
+            <!-- Header -->
+            <div class="mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Uygulama Mağazası</h1>
+                <p class="text-gray-600 mt-1">CRM'inize yeni özellikler ekleyin ve iş akışınızı güçlendirin</p>
+            </div>
+            
+            <!-- Category Filters -->
+            <div class="mb-6 flex flex-wrap gap-2">
+                <button onclick="filterCategory('all')" class="category-btn px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium transition hover:bg-purple-700">
+                    Tümü
+                </button>
+                <button onclick="filterCategory('Verimlilik')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300 transition">
+                    Verimlilik
+                </button>
+                <button onclick="filterCategory('Pazarlama')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300 transition">
+                    Pazarlama
+                </button>
+                <button onclick="filterCategory('Yapay Zeka')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300 transition">
+                    Yapay Zeka
+                </button>
+            </div>
+            
+            <!-- Apps Grid -->
+            <div id="apps-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {% for app in catalog %}
+                <div class="app-card bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:border-purple-200" data-category="{{ app.category }}">
+                    <!-- Icon & Badge -->
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-{{ app.color }}-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fas {{ app.icon }} text-xl text-{{ app.color }}-600"></i>
+                        </div>
+                        {% if app.slug in installed_apps %}
+                        <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Aktif</span>
+                        {% elif not app.is_available %}
+                        <span class="px-2.5 py-1 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">Yakında</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- App Info -->
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">{{ app.name }}</h3>
+                    <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ app.description }}</p>
+                    
+                    <!-- Category Tag -->
+                    <div class="mb-3">
+                        <span class="inline-block px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                            {{ app.category }}
+                        </span>
+                    </div>
+                    
+                    <!-- Action Button -->
+                    <div>
+                        {% if app.slug in installed_apps %}
+                        <button onclick="uninstallApp('{{ app.slug }}')" 
+                                class="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition">
+                            Kaldır
+                        </button>
+                        {% elif app.is_available %}
+                        <button onclick="installApp('{{ app.slug }}')" 
+                                class="w-full px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition">
+                            Yükle
+                        </button>
+                        {% else %}
+                        <button disabled 
+                                class="w-full px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed">
+                            Yakında
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+    
+    <script>
+        // Category Filter
+        function filterCategory(category) {
+            const cards = document.querySelectorAll('.app-card');
+            const buttons = document.querySelectorAll('.category-btn');
+            
+            // Update button styles
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-purple-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            event.target.classList.add('bg-purple-600', 'text-white');
+            
+            // Filter cards
+            cards.forEach(card => {
+                if (category === 'all' || card.dataset.category === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        // Install App with Loading Animation
+        async function installApp(appSlug) {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Yükleniyor...';
+            
+            try {
+                const response = await fetch('/api/marketplace/install', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ app_slug: appSlug })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showInstallOverlay(appSlug);
+                } else {
+                    showToast(data.error || 'Yükleme başarısız', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                showToast('Bir hata oluştu', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        // Install Overlay with Progress Animation
+        function showInstallOverlay(appSlug) {
+            const appNames = {
+                'docgen': 'Belge Üretici',
+                'email_campaigns': 'E-posta Kampanyaları',
+                'sms_notifier': 'SMS Bildirimleri',
+                'ai_assistant': 'AI Asistan'
+            };
+            
+            const appIcons = {
+                'docgen': 'fa-file-alt',
+                'email_campaigns': 'fa-envelope',
+                'sms_notifier': 'fa-comment-sms',
+                'ai_assistant': 'fa-robot'
+            };
+            
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+                display: flex; align-items: center; justify-content: center;
+                z-index: 9999; backdrop-filter: blur(4px);
+            `;
+            overlay.innerHTML = `
+                <div style="background: white; border-radius: 16px; padding: 40px; text-align: center; max-width: 360px; width: 90%;">
+                    <div style="width: 64px; height: 64px; background: #f3f0ff; border-radius: 16px;
+                                 display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas ${appIcons[appSlug] || 'fa-puzzle-piece'}" style="font-size: 28px; color: #7c3aed;"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 8px;">${appNames[appSlug] || appSlug} Yükleniyor</h3>
+                    <p style="font-size: 14px; color: #6b7280; margin: 0 0 24px;">Özellikler aktif ediliyor...</p>
+                    
+                    <div style="background: #f3f4f6; border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 16px;">
+                        <div id="install-progress" style="height: 100%; background: linear-gradient(90deg, #7c3aed, #a78bfa); border-radius: 8px; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <p id="install-step" style="font-size: 12px; color: #9ca3af;">Başlatılıyor...</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            // Progress animation
+            const steps = [
+                { width: '25%', text: 'Veritabanı hazırlanıyor...' },
+                { width: '55%', text: 'Modüller yükleniyor...' },
+                { width: '80%', text: 'Arayüz güncelleniyor...' },
+                { width: '100%', text: 'Tamamlandı!' },
+            ];
+            
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < steps.length) {
+                    document.getElementById('install-progress').style.width = steps[i].width;
+                    document.getElementById('install-step').textContent = steps[i].text;
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => location.reload(), 600);
+                }
+            }, 600);
+        }
+        
+        // Uninstall App
+        async function uninstallApp(appSlug) {
+            if (!confirm('Bu uygulamayı kaldırmak istediğinizden emin misiniz?')) return;
+            
+            try {
+                const response = await fetch('/api/marketplace/uninstall', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ app_slug: appSlug })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast('Uygulama kaldırıldı', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(data.error || 'Kaldırma başarısız', 'error');
+                }
+            } catch (error) {
+                showToast('Bir hata oluştu', 'error');
+                console.error(error);
+            }
+        }
+        
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            
+            toast.className = `toast ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-3`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -2132,6 +2132,7 @@ class GeneratedDocument(db.Model):
         return {
             'id': self.id,
             'template_id': self.template_id,
+            'template_name': self.template.name if self.template else None,
             'record_id': self.record_id,
             'record_type': self.record_type,
             'output_type': self.output_type,
@@ -2139,5 +2140,31 @@ class GeneratedDocument(db.Model):
             'error_msg': self.error_msg,
             'created_at': self.created_at.isoformat(),
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
-            'download_url': f'/docgen/download/{self.id}' if self.status == 'done' else None,
+            'download_url': f'/api/docgen/download/{self.id}' if self.status == 'done' else None,
         }
+
+
+# ============================================================================
+# APP MARKETPLACE
+# ============================================================================
+
+class WorkspaceApp(db.Model):
+    """
+    Tracks which apps are installed and active in each workspace.
+    Used by the marketplace system to enable/disable features per workspace.
+    """
+    __tablename__ = 'workspace_apps'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    app_slug = db.Column(db.String(50), nullable=False)  # 'docgen', 'sms', etc.
+    is_active = db.Column(db.Boolean, default=True)
+    installed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    settings = db.Column(db.JSON, default={})
+    
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'app_slug', name='uq_workspace_app'),
+    )
+    
+    def __repr__(self):
+        return f'<WorkspaceApp {self.app_slug} for workspace {self.workspace_id}>'

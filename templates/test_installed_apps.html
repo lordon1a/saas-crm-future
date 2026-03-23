@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Installed Apps Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+        .section { margin: 20px 0; }
+        h2 { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Installed Apps Debug</h1>
+    
+    <div class="section">
+        <h2>1. API Endpoint Test</h2>
+        <button onclick="testAPI()">Test /api/marketplace/installed</button>
+        <pre id="api-result">Click button to test...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>2. Debug Endpoint Test</h2>
+        <button onclick="testDebug()">Test /api/marketplace/debug</button>
+        <pre id="debug-result">Click button to test...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>3. Template Context Test</h2>
+        <p>Open browser console and check:</p>
+        <pre>{{ installed_apps }}</pre>
+        <p>Installed apps from template: <strong>{{ installed_apps|join(', ') if installed_apps else 'NONE' }}</strong></p>
+    </div>
+    
+    <div class="section">
+        <h2>4. Manual Install Test</h2>
+        <button onclick="installDocGen()">Install DocGen</button>
+        <pre id="install-result">Click button to install...</pre>
+    </div>
+    
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/marketplace/installed');
+                const data = await response.json();
+                document.getElementById('api-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('api-result').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function testDebug() {
+            try {
+                const response = await fetch('/api/marketplace/debug');
+                const data = await response.json();
+                document.getElementById('debug-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('debug-result').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function installDocGen() {
+            try {
+                const response = await fetch('/api/marketplace/install', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({app_slug: 'docgen'})
+                });
+                const data = await response.json();
+                document.getElementById('install-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('install-result').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

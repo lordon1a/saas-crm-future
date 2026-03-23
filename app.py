@@ -1205,6 +1205,24 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"DocGen migration failed (may already exist): {e}")
             
+            # === WORKSPACE APPS TABLE (MARKETPLACE) ===
+            # Import and run the migration
+            try:
+                from migrations.add_workspace_apps_table import upgrade as workspace_apps_upgrade
+                
+                # Reconnect for this migration
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                logger.info("Running migration: add workspace_apps table...")
+                workspace_apps_upgrade(conn, cur)
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ Workspace apps migration completed")
+            except Exception as e:
+                logger.warning(f"Workspace apps migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 
@@ -1347,8 +1365,29 @@ app.register_blueprint(assignments_route.bp)
 from routes.super_admin import bp as super_admin_bp
 app.register_blueprint(super_admin_bp)
 from routes import docgen as docgen_route
-app.register_blueprint(docgen_route.bp)
+app.register_blueprint(docgen_route.bp, url_prefix='/api/docgen')
 app.register_blueprint(search_bp)
+from routes.marketplace import marketplace_bp
+app.register_blueprint(marketplace_bp)
+
+# Context processor for installed apps (used in sidebar)
+@app.context_processor
+def inject_installed_apps():
+    """Inject installed apps list into all templates for dynamic sidebar"""
+    from models_crm import WorkspaceApp
+    
+    if 'user_id' in session and 'workspace_id' in session:
+        try:
+            workspace_id = session.get('workspace_id')
+            installed = WorkspaceApp.query.filter_by(
+                workspace_id=workspace_id,
+                is_active=True
+            ).with_entities(WorkspaceApp.app_slug).all()
+            return {"installed_apps": [r.app_slug for r in installed]}
+        except Exception as e:
+            logger.warning(f"Failed to load installed apps: {e}")
+            return {"installed_apps": []}
+    return {"installed_apps": []}
 
 # CSRF Exemptions for webhooks (external services)
 csrf.exempt(webhook.bp)

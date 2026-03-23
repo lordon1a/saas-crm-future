@@ -32,14 +32,19 @@
         <a href="/analytics" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
             <i class="fas fa-chart-line text-lg"></i>
         </a>
+        {% if 'docgen' in installed_apps %}
         <a href="/documents" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar">
             <i class="fas fa-file-lines text-lg"></i>
         </a>
+        {% endif %}
 
         <!-- Ayraç 2 -->
         <div class="w-full h-px bg-slate-200 my-2"></div>
 
         <!-- ③ SİSTEM -->
+        <a href="/marketplace" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Mağaza">
+            <i class="fas fa-store text-lg"></i>
+        </a>
         <a href="/automation" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
             <i class="fas fa-robot text-lg"></i>
         </a>
