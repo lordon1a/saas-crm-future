@@ -391,6 +391,12 @@
                             <button class="edit-btn" onclick="startInlineEdit('company.phone')" title="Düzenle"><i class="fas fa-pen"></i></button>
                         </div>
                         <div class="sidebar-info-row group">
+                            <i class="fas fa-envelope"></i>
+                            <a id="summary-email-display" href="mailto:{{ company.email or '' }}" ondblclick="event.preventDefault(); startInlineEdit('company.email')" class="flex-1">{{ company.email or '-' }}</a>
+                            <input id="summary-email-input" type="email" class="hidden flex-1 px-2 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.email or '' }}">
+                            <button class="edit-btn" onclick="startInlineEdit('company.email')" title="Düzenle"><i class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="sidebar-info-row group">
                             <i class="fas fa-globe"></i>
                             {% if company.website %}
                             <a id="summary-website-display" href="{{ company.website }}" target="_blank" class="flex-1 truncate">{{ company.website }}</a>
@@ -451,6 +457,13 @@
                             <div class="flex items-center gap-1 group">
                                 <span id="details-phone" ondblclick="startInlineEdit('company.phone')" class="sidebar-field-value flex-1 cursor-text">{{ company.phone or '-' }}</span>
                                 <input id="details-phone-input" type="text" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.phone or '' }}">
+                            </div>
+                        </div>
+                        <div class="sidebar-field-row">
+                            <span class="sidebar-field-label">E-posta</span>
+                            <div class="flex items-center gap-1 group">
+                                <span id="details-email" ondblclick="startInlineEdit('company.email')" class="sidebar-field-value flex-1 cursor-text">{{ company.email or '-' }}</span>
+                                <input id="details-email-input" type="email" class="hidden flex-1 px-1.5 py-0.5 border border-blue-300 rounded text-xs" value="{{ company.email or '' }}">
                             </div>
                         </div>
                         <div class="sidebar-field-row">
@@ -848,6 +861,7 @@
         const FIELD_MAP = {
             'company.name':     { display: ['details-name', 'sidebar-company-name', 'company-name-display'], input: 'details-name-input',     api: 'name' },
             'company.phone':    { display: ['summary-phone-display', 'details-phone'],  input: 'summary-phone-input',    api: 'phone' },
+            'company.email':    { display: ['summary-email-display', 'details-email'],  input: 'summary-email-input',    api: 'email' },
             'company.website':  { display: ['summary-website-display', 'details-website'], input: 'summary-website-input', api: 'website' },
             'company.address':  { display: ['summary-address-display', 'details-address'], input: 'summary-address-input', api: 'address' },
             'company.industry': { display: ['details-industry'], input: 'details-industry-input', api: 'industry' },
