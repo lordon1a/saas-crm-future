@@ -190,12 +190,17 @@ def _build_context(template, record_data: dict) -> dict:
     Falls back to using record_data directly if no field_map.
     """
     if not template.field_map:
-        return record_data
-
-    context = {}
-    for placeholder, crm_field in template.field_map.items():
-        context[placeholder] = record_data.get(crm_field, '')
-
-    # Always include raw record data too, for direct access in templates
-    context.update(record_data)
+        context = record_data.copy()
+    else:
+        context = {}
+        for placeholder, crm_field in template.field_map.items():
+            context[placeholder] = record_data.get(crm_field, '')
+        # Always include raw record data too, for direct access in templates
+        context.update(record_data)
+    
+    # Add utility functions for Jinja2 templates
+    context['now'] = datetime.now
+    context['today'] = datetime.now().strftime('%Y-%m-%d')
+    context['current_year'] = datetime.now().year
+    
     return context
