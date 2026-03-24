@@ -1182,9 +1182,7 @@ Rules:
                             company_id=company_id,
                             due_date=due_date,
                             status='not_started',
-                            priority='medium',
-                            created_by=user_id,
-                            created_at=datetime.utcnow()
+                            priority='medium'
                         )
                         db.session.add(task)
                         db.session.commit()
