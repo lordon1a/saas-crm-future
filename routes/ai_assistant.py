@@ -981,23 +981,7 @@ def conversation_summary(conversation_id):
             'sentiment_score': conversation.ai_sentiment_score
         })
     else:
-        return jsonify({'error': 'Özet oluşturulamadı'}), 500rst_name.ilike(f'%{q}%'),
-            Contact.last_name.ilike(f'%{q}%')
-        )
-        if len(q_parts) >= 2:
-            full_name_filter = and_(
-                Contact.first_name.ilike(f'%{q_parts[0]}%'),
-                Contact.last_name.ilike(f'%{q_parts[-1]}%')
-            )
-            name_filter = or_(base_filter, full_name_filter)
-        else:
-            name_filter = base_filter
-
-        contacts = Contact.query.filter(
-            Contact.workspace_id == workspace_id,
-            Contact.is_deleted == False,
-            name_filter
-        ).limit(6).all()
+        return jsonify({'error': 'Özet oluşturulamadı'}), 500
         for c in contacts:
             results.append({
                 'id': c.id,
