@@ -92,12 +92,6 @@ def _get_workspace_ai(workspace_id):
                 if row.model_name:
                     result['openrouter_model'] = row.model_name
                 logger.info(f"[AI] Using workspace OpenRouter key, model={result['openrouter_model']}")
-            elif row.provider == 'anthropic' and decrypted:
-                result['anthropic_client'] = anthropic.Anthropic(api_key=decrypted)
-                result['anthropic_key'] = decrypted
-                if row.model_name:
-                    result['anthropic_model'] = row.model_name
-                logger.info(f"[AI] Using workspace Anthropic key, model={result['anthropic_model']}")
     except Exception as e:
         logger.error(f"[AI] Failed to load workspace AI settings: {e}")
     return result
@@ -663,6 +657,9 @@ TAHMİN: [Bu ay kapanması beklenen deal sayısı ve değeri tahmini]"""
 def _call_ai(messages, system=None, provider=None):
     """Ortak AI çağrı fonksiyonu."""
     import requests
+    import logging
+    logger = logging.getLogger(__name__)
+    
     system_prompt = system or SYSTEM_PROMPT
     workspace_id = session.get('workspace_id')
     ai = _get_workspace_ai(workspace_id)
@@ -675,6 +672,8 @@ def _call_ai(messages, system=None, provider=None):
             provider = 'gemini'
         else:
             provider = 'anthropic'
+    
+    logger.info(f"[AI] _call_ai - Provider: {provider}, OpenRouter key exists: {bool(ai.get('openrouter_key'))}, Model: {ai.get('openrouter_model')}")
 
     try:
         if provider == 'openrouter' and ai['openrouter_key']:
