@@ -129,7 +129,6 @@ from models_contact_timeline import ContactNote, ContactActivityLog
 from routes import webhook, api
 from routes import auth as auth_route
 from routes import settings as settings_route
-from routes import ai_settings as ai_settings_route
 from routes import templates as templates_route
 from routes import automation as automation_route
 from routes import pipeline as pipeline_route
@@ -1383,7 +1382,6 @@ app.register_blueprint(webhook.bp)
 app.register_blueprint(api.bp)
 app.register_blueprint(auth_route.bp)
 app.register_blueprint(settings_route.bp)
-app.register_blueprint(ai_settings_route.bp)
 app.register_blueprint(templates_route.bp)
 app.register_blueprint(automation_route.bp)
 app.register_blueprint(pipeline_route.bp)
