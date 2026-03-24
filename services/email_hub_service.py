@@ -159,23 +159,24 @@ class EmailHubService:
         return SMTPEmailProvider()
 
     @staticmethod
-    def send_invitation_email(workspace_name, inviter_name, invitee_email, role, token, expires_at):
+    def send_invitation_email(workspace_name, inviter_name, invitee_email, role, token, expires_at, workspace_id=None, user_id=None):
         """
         Send team member invitation email.
         Handles SMTP not configured gracefully - logs instead of failing.
         
+        Args:
+            workspace_name: Name of the workspace
+            inviter_name: Name of the person sending invitation
+            invitee_email: Email address of invitee
+            role: Role being offered
+            token: Invitation token
+            expires_at: Expiration datetime
+            workspace_id: Optional workspace ID for Gmail API provider
+            user_id: Optional user ID for Gmail API provider
+        
         Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5, 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7
         """
         try:
-            # Check if SMTP is configured
-            if not Config.SMTP_HOST or not Config.SMTP_FROM_EMAIL:
-                logger.info(
-                    'SMTP not configured. Invitation email not sent. '
-                    'workspace=%s invitee=%s role=%s token=%s',
-                    workspace_name, invitee_email, role, token
-                )
-                return None
-
             # Build invitation link
             base_url = Config.APP_BASE_URL
             invitation_link = f"{base_url}/accept-invitation?token={token}"
@@ -275,7 +276,7 @@ If you didn't expect this invitation, you can safely ignore this email.
             
             subject = f"You're invited to join {workspace_name}"
             
-            provider = EmailHubService._provider()
+            provider = EmailHubService._provider(workspace_id=workspace_id, user_id=user_id)
             message_id = provider.send(
                 to_email=invitee_email,
                 subject=subject,
