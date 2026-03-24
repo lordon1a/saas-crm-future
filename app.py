@@ -1240,6 +1240,36 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Company email migration failed (may already exist): {e}")
             
+            # === AI SCORING FIELDS ===
+            try:
+                from migrations.add_ai_scoring_fields import upgrade as ai_scoring_upgrade
+                
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                ai_scoring_upgrade(conn, cur)
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ AI scoring fields migration completed")
+            except Exception as e:
+                logger.warning(f"AI scoring fields migration failed (may already exist): {e}")
+            
+            # === AI SETTINGS TABLE ===
+            try:
+                from migrations.add_ai_settings_table import upgrade as ai_settings_upgrade
+                
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                ai_settings_upgrade(conn, cur)
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ AI settings migration completed")
+            except Exception as e:
+                logger.warning(f"AI settings migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 
@@ -1386,6 +1416,9 @@ app.register_blueprint(docgen_route.bp, url_prefix='/api/docgen')
 app.register_blueprint(search_bp)
 from routes.marketplace import marketplace_bp
 app.register_blueprint(marketplace_bp)
+
+from routes import ai_assistant
+app.register_blueprint(ai_assistant.bp)
 
 # Context processor for installed apps (used in sidebar)
 @app.context_processor

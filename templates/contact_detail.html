@@ -3421,6 +3421,20 @@
             });
         });
     </script>
+{% include '_ai_sidebar.html' %}
+<script>
+if (typeof setAIContext === 'function') {
+    setAIContext({
+        contact_id: {{ contact.id }},
+        'Sayfa': 'Kişi Detayı',
+        'Kişi adı': '{{ contact.full_name|escape }}',
+        'E-posta': '{{ contact.email or "" }}',
+        'Telefon': '{{ contact.phone or "" }}',
+        'Şirket': '{{ contact.company.name if contact.company else "" }}',
+        'Yaşam döngüsü': '{{ contact.lifecycle_stage or "" }}'
+    });
+}
+</script>
 </body>
 </html>
 

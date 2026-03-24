@@ -1,0 +1,853 @@
+{% if 'ai_assistant' in installed_apps %}
+<div id="ai-sidebar" style="
+    position: fixed; right: -440px; top: 0; width: 440px; height: 100vh;
+    background: #ffffff; border-left: 1px solid #e2e8f0; z-index: 100;
+    display: flex; flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: -8px 0 32px rgba(0,0,0,0.08);
+">
+    <!-- Header -->
+    <div style="padding: 0; flex-shrink: 0; position: relative; overflow: hidden;">
+        <!-- Gradient background -->
+        <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 100%);"></div>
+        <!-- Subtle pattern overlay -->
+        <div style="position: absolute; inset: 0; background: radial-gradient(circle at 20% 50%, rgba(139,92,246,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(167,139,250,0.2) 0%, transparent 40%);"></div>
+        
+        <div style="position: relative; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 38px; height: 38px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(12px); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 18px; line-height: 1;">🐧</span>
+                </div>
+                <div>
+                    <div style="font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.02em;">CRM Asistan</div>
+                    <div style="display: flex; align-items: center; gap: 5px; margin-top: 1px;">
+                        <span style="width: 6px; height: 6px; background: #34d399; border-radius: 50%; box-shadow: 0 0 6px rgba(52,211,153,0.6);"></span>
+                        <span style="font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 500; letter-spacing: 0.02em;">Aktif</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 3px; background: rgba(0,0,0,0.15); border-radius: 10px; padding: 3px;">
+                <button onclick="startNewChat()" title="Yeni sohbet" style="width: 30px; height: 30px; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: rgba(255,255,255,0.7); font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.7)'">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button onclick="toggleHistoryPanel()" id="ai-history-btn" title="Sohbet gecmisi" style="width: 30px; height: 30px; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: rgba(255,255,255,0.7); font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.7)'">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </button>
+                <div style="width: 1px; background: rgba(255,255,255,0.1); margin: 4px 1px;"></div>
+                <button onclick="closeAISidebar()" title="Kapat" style="width: 30px; height: 30px; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: rgba(255,255,255,0.7); font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fca5a5'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.7)'">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Bottom glow line -->
+        <div style="height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(167,139,250,0.5) 30%, rgba(139,92,246,0.6) 50%, rgba(167,139,250,0.5) 70%, transparent 100%);"></div>
+    </div>
+
+    <!-- History Panel (hidden by default) -->
+    <div id="ai-history-panel" style="display:none; flex:1; overflow-y:auto; flex-direction:column;">
+        <div style="padding:14px 20px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:13px; font-weight:700; color:#1e293b;"><i class="fas fa-clock-rotate-left" style="margin-right:8px; color:#7c3aed;"></i>Sohbet Gecmisi</span>
+            <button onclick="clearAllConversations()" title="Tum gecmisi sil" style="font-size:11px; color:#ef4444; background:none; border:none; cursor:pointer; padding:4px 10px; border-radius:6px; font-weight:500;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'"><i class="fas fa-trash-can" style="margin-right:4px;"></i>Temizle</button>
+        </div>
+        <div id="ai-history-list" style="flex:1; overflow-y:auto; padding:8px 12px;"></div>
+    </div>
+
+    <!-- Mesajlar -->
+    <div id="ai-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: #f8fafc;">
+        <div id="ai-welcome" style="text-align: center; padding: 32px 20px;">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <span style="font-size: 28px; line-height: 1;">🐧</span>
+            </div>
+            <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">Merhaba!</div>
+            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6; max-width: 280px; margin: 0 auto;">CRM verilerinizi analiz edebilir, rapor olusturabilir ve aksiyonlar alabilirim.</div>
+            
+            <!-- Welcome Quick Actions Grid -->
+            <div id="ai-welcome-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; text-align: left;">
+                <button onclick="quickAction('pipeline_ozet')" class="ai-welcome-btn" style="padding: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.15s; text-align: left;" onmouseover="this.style.borderColor='#c4b5fd';this.style.background='#faf5ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+                    <div style="width: 28px; height: 28px; background: #ede9fe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-chart-pie" style="font-size: 11px; color: #7c3aed;"></i></div>
+                    <div style="font-size: 12px; font-weight: 600; color: #1e293b;">Pipeline Ozeti</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Satis durumu ve gelir</div>
+                </button>
+                <button onclick="quickAction('deal_analiz')" class="ai-welcome-btn" style="padding: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.15s; text-align: left;" onmouseover="this.style.borderColor='#c4b5fd';this.style.background='#faf5ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+                    <div style="width: 28px; height: 28px; background: #dbeafe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-handshake" style="font-size: 11px; color: #3b82f6;"></i></div>
+                    <div style="font-size: 12px; font-weight: 600; color: #1e293b;">Deal Analizi</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Acik deal'lari incele</div>
+                </button>
+                <button onclick="quickAction('yeni_kayit')" class="ai-welcome-btn" style="padding: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.15s; text-align: left;" onmouseover="this.style.borderColor='#c4b5fd';this.style.background='#faf5ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+                    <div style="width: 28px; height: 28px; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-plus" style="font-size: 11px; color: #16a34a;"></i></div>
+                    <div style="font-size: 12px; font-weight: 600; color: #1e293b;">Kayit Olustur</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Contact veya deal ekle</div>
+                </button>
+                <button onclick="quickAction('email_taslak')" class="ai-welcome-btn" style="padding: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.15s; text-align: left;" onmouseover="this.style.borderColor='#c4b5fd';this.style.background='#faf5ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+                    <div style="width: 28px; height: 28px; background: #fef3c7; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-envelope" style="font-size: 11px; color: #d97706;"></i></div>
+                    <div style="font-size: 12px; font-weight: 600; color: #1e293b;">E-posta Taslagi</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Takip veya teklif yaz</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hizli Aksiyonlar (context-aware chip bar) -->
+    <div id="ai-quick-actions" style="padding: 8px 16px 4px; border-top: 1px solid #e2e8f0; display: flex; gap: 6px; flex-wrap: wrap; background: #fff;">
+        <button onclick="quickAction('sayfa_ozetle')" class="ai-chip-btn" style="padding: 6px 12px; background: #f1f5f9; color: #475569; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#ede9fe';this.style.color='#6d28d9';this.style.borderColor='#c4b5fd'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569';this.style.borderColor='transparent'">
+            <i class="fas fa-file-lines" style="font-size: 10px;"></i> Sayfayi Ozetle
+        </button>
+        <button onclick="quickAction('musteri_analiz')" class="ai-chip-btn" style="padding: 6px 12px; background: #f1f5f9; color: #475569; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#ede9fe';this.style.color='#6d28d9';this.style.borderColor='#c4b5fd'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569';this.style.borderColor='transparent'">
+            <i class="fas fa-user-check" style="font-size: 10px;"></i> Musteri Analizi
+        </button>
+        <button onclick="quickAction('takip_onerisi')" class="ai-chip-btn" style="padding: 6px 12px; background: #f1f5f9; color: #475569; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#ede9fe';this.style.color='#6d28d9';this.style.borderColor='#c4b5fd'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569';this.style.borderColor='transparent'">
+            <i class="fas fa-bell" style="font-size: 10px;"></i> Takip Onerisi
+        </button>
+        <button onclick="quickAction('rapor')" class="ai-chip-btn" style="padding: 6px 12px; background: #f1f5f9; color: #475569; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#ede9fe';this.style.color='#6d28d9';this.style.borderColor='#c4b5fd'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569';this.style.borderColor='transparent'">
+            <i class="fas fa-chart-bar" style="font-size: 10px;"></i> Rapor
+        </button>
+    </div>
+
+    <!-- Input Alani -->
+    <div id="ai-input-area" style="padding: 10px 16px 14px; background: #fff; position: relative;">
+        <!-- @ mention dropdown -->
+        <div id="mention-dropdown" style="display: none; position: absolute; bottom: 100%; left: 16px; right: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; z-index: 200;">
+            <div style="padding: 10px 14px; font-size: 10px; font-weight: 700; color: #94a3b8; border-bottom: 1px solid #f1f5f9; text-transform: uppercase; letter-spacing: 0.05em;">Kayitlar</div>
+            <div id="mention-results"></div>
+        </div>
+
+        <div style="border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: #f8fafc; transition: border-color 0.2s;" onfocusin="this.style.borderColor='#a78bfa'" onfocusout="this.style.borderColor='#e2e8f0'">
+            <div id="ai-input-display" contenteditable="true"
+                style="min-height: 44px; max-height: 120px; overflow-y: auto; padding: 12px 14px; font-size: 13px; color: #1e293b; outline: none; line-height: 1.6; background: transparent;"
+                data-placeholder="Mesajinizi yazin... @ ile kayit secin"
+            ></div>
+
+            <!-- Alt toolbar -->
+            <div style="padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f1f5f9;">
+                <div style="display: flex; gap: 2px;">
+                    <button onclick="triggerMention()" title="Kayit sec (@)" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; font-size: 13px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" onmouseover="this.style.background='#ede9fe';this.style.color='#7c3aed'" onmouseout="this.style.background='none';this.style.color='#94a3b8'">
+                        <i class="fas fa-at"></i>
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 10px; color: #cbd5e1; font-weight: 500;">Enter gonder</span>
+                    <button onclick="sendAIMessage()" id="ai-send-btn"
+                        style="width: 32px; height: 32px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; box-shadow: 0 2px 8px rgba(124,58,237,0.3);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tetikleyici buton -->
+<button onclick="toggleAISidebar()" id="ai-trigger-btn" title="CRM Asistan"
+    style="position: fixed; right: 20px; bottom: 24px; width: 50px; height: 50px;
+           background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white;
+           border: none; border-radius: 14px; box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+           cursor: pointer; font-size: 18px; z-index: 99; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+           display: flex; align-items: center; justify-content: center;"
+    onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 6px 20px rgba(124,58,237,0.5)'"
+    onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 16px rgba(124,58,237,0.4)'">
+    <span style="font-size: 20px; line-height: 1;">🐧</span>
+</button>
+
+<style>
+@keyframes aiBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+@keyframes aiFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+#ai-input-display:empty:before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+}
+#ai-messages::-webkit-scrollbar { width: 4px; }
+#ai-messages::-webkit-scrollbar-track { background: transparent; }
+#ai-messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+#ai-messages::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+#mention-dropdown::-webkit-scrollbar { width: 4px; }
+#mention-dropdown::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+#ai-history-list::-webkit-scrollbar { width: 4px; }
+#ai-history-list::-webkit-scrollbar-track { background: transparent; }
+#ai-history-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+#ai-messages > div { animation: aiFadeIn 0.25s ease-out; }
+</style>
+
+<script>
+var AI_CONVERSATIONS_KEY = 'ai_conversations';
+var AI_ACTIVE_KEY = 'ai_active_conversation';
+var aiMessages = [];
+var aiOpen = false;
+var aiHistoryOpen = false;
+var activeConversationId = null;
+var pageContext = {};
+var mentionQuery = '';
+var mentionActive = false;
+var mentionedRecords = [];
+
+function generateConvId() {
+    return 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+}
+
+function getAllConversations() {
+    try {
+        var raw = localStorage.getItem(AI_CONVERSATIONS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch(e) { return []; }
+}
+
+function saveAllConversations(convs) {
+    try {
+        localStorage.setItem(AI_CONVERSATIONS_KEY, JSON.stringify(convs));
+    } catch(e) {}
+}
+
+function saveAIHistory() {
+    if (!activeConversationId) return;
+    var convs = getAllConversations();
+    var found = false;
+    var title = '';
+    if (aiMessages.length > 0) {
+        var firstUser = aiMessages.find(function(m) { return m.role === 'user'; });
+        title = firstUser ? firstUser.content.substring(0, 60) : 'Yeni Sohbet';
+    }
+    for (var i = 0; i < convs.length; i++) {
+        if (convs[i].id === activeConversationId) {
+            convs[i].messages = aiMessages.slice(-50);
+            convs[i].updated_at = Date.now();
+            if (title) convs[i].title = title;
+            found = true;
+            break;
+        }
+    }
+    if (!found && aiMessages.length > 0) {
+        convs.unshift({
+            id: activeConversationId,
+            title: title || 'Yeni Sohbet',
+            messages: aiMessages.slice(-50),
+            created_at: Date.now(),
+            updated_at: Date.now()
+        });
+    }
+    if (convs.length > 30) convs = convs.slice(0, 30);
+    saveAllConversations(convs);
+    try { localStorage.setItem(AI_ACTIVE_KEY, activeConversationId); } catch(e) {}
+}
+
+function loadConversation(convId) {
+    hideHistoryPanel();
+    var convs = getAllConversations();
+    var conv = convs.find(function(c) { return c.id === convId; });
+    activeConversationId = convId;
+    aiMessages = conv ? (conv.messages || []) : [];
+    try { localStorage.setItem(AI_ACTIVE_KEY, convId); } catch(e) {}
+    renderCurrentMessages();
+}
+
+function renderCurrentMessages() {
+    var container = document.getElementById('ai-messages');
+    container.innerHTML = '';
+    if (aiMessages.length === 0) {
+        container.innerHTML = '<div id="ai-welcome" style="text-align:center;padding:32px 20px;">'
+            + '<div style="width:56px;height:56px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">'
+            + '<span style="font-size:28px;line-height:1;">\ud83d\udc27</span></div>'
+            + '<div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px;">Merhaba!</div>'
+            + '<div style="font-size:12px;color:#94a3b8;line-height:1.6;max-width:280px;margin:0 auto;">CRM verilerinizi analiz edebilir, rapor olusturabilir ve aksiyonlar alabilirim.</div>'
+            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px;text-align:left;">'
+            + _welcomeActionBtn('pipeline_ozet', 'fa-chart-pie', '#ede9fe', '#7c3aed', 'Pipeline Ozeti', 'Satis durumu ve gelir')
+            + _welcomeActionBtn('deal_analiz', 'fa-handshake', '#dbeafe', '#3b82f6', 'Deal Analizi', 'Acik deal\'lari incele')
+            + _welcomeActionBtn('yeni_kayit', 'fa-plus', '#dcfce7', '#16a34a', 'Kayit Olustur', 'Contact veya deal ekle')
+            + _welcomeActionBtn('email_taslak', 'fa-envelope', '#fef3c7', '#d97706', 'E-posta Taslagi', 'Takip veya teklif yaz')
+            + '</div></div>';
+    } else {
+        aiMessages.forEach(function(msg) {
+            appendMessage(msg.role, msg.content, false, true);
+        });
+    }
+}
+
+function _welcomeActionBtn(action, icon, bg, color, title, desc) {
+    return '<button onclick="quickAction(\'' + action + '\')" style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all 0.15s;text-align:left;" onmouseover="this.style.borderColor=\'#c4b5fd\';this.style.background=\'#faf5ff\'" onmouseout="this.style.borderColor=\'#e2e8f0\';this.style.background=\'#fff\'">'
+        + '<div style="width:28px;height:28px;background:' + bg + ';border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><i class="fas ' + icon + '" style="font-size:11px;color:' + color + ';"></i></div>'
+        + '<div style="font-size:12px;font-weight:600;color:#1e293b;">' + title + '</div>'
+        + '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + desc + '</div></button>';
+}
+
+function startNewChat() {
+    if (aiMessages.length > 0) saveAIHistory();
+    hideHistoryPanel();
+    activeConversationId = generateConvId();
+    aiMessages = [];
+    mentionedRecords = [];
+    try { localStorage.setItem(AI_ACTIVE_KEY, activeConversationId); } catch(e) {}
+    renderCurrentMessages();
+    document.getElementById('ai-input-display').focus();
+}
+
+function deleteConversation(convId, evt) {
+    if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+    var convs = getAllConversations().filter(function(c) { return c.id !== convId; });
+    saveAllConversations(convs);
+    if (convId === activeConversationId) {
+        startNewChat();
+    }
+    renderHistoryList();
+}
+
+function clearAllConversations() {
+    saveAllConversations([]);
+    startNewChat();
+    renderHistoryList();
+}
+
+function toggleHistoryPanel() {
+    if (aiHistoryOpen) {
+        hideHistoryPanel();
+    } else {
+        showHistoryPanel();
+    }
+}
+
+function showHistoryPanel() {
+    aiHistoryOpen = true;
+    renderHistoryList();
+    document.getElementById('ai-history-panel').style.display = 'flex';
+    document.getElementById('ai-messages').style.display = 'none';
+    document.getElementById('ai-quick-actions').style.display = 'none';
+    document.getElementById('ai-input-area').style.display = 'none';
+    var histBtn = document.getElementById('ai-history-btn');
+    histBtn.style.background = 'rgba(255,255,255,0.35)';
+}
+
+function hideHistoryPanel() {
+    aiHistoryOpen = false;
+    document.getElementById('ai-history-panel').style.display = 'none';
+    document.getElementById('ai-messages').style.display = 'flex';
+    document.getElementById('ai-quick-actions').style.display = 'flex';
+    document.getElementById('ai-input-area').style.display = 'block';
+    var histBtn = document.getElementById('ai-history-btn');
+    histBtn.style.background = 'rgba(255,255,255,0.15)';
+}
+
+function renderHistoryList() {
+    var listEl = document.getElementById('ai-history-list');
+    var convs = getAllConversations();
+    if (convs.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:32px 16px;color:#9ca3af;">'
+            + '<i class="fas fa-comment-slash" style="font-size:24px;margin-bottom:8px;display:block;"></i>'
+            + '<div style="font-size:13px;">Henuz sohbet gecmisi yok</div></div>';
+        return;
+    }
+    listEl.innerHTML = convs.map(function(c) {
+        var date = new Date(c.updated_at || c.created_at);
+        var timeStr = date.toLocaleDateString('tr-TR', { day:'numeric', month:'short' }) + ' ' + date.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+        var msgCount = (c.messages || []).length;
+        var isActive = c.id === activeConversationId;
+        var activeBg = isActive ? 'background:#f3f0ff;border-color:#e9e0ff;' : 'background:#fff;border-color:#f3f4f6;';
+        return '<div onclick="loadConversation(\'' + c.id + '\')" style="padding:10px 12px;margin-bottom:6px;border-radius:10px;border:1px solid;cursor:pointer;transition:all 0.15s;' + activeBg + '"'
+            + ' onmouseover="if(this.dataset.id!==\'' + activeConversationId + '\')this.style.background=\'#f9fafb\'" onmouseout="if(this.dataset.id!==\'' + activeConversationId + '\')this.style.background=\'' + (isActive ? '#f3f0ff' : '#fff') + '\'" data-id="' + c.id + '">'
+            + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:13px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (c.title || 'Yeni Sohbet') + '</div>'
+            + '<div style="font-size:11px;color:#9ca3af;margin-top:2px;">' + timeStr + ' &middot; ' + msgCount + ' mesaj</div>'
+            + '</div>'
+            + '<button onclick="deleteConversation(\'' + c.id + '\', event)" title="Sil" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#d1d5db;font-size:11px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onmouseover="this.style.color=\'#ef4444\';this.style.background=\'#fef2f2\'" onmouseout="this.style.color=\'#d1d5db\';this.style.background=\'none\'"><i class="fas fa-trash"></i></button>'
+            + '</div></div>';
+    }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Migrate old single-conversation format
+        var oldData = localStorage.getItem('ai_chat_history');
+        if (oldData) {
+            var oldMessages = JSON.parse(oldData);
+            if (oldMessages && oldMessages.length > 0) {
+                var migrated = getAllConversations();
+                var firstUser = oldMessages.find(function(m) { return m.role === 'user'; });
+                migrated.unshift({
+                    id: generateConvId(),
+                    title: firstUser ? firstUser.content.substring(0, 60) : 'Eski Sohbet',
+                    messages: oldMessages,
+                    created_at: Date.now(),
+                    updated_at: Date.now()
+                });
+                saveAllConversations(migrated);
+            }
+            localStorage.removeItem('ai_chat_history');
+        }
+
+        var savedId = localStorage.getItem(AI_ACTIVE_KEY);
+        var convs = getAllConversations();
+        if (savedId && convs.find(function(c) { return c.id === savedId; })) {
+            activeConversationId = savedId;
+        } else if (convs.length > 0) {
+            activeConversationId = convs[0].id;
+        } else {
+            activeConversationId = generateConvId();
+        }
+        var conv = convs.find(function(c) { return c.id === activeConversationId; });
+        aiMessages = conv ? (conv.messages || []) : [];
+        if (aiMessages.length > 0) {
+            var welcome = document.getElementById('ai-welcome');
+            if (welcome) welcome.remove();
+            aiMessages.forEach(function(msg) {
+                appendMessage(msg.role, msg.content, false, true);
+            });
+        }
+    } catch(e) {
+        activeConversationId = generateConvId();
+        aiMessages = [];
+    }
+});
+
+function setAIContext(ctx) { pageContext = ctx; }
+
+function toggleAISidebar() {
+    aiOpen = !aiOpen;
+    document.getElementById('ai-sidebar').style.right = aiOpen ? '0' : '-440px';
+    document.getElementById('ai-trigger-btn').style.right = aiOpen ? '456px' : '20px';
+    if (aiOpen) document.getElementById('ai-input-display').focus();
+}
+
+function closeAISidebar() {
+    aiOpen = false;
+    document.getElementById('ai-sidebar').style.right = '-440px';
+    document.getElementById('ai-trigger-btn').style.right = '20px';
+}
+
+function clearAIChat() {
+    startNewChat();
+}
+
+function triggerMention() {
+    var input = document.getElementById('ai-input-display');
+    input.focus();
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(input);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('insertText', false, '@');
+    handleMentionInput('@');
+}
+
+function quickAction(type) {
+    var prompts = {
+        'pipeline_ozet':  'Pipeline durumunu ozetle: toplam gelir, asamalara gore dagilim, kazanilan ve kaybedilen deal sayilari nedir?',
+        'deal_analiz':    'Acik deal\'lari analiz et: hangileri riskli, hangileri kapanmaya yakin? Oncelik siralamasini yap.',
+        'yeni_kayit':     'Yeni bir kayit olusturmak istiyorum.',
+        'email_taslak':   'Bu musteriye profesyonel bir takip e-postasi taslagi olustur.',
+        'sayfa_ozetle':   'Bu sayfadaki tum verileri analiz et ve kisa bir ozet cikar. Onemli noktalari ve onerilerini belirt.',
+        'musteri_analiz': 'Bu musteriyi detayli analiz et: lead durumu, etkilesim gecmisi, potansiyel deger ve sonraki adim onerileri.',
+        'takip_onerisi':  'Bugun takip etmem gereken musteriler ve deal\'lar hangileri? Once siralamasi ve aksiyon onerileri ver.',
+        'rapor':          'Genel CRM performans raporu olustur: aktif deal sayisi, toplam gelir, bu haftaki aktiviteler ve trendler.'
+    };
+    var input = document.getElementById('ai-input-display');
+    input.innerText = prompts[type] || type;
+    sendAIMessage();
+}
+
+document.getElementById('ai-input-display').addEventListener('input', function() {
+    handleMentionInput(this.innerText);
+});
+
+function handleMentionInput(text) {
+    var atIndex = text.lastIndexOf('@');
+    if (atIndex !== -1) {
+        mentionQuery = text.slice(atIndex + 1);
+        mentionActive = true;
+        searchMentions(mentionQuery);
+    } else {
+        closeMentionDropdown();
+    }
+}
+
+document.getElementById('ai-input-display').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (mentionActive) return;
+        sendAIMessage();
+    }
+    if (e.key === 'Escape') closeMentionDropdown();
+});
+
+async function searchMentions(query) {
+    if (query.length < 1) { closeMentionDropdown(); return; }
+    var dropdown = document.getElementById('mention-dropdown');
+    var resultsEl = document.getElementById('mention-results');
+    dropdown.style.display = 'block';
+    resultsEl.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#9ca3af;">Araniyor...</div>';
+    try {
+        var res = await fetch('/api/ai/mention-search?q=' + encodeURIComponent(query));
+        if (!res.ok) { closeMentionDropdown(); return; }
+        var data = await res.json();
+        renderMentionDropdown(data.results);
+    } catch (e) {
+        console.warn('Mention search error:', e);
+        closeMentionDropdown();
+    }
+}
+
+function renderMentionDropdown(results) {
+    var dropdown = document.getElementById('mention-dropdown');
+    var resultsEl = document.getElementById('mention-results');
+    if (!results || results.length === 0) {
+        resultsEl.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#9ca3af;">Sonuc bulunamadi</div>';
+        dropdown.style.display = 'block';
+        return;
+    }
+    var iconMap = { contact: 'fa-user', deal: 'fa-handshake', company: 'fa-building' };
+    var colorMap = { contact: '#3b82f6', deal: '#22c55e', company: '#f59e0b' };
+    var bgMap = { contact: '#eff6ff', deal: '#f0fdf4', company: '#fef3c7' };
+    var labelMap = { contact: 'Kisi', deal: 'Deal', company: 'Sirket' };
+    resultsEl.innerHTML = results.map(function(r) {
+        var icon = iconMap[r.type] || 'fa-circle';
+        var color = colorMap[r.type] || '#6b7280';
+        var bg = bgMap[r.type] || '#f3f4f6';
+        var label = labelMap[r.type] || r.type;
+        var subtitle = r.subtitle ? ' &middot; ' + r.subtitle : '';
+        var rJson = JSON.stringify(r).replace(/"/g, '&quot;');
+        return '<div onclick="selectMention(' + rJson + ')"'
+            + ' style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;"'
+            + ' onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'">'
+            + '<span style="width:24px;height:24px;border-radius:6px;background:' + bg + ';display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;">'
+            + '<i class="fas ' + icon + '" style="color:' + color + ';"></i></span>'
+            + '<div><div style="font-weight:500;color:#111827;">' + r.name + '</div>'
+            + '<div style="font-size:11px;color:#9ca3af;">' + label + subtitle + '</div></div></div>';
+    }).join('');
+    dropdown.style.display = 'block';
+}
+
+function selectMention(record) {
+    var input = document.getElementById('ai-input-display');
+    var text = input.innerText;
+    var atIndex = text.lastIndexOf('@');
+    input.innerText = text.slice(0, atIndex);
+
+    var iconMap = { contact: 'fa-user', deal: 'fa-handshake', company: 'fa-building' };
+    var chip = document.createElement('span');
+    chip.contentEditable = 'false';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#ede9fe;color:#5b21b6;border-radius:12px;font-size:12px;font-weight:500;margin:0 2px;cursor:default;';
+    chip.innerHTML = '<i class="fas ' + (iconMap[record.type] || 'fa-circle') + '" style="font-size:10px;"></i> ' + record.name;
+    chip.dataset.record = JSON.stringify(record);
+    input.appendChild(chip);
+
+    var space = document.createTextNode(' ');
+    input.appendChild(space);
+    mentionedRecords.push(record);
+    closeMentionDropdown();
+
+    var range = document.createRange();
+    var sel = window.getSelection();
+    range.setStartAfter(space);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function closeMentionDropdown() {
+    mentionActive = false;
+    document.getElementById('mention-dropdown').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#mention-dropdown') && !e.target.closest('#ai-input-display')) {
+        closeMentionDropdown();
+    }
+});
+
+function getInputText() {
+    var input = document.getElementById('ai-input-display');
+    var text = '';
+    input.childNodes.forEach(function(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            text += node.textContent;
+        } else if (node.dataset && node.dataset.record) {
+            var r = JSON.parse(node.dataset.record);
+            text += '@' + r.name;
+        }
+    });
+    return text.trim();
+}
+
+function clearInput() {
+    document.getElementById('ai-input-display').innerHTML = '';
+}
+
+function appendMessage(role, content, isAction, skipSave) {
+    var container = document.getElementById('ai-messages');
+    var welcome = document.getElementById('ai-welcome');
+    if (welcome) welcome.remove();
+    var isUser = role === 'user';
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:' + (isUser ? 'flex-end' : 'flex-start') + ';align-items:flex-start;gap:8px;';
+    if (!isUser) {
+        var bg = isAction ? '#f0fdf4' : '#ffffff';
+        var border = isAction ? '#bbf7d0' : '#e2e8f0';
+        div.innerHTML = '<div style="width:26px;height:26px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">'
+            + '<span style="font-size:13px;line-height:1;">\ud83d\udc27</span></div>'
+            + '<div style="max-width:82%;padding:10px 14px;border-radius:2px 14px 14px 14px;background:' + bg + ';border:1px solid ' + border + ';color:#1e293b;font-size:13px;line-height:1.7;white-space:pre-wrap;box-shadow:0 1px 3px rgba(0,0,0,0.04);">' + content + '</div>';
+    } else {
+        div.innerHTML = '<div style="max-width:82%;padding:10px 14px;border-radius:14px 14px 2px 14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;font-size:13px;line-height:1.7;white-space:pre-wrap;box-shadow:0 2px 8px rgba(124,58,237,0.2);">' + content + '</div>';
+    }
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    if (!skipSave) saveAIHistory();
+}
+
+function appendConfirmCard(action, params) {
+    var container = document.getElementById('ai-messages');
+    var welcome = document.getElementById('ai-welcome');
+    if (welcome) welcome.remove();
+    var cardId = 'confirm-' + Date.now();
+    var actionLabels = {
+        'create_contact': 'Contact Olustur',
+        'update_contact': 'Contact Guncelle',
+        'create_deal': 'Deal Olustur',
+        'update_deal_status': 'Deal Durumunu Guncelle',
+        'update_deal_value': 'Deal Degerini Guncelle',
+        'delete_contact': 'Contact Sil'
+    };
+    var paramsHtml = Object.entries(params).map(function(kv) {
+        return '<div style="padding:3px 0;"><span style="color:#64748b;font-weight:500;">' + kv[0] + ':</span> <strong style="color:#1e293b;">' + kv[1] + '</strong></div>';
+    }).join('');
+    var paramsJson = JSON.stringify(params).replace(/"/g, '&quot;');
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:flex-start;align-items:flex-start;gap:8px;';
+    div.innerHTML = '<div style="width:26px;height:26px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">'
+        + '<i class="fas fa-shield-halved" style="font-size:9px;color:#d97706;"></i></div>'
+        + '<div id="' + cardId + '" style="max-width:88%;background:#fffbeb;border:1px solid #fde68a;border-radius:2px 14px 14px 14px;padding:14px 16px;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">'
+        + '<div style="font-weight:700;color:#92400e;margin-bottom:10px;font-size:12px;"><i class="fas fa-exclamation-triangle" style="margin-right:5px;"></i>Onay Gerekiyor: ' + (actionLabels[action] || action) + '</div>'
+        + '<div style="background:white;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#374151;border:1px solid #fef3c7;">' + paramsHtml + '</div>'
+        + '<div style="display:flex;gap:8px;">'
+        + '<button onclick="executeAction(\'' + action + '\',' + paramsJson + ',\'' + cardId + '\')" style="flex:1;padding:8px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;box-shadow:0 2px 6px rgba(124,58,237,0.25);" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'"><i class="fas fa-check" style="margin-right:4px;"></i>Onayla</button>'
+        + '<button onclick="document.getElementById(\'' + cardId + '\').closest(\'div\').remove()" style="flex:1;padding:8px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'#e2e8f0\'" onmouseout="this.style.background=\'#f1f5f9\'"><i class="fas fa-xmark" style="margin-right:4px;"></i>Iptal</button>'
+        + '</div></div>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendTypingIndicator() {
+    var welcome = document.getElementById('ai-welcome');
+    if (welcome) welcome.remove();
+    var container = document.getElementById('ai-messages');
+    var div = document.createElement('div');
+    div.id = 'typing-indicator';
+    div.style.cssText = 'display:flex;justify-content:flex-start;align-items:flex-start;gap:8px;';
+    div.innerHTML = '<div style="width:26px;height:26px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">'
+        + '<span style="font-size:13px;line-height:1;">\ud83d\udc27</span></div>'
+        + '<div style="padding:12px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:2px 14px 14px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">'
+        + '<div style="display:flex;gap:5px;align-items:center;">'
+        + '<span style="width:6px;height:6px;background:#a78bfa;border-radius:50%;animation:aiBounce 1s infinite;"></span>'
+        + '<span style="width:6px;height:6px;background:#8b5cf6;border-radius:50%;animation:aiBounce 1s infinite 0.2s;"></span>'
+        + '<span style="width:6px;height:6px;background:#7c3aed;border-radius:50%;animation:aiBounce 1s infinite 0.4s;"></span>'
+        + '</div></div>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+async function executeAction(action, params, cardId) {
+    var card = document.getElementById(cardId);
+    if (card) card.closest('div').remove();
+    appendTypingIndicator();
+    try {
+        var res = await fetch('/api/ai/execute-action', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+            },
+            body: JSON.stringify({ action: action, params: params })
+        });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator');
+        if (ti) ti.remove();
+        if (res.ok) {
+            appendMessage('assistant', '\u2705 ' + data.message, true);
+        } else {
+            appendMessage('assistant', '\u274c Hata: ' + data.error);
+        }
+    } catch (err) {
+        var ti2 = document.getElementById('typing-indicator');
+        if (ti2) ti2.remove();
+        appendMessage('assistant', 'Baglanti hatasi.');
+    }
+}
+
+async function sendAIMessage() {
+    var text = getInputText();
+    if (!text) return;
+
+    clearInput();
+    if (!aiOpen) toggleAISidebar();
+    appendMessage('user', text);
+    aiMessages.push({ role: 'user', content: text });
+    saveAIHistory();
+
+    var btn = document.getElementById('ai-send-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    appendTypingIndicator();
+
+    var richContext = Object.assign({}, pageContext);
+    for (var i = 0; i < mentionedRecords.length; i++) {
+        var rec = mentionedRecords[i];
+        try {
+            var ctx = await fetch('/api/ai/context/' + rec.type + '/' + rec.id);
+            if (ctx.ok) {
+                var ctxData = await ctx.json();
+                Object.assign(richContext, ctxData.context);
+            }
+        } catch (e) {}
+    }
+    if (!mentionedRecords.length) {
+        try {
+            if (pageContext.deal_id) {
+                var r1 = await fetch('/api/ai/context/deal/' + pageContext.deal_id);
+                if (r1.ok) { var d1 = await r1.json(); Object.assign(richContext, d1.context); }
+            } else if (pageContext.contact_id) {
+                var r2 = await fetch('/api/ai/context/contact/' + pageContext.contact_id);
+                if (r2.ok) { var d2 = await r2.json(); Object.assign(richContext, d2.context); }
+            } else if (pageContext.company_id) {
+                var r3 = await fetch('/api/ai/context/company/' + pageContext.company_id);
+                if (r3.ok) { var d3 = await r3.json(); Object.assign(richContext, d3.context); }
+            }
+        } catch (e) { console.warn('Context fetch error:', e); }
+    }
+
+    try {
+        var res = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+            },
+            body: JSON.stringify({
+                messages: aiMessages,
+                context: richContext,
+                mentioned_records: mentionedRecords
+            })
+        });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator');
+        if (ti) ti.remove();
+        if (res.ok) {
+            if (data.requires_confirmation) {
+                appendConfirmCard(data.action, data.params);
+            } else {
+                appendMessage('assistant', data.response);
+                aiMessages.push({ role: 'assistant', content: data.response });
+                saveAIHistory();
+            }
+        } else {
+            appendMessage('assistant', 'Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    } catch (err) {
+        var ti3 = document.getElementById('typing-indicator');
+        if (ti3) ti3.remove();
+        appendMessage('assistant', 'Baglanti hatasi. Lutfen tekrar deneyin.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        mentionedRecords = [];
+    }
+}
+
+/* Backwards compat */
+function sendQuickPrompt(text) {
+    document.getElementById('ai-input-display').innerText = text;
+    sendAIMessage();
+}
+
+async function draftEmail(emailType) {
+    var label = { followup: 'takip e-postasi', proposal: 'teklif e-postasi', thankyou: 'tesekkur e-postasi', reminder: 'hatirlatma e-postasi' };
+    if (!aiOpen) toggleAISidebar();
+    appendMessage('user', (label[emailType] || emailType) + ' taslagi olustur');
+    appendTypingIndicator();
+    try {
+        var res = await fetch('/api/ai/draft-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' },
+            body: JSON.stringify({ email_type: emailType, context: Object.assign({}, pageContext) })
+        });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator'); if (ti) ti.remove();
+        if (res.ok) { appendMessage('assistant', data.response); aiMessages.push({ role: 'assistant', content: data.response }); saveAIHistory(); }
+        else { appendMessage('assistant', 'Hata: ' + data.error); }
+    } catch (err) { var ti2 = document.getElementById('typing-indicator'); if (ti2) ti2.remove(); appendMessage('assistant', 'Baglanti hatasi.'); }
+}
+
+async function summarizeConversation() {
+    if (!aiOpen) toggleAISidebar();
+    var msgElements = document.querySelectorAll('.message-content, .conversation-message');
+    var messagesText = '';
+    var richContext = Object.assign({}, pageContext);
+    if (msgElements.length > 0) {
+        messagesText = Array.from(msgElements).map(function(el) { return el.innerText; }).join('\n');
+    } else if (Object.keys(richContext).length > 0) {
+        messagesText = Object.entries(richContext).map(function(kv) { return kv[0] + ': ' + kv[1]; }).join('\n');
+    } else {
+        appendMessage('assistant', 'Ozetlenecek konusma bulunamadi.');
+        return;
+    }
+    appendMessage('user', 'Bu sayfayi ozetle');
+    appendTypingIndicator();
+    try {
+        var res = await fetch('/api/ai/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' },
+            body: JSON.stringify({ messages_text: messagesText })
+        });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator'); if (ti) ti.remove();
+        if (res.ok) { appendMessage('assistant', data.response); aiMessages.push({ role: 'assistant', content: data.response }); saveAIHistory(); }
+        else { appendMessage('assistant', 'Hata: ' + data.error); }
+    } catch (err) { var ti2 = document.getElementById('typing-indicator'); if (ti2) ti2.remove(); appendMessage('assistant', 'Baglanti hatasi.'); }
+}
+
+async function analyzeDeal() {
+    var dealId = pageContext.deal_id;
+    if (!dealId) { if (!aiOpen) toggleAISidebar(); appendMessage('assistant', 'Bu ozellik sadece deal sayfasinda kullanilabilir.'); return; }
+    if (!aiOpen) toggleAISidebar();
+    appendMessage('user', 'Bu deal icin skor ve analiz yap');
+    appendTypingIndicator();
+    try {
+        var res = await fetch('/api/ai/deal-score/' + dealId, { headers: { 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' } });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator'); if (ti) ti.remove();
+        if (res.ok) { appendMessage('assistant', data.response); aiMessages.push({ role: 'assistant', content: data.response }); saveAIHistory(); }
+        else { appendMessage('assistant', 'Hata: ' + data.error); }
+    } catch (err) { var ti2 = document.getElementById('typing-indicator'); if (ti2) ti2.remove(); appendMessage('assistant', 'Baglanti hatasi.'); }
+}
+
+async function analyzeCustomer() {
+    var contactId = pageContext.contact_id;
+    if (!contactId) { if (!aiOpen) toggleAISidebar(); appendMessage('assistant', 'Bu ozellik contact sayfasinda kullanilabilir.'); return; }
+    if (!aiOpen) toggleAISidebar();
+    appendMessage('user', 'Bu musteriyi analiz et');
+    appendTypingIndicator();
+    try {
+        var res = await fetch('/api/ai/customer-analysis/' + contactId, { headers: { 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' } });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator'); if (ti) ti.remove();
+        if (res.ok) { appendMessage('assistant', data.response); aiMessages.push({ role: 'assistant', content: data.response }); saveAIHistory(); }
+        else { appendMessage('assistant', 'Hata: ' + data.error); }
+    } catch (err) { var ti2 = document.getElementById('typing-indicator'); if (ti2) ti2.remove(); appendMessage('assistant', 'Baglanti hatasi.'); }
+}
+
+async function getPipelineInsights() {
+    if (!aiOpen) toggleAISidebar();
+    appendMessage('user', 'Pipeline analizi ve haftalik ozet');
+    appendTypingIndicator();
+    try {
+        var res = await fetch('/api/ai/pipeline-insights', { headers: { 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' } });
+        var data = await res.json();
+        var ti = document.getElementById('typing-indicator'); if (ti) ti.remove();
+        if (res.ok) { appendMessage('assistant', data.response); aiMessages.push({ role: 'assistant', content: data.response }); saveAIHistory(); }
+        else { appendMessage('assistant', 'Hata: ' + data.error); }
+    } catch (err) { var ti2 = document.getElementById('typing-indicator'); if (ti2) ti2.remove(); appendMessage('assistant', 'Baglanti hatasi.'); }
+}
+</script>
+{% endif %}

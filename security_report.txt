@@ -1,0 +1,1433 @@
+Run started:2026-03-23 02:23:22.506532+00:00
+
+Test results:
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\admin_panel\app.py:179:17
+178	    port = int(os.environ.get('PORT', 10000))
+179	    app.run(host='0.0.0.0', port=port)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\app.py:1551:55
+1550	    # Allow same-machine requests regardless of port (dev proxies, e.g. Windsurf preview)
+1551	    _localhost_ips = {'localhost', '127.0.0.1', '::1', '0.0.0.0'}
+1552	    candidate_ip = candidate_host.split(':')[0].lower()
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\app.py:2326:82
+2325	if __name__ == '__main__':
+2326	    socketio.run(app, debug=Config.DEBUG, port=int(os.getenv('PORT', 5000)), host='0.0.0.0')
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'dev-secret-key-change-in-production'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\config.py:44:21
+43	            raise RuntimeError('SECRET_KEY environment variable must be set in production')
+44	        SECRET_KEY = 'dev-secret-key-change-in-production'  # Sadece development için
+45	    
+
+--------------------------------------------------
+>> Issue: [B701:jinja2_autoescape_false] By default, jinja2 sets autoescape to False. Consider using autoescape=True or use the select_autoescape function to mitigate XSS vulnerabilities.
+   Severity: High   Confidence: High
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b701_jinja2_autoescape_false.html
+   Location: .\engine.py:71:16
+70	
+71	    jinja_env = Environment()
+72	    template = jinja_env.from_string(html_source)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\engine.py:86:4
+85	    """
+86	    import subprocess
+87	
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: .\engine.py:89:13
+88	    out_dir = str(Path(output_path).parent)
+89	    result = subprocess.run(
+90	        ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', out_dir, docx_path],
+91	        capture_output=True, text=True, timeout=30
+92	    )
+93	    if result.returncode != 0:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\engine.py:89:13
+88	    out_dir = str(Path(output_path).parent)
+89	    result = subprocess.run(
+90	        ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', out_dir, docx_path],
+91	        capture_output=True, text=True, timeout=30
+92	    )
+93	    if result.returncode != 0:
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\models_contact_timeline.py:73:12
+72	                metadata = json.loads(self.metadata_json)
+73	            except:
+74	                pass
+75	        
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1338:62
+1337	                profile_name=demo['name'],
+1338	                created_at=datetime.utcnow() - timedelta(days=random.randint(1,60))
+1339	            )
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1344:23
+1343	        # Her müşteri için 1-3 konuşma
+1344	        for _ in range(random.randint(1, 3)):
+1345	            conv = Conversation(
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1348:23
+1347	                customer_id=customer.id,
+1348	                status=random.choice(statuses),
+1349	                tags=random.choice(tags_pool),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1349:21
+1348	                status=random.choice(statuses),
+1349	                tags=random.choice(tags_pool),
+1350	                last_message_at=datetime.utcnow() - timedelta(hours=random.randint(1, 72))
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1350:68
+1349	                tags=random.choice(tags_pool),
+1350	                last_message_at=datetime.utcnow() - timedelta(hours=random.randint(1, 72))
+1351	            )
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1356:27
+1355	            # Her konuşmaya 2-5 mesaj
+1356	            for i in range(random.randint(2, 5)):
+1357	                sender = 'customer' if i % 2 == 0 else 'agent'
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1361:33
+1360	                    sender_type=sender,
+1361	                    message_body=random.choice(messages_pool),
+1362	                    is_read=(sender == 'agent'),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random
+   Location: .\routes\api.py:1363:67
+1362	                    is_read=(sender == 'agent'),
+1363	                    created_at=datetime.utcnow() - timedelta(hours=random.randint(1,48))
+1364	                )
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\contacts.py:1472:8
+1471	            db.session.rollback()
+1472	        except Exception:
+1473	            pass
+1474	        logger.error(f"Error uploading files: {str(e)}")
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\contacts.py:1540:8
+1539	            db.session.rollback()
+1540	        except Exception:
+1541	            pass
+1542	        logger.error(f"Error deleting contact file: {str(e)}")
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\contacts.py:1654:12
+1653	                    os.remove(shared_path)
+1654	            except Exception:
+1655	                pass
+1656	            return jsonify({'error': result.get('error', 'Dosya Telegram sohbetinde paylasilamadi')}), 500
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\contacts.py:1709:8
+1708	            db.session.rollback()
+1709	        except Exception:
+1710	            pass
+1711	        logger.error(f"Error sharing contact file to chat: {str(e)}")
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\contacts_file_upload.py:136:8
+135	            db.session.rollback()
+136	        except Exception:
+137	            pass
+138	        logger.error(f"Error uploading files: {str(e)}")
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\contacts_file_upload.py:263:8
+262	            db.session.rollback()
+263	        except Exception:
+264	            pass
+265	        logger.error(f"Error deleting contact file: {str(e)}")
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\import_wizard.py:984:8
+983	            os.remove(filepath)
+984	        except:
+985	            pass
+986	        
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'Bearer'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\routes\portal.py:305:8
+304	        'token': token,
+305	        'token_type': 'Bearer',
+306	        'expires_in': _token_exp_seconds(),
+307	        'user': {
+308	            'id': customer_user.id,
+309	            'full_name': customer_user.full_name,
+310	            'email': customer_user.email,
+311	            'company_id': customer_user.company_id,
+312	            'workspace_id': customer_user.workspace_id,
+313	        },
+314	    }), 200
+315	
+316	
+317	@bp.route('/api/me', methods=['GET'])
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\portal.py:424:8
+423	            })
+424	        except Exception:
+425	            pass
+426	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\settings.py:141:8
+140	                    contact_dirs.append(int(item))
+141	        except Exception:
+142	            pass
+143	        
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html
+   Location: .\routes\settings.py:175:12
+174	                    })
+175	            except Exception:
+176	                continue
+177	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\routes\settings.py:288:8
+287	                    contact_dirs.append(int(item))
+288	        except Exception:
+289	            pass
+290	        
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html
+   Location: .\routes\settings.py:325:12
+324	                    })
+325	            except Exception:
+326	                continue
+327	
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\run_debug.py:8:29
+7	if __name__ == '__main__':
+8	    app.run(debug=True, host='0.0.0.0', port=5000)
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'Bearer'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\api_auth_service.py:222:12
+221	            'access_token': raw_token,
+222	            'token_type': 'Bearer',
+223	            'expires_in': 3600,
+224	            'scope': token_row.scopes,
+225	            'workspace_id': token_row.workspace_id,
+226	        }
+227	
+228	    @staticmethod
+229	    def validate_oauth_access_token(raw_token: str, required_scope: str | None = None):
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'https://oauth2.googleapis.com/token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\services\calendar_sync_service.py:30:22
+29	            refresh_token=tokens['refresh_token'],
+30	            token_uri='https://oauth2.googleapis.com/token',
+31	            client_id=None,
+32	            client_secret=None,
+33	            scopes=json.loads(google_integration.scopes or '[]')
+34	        )
+35	        
+36	        return build('calendar', 'v3', credentials=credentials)
+37	    
+38	    @staticmethod
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\services\contact_merge_service.py:173:8
+172	            )
+173	        except Exception:
+174	            pass  # Tables may not exist yet
+175	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\services\contact_merge_service.py:229:8
+228	            db.session.add(activity)
+229	        except Exception:
+230	            pass
+231	
+
+--------------------------------------------------
+>> Issue: [B701:jinja2_autoescape_false] By default, jinja2 sets autoescape to False. Consider using autoescape=True or use the select_autoescape function to mitigate XSS vulnerabilities.
+   Severity: High   Confidence: High
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b701_jinja2_autoescape_false.html
+   Location: .\services\docgen_engine.py:90:20
+89	
+90	        jinja_env = Environment()
+91	        template = jinja_env.from_string(html_source)
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: .\services\docgen_engine.py:110:4
+109	    """
+110	    import subprocess
+111	    
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: .\services\docgen_engine.py:114:17
+113	    try:
+114	        result = subprocess.run(['which', 'libreoffice'], capture_output=True, text=True, timeout=5)
+115	        if result.returncode != 0:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\services\docgen_engine.py:114:17
+113	    try:
+114	        result = subprocess.run(['which', 'libreoffice'], capture_output=True, text=True, timeout=5)
+115	        if result.returncode != 0:
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: .\services\docgen_engine.py:121:13
+120	    out_dir = str(Path(output_path).parent)
+121	    result = subprocess.run(
+122	        ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', out_dir, docx_path],
+123	        capture_output=True, text=True, timeout=30
+124	    )
+125	    if result.returncode != 0:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: .\services\docgen_engine.py:121:13
+120	    out_dir = str(Path(output_path).parent)
+121	    result = subprocess.run(
+122	        ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', out_dir, docx_path],
+123	        capture_output=True, text=True, timeout=30
+124	    )
+125	    if result.returncode != 0:
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'https://oauth2.googleapis.com/token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\services\gmail_sync_service.py:30:22
+29	            refresh_token=tokens['refresh_token'],
+30	            token_uri='https://oauth2.googleapis.com/token',
+31	            client_id=None,  # Not needed for API calls
+32	            client_secret=None,
+33	            scopes=json.loads(google_integration.scopes or '[]')
+34	        )
+35	        
+36	        return build('gmail', 'v1', credentials=credentials)
+37	    
+38	    @staticmethod
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'https://oauth2.googleapis.com/token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\google_service.py:58:16
+57	                'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+58	                'token_uri': 'https://oauth2.googleapis.com/token',
+59	                'redirect_uris': [Config.GOOGLE_REDIRECT_URI],
+60	            }
+61	        }
+62	
+63	    @staticmethod
+64	    def _create_oauth_flow(state: str | None = None):
+65	        try:
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: ''
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\google_service.py:129:31
+128	            row.user_id = user_id
+129	            row.access_token = ''
+130	            db.session.add(row)
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'None'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\google_service.py:170:16
+169	                'google_email': None,
+170	                'token_expires_at': None,
+171	                'scopes': [],
+172	            }
+173	
+174	        try:
+175	            scopes = json.loads(row.scopes or '[]')
+176	        except json.JSONDecodeError:
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: ''
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\google_service.py:198:27
+197	        row.is_active = False
+198	        row.access_token = ''
+199	        row.refresh_token = None
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: ''
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\services\quickbooks_service.py:154:18
+153	        if not row:
+154	            row = QuickBooksIntegration(workspace_id=workspace_id, user_id=user_id, access_token='')
+155	            db.session.add(row)
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'None'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\quickbooks_service.py:180:16
+179	                'company_name': None,
+180	                'token_expires_at': None,
+181	                'last_sync_at': None,
+182	                'last_error': None,
+183	            }
+184	
+185	        return {
+186	            'connected': bool(row.is_active),
+187	            'realm_id': row.realm_id,
+188	            'company_name': row.company_name,
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: ''
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\services\quickbooks_service.py:201:27
+200	        row.is_active = False
+201	        row.access_token = ''
+202	        row.refresh_token = None
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: .\services\task_service.py:224:12
+223	                })
+224	            except Exception:
+225	                pass
+226	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'demo123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\test_contacts_api.py:8:8
+7	        'email': 'demo@example.com',
+8	        'password': 'demo123'
+9	    }, follow_redirects=False)
+10	    
+11	    print(f'Login Status: {login_resp.status_code}')
+12	    
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'demo123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\test_contacts_endpoint.py:7:8
+6	        'email': 'demo@example.com',
+7	        'password': 'demo123'
+8	    }, follow_redirects=False)
+9	    
+10	    print(f'Login Status: {login_resp.status_code}')
+11	    
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'test123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\test_docgen_api.py:20:8
+19	        "email": "test@example.com",  # Kendi email'ini yaz
+20	        "password": "test123"  # Kendi şifreni yaz
+21	    }, allow_redirects=False)
+22	    
+23	    if response.status_code in [200, 302]:
+24	        print("✅ Login başarılı")
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'demo123'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\test_docgen_nested_context.py:14:4
+13	    'username': 'demo',
+14	    'password': 'demo123'
+15	})
+16	print(f"   Login status: {login_resp.status_code}")
+17	
+18	# 2. Get first deal
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:28:4
+27	    results, pagination = FilterCacheService.get_cached_results(cache_key)
+28	    assert results is not None, "Cache should return results"
+29	    assert len(results) == 1, "Should have 1 result"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:29:4
+28	    assert results is not None, "Cache should return results"
+29	    assert len(results) == 1, "Should have 1 result"
+30	    assert pagination['page'] == 1, "Page should be 1"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:30:4
+29	    assert len(results) == 1, "Should have 1 result"
+30	    assert pagination['page'] == 1, "Page should be 1"
+31	    print(f'✓ Test 3: Cache hit: {len(results)} results, page {pagination["page"]}')
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:35:4
+34	    stats = FilterCacheService.get_cache_stats()
+35	    assert stats['total_entries'] == 1, "Should have 1 cache entry"
+36	    assert stats['active_entries'] == 1, "Should have 1 active entry"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:36:4
+35	    assert stats['total_entries'] == 1, "Should have 1 cache entry"
+36	    assert stats['active_entries'] == 1, "Should have 1 active entry"
+37	    print(f'✓ Test 4: Cache stats: {stats["total_entries"]} entries, {stats["active_entries"]} active')
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:41:4
+40	    invalidated = FilterCacheService.invalidate_cache('contact', 1)
+41	    assert invalidated == 1, "Should invalidate 1 entry"
+42	    print(f'✓ Test 5: Invalidated {invalidated} cache entries')
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:46:4
+45	    result = FilterCacheService.get_cached_results(cache_key)
+46	    assert result is None, "Cache should be empty after invalidation"
+47	    print(f'✓ Test 6: Cache miss after invalidation: {result is None}')
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:63:4
+62	    cleaned = FilterCacheService.cleanup_expired()
+63	    assert cleaned == 1, "Should clean 1 expired entry"
+64	    print(f'✓ Test 7: Cleaned up {cleaned} expired entries')
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_cache_service.py:69:4
+68	    cleared = FilterCacheService.clear_all()
+69	    assert cleared >= 1, "Should clear at least 1 entry"
+70	    print(f'✓ Test 8: Cleared {cleared} cache entries')
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:18:4
+17	    print(f"✓ Operators: {', '.join(FILTER_OPERATORS.keys())}")
+18	    assert 'equals' in FILTER_OPERATORS
+19	    assert 'contains' in FILTER_OPERATORS
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:19:4
+18	    assert 'equals' in FILTER_OPERATORS
+19	    assert 'contains' in FILTER_OPERATORS
+20	    assert 'greater_than' in FILTER_OPERATORS
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:20:4
+19	    assert 'contains' in FILTER_OPERATORS
+20	    assert 'greater_than' in FILTER_OPERATORS
+21	    print("✓ FILTER_OPERATORS OK")
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:28:4
+27	    print(f"✓ Company quick filters: {len(QUICK_FILTERS.get('company', {}))}")
+28	    assert 'contact' in QUICK_FILTERS
+29	    assert 'company' in QUICK_FILTERS
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:29:4
+28	    assert 'contact' in QUICK_FILTERS
+29	    assert 'company' in QUICK_FILTERS
+30	    print("✓ QUICK_FILTERS OK")
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:44:4
+43	    print(f"✓ Valid filter: is_valid={is_valid}, error={error}")
+44	    assert is_valid == True
+45	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:54:4
+53	    print(f"✓ Invalid operator: is_valid={is_valid}, error={error}")
+54	    assert is_valid == False
+55	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:64:4
+63	    print(f"✓ Missing field: is_valid={is_valid}, error={error}")
+64	    assert is_valid == False
+65	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:75:4
+74	    print(f"✓ starred config: {config}")
+75	    assert 'filters' in config
+76	    assert len(config['filters']) > 0
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:76:4
+75	    assert 'filters' in config
+76	    assert len(config['filters']) > 0
+77	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:81:4
+80	    print(f"✓ no_parent config: {config}")
+81	    assert 'filters' in config
+82	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:86:4
+85	    print(f"✓ created_this_week config: {config}")
+86	    assert 'filters' in config
+87	    # Check that WEEK_START was replaced with actual date
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:88:4
+87	    # Check that WEEK_START was replaced with actual date
+88	    assert config['filters'][0]['value'] != 'WEEK_START'
+89	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:107:8
+106	        
+107	        assert 'saved_filters' in tables, "saved_filters table not found"
+108	        assert 'user_defined_filters' in tables, "user_defined_filters table not found"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:108:8
+107	        assert 'saved_filters' in tables, "saved_filters table not found"
+108	        assert 'user_defined_filters' in tables, "user_defined_filters table not found"
+109	        assert 'filter_execution_logs' in tables, "filter_execution_logs table not found"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:109:8
+108	        assert 'user_defined_filters' in tables, "user_defined_filters table not found"
+109	        assert 'filter_execution_logs' in tables, "filter_execution_logs table not found"
+110	        
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:120:4
+119	    print(f"✓ Cache miss: {result}")
+120	    assert result is None
+121	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:127:4
+126	    print(f"✓ Cache hit: {cached}")
+127	    assert cached == test_results
+128	    
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_filter_services.py:132:4
+131	    print(f"✓ Workspace isolation: {cached_wrong_workspace}")
+132	    assert cached_wrong_workspace is None
+133	    
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'test-secret-key'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\test_idor_security.py:20:15
+19	    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+20	    app.config['SECRET_KEY'] = 'test-secret-key'
+21	    
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hashed'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\test_idor_security.py:43:17
+42	            email='owner1@test.com',
+43	            password_hash='hashed',
+44	            workspace_id=workspace1.id,
+45	            role='owner',
+46	            is_active=True
+47	        )
+48	        member1 = User(
+49	            email='member1@test.com',
+50	            password_hash='hashed',
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hashed'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\test_idor_security.py:50:18
+49	            email='member1@test.com',
+50	            password_hash='hashed',
+51	            workspace_id=workspace1.id,
+52	            role='member',
+53	            is_active=True
+54	        )
+55	        viewer1 = User(
+56	            email='viewer1@test.com',
+57	            password_hash='hashed',
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hashed'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\test_idor_security.py:57:18
+56	            email='viewer1@test.com',
+57	            password_hash='hashed',
+58	            workspace_id=workspace1.id,
+59	            role='viewer',
+60	            is_active=True
+61	        )
+62	        
+63	        # Create user in workspace 2
+64	        owner2 = User(
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hashed'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\test_idor_security.py:66:17
+65	            email='owner2@test.com',
+66	            password_hash='hashed',
+67	            workspace_id=workspace2.id,
+68	            role='owner',
+69	            is_active=True
+70	        )
+71	        
+72	        db.session.add_all([owner1, member1, viewer1, owner2])
+73	        db.session.commit()
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:209:4
+208	    
+209	    assert response.status_code == 404, "Should return 404 for cross-workspace access"
+210	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:226:4
+225	    
+226	    assert response.status_code == 403, "Member should not update others' deals"
+227	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:243:4
+242	    
+243	    assert response.status_code == 200, "Member should update their own deal"
+244	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:260:4
+259	    
+260	    assert response.status_code == 200, "Owner should update any deal"
+261	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:277:4
+276	    
+277	    assert response.status_code == 403, "Viewer should not update deals"
+278	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:290:4
+289	    
+290	    assert response.status_code == 200, "Viewer should read deals"
+291	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:303:4
+302	    
+303	    assert response.status_code == 404, "Should not delete cross-workspace deal"
+304	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:320:4
+319	    
+320	    assert response.status_code == 404, "Should return 404 for cross-workspace access"
+321	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:337:4
+336	    
+337	    assert response.status_code == 403, "Member should not update others' tasks"
+338	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:354:4
+353	    
+354	    assert response.status_code == 200, "Member should update their own task"
+355	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:367:4
+366	    
+367	    assert response.status_code == 403, "Member should not delete others' tasks"
+368	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:380:4
+379	    
+380	    assert response.status_code == 200, "Owner should delete any task"
+381	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:397:4
+396	    
+397	    assert response.status_code == 404, "Should return 404 for cross-workspace access"
+398	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:414:4
+413	    
+414	    assert response.status_code == 403, "Member should not update others' contacts"
+415	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:431:4
+430	    
+431	    assert response.status_code == 200, "Member should update their own contact"
+432	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:448:4
+447	    
+448	    assert response.status_code == 200, "Owner should update any contact"
+449	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:465:4
+464	    
+465	    assert response.status_code == 404, "Should return 404 for cross-workspace access"
+466	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:482:4
+481	    
+482	    assert response.status_code == 403, "Viewer should not update companies"
+483	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:495:4
+494	    
+495	    assert response.status_code == 200, "Viewer should read companies"
+496	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:512:4
+511	    
+512	    assert response.status_code == 200
+513	    json_data = response.get_json()
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:517:4
+516	    task_ids = [task['id'] for task in json_data['tasks']]
+517	    assert data['task2'].id in task_ids, "Should see own task"
+518	    assert data['task1'].id not in task_ids, "Should not see others' tasks"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:518:4
+517	    assert data['task2'].id in task_ids, "Should see own task"
+518	    assert data['task1'].id not in task_ids, "Should not see others' tasks"
+519	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:531:4
+530	    
+531	    assert response.status_code == 200
+532	    json_data = response.get_json()
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:536:4
+535	    task_ids = [task['id'] for task in json_data['tasks']]
+536	    assert data['task1'].id in task_ids, "Should see all tasks"
+537	    assert data['task2'].id in task_ids, "Should see all tasks"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:537:4
+536	    assert data['task1'].id in task_ids, "Should see all tasks"
+537	    assert data['task2'].id in task_ids, "Should see all tasks"
+538	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:550:4
+549	    
+550	    assert response.status_code == 200
+551	    json_data = response.get_json()
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:555:4
+554	    task_ids = [task['id'] for task in json_data['tasks']]
+555	    assert data['task1'].id in task_ids, "Viewer should see all tasks"
+556	    assert data['task2'].id in task_ids, "Viewer should see all tasks"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b101_assert_used.html
+   Location: .\test_idor_security.py:556:4
+555	    assert data['task1'].id in task_ids, "Viewer should see all tasks"
+556	    assert data['task2'].id in task_ids, "Viewer should see all tasks"
+557	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'password'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: .\test_marketplace_middleware.py:24:8
+23	        "email": "test@example.com",  # Replace with your test credentials
+24	        "password": "password"
+25	    }
+26	)
+27	if login_response.status_code == 200:
+28	    print("✓ Login successful")
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase10_documents.py:41:15
+40	            email='doc.user@example.com',
+41	            password_hash='hash',
+42	            role='admin',
+43	        )
+44	        db.session.add(user)
+45	        db.session.commit()
+46	
+47	        self.workspace_id = ws.id
+48	        self.user_id = user.id
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase11_email.py:39:15
+38	            email='email.admin@example.com',
+39	            password_hash='hash',
+40	            role='admin',
+41	        )
+42	        db.session.add(user)
+43	        db.session.flush()
+44	
+45	        customer = Customer(
+46	            workspace_id=ws.id,
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'encrypted-token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase11_email.py:105:22
+104	            google_email='agent@example.com',
+105	            access_token='encrypted-token',
+106	            refresh_token='encrypted-refresh',
+107	            is_active=True,
+108	        )
+109	        db.session.add(integration)
+110	        db.session.flush()
+111	
+112	        synced = EmailSync(
+113	            workspace_id=self.workspace_id,
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase12_quickbooks.py:34:15
+33	            email='qb.user@example.com',
+34	            password_hash='hash',
+35	            role='admin',
+36	        )
+37	        db.session.add(user)
+38	        db.session.flush()
+39	
+40	        company = Company(workspace_id=ws.id, name='Acme Inc')
+41	        db.session.add(company)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase13_collaboration.py:33:16
+32	            email='actor@example.com',
+33	            password_hash='hash',
+34	            role='admin',
+35	        )
+36	        mentioned = User(
+37	            workspace_id=ws.id,
+38	            name='Ali Veli',
+39	            email='ali@example.com',
+40	            password_hash='hash',
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase13_collaboration.py:40:20
+39	            email='ali@example.com',
+40	            password_hash='hash',
+41	            role='agent',
+42	        )
+43	        db.session.add(actor)
+44	        db.session.add(mentioned)
+45	        db.session.flush()
+46	
+47	        customer = Customer(
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase14_system_health.py:33:15
+32	            email='health@example.com',
+33	            password_hash='hash',
+34	            role='admin',
+35	        )
+36	        db.session.add(user)
+37	        db.session.flush()
+38	
+39	        customer = Customer(workspace_id=ws.id, phone_number='+905001234567', profile_name='C1')
+40	        db.session.add(customer)
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'hash'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_phase9_security.py:36:15
+35	            email='security@example.com',
+36	            password_hash='hash',
+37	            role='admin',
+38	        )
+39	        db.session.add(user)
+40	        db.session.commit()
+41	
+42	        self.workspace_id = ws.id
+43	        self.user_id = user.id
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'dummy-token'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: .\tests\test_telegram_integration.py:24:13
+23	
+24	        ws = Workspace(company_name='Telegram WS', telegram_bot_token='dummy-token')
+25	        db.session.add(ws)
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 35152
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 119
+		Medium: 4
+		High: 2
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 35
+		High: 90
+Files skipped (0):

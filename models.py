@@ -88,6 +88,10 @@ class Conversation(db.Model):
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     notes = db.Column(db.Text)
     last_message_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    ai_summary = db.Column(db.Text, nullable=True)
+    ai_summary_at = db.Column(db.DateTime, nullable=True)
+    ai_sentiment = db.Column(db.String(20), nullable=True)  # positive, negative, neutral
+    ai_sentiment_score = db.Column(db.Float, nullable=True)  # -1.0 to 1.0
     messages = db.relationship('Message', backref='conversation', lazy=True, order_by='Message.created_at', cascade="all, delete-orphan")
     conv_notes = db.relationship('Note', backref='conversation', lazy=True, cascade="all, delete-orphan")
 

@@ -760,11 +760,24 @@
             });
         });
 
-        // Load recent documents on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadRecentDocuments();
         });
     </script>
 
+{% include '_ai_sidebar.html' %}
+<script>
+if (typeof setAIContext === 'function') {
+    setAIContext({
+        'deal_id': {{ deal.id }},
+        'Sayfa': 'Deal Detayı',
+        'Deal adı': '{{ deal.name|escape }}',
+        'Değer': '{{ deal.value }} TL',
+        'Durum': '{{ deal.status }}',
+        'Şirket': '{{ deal.company.name if deal.company else "" }}',
+        'İlgili kişi': '{{ deal.primary_contact.full_name if deal.primary_contact else "" }}'
+    });
+}
+</script>
 </body>
 </html>

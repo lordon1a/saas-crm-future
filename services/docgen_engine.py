@@ -82,12 +82,12 @@ def render_pdf(template_path: str, context: dict, output_path: str) -> str:
     """
     try:
         from weasyprint import HTML
-        from jinja2 import Template
+        from jinja2 import Environment, select_autoescape
 
         with open(template_path, 'r', encoding='utf-8') as f:
             html_source = f.read()
 
-        jinja_env = Environment()
+        jinja_env = Environment(autoescape=select_autoescape(['html', 'htm', 'xml']))
         template = jinja_env.from_string(html_source)
         rendered_html = template.render(**context)
 

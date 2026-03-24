@@ -1211,5 +1211,19 @@
             });
         });
     </script>
+{% include '_ai_sidebar.html' %}
+<script>
+if (typeof setAIContext === 'function') {
+    setAIContext({
+        'company_id': {{ company.id }},
+        'Sayfa': 'Şirket Detayı',
+        'Şirket adı': '{{ company.name|escape }}',
+        'Sektör': '{{ company.industry or "" }}',
+        'Çalışan': '{{ company.employee_count or "" }}',
+        'Web sitesi': '{{ company.website or "" }}',
+        'Ana şirket': '{{ company.parent_company.name if company.parent_company else "" }}'
+    });
+}
+</script>
 </body>
 </html>

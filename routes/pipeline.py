@@ -198,12 +198,11 @@ def get_deals():
             query = query.filter_by(churn_risk=filters['churn_risk'])
         
         # Eager load relationships
-        from models import db
         query = query.options(
-            db.joinedload(Deal.company),
-            db.joinedload(Deal.primary_contact),
-            db.joinedload(Deal.pipeline),
-            db.joinedload(Deal.stage)
+            joinedload(Deal.company),
+            joinedload(Deal.primary_contact),
+            joinedload(Deal.pipeline),
+            joinedload(Deal.stage)
         )
         
         # Paginate

@@ -1061,3 +1061,168 @@ def get_audit_logs():
             for row in logs
         ]
     }), 200
+
+
+# ─── AI Settings (per-workspace API keys) ─────────────────────────────────
+
+def _ai_fernet():
+    """Create Fernet instance for AI key encryption using app SECRET_KEY."""
+    import hashlib, base64
+    from cryptography.fernet import Fernet
+    from config import Config
+    key_material = Config.SECRET_KEY.encode('utf-8')
+    digest = hashlib.sha256(key_material).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
+def _ai_encrypt(value):
+    if not value:
+        return None
+    return _ai_fernet().encrypt(value.encode('utf-8')).decode('utf-8')
+
+
+def _ai_decrypt(value):
+    if not value:
+        return None
+    try:
+        return _ai_fernet().decrypt(value.encode('utf-8')).decode('utf-8')
+    except Exception:
+        return None
+
+
+def _mask_key(key):
+    """Mask API key for safe display: sk-abc...xyz"""
+    if not key:
+        return ''
+    if len(key) <= 8:
+        return key[:2] + '***'
+    return key[:6] + '***' + key[-4:]
+
+
+@bp.route('/ai', methods=['GET'])
+@login_required_api
+def get_ai_settings():
+    """Get AI provider settings for current workspace (keys masked)."""
+    from models_crm import AISettings
+    workspace_id = session.get('workspace_id')
+
+    rows = AISettings.query.filter_by(workspace_id=workspace_id).all()
+    providers = []
+    for row in rows:
+        decrypted = _ai_decrypt(row.api_key_encrypted)
+        providers.append({
+            'provider': row.provider,
+            'api_key_masked': _mask_key(decrypted),
+            'has_key': bool(decrypted),
+            'model_name': row.model_name or '',
+            'is_active': row.is_active,
+        })
+
+    return jsonify({'providers': providers}), 200
+
+
+@bp.route('/ai', methods=['PUT'])
+@login_required_api
+@admin_required
+def update_ai_settings():
+    """Save or update an AI provider API key for the workspace."""
+    from models_crm import AISettings
+    workspace_id = session.get('workspace_id')
+    data = request.get_json(silent=True) or {}
+
+    provider = (data.get('provider') or '').strip().lower()
+    if provider not in ('gemini', 'anthropic', 'openai'):
+        return jsonify({'error': 'Geçersiz provider (gemini/anthropic/openai)'}), 400
+
+    api_key = (data.get('api_key') or '').strip()
+    model_name = (data.get('model_name') or '').strip()
+    is_active = data.get('is_active', True)
+
+    row = AISettings.query.filter_by(workspace_id=workspace_id, provider=provider).first()
+    if not row:
+        row = AISettings(workspace_id=workspace_id, provider=provider)
+        db.session.add(row)
+
+    if api_key and api_key != '***':
+        row.api_key_encrypted = _ai_encrypt(api_key)
+    row.model_name = model_name or None
+    row.is_active = bool(is_active)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    decrypted = _ai_decrypt(row.api_key_encrypted)
+    return jsonify({
+        'status': 'updated',
+        'provider': row.provider,
+        'api_key_masked': _mask_key(decrypted),
+        'has_key': bool(decrypted),
+        'model_name': row.model_name or '',
+        'is_active': row.is_active,
+    }), 200
+
+
+@bp.route('/ai/<provider>', methods=['DELETE'])
+@login_required_api
+@admin_required
+def delete_ai_settings(provider):
+    """Remove an AI provider API key from the workspace."""
+    from models_crm import AISettings
+    workspace_id = session.get('workspace_id')
+    row = AISettings.query.filter_by(workspace_id=workspace_id, provider=provider).first()
+    if not row:
+        return jsonify({'error': 'Kayıt bulunamadı'}), 404
+
+    try:
+        db.session.delete(row)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({'status': 'deleted'}), 200
+
+
+@bp.route('/ai/test', methods=['POST'])
+@login_required_api
+@admin_required
+def test_ai_key():
+    """Test an AI provider API key before saving."""
+    data = request.get_json(silent=True) or {}
+    provider = (data.get('provider') or '').strip().lower()
+    api_key = (data.get('api_key') or '').strip()
+    model_name = (data.get('model_name') or '').strip()
+
+    if not api_key:
+        return jsonify({'success': False, 'error': 'API key gerekli'}), 400
+
+    try:
+        if provider == 'gemini':
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            gem_model = model_name or 'gemini-2.5-flash'
+            resp = client.models.generate_content(
+                model=gem_model,
+                contents=[{'role': 'user', 'parts': [{'text': 'Say hello in one word'}]}],
+            )
+            return jsonify({'success': True, 'message': f'{gem_model} bağlantısı başarılı'}), 200
+
+        elif provider == 'anthropic':
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+            ant_model = model_name or 'claude-3-5-sonnet-latest'
+            resp = client.messages.create(
+                model=ant_model,
+                max_tokens=10,
+                messages=[{'role': 'user', 'content': 'Say hello in one word'}]
+            )
+            return jsonify({'success': True, 'message': f'{ant_model} bağlantısı başarılı'}), 200
+
+        else:
+            return jsonify({'success': False, 'error': f'Test desteklenmiyor: {provider}'}), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400

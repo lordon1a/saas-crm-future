@@ -99,6 +99,12 @@ class Deal(db.Model):
     stage_entered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)  # Track when deal entered current stage
     version = db.Column(db.Integer, default=0, nullable=False)  # Optimistic locking
     
+    # AI Scoring
+    ai_score = db.Column(db.Integer, nullable=True)  # 0-100 win probability
+    ai_score_label = db.Column(db.String(20), nullable=True)  # hot, warm, cold
+    ai_insight = db.Column(db.Text, nullable=True)  # Short AI-generated insight
+    ai_scored_at = db.Column(db.DateTime, nullable=True)
+    
     # Relationships
     stage = db.relationship('DealStage', foreign_keys=[stage_id], backref='deals')
     primary_contact = db.relationship('Contact', foreign_keys=[contact_id], backref='deals')
@@ -221,6 +227,10 @@ class Contact(db.Model):
     
     # Last activity tracking for inactivity alerts
     last_activity_at = db.Column(db.DateTime, nullable=True, index=True)
+    
+    # AI Scoring
+    ai_insight = db.Column(db.Text, nullable=True)  # Short AI-generated insight
+    ai_scored_at = db.Column(db.DateTime, nullable=True)
     
     # Link to existing Customer for WhatsApp conversations
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
@@ -2169,3 +2179,31 @@ class WorkspaceApp(db.Model):
     
     def __repr__(self):
         return f'<WorkspaceApp {self.app_slug} for workspace {self.workspace_id}>'
+
+
+# ============================================================================
+# AI SETTINGS (per-workspace API keys)
+# ============================================================================
+
+class AISettings(db.Model):
+    """
+    Stores AI provider configuration per workspace.
+    API keys are encrypted at rest using Fernet symmetric encryption.
+    """
+    __tablename__ = 'ai_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    provider = db.Column(db.String(30), nullable=False, default='gemini')  # gemini, anthropic, openai
+    api_key_encrypted = db.Column(db.Text, nullable=True)
+    model_name = db.Column(db.String(100), nullable=True)  # e.g. gemini-2.5-flash, claude-3-5-sonnet-latest
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'provider', name='uq_ai_settings_workspace_provider'),
+    )
+
+    def __repr__(self):
+        return f'<AISettings {self.provider} for workspace {self.workspace_id}>'

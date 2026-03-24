@@ -55,11 +55,11 @@ APP_CATALOG = [
     {
         "slug": "ai_assistant",
         "name": "AI Asistan",
-        "description": "CRM verilerinizi analiz eden yapay zeka asistanı",
+        "description": "CRM verinizle konuşun — müşteri analizi, e-posta taslağı, deal özeti",
         "icon": "fa-robot",
-        "color": "amber",
+        "color": "purple",
         "category": "Yapay Zeka",
-        "is_available": False,
+        "is_available": True,
     },
 ]
 
