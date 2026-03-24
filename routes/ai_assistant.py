@@ -118,12 +118,14 @@ CEVAP FORMATI:
 
 ACTION_SYSTEM = """
 
-Kullanıcı bir CRM aksiyonu yapmak istiyorsa (contact oluştur, deal güncelle vb.),
-SADECE saf JSON formatında yanıt ver, başka hiçbir şey yazma:
+AKSIYON KURALLARI:
+1. Kullanıcı AÇIKÇA bir CRM aksiyonu talep ediyorsa (örn: "contact oluştur", "deal güncelle", "email ekle") SADECE o zaman JSON aksiyon döndür.
+2. Sohbet, selamlaşma, soru-cevap gibi durumlarda ASLA JSON aksiyon döndürme. Normal Türkçe metin yanıt ver.
+3. Daha önce AYNI aksiyon yapıldıysa (örn: aynı contact zaten oluşturuldu), TEKRAR ÖNERME. "Zaten yapıldı" de.
+4. Kullanıcı "hi", "merhaba", "teşekkürler" gibi basit mesajlar yazdığında ASLA aksiyon önerme.
 
+Aksiyon gerektiğinde SADECE saf JSON formatında yanıt ver:
 {"requires_confirmation": true, "action": "create_contact", "params": {"isim": "...", "email": "..."}, "message": "..."}
-
-Aksiyon gerektirmiyorsa normal Türkçe metin yanıt ver (JSON kullanma).
 
 Desteklenen aksiyonlar:
 - create_contact: params: isim, email, telefon (opsiyonel)
@@ -132,8 +134,10 @@ Desteklenen aksiyonlar:
 - update_deal_status: params: deal_id, status (won/lost/open)
 - update_deal_value: params: deal_id, value
 
-ÖNEMLİ: Eğer kullanıcı mevcut bir kişiyi güncellemek istiyorsa (email ekle, telefon güncelle vb.), update_contact aksiyonunu kullan.
-Eğer contact_id bilinmiyorsa, kullanıcıya sor veya bağlam bilgisinden bul.
+ÖNEMLİ: 
+- Eğer kullanıcı mevcut bir kişiyi güncellemek istiyorsa update_contact kullan.
+- Sohbet geçmişinde aynı aksiyon varsa TEKRAR ÖNERME.
+- Basit selamlaşmalara aksiyon önerme.
 """
 
 
@@ -149,11 +153,24 @@ def chat():
     if not messages:
         return jsonify({'error': 'Mesaj gerekli'}), 400
 
+    # Check for executed actions in conversation history
+    executed_actions = []
+    for msg in messages:
+        if msg.get('role') == 'assistant':
+            content = msg.get('content', '')
+            if 'oluşturuldu' in content or 'güncellendi' in content or 'yapıldı' in content:
+                executed_actions.append(content)
+
     system = SYSTEM_PROMPT + ACTION_SYSTEM
     if context:
         system += "\n\nMevcut bağlam:\n"
         for k, v in sanitize_context(context).items():
             system += f"- {k}: {v}\n"
+    
+    if executed_actions:
+        system += "\n\nDaha önce yapılan aksiyonlar (TEKRAR ÖNERME):\n"
+        for action in executed_actions[-3:]:  # Son 3 aksiyon
+            system += f"- {action}\n"
 
     try:
         response_text = ''
