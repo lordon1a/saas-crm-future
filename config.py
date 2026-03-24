@@ -43,12 +43,12 @@ class Config:
             raise RuntimeError('SECRET_KEY environment variable must be set in production')
         SECRET_KEY = 'dev-secret-key-change-in-production'  # Sadece development için
     
-    # CSRF Protection
-    WTF_CSRF_ENABLED = True
+    # CSRF Protection (Temporarily Disabled)
+    WTF_CSRF_ENABLED = False
     WTF_CSRF_SECRET_KEY = os.getenv('CSRF_SECRET_KEY', SECRET_KEY)
     WTF_CSRF_TIME_LIMIT = 3600  # 1 saat
     WTF_CSRF_SSL_STRICT = ENV == 'production'
-    WTF_CSRF_CHECK_DEFAULT = True
+    WTF_CSRF_CHECK_DEFAULT = False
     
     # Session ayarları
     SESSION_COOKIE_HTTPONLY = True
