@@ -92,7 +92,6 @@ def _get_workspace_ai(workspace_id):
                 if row.model_name:
                     result['openrouter_model'] = row.model_name
                 logger.info(f"[AI] Using workspace OpenRouter key, model={result['openrouter_model']}")
-                logger.info(f"[AI] Using workspace Gemini key, model={result['gemini_model']}")
             elif row.provider == 'anthropic' and decrypted:
                 result['anthropic_client'] = anthropic.Anthropic(api_key=decrypted)
                 result['anthropic_key'] = decrypted

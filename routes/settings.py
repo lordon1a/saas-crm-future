@@ -1131,8 +1131,8 @@ def update_ai_settings():
     data = request.get_json(silent=True) or {}
 
     provider = (data.get('provider') or '').strip().lower()
-    if provider not in ('gemini', 'anthropic', 'openai'):
-        return jsonify({'error': 'Geçersiz provider (gemini/anthropic/openai)'}), 400
+    if provider not in ('gemini', 'anthropic', 'openai', 'openrouter'):
+        return jsonify({'error': 'Geçersiz provider (gemini/anthropic/openai/openrouter)'}), 400
 
     api_key = (data.get('api_key') or '').strip()
     model_name = (data.get('model_name') or '').strip()
@@ -1220,6 +1220,27 @@ def test_ai_key():
                 messages=[{'role': 'user', 'content': 'Say hello in one word'}]
             )
             return jsonify({'success': True, 'message': f'{ant_model} bağlantısı başarılı'}), 200
+
+        elif provider == 'openrouter':
+            import requests
+            headers = {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            }
+            or_model = model_name or 'minimax/minimax-m2.5:free'
+            payload = {
+                'model': or_model,
+                'messages': [{'role': 'user', 'content': 'Say hello in one word'}],
+                'max_tokens': 10,
+            }
+            resp = requests.post(
+                'https://openrouter.ai/api/v1/chat/completions',
+                headers=headers,
+                json=payload,
+                timeout=10
+            )
+            resp.raise_for_status()
+            return jsonify({'success': True, 'message': f'{or_model} bağlantısı başarılı'}), 200
 
         else:
             return jsonify({'success': False, 'error': f'Test desteklenmiyor: {provider}'}), 400
