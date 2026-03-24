@@ -816,6 +816,47 @@
                                     </div>
                                 </div>
 
+                                <!-- OpenRouter -->
+                                <div class="border border-slate-200 rounded-xl p-5 space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                                                <i class="fas fa-route text-purple-600 text-sm"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-sm font-bold text-slate-800">OpenRouter</h4>
+                                                <p class="text-xs text-slate-500" id="ai-openrouter-status">Yapılandırılmadı</p>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ai-openrouter-active" class="sr-only peer" checked onchange="toggleAIProvider('openrouter', this.checked)">
+                                            <div class="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-brand-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">API Key</label>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="ai-openrouter-key" placeholder="sk-or-..." class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none">
+                                            <button onclick="toggleKeyVisibility('ai-openrouter-key')" class="px-3 py-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 text-sm"><i class="fas fa-eye"></i></button>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1.5">100+ model, ücretsiz seçenekler mevcut. <a href="https://openrouter.ai/keys" target="_blank" class="text-brand-600 hover:underline">API key al</a></p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Model</label>
+                                        <select id="ai-openrouter-model" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none">
+                                            <option value="minimax/minimax-m2.5:free">MiniMax M2.5 (Ücretsiz)</option>
+                                            <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Ücretsiz)</option>
+                                            <option value="google/gemini-flash-1.5:free">Gemini Flash 1.5 (Ücretsiz)</option>
+                                            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                                            <option value="openai/gpt-4o">GPT-4o</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="testAIKey('openrouter')" class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all"><i class="fas fa-plug mr-1"></i> Test Et</button>
+                                        <button onclick="saveAIKey('openrouter')" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700 transition-all"><i class="fas fa-save mr-1"></i> Kaydet</button>
+                                    </div>
+                                </div>
+
                             </div>
                         </section>
 

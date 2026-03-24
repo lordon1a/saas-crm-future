@@ -48,8 +48,10 @@ def _get_workspace_ai(workspace_id):
         'anthropic_client': anthropic_client,
         'gemini_key': GEMINI_KEY,
         'anthropic_key': ANTHROPIC_KEY,
+        'openrouter_key': None,
         'gemini_model': 'gemini-2.5-flash',
         'anthropic_model': 'claude-3-5-sonnet-latest',
+        'openrouter_model': 'minimax/minimax-m2.5:free',
     }
     try:
         from models_crm import AISettings
@@ -78,6 +80,18 @@ def _get_workspace_ai(workspace_id):
                 result['gemini_key'] = decrypted
                 if row.model_name:
                     result['gemini_model'] = row.model_name
+                logger.info(f"[AI] Using workspace Gemini key, model={result['gemini_model']}")
+            elif row.provider == 'anthropic' and decrypted:
+                result['anthropic_client'] = anthropic.Anthropic(api_key=decrypted)
+                result['anthropic_key'] = decrypted
+                if row.model_name:
+                    result['anthropic_model'] = row.model_name
+                logger.info(f"[AI] Using workspace Anthropic key, model={result['anthropic_model']}")
+            elif row.provider == 'openrouter' and decrypted:
+                result['openrouter_key'] = decrypted
+                if row.model_name:
+                    result['openrouter_model'] = row.model_name
+                logger.info(f"[AI] Using workspace OpenRouter key, model={result['openrouter_model']}")
                 logger.info(f"[AI] Using workspace Gemini key, model={result['gemini_model']}")
             elif row.provider == 'anthropic' and decrypted:
                 result['anthropic_client'] = anthropic.Anthropic(api_key=decrypted)
@@ -649,15 +663,38 @@ TAHMİN: [Bu ay kapanması beklenen deal sayısı ve değeri tahmini]"""
 
 def _call_ai(messages, system=None, provider=None):
     """Ortak AI çağrı fonksiyonu."""
+    import requests
     system_prompt = system or SYSTEM_PROMPT
     workspace_id = session.get('workspace_id')
     ai = _get_workspace_ai(workspace_id)
 
     if provider is None:
-        provider = 'gemini' if ai['gemini_key'] else 'anthropic'
+        # Priority: OpenRouter > Gemini > Anthropic
+        if ai['openrouter_key']:
+            provider = 'openrouter'
+        elif ai['gemini_key']:
+            provider = 'gemini'
+        else:
+            provider = 'anthropic'
 
     try:
-        if provider == 'gemini' and ai['gemini_client']:
+        if provider == 'openrouter' and ai['openrouter_key']:
+            # OpenRouter HTTP API
+            headers = {
+                'Authorization': f"Bearer {ai['openrouter_key']}",
+                'Content-Type': 'application/json',
+            }
+            payload = {
+                'model': ai['openrouter_model'],
+                'messages': [{'role': 'system', 'content': system_prompt}] + messages if system_prompt else messages,
+            }
+            response = requests.post('https://openrouter.ai/api/v1/chat/completions', 
+                                    headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            return jsonify({'response': data['choices'][0]['message']['content']})
+            
+        elif provider == 'gemini' and ai['gemini_client']:
             gemini_messages = []
             for msg in messages:
                 role = 'user' if msg['role'] == 'user' else 'model'
