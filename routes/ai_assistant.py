@@ -1,6 +1,5 @@
 import os
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import anthropic
 from functools import wraps
 from flask import Blueprint, request, jsonify, g, session
@@ -27,7 +26,8 @@ ANTHROPIC_KEY = os.environ.get('ANTHROPIC_API_KEY')
 
 gemini_client = None
 if GEMINI_KEY:
-    gemini_client = genai.Client(api_key=GEMINI_KEY)
+    genai.configure(api_key=GEMINI_KEY)
+    gemini_client = genai
 
 anthropic_client = None
 if ANTHROPIC_KEY:
@@ -72,7 +72,8 @@ def _get_workspace_ai(workspace_id):
                 continue
 
             if row.provider == 'gemini' and decrypted:
-                result['gemini_client'] = genai.Client(api_key=decrypted)
+                genai.configure(api_key=decrypted)
+                result['gemini_client'] = genai
                 result['gemini_key'] = decrypted
                 if row.model_name:
                     result['gemini_model'] = row.model_name
@@ -172,17 +173,14 @@ def chat():
         elif ai['gemini_key'] and ai['gemini_client']:
             gemini_messages = [
                 {'role': 'user' if m['role'] == 'user' else 'model',
-                 'parts': [{'text': m['content']}]}
+                 'parts': [m['content']]}
                 for m in messages
             ]
-            resp = ai['gemini_client'].models.generate_content(
-                model=ai['gemini_model'],
-                contents=gemini_messages,
-                config=types.GenerateContentConfig(
-                    system_instruction=system,
-                    temperature=0.7
-                )
-            )
+            if system:
+                gemini_messages.insert(0, {'role': 'user', 'parts': [system]})
+            
+            model = ai['gemini_client'].GenerativeModel(ai['gemini_model'])
+            resp = model.generate_content(gemini_messages)
             response_text = resp.text
 
         else:
@@ -645,16 +643,13 @@ def _call_ai(messages, system=None, provider=None):
             gemini_messages = []
             for msg in messages:
                 role = 'user' if msg['role'] == 'user' else 'model'
-                gemini_messages.append({'role': role, 'parts': [{'text': msg['content']}]})
-                
-            response = ai['gemini_client'].models.generate_content(
-                model=ai['gemini_model'],
-                contents=gemini_messages,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.7
-                )
-            )
+                gemini_messages.append({'role': role, 'parts': [msg['content']]})
+            
+            if system_prompt:
+                gemini_messages.insert(0, {'role': 'user', 'parts': [system_prompt]})
+            
+            model = ai['gemini_client'].GenerativeModel(ai['gemini_model'])
+            response = model.generate_content(gemini_messages)
             return jsonify({'response': response.text})
             
         elif provider == 'anthropic' and ai['anthropic_client']:

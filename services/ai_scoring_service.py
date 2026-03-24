@@ -289,17 +289,13 @@ SADECE su JSON formatinda yanit ver, baska hicbir sey yazma:
 
 def _call_ai_simple(prompt, ai_client, model_name, provider='gemini'):
     """Simple AI call that returns raw text."""
-    from google.genai import types
     
     if provider == 'gemini':
-        resp = ai_client.models.generate_content(
-            model=model_name,
-            contents=[{'role': 'user', 'parts': [{'text': prompt}]}],
-            config=types.GenerateContentConfig(
-                system_instruction="Sen bir CRM veri analisti olarak JSON formatinda yanit veriyorsun. Sadece JSON don, baska hicbir sey yazma.",
-                temperature=0.3
-            )
-        )
+        model = ai_client.GenerativeModel(model_name)
+        resp = model.generate_content([
+            {'role': 'user', 'parts': ["Sen bir CRM veri analisti olarak JSON formatinda yanit veriyorsun. Sadece JSON don, baska hicbir sey yazma."]},
+            {'role': 'user', 'parts': [prompt]}
+        ])
         return resp.text
     elif provider == 'anthropic':
         resp = ai_client.messages.create(
