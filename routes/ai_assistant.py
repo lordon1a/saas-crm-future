@@ -1,4 +1,5 @@
 import os
+import requests
 import google.generativeai as genai
 import anthropic
 from datetime import datetime, timedelta
@@ -656,7 +657,6 @@ TAHMİN: [Bu ay kapanması beklenen deal sayısı ve değeri tahmini]"""
 
 def _call_ai(messages, system=None, provider=None):
     """Ortak AI çağrı fonksiyonu."""
-    import requests
     import logging
     logger = logging.getLogger(__name__)
     
@@ -683,19 +683,30 @@ def _call_ai(messages, system=None, provider=None):
     try:
         if provider == 'openrouter' and ai['openrouter_key']:
             # OpenRouter HTTP API
-            headers = {
-                'Authorization': f"Bearer {ai['openrouter_key']}",
-                'Content-Type': 'application/json',
-            }
-            payload = {
-                'model': ai['openrouter_model'],
-                'messages': [{'role': 'system', 'content': system_prompt}] + messages if system_prompt else messages,
-            }
-            response = requests.post('https://openrouter.ai/api/v1/chat/completions', 
-                                    headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            return jsonify({'response': data['choices'][0]['message']['content']})
+            try:
+                headers = {
+                    'Authorization': f"Bearer {ai['openrouter_key']}",
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://whatsapp-crm-saas.onrender.com',
+                }
+                payload = {
+                    'model': ai['openrouter_model'],
+                    'messages': [{'role': 'system', 'content': system_prompt}] + messages if system_prompt else messages,
+                    'max_tokens': 512,
+                }
+                logger.info(f"[OpenRouter] Sending request to OpenRouter API, model={ai['openrouter_model']}")
+                response = requests.post('https://openrouter.ai/api/v1/chat/completions', 
+                                        headers=headers, json=payload, timeout=30)
+                logger.info(f"[OpenRouter] Status: {response.status_code}")
+                response.raise_for_status()
+                data = response.json()
+                logger.info(f"[OpenRouter] Response received: {str(data)[:200]}")
+                return jsonify({'response': data['choices'][0]['message']['content']})
+            except Exception as openrouter_error:
+                logger.error(f"[OpenRouter] Error: {str(openrouter_error)}")
+                import traceback
+                logger.error(f"[OpenRouter] Traceback: {traceback.format_exc()}")
+                raise
             
         elif provider == 'gemini' and ai['gemini_client']:
             gemini_messages = []
