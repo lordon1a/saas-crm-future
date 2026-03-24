@@ -18,6 +18,7 @@ class TaskScheduler:
     """
     
     scheduler = None
+    app = None  # Flask app instance for context
     
     @classmethod
     def init_scheduler(cls, app):
@@ -31,6 +32,8 @@ class TaskScheduler:
         if cls.scheduler is not None:
             logger.warning("Scheduler zaten başlatılmış")
             return
+        
+        cls.app = app  # Store app instance for context
         
         cls.scheduler = BackgroundScheduler(
             daemon=True,
@@ -68,41 +71,51 @@ class TaskScheduler:
             cls.scheduler.shutdown()
             logger.info("TaskScheduler kapatıldı")
     
-    @staticmethod
-    def _send_notifications_job():
+    @classmethod
+    def _send_notifications_job(cls):
         """
         Bildirim gönderme job'ı.
         Her dakika çalışır ve zamanı gelmiş bildirimleri gönderir.
         """
+        if not cls.app:
+            logger.error("Flask app instance not available for notifications job")
+            return
+            
         try:
-            from services.notification_service import NotificationService
-            NotificationService.send_pending_notifications()
+            with cls.app.app_context():
+                from services.notification_service import NotificationService
+                NotificationService.send_pending_notifications()
         except Exception as e:
             logger.error(f"Bildirim job hatası: {str(e)}", exc_info=True)
     
-    @staticmethod
-    def _check_overdue_tasks_job():
+    @classmethod
+    def _check_overdue_tasks_job(cls):
         """
         Overdue görev kontrolü job'ı.
         Her 5 dakikada çalışır ve süresi geçmiş görevleri işaretler.
         Tüm workspace'ler için batch processing yapar.
         """
+        if not cls.app:
+            logger.error("Flask app instance not available for overdue tasks job")
+            return
+            
         try:
-            from models import db
-            from models_crm import Task
-            from services.task_service import TaskService
-            
-            # Tüm workspace'ler için kontrol et
-            # (Render Free Plan için optimize edilmiş - batch processing)
-            workspaces = db.session.query(Task.workspace_id).distinct().all()
-            
-            for (workspace_id,) in workspaces:
-                try:
-                    TaskService.mark_overdue_tasks(workspace_id)
-                except Exception as workspace_error:
-                    logger.error(f"Workspace {workspace_id} overdue kontrolü hatası: {str(workspace_error)}")
-                    # Bir workspace'de hata olsa bile diğerlerine devam et
-                    continue
+            with cls.app.app_context():
+                from models import db
+                from models_crm import Task
+                from services.task_service import TaskService
                 
+                # Tüm workspace'ler için kontrol et
+                # (Render Free Plan için optimize edilmiş - batch processing)
+                workspaces = db.session.query(Task.workspace_id).distinct().all()
+                
+                for (workspace_id,) in workspaces:
+                    try:
+                        TaskService.mark_overdue_tasks(workspace_id)
+                    except Exception as workspace_error:
+                        logger.error(f"Workspace {workspace_id} overdue kontrolü hatası: {str(workspace_error)}")
+                        # Bir workspace'de hata olsa bile diğerlerine devam et
+                        continue
+                    
         except Exception as e:
             logger.error(f"Overdue kontrolü job hatası: {str(e)}", exc_info=True)
