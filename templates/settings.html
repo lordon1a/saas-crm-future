@@ -732,8 +732,11 @@
                         </div>
 
                         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">API Anahtarları</h3>
+                                <button onclick="clearAllAIKeys()" class="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all border border-red-200">
+                                    <i class="fas fa-trash-alt mr-1"></i> Tümünü Temizle
+                                </button>
                             </div>
                             <div class="p-6 space-y-6" id="ai-settings-container">
 
@@ -2853,6 +2856,42 @@
                         is_active: isActive
                     });
                 } catch (e) { console.error('Toggle error:', e); }
+            }
+
+            async function clearAllAIKeys() {
+                if (!confirm('Tüm AI API anahtarlarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                    return;
+                }
+                
+                const providers = ['gemini', 'anthropic', 'openrouter'];
+                let successCount = 0;
+                let errorCount = 0;
+                
+                for (const provider of providers) {
+                    try {
+                        await api('/api/settings/ai/' + provider, 'DELETE');
+                        successCount++;
+                        
+                        // Clear UI
+                        const keyEl = document.getElementById('ai-' + provider + '-key');
+                        const statusEl = document.getElementById('ai-' + provider + '-status');
+                        const activeEl = document.getElementById('ai-' + provider + '-active');
+                        
+                        if (keyEl) keyEl.value = '';
+                        if (statusEl) statusEl.textContent = 'Yapılandırılmadı';
+                        if (activeEl) activeEl.checked = false;
+                    } catch (e) {
+                        console.error('Delete error for ' + provider + ':', e);
+                        errorCount++;
+                    }
+                }
+                
+                if (successCount > 0) {
+                    showToast(successCount + ' API anahtarı silindi');
+                }
+                if (errorCount > 0) {
+                    showToast(errorCount + ' API anahtarı silinemedi', 'error');
+                }
             }
         </script>
         <script src="/static/custom-fields.js"></script>
