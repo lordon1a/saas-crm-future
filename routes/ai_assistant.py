@@ -52,7 +52,7 @@ def _get_workspace_ai(workspace_id):
         'openrouter_key': None,
         'gemini_model': 'gemini-2.5-flash',
         'anthropic_model': 'claude-3-5-sonnet-latest',
-        'openrouter_model': 'minimax/minimax-m2.5:free',
+        'openrouter_model': 'openrouter/auto',
     }
     try:
         from models_crm import AISettings
@@ -97,56 +97,38 @@ def _get_workspace_ai(workspace_id):
         logger.error(f"[AI] Failed to load workspace AI settings: {e}")
     return result
 
-SYSTEM_PROMPT = """Sen uzman bir CRM asistanısın. Adın "CRM Asistan".
+SYSTEM_PROMPT = """You are a CRM assistant. Respond in Turkish.
 
-TEMEL KURALLAR:
-- Her zaman Türkçe konuş.
-- Kısa, net ve profesyonel cevaplar ver. Gereksiz tekrar yapma.
-- Kullanıcıya "nasıl yardımcı olabilirim" gibi boş sorular sorma. Bağlamdan anla ve direkt yardım et.
-- "Bilgim yok" veya "daha fazla detay lazım" gibi kaçamak cevaplar verme. Bağlamda veri varsa kullan, yoksa açıkça belirt.
-
-BAĞLAM KULLANIMI:
-- Sana verilen "Mevcut bağlam" bölümündeki verileri DİKKATLİCE oku ve kullan.
-- Sayısal değerleri, isimleri, tarihleri bağlamdan doğrudan al. Tahmin etme.
-- Bağlamda deal bilgisi varsa: değer, aşama, şirket, tarih gibi detayları kullan.
-- Bağlamda contact bilgisi varsa: isim, email, telefon, şirket, lead durumu gibi detayları kullan.
-- Bağlamda pipeline bilgisi varsa: toplam değer, aşama bazlı dağılım, deal sayıları gibi detayları kullan.
-
-UZMANLIK ALANLARIN:
-- Satış stratejisi ve deal analizi (kazanma olasılığı, sonraki adımlar, risk değerlendirmesi)
-- Müşteri ilişkileri yönetimi (segmentasyon, takip önerileri, churn risk)
-- E-posta taslakları (takip, teklif, teşekkür, hatırlatma - profesyonel Türkçe)
-- Pipeline analizi (darboğazlar, dönüşüm oranları, gelir tahminleri)
-- Görev ve aktivite planlaması
-
-CEVAP FORMATI:
-- Sayısal verileri formatlı göster (ör: 150.000 TL, %45)
-- Madde işaretleri kullan, uzun paragraflar yazma.
-- Somut aksiyon önerileri sun (ör: "Bu deal için yarın takip e-postası atın" gibi).
-- Emin olmadığın bilgileri belirt ama yine de en iyi tahmini ver."""
+Rules:
+- "hello"/"hi"/"thanks" → brief friendly reply only
+- Action request → return pure JSON (no markdown, no explanation)
+- Use context data when available"""
 
 ACTION_SYSTEM = """
 
-AKSIYON KURALLARI:
-1. Kullanıcı AÇIKÇA bir CRM aksiyonu talep ediyorsa (örn: "contact oluştur", "deal güncelle", "email ekle") SADECE o zaman JSON aksiyon döndür.
-2. Sohbet, selamlaşma, soru-cevap gibi durumlarda ASLA JSON aksiyon döndürme. Normal Türkçe metin yanıt ver.
-3. Daha önce AYNI aksiyon yapıldıysa (örn: aynı contact zaten oluşturuldu), TEKRAR ÖNERME. "Zaten yapıldı" de.
-4. Kullanıcı "hi", "merhaba", "teşekkürler" gibi basit mesajlar yazdığında ASLA aksiyon önerme.
+JSON ACTION FORMAT (when user requests action):
+{"requires_confirmation": true, "action": "ACTION_NAME", "params": {PARAMS}, "message": "Turkish message"}
 
-Aksiyon gerektiğinde SADECE saf JSON formatında yanıt ver:
-{"requires_confirmation": true, "action": "create_contact", "params": {"isim": "...", "email": "..."}, "message": "..."}
+CRITICAL RULES:
+1. Return ONLY the JSON above. NO markdown fence, NO explanation, NO extra text.
+2. "requires_confirmation" MUST ALWAYS be true
+3. Extract real names from context or user message - NO placeholders like "Isim Soyisim"
 
-Desteklenen aksiyonlar:
-- create_contact: params: isim, email, telefon (opsiyonel)
-- update_contact: params: contact_id, email (opsiyonel), telefon (opsiyonel), sirket (opsiyonel), pozisyon (opsiyonel), isim (opsiyonel)
-- create_deal: params: isim, deger, sirket (opsiyonel)
-- update_deal_status: params: deal_id, status (won/lost/open)
-- update_deal_value: params: deal_id, value
+Actions:
+- create_contact: {isim, email, telefon}
+- update_contact: {isim (REQUIRED - use real name from context/message), role/email/telefon/sirket/pozisyon}
+- create_deal: {isim, deger, sirket}
+- update_deal_status: {deal_id, status}
+- update_deal_value: {deal_id, value}
 
-ÖNEMLİ: 
-- Eğer kullanıcı mevcut bir kişiyi güncellemek istiyorsa update_contact kullan.
-- Sohbet geçmişinde aynı aksiyon varsa TEKRAR ÖNERME.
-- Basit selamlaşmalara aksiyon önerme.
+IMPORTANT DISTINCTION:
+- "role" = Decision Maker, Influencer, Champion, Blocker, End User (business role in deal)
+- "pozisyon" = job title like "CEO", "Manager", "Engineer" (job position)
+
+When user says "change role to Decision Maker" → use "role" parameter, NOT "pozisyon"
+
+Example: User says "change Yiğit Güldal's role to Decision Maker"
+Correct: {"requires_confirmation": true, "action": "update_contact", "params": {"isim": "Yiğit Güldal", "role": "Decision Maker"}, "message": "Yiğit Güldal'ın rolü Decision Maker olarak güncellenecek"}
 """
 
 
@@ -161,6 +143,11 @@ def chat():
 
     if not messages:
         return jsonify({'error': 'Mesaj gerekli'}), 400
+
+    # SON 10 MESAJI AL (token tasarrufu için)
+    # İlk mesaj varsa onu koru (context için önemli olabilir)
+    if len(messages) > 10:
+        messages = [messages[0]] + messages[-9:]
 
     # Check for executed actions in conversation history
     executed_actions = []
@@ -186,37 +173,108 @@ def chat():
         workspace_id = session.get('workspace_id')
         ai = _get_workspace_ai(workspace_id)
 
-        # Anthropic öncelikli (daha iyi JSON uyumu)
+        # Sağlayıcı fallback sırası: Anthropic -> Gemini -> OpenRouter
+        provider_attempted = False
+        provider_errors = []
+
         if ai['anthropic_key'] and ai['anthropic_client']:
-            resp = ai['anthropic_client'].messages.create(
-                model=ai['anthropic_model'],
-                max_tokens=1024,
-                system=system,
-                messages=messages
-            )
-            response_text = resp.content[0].text
+            provider_attempted = True
+            try:
+                resp = ai['anthropic_client'].messages.create(
+                    model=ai['anthropic_model'],
+                    max_tokens=512,  # 1024'ten 512'ye düşürüldü
+                    system=system,
+                    messages=messages
+                )
+                response_text = resp.content[0].text
+            except Exception as e:
+                provider_errors.append(('anthropic', e))
 
-        elif ai['gemini_key'] and ai['gemini_client']:
-            gemini_messages = [
-                {'role': 'user' if m['role'] == 'user' else 'model',
-                 'parts': [m['content']]}
-                for m in messages
-            ]
-            if system:
-                gemini_messages.insert(0, {'role': 'user', 'parts': [system]})
-            
-            model = ai['gemini_client'].GenerativeModel(ai['gemini_model'])
-            resp = model.generate_content(gemini_messages)
-            response_text = resp.text
+        if not response_text and ai['gemini_key'] and ai['gemini_client']:
+            provider_attempted = True
+            try:
+                gemini_messages = [
+                    {'role': 'user' if m['role'] == 'user' else 'model',
+                     'parts': [m['content']]}
+                    for m in messages
+                ]
+                if system:
+                    gemini_messages.insert(0, {'role': 'user', 'parts': [system]})
 
-        else:
+                model = ai['gemini_client'].GenerativeModel(ai['gemini_model'])
+                resp = model.generate_content(gemini_messages)
+                response_text = resp.text
+            except Exception as e:
+                provider_errors.append(('gemini', e))
+
+        if not response_text and ai['openrouter_key']:
+            provider_attempted = True
+            try:
+                headers = {
+                    'Authorization': f"Bearer {ai['openrouter_key']}",
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://whatsapp-crm-saas.onrender.com',
+                }
+                payload = {
+                    'model': ai['openrouter_model'],
+                    'messages': ([{'role': 'system', 'content': system}] if system else []) + messages,
+                    'max_tokens': 512,  # 1024'ten 512'ye düşürüldü
+                }
+                resp = requests.post(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
+                )
+                # Bazı modeller OpenRouter tarafında kaldırılmış olabilir; 404'te auto modele fallback yap.
+                if resp.status_code == 404 and ai['openrouter_model'] != 'openrouter/auto':
+                    payload['model'] = 'openrouter/auto'
+                    resp = requests.post(
+                        'https://openrouter.ai/api/v1/chat/completions',
+                        headers=headers,
+                        json=payload,
+                        timeout=30,
+                    )
+
+                resp.raise_for_status()
+                data = resp.json()
+                response_text = data['choices'][0]['message']['content']
+            except requests.exceptions.HTTPError as e:
+                provider_errors.append(('openrouter', e))
+                if e.response is not None and e.response.status_code == 429:
+                    return jsonify({
+                        'error': 'OpenRouter için istek limiti aşıldı (429). Lütfen kısa süre bekleyip tekrar deneyin veya farklı bir AI sağlayıcısı etkinleştirin.'
+                    }), 429
+                if e.response is not None and e.response.status_code == 404:
+                    return jsonify({
+                        'error': 'OpenRouter modeli bulunamadı (404). AI Ayarları > OpenRouter modelini `openrouter/auto` yapıp tekrar deneyin.'
+                    }), 400
+            except Exception as e:
+                provider_errors.append(('openrouter', e))
+
+        if not response_text and not provider_attempted:
             return jsonify({'error': 'API anahtarı bulunamadı. Ayarlar > AI Ayarları bölümünden API anahtarınızı ekleyin.'}), 500
 
-        # Markdown code fence'leri temizle
+        if not response_text and provider_errors:
+            provider_name, provider_error = provider_errors[-1]
+            return jsonify({'error': f'{provider_name} sağlayıcısı yanıt veremedi: {str(provider_error)}'}), 500
+
+        # Markdown code fence'leri temizle (agresif)
         clean = response_text.strip()
-        if clean.startswith('```'):
-            clean = clean.split('\n', 1)[-1]
-            clean = clean.rsplit('```', 1)[0].strip()
+        
+        # Tüm markdown fence'leri kaldır
+        if '```' in clean:
+            # İlk ``` sonrasını al
+            if clean.startswith('```'):
+                clean = clean.split('\n', 1)[-1] if '\n' in clean else clean[3:]
+            # Son ``` öncesini al
+            if '```' in clean:
+                clean = clean.rsplit('```', 1)[0]
+            clean = clean.strip()
+        
+        # "json" kelimesini baştan kaldır
+        if clean.lower().startswith('json'):
+            clean = clean[4:].strip()
 
         # JSON aksiyon mı?
         try:
@@ -832,6 +890,9 @@ def execute_action():
             if params.get('pozisyon'):
                 contact.job_title = params['pozisyon']
                 updated_fields.append(f"pozisyon: {params['pozisyon']}")
+            if params.get('role'):
+                contact.role = params['role']
+                updated_fields.append(f"rol: {params['role']}")
             if params.get('sirket'):
                 company = Company.query.filter(
                     Company.workspace_id == workspace_id,
