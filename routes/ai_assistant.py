@@ -674,6 +674,11 @@ def _call_ai(messages, system=None, provider=None):
             provider = 'anthropic'
     
     logger.info(f"[AI] _call_ai - Provider: {provider}, OpenRouter key exists: {bool(ai.get('openrouter_key'))}, Model: {ai.get('openrouter_model')}")
+    
+    if ai.get('openrouter_key'):
+        logger.info(f"[AI] OpenRouter key length: {len(ai['openrouter_key'])}")
+    else:
+        logger.warning(f"[AI] OpenRouter key is None or empty!")
 
     try:
         if provider == 'openrouter' and ai['openrouter_key']:
