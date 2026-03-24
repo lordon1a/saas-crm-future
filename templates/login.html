@@ -33,6 +33,17 @@
 </head>
 
 <body class="bg-slate-50 min-h-screen flex items-center justify-center p-6 font-sans antialiased text-slate-800">
+    <script>
+        // Clear AI chat history on login page load (security: prevent cross-workspace data leak)
+        try {
+            var keys = Object.keys(localStorage);
+            keys.forEach(function(key) {
+                if (key.startsWith('ai_conversations_') || key.startsWith('ai_active_conversation_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+        } catch(e) {}
+    </script>
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <div class="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg mx-auto mb-6">

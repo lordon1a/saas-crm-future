@@ -174,8 +174,10 @@
 </style>
 
 <script>
-var AI_CONVERSATIONS_KEY = 'ai_conversations';
-var AI_ACTIVE_KEY = 'ai_active_conversation';
+// Get workspace_id from session for localStorage isolation
+var WORKSPACE_ID = '{{ session.get("workspace_id", "default") }}';
+var AI_CONVERSATIONS_KEY = 'ai_conversations_' + WORKSPACE_ID;
+var AI_ACTIVE_KEY = 'ai_active_conversation_' + WORKSPACE_ID;
 var aiMessages = [];
 var aiOpen = false;
 var aiHistoryOpen = false;
