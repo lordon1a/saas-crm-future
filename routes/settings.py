@@ -1107,28 +1107,16 @@ def get_ai_settings():
     workspace_id = session.get('workspace_id')
 
     rows = AISettings.query.filter_by(workspace_id=workspace_id).all()
-    settings_dict = {r.provider: r for r in rows}
-    
     providers = []
-    for provider in ['gemini', 'anthropic', 'openrouter']:
-        row = settings_dict.get(provider)
-        if row:
-            decrypted = _ai_decrypt(row.api_key_encrypted)
-            providers.append({
-                'provider': row.provider,
-                'api_key_masked': _mask_key(decrypted),
-                'has_key': bool(decrypted),
-                'model_name': row.model_name or '',
-                'is_active': row.is_active,
-            })
-        else:
-            providers.append({
-                'provider': provider,
-                'api_key_masked': None,
-                'has_key': False,
-                'model_name': '',
-                'is_active': False,
-            })
+    for row in rows:
+        decrypted = _ai_decrypt(row.api_key_encrypted)
+        providers.append({
+            'provider': row.provider,
+            'api_key_masked': _mask_key(decrypted),
+            'has_key': bool(decrypted),
+            'model_name': row.model_name or '',
+            'is_active': row.is_active,
+        })
 
     return jsonify({'providers': providers}), 200
 
@@ -1143,8 +1131,8 @@ def update_ai_settings():
     data = request.get_json(silent=True) or {}
 
     provider = (data.get('provider') or '').strip().lower()
-    if provider not in ('gemini', 'anthropic', 'openrouter'):
-        return jsonify({'error': 'Geçersiz provider (gemini/anthropic/openrouter)'}), 400
+    if provider not in ('gemini', 'anthropic', 'openai'):
+        return jsonify({'error': 'Geçersiz provider (gemini/anthropic/openai)'}), 400
 
     api_key = (data.get('api_key') or '').strip()
     model_name = (data.get('model_name') or '').strip()
@@ -1232,26 +1220,6 @@ def test_ai_key():
                 messages=[{'role': 'user', 'content': 'Say hello in one word'}]
             )
             return jsonify({'success': True, 'message': f'{ant_model} bağlantısı başarılı'}), 200
-
-        elif provider == 'openrouter':
-            import requests
-            headers = {
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-            }
-            payload = {
-                'model': model_name or 'minimax/minimax-m2.5:free',
-                'messages': [{'role': 'user', 'content': 'Say hello in one word'}],
-                'max_tokens': 10,
-            }
-            resp = requests.post(
-                'https://openrouter.ai/api/v1/chat/completions',
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
-            resp.raise_for_status()
-            return jsonify({'success': True, 'message': 'OpenRouter bağlantısı başarılı'}), 200
 
         else:
             return jsonify({'success': False, 'error': f'Test desteklenmiyor: {provider}'}), 400
