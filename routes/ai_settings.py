@@ -34,9 +34,9 @@ def get_ai_settings():
     # Create a dict for quick lookup
     settings_dict = {s.provider: s for s in settings}
     
-    # Return all three providers with their status
+    # Return all providers with their status
     providers = []
-    for provider in ['gemini', 'anthropic', 'openrouter']:
+    for provider in ['groq', 'gemini', 'anthropic', 'openrouter']:
         s = settings_dict.get(provider)
         if s and s.api_key_encrypted:
             # Mask the key for display
@@ -176,7 +176,7 @@ def test_ai_key():
                 'Content-Type': 'application/json',
             }
             payload = {
-                'model': model_name or 'minimax/minimax-m2.5:free',
+                'model': model_name or 'openrouter/auto',
                 'messages': [{'role': 'user', 'content': 'Test'}],
                 'max_tokens': 10,
             }

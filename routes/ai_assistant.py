@@ -25,6 +25,7 @@ from models import Conversation, Message, db
 # Initialize fallback clients from env vars
 GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
 ANTHROPIC_KEY = os.environ.get('ANTHROPIC_API_KEY')
+GROQ_KEY = os.environ.get('GROQ_API_KEY')
 
 gemini_client = None
 if GEMINI_KEY:
@@ -35,11 +36,19 @@ anthropic_client = None
 if ANTHROPIC_KEY:
     anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
+groq_client = None
+if GROQ_KEY:
+    try:
+        from groq import Groq
+        groq_client = Groq(api_key=GROQ_KEY)
+    except ImportError:
+        pass  # groq package not installed
+
 
 def _get_workspace_ai(workspace_id):
     """Get AI clients and model names for a workspace.
     Priority: workspace DB settings > env vars.
-    Returns dict with gemini_client, anthropic_client, gemini_model, anthropic_model.
+    Returns dict with gemini_client, anthropic_client, groq_client, and model names.
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -47,11 +56,14 @@ def _get_workspace_ai(workspace_id):
     result = {
         'gemini_client': gemini_client,
         'anthropic_client': anthropic_client,
+        'groq_client': groq_client,
         'gemini_key': GEMINI_KEY,
         'anthropic_key': ANTHROPIC_KEY,
+        'groq_key': GROQ_KEY,
         'openrouter_key': None,
         'gemini_model': 'gemini-2.5-flash',
         'anthropic_model': 'claude-3-5-sonnet-latest',
+        'groq_model': 'llama-3.1-70b-versatile',
         'openrouter_model': 'openrouter/auto',
     }
     try:
@@ -93,6 +105,16 @@ def _get_workspace_ai(workspace_id):
                 if row.model_name:
                     result['openrouter_model'] = row.model_name
                 logger.info(f"[AI] Using workspace OpenRouter key, model={result['openrouter_model']}")
+            elif row.provider == 'groq' and decrypted:
+                try:
+                    from groq import Groq
+                    result['groq_client'] = Groq(api_key=decrypted)
+                    result['groq_key'] = decrypted
+                    if row.model_name:
+                        result['groq_model'] = row.model_name
+                    logger.info(f"[AI] Using workspace Groq key, model={result['groq_model']}")
+                except ImportError:
+                    logger.warning("[AI] Groq package not installed")
     except Exception as e:
         logger.error(f"[AI] Failed to load workspace AI settings: {e}")
     return result
@@ -173,11 +195,24 @@ def chat():
         workspace_id = session.get('workspace_id')
         ai = _get_workspace_ai(workspace_id)
 
-        # Sağlayıcı fallback sırası: Anthropic -> Gemini -> OpenRouter
+        # Sağlayıcı fallback sırası: Groq -> Anthropic -> Gemini -> OpenRouter
         provider_attempted = False
         provider_errors = []
 
-        if ai['anthropic_key'] and ai['anthropic_client']:
+        if ai['groq_key'] and ai['groq_client']:
+            provider_attempted = True
+            try:
+                resp = ai['groq_client'].chat.completions.create(
+                    model=ai['groq_model'],
+                    messages=([{'role': 'system', 'content': system}] if system else []) + messages,
+                    max_tokens=512,
+                    temperature=0.7,
+                )
+                response_text = resp.choices[0].message.content
+            except Exception as e:
+                provider_errors.append(('groq', e))
+
+        if not response_text and ai['anthropic_key'] and ai['anthropic_client']:
             provider_attempted = True
             try:
                 resp = ai['anthropic_client'].messages.create(
