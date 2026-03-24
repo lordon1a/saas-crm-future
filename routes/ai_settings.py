@@ -30,14 +30,32 @@ def get_ai_settings():
     workspace_id = session.get('workspace_id')
     settings = AISettings.query.filter_by(workspace_id=workspace_id).all()
     
+    # Create a dict for quick lookup
+    settings_dict = {s.provider: s for s in settings}
+    
+    # Return all three providers with their status
     providers = []
-    for s in settings:
-        providers.append({
-            'provider': s.provider,
-            'model_name': s.model_name,
-            'is_active': s.is_active,
-            'has_key': bool(s.api_key_encrypted),
-        })
+    for provider in ['gemini', 'anthropic', 'openrouter']:
+        s = settings_dict.get(provider)
+        if s and s.api_key_encrypted:
+            # Mask the key for display
+            api_key_masked = s.api_key_encrypted[:2] + '***' if s.api_key_encrypted else None
+            providers.append({
+                'provider': provider,
+                'model_name': s.model_name,
+                'is_active': s.is_active,
+                'has_key': True,
+                'api_key_masked': api_key_masked,
+            })
+        else:
+            # Provider not configured yet
+            providers.append({
+                'provider': provider,
+                'model_name': '',
+                'is_active': False,
+                'has_key': False,
+                'api_key_masked': None,
+            })
     
     return jsonify({'providers': providers}), 200
 
@@ -105,7 +123,17 @@ def save_ai_settings():
             db.session.add(setting)
         
         db.session.commit()
-        return jsonify({'status': 'saved'}), 200
+        
+        # Return format expected by frontend
+        api_key_masked = encrypted_key[:2] + '***' if encrypted_key else None
+        return jsonify({
+            'status': 'saved',
+            'provider': provider,
+            'model_name': model_name,
+            'is_active': is_active,
+            'has_key': True,
+            'api_key_masked': api_key_masked,
+        }), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
