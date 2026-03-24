@@ -361,7 +361,7 @@
       if (wrapper && wrapper.parentNode) {
         if (!document.getElementById('global-assistant-btn')) {
           var asstHtml = document.createElement('div');
-          asstHtml.innerHTML = '<button id="global-assistant-btn" onclick="if(typeof toggleAISidebar===\'function\'){toggleAISidebar()}else{window.location.href=\'/assistant\'}" class="h-9 px-3 mx-2 flex items-center justify-center gap-2 hover:bg-slate-100 rounded-lg transition-all cursor-pointer" title="Yapay Zeka Asistanı"><span class="text-[15px]">\ud83d\udc27</span><span class="hidden md:inline text-[14px] font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 tracking-wide text-center">Asistan</span></button>';
+          asstHtml.innerHTML = '<button id="global-assistant-btn" onclick="if(typeof toggleAISidebar===\'function\'){toggleAISidebar()}else{if(confirm(\'AI Asistan uygulaması yüklü değil. Marketplace\\\'ten yüklemek ister misiniz?\')){window.location.href=\'/marketplace\'}}" class="h-9 px-3 mx-2 flex items-center justify-center gap-2 hover:bg-slate-100 rounded-lg transition-all cursor-pointer" title="Yapay Zeka Asistanı"><span class="text-[15px]">\ud83d\udc27</span><span class="hidden md:inline text-[14px] font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 tracking-wide text-center">Asistan</span></button>';
           wrapper.parentNode.insertBefore(asstHtml.firstChild, wrapper);
         }
       }

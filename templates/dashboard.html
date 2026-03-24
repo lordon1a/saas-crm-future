@@ -246,7 +246,7 @@
                     <i class="fas fa-circle-question text-sm"></i>
                 </button>
                 <div class="w-px h-6 bg-dark-700/50 mx-1"></div>
-                <button onclick="if(typeof toggleAISidebar==='function'){toggleAISidebar()}else{window.location.href='/assistant'}" class="h-9 px-4 flex items-center justify-center gap-2 hover:bg-dark-700/50 rounded-lg transition-all cursor-pointer" title="Yapay Zeka Asistanı">
+                <button onclick="if(typeof toggleAISidebar==='function'){toggleAISidebar()}else{if(confirm('AI Asistan uygulaması yüklü değil. Marketplace\'ten yüklemek ister misiniz?')){window.location.href='/marketplace'}}" class="h-9 px-4 flex items-center justify-center gap-2 hover:bg-dark-700/50 rounded-lg transition-all cursor-pointer" title="Yapay Zeka Asistanı">
                     <span class="text-[15px]">🐧</span>
                     <span class="text-[13px] font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-wide text-center">Asistan</span>
                 </button>
