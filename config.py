@@ -97,6 +97,7 @@ class Config:
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
     SMTP_TLS = os.getenv('SMTP_TLS', '1').lower() in ('1', 'true', 'yes')
     SMTP_FROM_EMAIL = os.getenv('SMTP_FROM_EMAIL')
+    # EMAIL_PROVIDER options: 'smtp' (default), 'gmail' (requires Google OAuth), 'log' (dev only)
     EMAIL_PROVIDER = os.getenv('EMAIL_PROVIDER', 'smtp').strip().lower()
 
     # Google Workspace Integration
@@ -105,7 +106,7 @@ class Config:
     GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:5000/integrations/google/callback').strip()
     _google_scopes_raw = os.getenv(
         'GOOGLE_OAUTH_SCOPES',
-        'openid,email,profile,https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar.readonly,https://www.googleapis.com/auth/drive.readonly'
+        'openid,email,profile,https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.readonly,https://www.googleapis.com/auth/drive.readonly'
     )
     GOOGLE_OAUTH_SCOPES = [scope.strip() for scope in _google_scopes_raw.split(',') if scope.strip()]
     GOOGLE_OAUTH_STATE_TTL_SECONDS = int(os.getenv('GOOGLE_OAUTH_STATE_TTL_SECONDS', '600'))

@@ -66,15 +66,96 @@ class LogEmailProvider(BaseEmailProvider):
         return f'log-{int(datetime.utcnow().timestamp())}'
 
 
+class GmailEmailProvider(BaseEmailProvider):
+    name = 'gmail'
+
+    def __init__(self, google_integration):
+        self.google_integration = google_integration
+
+    def send(self, to_email, subject, body_text, body_html):
+        """Send email via Gmail API"""
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        from services.google_service import GoogleService
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        # Get decrypted tokens
+        tokens = GoogleService.get_decrypted_tokens(self.google_integration)
+        
+        # Build credentials
+        credentials = Credentials(
+            token=tokens['access_token'],
+            refresh_token=tokens['refresh_token'],
+            token_uri='https://oauth2.googleapis.com/token',
+            client_id=None,
+            client_secret=None,
+            scopes=json.loads(self.google_integration.scopes or '[]')
+        )
+        
+        # Build Gmail service
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        # Create message
+        if body_html:
+            message = MIMEMultipart('alternative')
+            message.attach(MIMEText(body_text or '', 'plain'))
+            message.attach(MIMEText(body_html, 'html'))
+        else:
+            message = MIMEText(body_text or '', 'plain')
+        
+        message['To'] = to_email
+        message['From'] = self.google_integration.google_email
+        message['Subject'] = subject
+        
+        # Encode message
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+        
+        # Send via Gmail API
+        result = service.users().messages().send(
+            userId='me',
+            body={'raw': raw_message}
+        ).execute()
+        
+        return result.get('id')  # Gmail message ID
+
+
 class EmailHubService:
     DEFAULT_FIRST_RESPONSE_SLA_MINUTES = 15
     SLA_AT_RISK_THRESHOLD_MINUTES = 5
 
     @staticmethod
-    def _provider():
+    def _provider(workspace_id=None, user_id=None):
+        """
+        Get email provider based on config.
+        For 'gmail' provider, requires workspace_id and user_id to fetch GoogleIntegration.
+        """
         provider_name = (getattr(Config, 'EMAIL_PROVIDER', '') or '').strip().lower()
+        
         if provider_name == 'log':
             return LogEmailProvider()
+        
+        if provider_name == 'gmail':
+            # Gmail API provider - requires Google OAuth integration
+            if not workspace_id or not user_id:
+                logger.warning("Gmail provider requires workspace_id and user_id, falling back to SMTP")
+                return SMTPEmailProvider()
+            
+            from models_crm import GoogleIntegration
+            google_integration = GoogleIntegration.query.filter_by(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                is_active=True
+            ).first()
+            
+            if not google_integration:
+                logger.warning(f"No active Google integration found for workspace={workspace_id} user={user_id}, falling back to SMTP")
+                return SMTPEmailProvider()
+            
+            return GmailEmailProvider(google_integration)
+        
+        # Default: SMTP
         return SMTPEmailProvider()
 
     @staticmethod
@@ -480,7 +561,7 @@ You're receiving this because you were assigned to this {entity_type}.
         if not subject:
             raise ValueError('Email subject is required')
 
-        provider = EmailHubService._provider()
+        provider = EmailHubService._provider(workspace_id=workspace_id, user_id=user_id)
 
         outbound = OutboundEmail(
             workspace_id=workspace_id,
@@ -523,7 +604,7 @@ You're receiving this because you were assigned to this {entity_type}.
             raise ValueError('Queue item not found')
 
         outbound = queue_row.outbound_email
-        provider = EmailHubService._provider()
+        provider = EmailHubService._provider(workspace_id=outbound.workspace_id, user_id=outbound.user_id)
         queue_row.status = 'processing'
         queue_row.attempt_count += 1
 
