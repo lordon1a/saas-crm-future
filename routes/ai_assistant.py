@@ -1092,14 +1092,20 @@ Rules:
         # Call AI
         ai_response = _call_ai([{'role': 'user', 'content': prompt}])
         
-        if not ai_response or 'response' not in ai_response:
+        # _call_ai returns Flask Response, extract JSON
+        if not ai_response:
+            return jsonify({'error': 'AI service unavailable'}), 503
+        
+        # Get JSON data from Response object
+        ai_data_raw = ai_response.get_json()
+        if not ai_data_raw or 'response' not in ai_data_raw:
             return jsonify({'error': 'AI service unavailable'}), 503
         
         # Parse AI response
         import json
         import re
         
-        response_text = ai_response['response'].strip()
+        response_text = ai_data_raw['response'].strip()
         # Remove markdown code blocks if present
         response_text = re.sub(r'```json\s*', '', response_text)
         response_text = re.sub(r'```\s*$', '', response_text)
