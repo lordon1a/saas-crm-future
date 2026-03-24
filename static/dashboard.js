@@ -556,3 +556,96 @@ class Dashboard {
 document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new Dashboard();
 });
+
+
+// AI Insights Functions
+async function loadAIInsights() {
+    try {
+        const response = await fetch('/api/ai/daily-insights');
+        if (!response.ok) {
+            console.log('AI insights not available');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        // Show widget
+        document.getElementById('ai-insights-widget').style.display = 'block';
+        
+        // Update counts
+        document.getElementById('stale-deals-count').textContent = data.stale_deals?.length || 0;
+        document.getElementById('hot-deals-count').textContent = data.hot_deals?.length || 0;
+        document.getElementById('negative-sentiment-count').textContent = data.negative_conversations?.length || 0;
+        
+        // Render insights list
+        const listEl = document.getElementById('ai-insights-list');
+        listEl.innerHTML = '';
+        
+        // Stale deals
+        if (data.stale_deals && data.stale_deals.length > 0) {
+            data.stale_deals.slice(0, 3).forEach(deal => {
+                listEl.innerHTML += `
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="text-xs font-semibold text-amber-400 mb-1">⚠️ Hareketsiz Deal</div>
+                                <a href="/pipeline/deal/${deal.id}" class="text-sm text-dark-100 hover:text-brand-400 font-medium">${deal.name}</a>
+                                <div class="text-xs text-dark-400 mt-1">${deal.days_inactive} gündür hareketsiz • ${deal.value.toLocaleString('tr-TR')} TL</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Hot deals
+        if (data.hot_deals && data.hot_deals.length > 0) {
+            data.hot_deals.slice(0, 2).forEach(deal => {
+                listEl.innerHTML += `
+                    <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="text-xs font-semibold text-green-400 mb-1">🔥 Hot Deal (${deal.score}/100)</div>
+                                <a href="/pipeline/deal/${deal.id}" class="text-sm text-dark-100 hover:text-brand-400 font-medium">${deal.name}</a>
+                                <div class="text-xs text-dark-400 mt-1">${deal.insight || ''}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Negative sentiment
+        if (data.negative_conversations && data.negative_conversations.length > 0) {
+            data.negative_conversations.slice(0, 2).forEach(conv => {
+                listEl.innerHTML += `
+                    <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="text-xs font-semibold text-red-400 mb-1">😟 Negatif Sentiment</div>
+                                <a href="/inbox?conversation=${conv.id}" class="text-sm text-dark-100 hover:text-brand-400 font-medium">${conv.customer}</a>
+                                <div class="text-xs text-dark-400 mt-1">${conv.summary || ''}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        if (listEl.innerHTML === '') {
+            listEl.innerHTML = '<div class="text-center text-dark-500 text-xs py-4">✅ Tüm deal\'lar sağlıklı görünüyor</div>';
+        }
+        
+    } catch (error) {
+        console.error('Error loading AI insights:', error);
+    }
+}
+
+function refreshAIInsights() {
+    loadAIInsights();
+}
+
+// Load AI insights on page load
+if (document.getElementById('ai-insights-widget')) {
+    loadAIInsights();
+}

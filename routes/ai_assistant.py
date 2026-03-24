@@ -825,12 +825,163 @@ def mention_search():
 
     # Contacts
     try:
-        from sqlalchemy import or_, and_
-        q_parts = q.split()
-        # Tek kelime: first_name VEYA last_name içeriyor
-        # Çok kelime (ör: "eric white"): first_name~"eric" AND last_name~"white" de dene
-        base_filter = or_(
-            Contact.first_name.ilike(f'%{q}%'),
+        from sqlalchemy import or_
+        contacts = Contact.query.filter(
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+            or_(
+                Contact.first_name.ilike(f'%{q}%'),
+                Contact.last_name.ilike(f'%{q}%'),
+                Contact.email.ilike(f'%{q}%')
+            )
+        ).limit(5).all()
+        
+        for c in contacts:
+            results.append({
+                'type': 'contact',
+                'id': c.id,
+                'name': c.full_name,
+                'subtitle': c.email or c.phone or ''
+            })
+    except Exception:
+        pass
+
+    # Deals
+    try:
+        deals = Deal.query.filter(
+            Deal.workspace_id == workspace_id,
+            Deal.is_deleted == False,
+            Deal.name.ilike(f'%{q}%')
+        ).limit(5).all()
+        
+        for d in deals:
+            results.append({
+                'type': 'deal',
+                'id': d.id,
+                'name': d.name,
+                'subtitle': f"{d.value or 0:,.0f} TL - {d.stage.name if d.stage else ''}"
+            })
+    except Exception:
+        pass
+
+    # Companies
+    try:
+        companies = Company.query.filter(
+            Company.workspace_id == workspace_id,
+            Company.is_deleted == False,
+            Company.name.ilike(f'%{q}%')
+        ).limit(5).all()
+        
+        for comp in companies:
+            results.append({
+                'type': 'company',
+                'id': comp.id,
+                'name': comp.name,
+                'subtitle': comp.industry or ''
+            })
+    except Exception:
+        pass
+
+    return jsonify({'results': results[:15]})
+
+
+@bp.route('/api/ai/score-all', methods=['POST'])
+@login_required
+@require_app('ai_assistant')
+def score_all():
+    """Tüm açık deal'ları ve yüksek potansiyelli contact'ları skorla."""
+    from services.ai_scoring_service import AIScoringService
+    from models import db
+    
+    workspace_id = session.get('workspace_id')
+    ai = _get_workspace_ai(workspace_id)
+    
+    if not (ai['gemini_client'] or ai['anthropic_client']):
+        return jsonify({'error': 'AI API anahtarı bulunamadı'}), 500
+    
+    provider = 'anthropic' if ai['anthropic_client'] else 'gemini'
+    client = ai['anthropic_client'] if provider == 'anthropic' else ai['gemini_client']
+    model = ai['anthropic_model'] if provider == 'anthropic' else ai['gemini_model']
+    
+    # Açık deal'ları skorla
+    deals = Deal.query.filter_by(
+        workspace_id=workspace_id,
+        status='open',
+        is_deleted=False
+    ).limit(50).all()
+    
+    scored_deals = 0
+    for deal in deals:
+        if AIScoringService.score_deal(deal, client, model, provider):
+            scored_deals += 1
+    
+    # Yüksek potansiyelli contact'ları skorla (lead_score > 50 veya None)
+    contacts = Contact.query.filter(
+        Contact.workspace_id == workspace_id,
+        Contact.is_deleted == False,
+        db.or_(
+            Contact.lead_score >= 50,
+            Contact.lead_score.is_(None)
+        )
+    ).limit(50).all()
+    
+    scored_contacts = 0
+    for contact in contacts:
+        if AIScoringService.score_contact(contact, client, model, provider):
+            scored_contacts += 1
+    
+    return jsonify({
+        'message': f'{scored_deals} deal ve {scored_contacts} contact skorlandı',
+        'deals': scored_deals,
+        'contacts': scored_contacts
+    })
+
+
+@bp.route('/api/ai/daily-insights', methods=['GET'])
+@login_required
+@require_app('ai_assistant')
+def daily_insights():
+    """Günlük proaktif insight'lar - hareketsiz deal'lar, hot/cold deals, negative sentiment."""
+    from services.ai_scoring_service import AIScoringService
+    
+    workspace_id = session.get('workspace_id')
+    insights = AIScoringService.get_daily_insights(workspace_id)
+    
+    return jsonify(insights)
+
+
+@bp.route('/api/ai/conversation-summary/<int:conversation_id>', methods=['POST'])
+@login_required
+@require_app('ai_assistant')
+def conversation_summary(conversation_id):
+    """Bir konuşmayı özetle ve sentiment analizi yap."""
+    from services.ai_scoring_service import AIScoringService
+    
+    workspace_id = session.get('workspace_id')
+    conversation = Conversation.query.filter_by(
+        id=conversation_id,
+        workspace_id=workspace_id
+    ).first_or_404()
+    
+    ai = _get_workspace_ai(workspace_id)
+    
+    if not (ai['gemini_client'] or ai['anthropic_client']):
+        return jsonify({'error': 'AI API anahtarı bulunamadı'}), 500
+    
+    provider = 'anthropic' if ai['anthropic_client'] else 'gemini'
+    client = ai['anthropic_client'] if provider == 'anthropic' else ai['gemini_client']
+    model = ai['anthropic_model'] if provider == 'anthropic' else ai['gemini_model']
+    
+    success = AIScoringService.summarize_conversation(conversation, client, model, provider)
+    
+    if success:
+        return jsonify({
+            'summary': conversation.ai_summary,
+            'sentiment': conversation.ai_sentiment,
+            'sentiment_score': conversation.ai_sentiment_score
+        })
+    else:
+        return jsonify({'error': 'Özet oluşturulamadı'}), 500rst_name.ilike(f'%{q}%'),
             Contact.last_name.ilike(f'%{q}%')
         )
         if len(q_parts) >= 2:
