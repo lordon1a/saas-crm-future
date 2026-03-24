@@ -982,48 +982,4 @@ def conversation_summary(conversation_id):
         })
     else:
         return jsonify({'error': 'Özet oluşturulamadı'}), 500
-        for c in contacts:
-            results.append({
-                'id': c.id,
-                'type': 'contact',
-                'name': c.full_name,
-                'subtitle': c.email or ''
-            })
-    except Exception as e:
-        import traceback; traceback.print_exc()
-
-    # Deals (sadece açık olanlar)
-    try:
-        deals = Deal.query.filter(
-            Deal.workspace_id == workspace_id,
-            Deal.name.ilike(f'%{q}%'),
-            Deal.status == 'open'
-        ).limit(3).all()
-        for d in deals:
-            results.append({
-                'id': d.id,
-                'type': 'deal',
-                'name': d.name,
-                'subtitle': f"{d.value:,.0f} TL" if d.value else ''
-            })
-    except Exception:
-        pass
-
-    # Companies
-    try:
-        companies = Company.query.filter(
-            Company.workspace_id == workspace_id,
-            Company.name.ilike(f'%{q}%')
-        ).limit(3).all()
-        for c in companies:
-            results.append({
-                'id': c.id,
-                'type': 'company',
-                'name': c.name,
-                'subtitle': getattr(c, 'industry', '') or ''
-            })
-    except Exception:
-        pass
-
-    return jsonify({'results': results})
 
