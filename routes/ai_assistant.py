@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 import anthropic
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Blueprint, request, jsonify, g, session
 from utils.app_guard import require_app
@@ -17,8 +18,8 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-from models_crm import Deal, Contact, Company
-from models import Conversation, Message
+from models_crm import Deal, Contact, Company, Activity, Task
+from models import Conversation, Message, db
 
 # Initialize fallback clients from env vars
 GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
@@ -1145,16 +1146,19 @@ Rules:
                 if action_type == 'add_note':
                     content = params.get('content', '')
                     if content and (deal_id or contact_id or company_id):
-                        note = Note(
+                        # Use Activity model for notes
+                        activity = Activity(
                             workspace_id=workspace_id,
                             user_id=user_id,
+                            activity_type='note',
                             deal_id=deal_id,
                             contact_id=contact_id,
                             company_id=company_id,
-                            content=content,
+                            subject=f'Quick Log: {content[:50]}...',
+                            body=content,
                             created_at=datetime.utcnow()
                         )
-                        db.session.add(note)
+                        db.session.add(activity)
                         db.session.commit()
                         result['status'] = 'completed'
                         result['message'] = f'Note added: "{content[:50]}..."'
@@ -1172,12 +1176,12 @@ Rules:
                             workspace_id=workspace_id,
                             title=title,
                             description=f'Created from Quick Log: {text[:100]}',
-                            assigned_to=user_id,
+                            assignee_id=user_id,
                             deal_id=deal_id,
                             contact_id=contact_id,
                             company_id=company_id,
                             due_date=due_date,
-                            status='pending',
+                            status='not_started',
                             priority='medium',
                             created_by=user_id,
                             created_at=datetime.utcnow()
