@@ -4,6 +4,7 @@ from models_crm import AISettings
 from functools import wraps
 import hashlib
 import base64
+import requests
 from cryptography.fernet import Fernet
 from config import Config
 
