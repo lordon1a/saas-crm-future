@@ -100,6 +100,10 @@
         <button onclick="quickAction('rapor')" class="ai-chip-btn" style="padding: 6px 12px; background: #f1f5f9; color: #475569; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#ede9fe';this.style.color='#6d28d9';this.style.borderColor='#c4b5fd'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569';this.style.borderColor='transparent'">
             <i class="fas fa-chart-bar" style="font-size: 10px;"></i> Rapor
         </button>
+        <!-- Quick Log Button - Prominent -->
+        <button onclick="activateQuickLog()" class="ai-chip-btn" style="padding: 6px 14px; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: #fff; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 2px 8px rgba(124,58,237,0.25);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(124,58,237,0.35)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(124,58,237,0.25)'">
+            <i class="fas fa-bolt" style="font-size: 11px;"></i> Quick Log
+        </button>
     </div>
 
     <!-- Input Alani -->
@@ -435,6 +439,170 @@ function triggerMention() {
     handleMentionInput('@');
 }
 
+function activateQuickLog() {
+    var input = document.getElementById('ai-input-display');
+    input.innerText = '';
+    input.focus();
+    input.setAttribute('data-placeholder', 'Ne oldu? (örn: Ahmet ile görüştüm, fiyat konusunda tereddütlü, 5 gün sonra takip et)');
+    
+    // Show Quick Log mode indicator
+    var inputArea = document.getElementById('ai-input-area');
+    var existingIndicator = document.getElementById('quick-log-indicator');
+    if (existingIndicator) existingIndicator.remove();
+    
+    var indicator = document.createElement('div');
+    indicator.id = 'quick-log-indicator';
+    indicator.style.cssText = 'padding: 8px 14px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #92400e;';
+    indicator.innerHTML = '<i class="fas fa-bolt" style="color: #d97706;"></i> Quick Log Modu — Tek cümleyle çoklu aksiyon';
+    inputArea.insertBefore(indicator, inputArea.firstChild);
+    
+    // Override send function temporarily
+    window._quickLogMode = true;
+}
+
+function sendQuickLog(text) {
+    var context = window.aiContext || {};
+    
+    fetch('/api/ai/quick-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, context: context })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            appendAIMessage('Hata: ' + data.error, 'assistant');
+            return;
+        }
+        
+        // Display results
+        displayQuickLogResults(data);
+        
+        // Clear Quick Log mode
+        window._quickLogMode = false;
+        var indicator = document.getElementById('quick-log-indicator');
+        if (indicator) indicator.remove();
+        var input = document.getElementById('ai-input-display');
+        input.setAttribute('data-placeholder', 'Mesajinizi yazin... @ ile kayit secin');
+    })
+    .catch(err => {
+        console.error('Quick Log error:', err);
+        appendAIMessage('Quick Log hatası: ' + err.message, 'assistant');
+        window._quickLogMode = false;
+    });
+}
+
+function displayQuickLogResults(data) {
+    var messagesDiv = document.getElementById('ai-messages');
+    
+    // Summary message
+    var summaryDiv = document.createElement('div');
+    summaryDiv.style.cssText = 'background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px;';
+    summaryDiv.innerHTML = '<div style="font-size: 13px; font-weight: 600; color: #166534; margin-bottom: 6px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i>' + data.summary + '</div>';
+    
+    // Executed actions
+    if (data.executed && data.executed.length > 0) {
+        data.executed.forEach(action => {
+            var actionDiv = document.createElement('div');
+            actionDiv.style.cssText = 'padding: 8px 12px; margin-top: 8px; border-radius: 8px; font-size: 12px; display: flex; align-items: start; gap: 8px;';
+            
+            if (action.status === 'completed') {
+                actionDiv.style.background = '#dcfce7';
+                actionDiv.style.color = '#166534';
+                actionDiv.innerHTML = '<i class="fas fa-check" style="margin-top: 2px;"></i><span>' + action.message + '</span>';
+            } else if (action.status === 'failed') {
+                actionDiv.style.background = '#fee2e2';
+                actionDiv.style.color = '#991b1b';
+                actionDiv.innerHTML = '<i class="fas fa-xmark" style="margin-top: 2px;"></i><span>' + action.message + '</span>';
+            } else {
+                actionDiv.style.background = '#fef3c7';
+                actionDiv.style.color = '#92400e';
+                actionDiv.innerHTML = '<i class="fas fa-info-circle" style="margin-top: 2px;"></i><span>' + action.message + '</span>';
+            }
+            
+            summaryDiv.appendChild(actionDiv);
+        });
+    }
+    
+    // Pending confirmations
+    if (data.pending_confirmations && data.pending_confirmations.length > 0) {
+        data.pending_confirmations.forEach(action => {
+            var confirmDiv = document.createElement('div');
+            confirmDiv.style.cssText = 'padding: 12px; margin-top: 8px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px;';
+            
+            var labelDiv = document.createElement('div');
+            labelDiv.style.cssText = 'font-size: 12px; font-weight: 600; color: #92400e; margin-bottom: 8px;';
+            labelDiv.innerHTML = '<i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i>Onay Gerekiyor: ' + getActionLabel(action.type);
+            confirmDiv.appendChild(labelDiv);
+            
+            var paramsDiv = document.createElement('div');
+            paramsDiv.style.cssText = 'font-size: 11px; color: #78350f; margin-bottom: 10px;';
+            paramsDiv.textContent = JSON.stringify(action.params);
+            confirmDiv.appendChild(paramsDiv);
+            
+            var buttonsDiv = document.createElement('div');
+            buttonsDiv.style.cssText = 'display: flex; gap: 8px;';
+            
+            var yesBtn = document.createElement('button');
+            yesBtn.textContent = 'Evet';
+            yesBtn.style.cssText = 'padding: 6px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;';
+            yesBtn.onclick = () => confirmQuickLogAction(action, confirmDiv);
+            
+            var noBtn = document.createElement('button');
+            noBtn.textContent = 'Hayır';
+            noBtn.style.cssText = 'padding: 6px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;';
+            noBtn.onclick = () => confirmDiv.remove();
+            
+            buttonsDiv.appendChild(yesBtn);
+            buttonsDiv.appendChild(noBtn);
+            confirmDiv.appendChild(buttonsDiv);
+            
+            summaryDiv.appendChild(confirmDiv);
+        });
+    }
+    
+    messagesDiv.appendChild(summaryDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function getActionLabel(type) {
+    var labels = {
+        'update_deal_stage': 'Deal Aşaması Güncelle',
+        'update_deal_status': 'Deal Durumu Güncelle',
+        'update_deal_value': 'Deal Değeri Güncelle'
+    };
+    return labels[type] || type;
+}
+
+function confirmQuickLogAction(action, confirmDiv) {
+    // Execute the confirmed action via execute-action endpoint
+    var context = window.aiContext || {};
+    
+    fetch('/api/ai/execute-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: action.type,
+            params: action.params,
+            context: context
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            confirmDiv.style.background = '#dcfce7';
+            confirmDiv.style.borderColor = '#86efac';
+            confirmDiv.innerHTML = '<div style="font-size: 12px; color: #166534;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i>Tamamlandı!</div>';
+            setTimeout(() => confirmDiv.remove(), 2000);
+        } else {
+            confirmDiv.innerHTML = '<div style="font-size: 12px; color: #991b1b;"><i class="fas fa-xmark-circle" style="margin-right: 6px;"></i>Hata: ' + (data.error || 'Bilinmeyen hata') + '</div>';
+        }
+    })
+    .catch(err => {
+        confirmDiv.innerHTML = '<div style="font-size: 12px; color: #991b1b;"><i class="fas fa-xmark-circle" style="margin-right: 6px;"></i>Hata: ' + err.message + '</div>';
+    });
+}
+
 function quickAction(type) {
     var prompts = {
         'pipeline_ozet':  'Pipeline durumunu ozetle: toplam gelir, asamalara gore dagilim, kazanilan ve kaybedilen deal sayilari nedir?',
@@ -681,6 +849,14 @@ async function executeAction(action, params, cardId) {
 async function sendAIMessage() {
     var text = getInputText();
     if (!text) return;
+
+    // Check if Quick Log mode is active
+    if (window._quickLogMode) {
+        clearInput();
+        appendMessage('user', text);
+        sendQuickLog(text);
+        return;
+    }
 
     clearInput();
     if (!aiOpen) toggleAISidebar();

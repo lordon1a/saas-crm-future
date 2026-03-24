@@ -995,3 +995,214 @@ def conversation_summary(conversation_id):
     else:
         return jsonify({'error': 'Özet oluşturulamadı'}), 500
 
+
+
+@bp.route('/api/ai/quick-log', methods=['POST'])
+@login_required
+@require_app('ai_assistant')
+def quick_log():
+    """
+    Quick Log — AI-powered multi-action CRM logging.
+    User writes free text, AI extracts actions (note, task, deal update).
+    Executes safe actions immediately, returns confirmation-required actions.
+    """
+    import logging
+    from datetime import datetime, timedelta
+    from models import db, Note
+    from models_crm import Task, Deal, DealStage, Pipeline
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+        context = data.get('context', {})
+        
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        
+        if not text:
+            return jsonify({'error': 'Text is required'}), 400
+        
+        # Extract context IDs
+        deal_id = context.get('deal_id')
+        contact_id = context.get('contact_id')
+        company_id = context.get('company_id')
+        
+        # Get pipeline stages for AI context
+        pipeline_stages = []
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, workspace_id=workspace_id).first()
+            if deal and deal.pipeline_id:
+                stages = DealStage.query.filter_by(
+                    pipeline_id=deal.pipeline_id,
+                    is_active=True
+                ).order_by(DealStage.order).all()
+                pipeline_stages = [{'name': s.name, 'order': s.order} for s in stages]
+        
+        # Build AI prompt
+        prompt = f"""Analyze this CRM activity log and extract actionable items:
+
+User input: "{text}"
+
+Context:
+- Deal ID: {deal_id or 'None'}
+- Contact ID: {contact_id or 'None'}
+- Company ID: {company_id or 'None'}
+- Available pipeline stages: {', '.join([s['name'] for s in pipeline_stages]) if pipeline_stages else 'None'}
+
+Extract actions from the text. Return JSON array with these action types:
+
+1. add_note: Add a note/comment
+   - params: {{"content": "note text"}}
+   - requires_confirmation: false
+
+2. create_task: Create a follow-up task
+   - params: {{"title": "task title", "due_days": number_of_days_from_now}}
+   - requires_confirmation: false
+
+3. update_deal_stage: Move deal to different stage
+   - params: {{"stage_name": "exact stage name from available stages"}}
+   - requires_confirmation: true
+
+4. update_deal_status: Mark deal as won/lost
+   - params: {{"status": "won" or "lost", "reason": "optional reason"}}
+   - requires_confirmation: true
+
+5. update_deal_value: Change deal value
+   - params: {{"value": number}}
+   - requires_confirmation: true
+
+Return ONLY valid JSON in this exact format:
+{{
+  "actions": [
+    {{"type": "add_note", "params": {{"content": "..."}}, "requires_confirmation": false}},
+    {{"type": "create_task", "params": {{"title": "...", "due_days": 5}}, "requires_confirmation": false}}
+  ],
+  "summary": "Brief summary of what was detected"
+}}
+
+Rules:
+- Only extract actions that are clearly mentioned or implied
+- For tasks, estimate reasonable due_days (1-30)
+- For stage updates, use exact stage names from available stages
+- If no clear actions, return empty actions array
+- Return ONLY the JSON, no markdown, no explanation"""
+
+        # Call AI
+        ai_response = _call_ai([{'role': 'user', 'content': prompt}])
+        
+        if not ai_response or 'response' not in ai_response:
+            return jsonify({'error': 'AI service unavailable'}), 503
+        
+        # Parse AI response
+        import json
+        import re
+        
+        response_text = ai_response['response'].strip()
+        # Remove markdown code blocks if present
+        response_text = re.sub(r'```json\s*', '', response_text)
+        response_text = re.sub(r'```\s*$', '', response_text)
+        response_text = response_text.strip()
+        
+        try:
+            ai_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse AI response: {response_text}")
+            return jsonify({'error': 'Failed to parse AI response', 'details': str(e)}), 500
+        
+        actions = ai_data.get('actions', [])
+        summary = ai_data.get('summary', 'Actions detected')
+        
+        # Execute actions
+        executed_actions = []
+        pending_confirmations = []
+        
+        for action in actions:
+            action_type = action.get('type')
+            params = action.get('params', {})
+            requires_confirmation = action.get('requires_confirmation', False)
+            
+            result = {
+                'type': action_type,
+                'params': params,
+                'requires_confirmation': requires_confirmation,
+                'status': 'pending' if requires_confirmation else 'processing'
+            }
+            
+            if requires_confirmation:
+                pending_confirmations.append(result)
+                continue
+            
+            # Execute safe actions immediately
+            try:
+                if action_type == 'add_note':
+                    content = params.get('content', '')
+                    if content and (deal_id or contact_id or company_id):
+                        note = Note(
+                            workspace_id=workspace_id,
+                            user_id=user_id,
+                            deal_id=deal_id,
+                            contact_id=contact_id,
+                            company_id=company_id,
+                            content=content,
+                            created_at=datetime.utcnow()
+                        )
+                        db.session.add(note)
+                        db.session.commit()
+                        result['status'] = 'completed'
+                        result['message'] = f'Note added: "{content[:50]}..."'
+                    else:
+                        result['status'] = 'skipped'
+                        result['message'] = 'No content or context for note'
+                
+                elif action_type == 'create_task':
+                    title = params.get('title', '')
+                    due_days = params.get('due_days', 7)
+                    
+                    if title:
+                        due_date = datetime.utcnow() + timedelta(days=due_days)
+                        task = Task(
+                            workspace_id=workspace_id,
+                            title=title,
+                            description=f'Created from Quick Log: {text[:100]}',
+                            assigned_to=user_id,
+                            deal_id=deal_id,
+                            contact_id=contact_id,
+                            company_id=company_id,
+                            due_date=due_date,
+                            status='pending',
+                            priority='medium',
+                            created_by=user_id,
+                            created_at=datetime.utcnow()
+                        )
+                        db.session.add(task)
+                        db.session.commit()
+                        result['status'] = 'completed'
+                        result['message'] = f'Task created: "{title}" — {due_days} days'
+                    else:
+                        result['status'] = 'skipped'
+                        result['message'] = 'No title for task'
+                
+                else:
+                    result['status'] = 'unknown'
+                    result['message'] = f'Unknown action type: {action_type}'
+                
+                executed_actions.append(result)
+                
+            except Exception as e:
+                logger.error(f"Failed to execute action {action_type}: {str(e)}")
+                result['status'] = 'failed'
+                result['message'] = str(e)
+                executed_actions.append(result)
+        
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'executed': executed_actions,
+            'pending_confirmations': pending_confirmations
+        })
+        
+    except Exception as e:
+        logger.error(f"Quick log error: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
