@@ -1522,3 +1522,25 @@ Rules:
     except Exception as e:
         logger.error(f"Quick log error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/ai/enrichment-log/<int:contact_id>', methods=['GET'])
+@login_required
+def enrichment_log(contact_id):
+    """Contact için enrichment geçmişini döndür."""
+    from models_crm import EnrichmentLog
+    workspace_id = session.get('workspace_id')
+    
+    logs = EnrichmentLog.query.filter_by(
+        contact_id=contact_id,
+        workspace_id=workspace_id
+    ).order_by(EnrichmentLog.created_at.desc()).limit(20).all()
+    
+    return jsonify([{
+        'field': l.field_name,
+        'old': l.old_value,
+        'new': l.new_value,
+        'source': l.source,
+        'confidence': l.confidence,
+        'date': l.created_at.isoformat()
+    } for l in logs])

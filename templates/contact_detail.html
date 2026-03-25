@@ -2507,11 +2507,22 @@
         // ============================================================================
         async function loadEnrichmentLog() {
             try {
+                console.log('[Enrichment] Loading for contact:', STATE.contactId);
                 const response = await fetch(`/api/ai/enrichment-log/${STATE.contactId}`);
-                if (!response.ok) return;
+                console.log('[Enrichment] Response status:', response.status);
+                
+                if (!response.ok) {
+                    console.warn('[Enrichment] Failed to load:', response.status);
+                    return;
+                }
                 
                 const logs = await response.json();
-                if (!logs || logs.length === 0) return;
+                console.log('[Enrichment] Loaded logs:', logs.length);
+                
+                if (!logs || logs.length === 0) {
+                    console.log('[Enrichment] No logs found');
+                    return;
+                }
                 
                 // Section'ı göster
                 document.getElementById('enrichment-section').style.display = 'block';
