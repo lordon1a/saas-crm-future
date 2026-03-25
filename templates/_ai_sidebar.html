@@ -471,7 +471,7 @@ function sendQuickLog(text) {
     .then(res => res.json())
     .then(data => {
         if (data.error) {
-            appendAIMessage('Hata: ' + data.error, 'assistant');
+            appendMessage('assistant', 'Hata: ' + data.error);
             return;
         }
         
@@ -487,7 +487,7 @@ function sendQuickLog(text) {
     })
     .catch(err => {
         console.error('Quick Log error:', err);
-        appendAIMessage('Quick Log hatası: ' + err.message, 'assistant');
+        appendMessage('assistant', 'Quick Log hatası: ' + err.message);
         window._quickLogMode = false;
     });
 }
@@ -641,6 +641,17 @@ document.getElementById('ai-input-display').addEventListener('keydown', function
         sendAIMessage();
     }
     if (e.key === 'Escape') closeMentionDropdown();
+});
+
+// Paste event handler - normalize pasted content
+document.getElementById('ai-input-display').addEventListener('paste', function(e) {
+    e.preventDefault();
+    var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    var selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    selection.deleteFromDocument();
+    selection.getRangeAt(0).insertNode(document.createTextNode(text));
+    selection.collapseToEnd();
 });
 
 async function searchMentions(query) {
@@ -835,14 +846,23 @@ async function executeAction(action, params, cardId) {
         var ti = document.getElementById('typing-indicator');
         if (ti) ti.remove();
         if (res.ok) {
-            appendMessage('assistant', '\u2705 ' + data.message, true);
+            var successMsg = '\u2705 ' + data.message;
+            appendMessage('assistant', successMsg, true);
+            aiMessages.push({ role: 'assistant', content: successMsg });
+            saveAIHistory();
         } else {
-            appendMessage('assistant', '\u274c Hata: ' + data.error);
+            var errorMsg = '\u274c Hata: ' + data.error;
+            appendMessage('assistant', errorMsg);
+            aiMessages.push({ role: 'assistant', content: errorMsg });
+            saveAIHistory();
         }
     } catch (err) {
         var ti2 = document.getElementById('typing-indicator');
         if (ti2) ti2.remove();
-        appendMessage('assistant', 'Baglanti hatasi.');
+        var connErrorMsg = 'Baglanti hatasi.';
+        appendMessage('assistant', connErrorMsg);
+        aiMessages.push({ role: 'assistant', content: connErrorMsg });
+        saveAIHistory();
     }
 }
 

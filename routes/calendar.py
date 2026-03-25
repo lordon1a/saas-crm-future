@@ -73,26 +73,34 @@ def get_calendar_events():
         if request.args.get('status'):
             filters['status'] = request.args.get('status')
         
-        events = TaskService.get_tasks_for_calendar(
-            workspace_id=workspace_id,
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-            filters=filters
-        )
+        try:
+            events = TaskService.get_tasks_for_calendar(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                start_date=start_date,
+                end_date=end_date,
+                filters=filters
+            )
+        except Exception as service_error:
+            logger.error(f"TaskService.get_tasks_for_calendar error: {str(service_error)}", exc_info=True)
+            return jsonify({'error': f'Service error: {str(service_error)}'}), 500
         
         # Enrich events with contact/company/deal names
-        for ev in events:
-            props = ev.get('extendedProps', {})
-            if props.get('contact_id'):
-                contact = Contact.query.get(props['contact_id'])
-                props['contact_name'] = contact.full_name if contact else None
-            if props.get('company_id'):
-                company = Company.query.get(props['company_id'])
-                props['company_name'] = company.name if company else None
-            if props.get('deal_id'):
-                deal = Deal.query.get(props['deal_id'])
-                props['deal_name'] = deal.name if deal else None
+        try:
+            for ev in events:
+                props = ev.get('extendedProps', {})
+                if props.get('contact_id'):
+                    contact = Contact.query.get(props['contact_id'])
+                    props['contact_name'] = contact.full_name if contact else None
+                if props.get('company_id'):
+                    company = Company.query.get(props['company_id'])
+                    props['company_name'] = company.name if company else None
+                if props.get('deal_id'):
+                    deal = Deal.query.get(props['deal_id'])
+                    props['deal_name'] = deal.name if deal else None
+        except Exception as enrich_error:
+            logger.error(f"Event enrichment error: {str(enrich_error)}", exc_info=True)
+            # Continue without enrichment
         
         return jsonify({'events': events}), 200
         

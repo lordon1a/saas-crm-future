@@ -72,7 +72,7 @@ def save_ai_settings():
     model_name = data.get('model_name', '').strip()
     is_active = data.get('is_active', True)
     
-    if not provider or provider not in ['gemini', 'anthropic', 'openrouter']:
+    if not provider or provider not in ['groq', 'gemini', 'anthropic', 'openrouter']:
         return jsonify({'error': 'Invalid provider'}), 400
     
     # Don't save if key is masked
@@ -152,7 +152,18 @@ def test_ai_key():
         return jsonify({'error': 'Provider and API key required'}), 400
     
     try:
-        if provider == 'gemini':
+        if provider == 'groq':
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            completion = client.chat.completions.create(
+                model=model_name or 'openai/gpt-oss-120b',
+                messages=[{'role': 'user', 'content': 'Test'}],
+                max_tokens=10,
+                temperature=1
+            )
+            return jsonify({'success': True, 'message': 'Groq connection successful'}), 200
+        
+        elif provider == 'gemini':
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_name or 'gemini-2.5-flash')

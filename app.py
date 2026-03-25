@@ -1271,6 +1271,21 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"AI settings migration failed (may already exist): {e}")
             
+            # === TASK REMINDERS ===
+            try:
+                from migrations.add_task_reminders import upgrade as task_reminders_upgrade
+                
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                task_reminders_upgrade()
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ Task reminders migration completed")
+            except Exception as e:
+                logger.warning(f"Task reminders migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 

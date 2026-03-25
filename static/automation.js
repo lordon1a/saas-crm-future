@@ -261,7 +261,9 @@ async function loadAutoReplies() {
         const response = await fetch(`${API_BASE}/auto-replies`);
         if (!response.ok) throw new Error('Failed to load');
         
-        autoReplies = await response.json();
+        const data = await response.json();
+        // API response might be { auto_replies: [...] } or just [...]
+        autoReplies = Array.isArray(data) ? data : (data.auto_replies || []);
         renderAutoReplies();
     } catch (error) {
         console.error('Error loading auto-replies:', error);
