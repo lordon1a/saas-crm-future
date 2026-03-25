@@ -19,8 +19,10 @@ PHONE_PATTERNS = [
 EMAIL_PATTERN = r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}'
 
 COMPANY_KEYWORDS = [
-    r'(?:şirket|firma|company|corp|ltd|a\.ş|a\.s|inc|llc|gmbh)[:\s]+([A-ZÇĞİÖŞÜa-zçğışöüñ\s&\.]+)',
-    r'([A-ZÇĞİÖŞÜ][a-zçğışöüñ]+(?:\s[A-ZÇĞİÖŞÜ][a-zçğışöüñ]+)*)\s+(?:A\.Ş|Ltd|Corp|Inc|GmbH)',
+    # "X A.Ş", "X Ltd", "X Corp" gibi açık şirket isimleri
+    r'([A-ZÇĞİÖŞÜ][a-zA-ZçğışöüñÇĞİÖŞÜ\s&\.]{2,30})\s+(?:A\.Ş|A\.S|Ltd|Corp|Inc|GmbH|LLC)',
+    # "şirket: X" veya "firma: X" gibi açık etiketler
+    r'(?:şirket|firma|company)\s*:\s*([A-ZÇĞİÖŞÜa-zçğışöüñ\s&\.]{3,40})',
 ]
 
 
@@ -45,7 +47,7 @@ def extract_with_regex(text: str) -> dict:
     for pattern in COMPANY_KEYWORDS:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            extracted['company_name'] = {'value': match.group(1).strip(), 'confidence': 0.75}
+            extracted['company_name'] = {'value': match.group(1).strip(), 'confidence': 0.82}
             break
     
     return extracted
