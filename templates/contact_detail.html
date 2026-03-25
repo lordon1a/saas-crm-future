@@ -2525,14 +2525,23 @@
                 }
                 
                 // Section'ı göster
-                document.getElementById('enrichment-section').style.display = 'block';
+                const section = document.getElementById('enrichment-section');
+                console.log('[Enrichment] Section element:', section);
+                if (section) {
+                    section.style.display = 'block';
+                    console.log('[Enrichment] Section displayed');
+                } else {
+                    console.error('[Enrichment] Section element not found!');
+                }
                 
                 // İlk 5 log'u göster
                 const logList = document.getElementById('enrichment-log-list');
+                console.log('[Enrichment] Log list element:', logList);
                 logList.innerHTML = logs.slice(0, 5).map(l => {
                     const fieldNames = {
                         'phone': 'Telefon',
                         'email': 'E-posta',
+                        'company_name': 'Şirket',
                         'company': 'Şirket'
                     };
                     const sourceIcons = {
@@ -2556,8 +2565,9 @@
                         </div>
                     `;
                 }).join('');
+                console.log('[Enrichment] HTML rendered, length:', logList.innerHTML.length);
             } catch (error) {
-                console.warn('Enrichment log yüklenemedi:', error);
+                console.error('[Enrichment] Error:', error);
             }
         }
 
