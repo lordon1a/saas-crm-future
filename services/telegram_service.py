@@ -174,6 +174,19 @@ class TelegramService:
             )
             db.session.add(activity)
             db.session.commit()
+            
+            # Auto-enrichment: Mesajdan contact bilgisi çıkar (arka planda)
+            if contact:
+                try:
+                    from threading import Thread
+                    from services.enrichment import enrich_contact
+                    Thread(
+                        target=enrich_contact,
+                        args=(contact.id, workspace_id, text, 'telegram'),
+                        daemon=True
+                    ).start()
+                except Exception as e:
+                    logger.warning('Auto-enrichment failed: %s', e)
 
             emitted = False
             try:

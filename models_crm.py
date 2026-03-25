@@ -719,6 +719,12 @@ class Task(db.Model):
     task_type = db.Column(db.String(50), default='task', nullable=False, index=True)  # call, meeting, email, todo, follow_up, other
     contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)  # İlişkili contact
     
+    # Reminder/Notification columns
+    reminder_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Hatırlatıcı aktif mi?
+    reminder_minutes_before = db.Column(db.Integer, default=60)  # Kaç dakika önce hatırlatılsın? (default: 1 saat)
+    reminder_sent = db.Column(db.Boolean, default=False, nullable=False)  # Hatırlatıcı gönderildi mi?
+    reminder_method = db.Column(db.String(20), default='whatsapp')  # 'whatsapp', 'email', 'both'
+    
     # Relationships
     comments = db.relationship('TaskComment', backref='task', lazy=True, cascade="all, delete-orphan")
     attachments = db.relationship('TaskAttachment', backref='task', lazy=True, cascade="all, delete-orphan")
@@ -2207,3 +2213,23 @@ class AISettings(db.Model):
 
     def __repr__(self):
         return f'<AISettings {self.provider} for workspace {self.workspace_id}>'
+
+
+class EnrichmentLog(db.Model):
+    """Mesajlardan otomatik contact güncellemelerini loglar."""
+    __tablename__ = 'enrichment_logs'
+    
+    id           = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False)
+    contact_id   = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False)
+    source       = db.Column(db.String(50))   # 'whatsapp', 'telegram', 'email'
+    field_name   = db.Column(db.String(50))   # 'phone', 'email', 'company'
+    old_value    = db.Column(db.String(200))
+    new_value    = db.Column(db.String(200))
+    confidence   = db.Column(db.Float)        # 0.0 - 1.0
+    raw_message  = db.Column(db.Text)         # kaynağı kaydet
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<EnrichmentLog {self.contact_id} {self.field_name}>'
+

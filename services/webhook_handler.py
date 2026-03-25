@@ -163,6 +163,19 @@ class WebhookHandler:
         # Update conversation last_message_at
         ConversationManager.update_last_message_time(conversation.id)
         
+        # Auto-enrichment: Mesajdan contact bilgisi çıkar (arka planda)
+        try:
+            from threading import Thread
+            from services.enrichment import enrich_contact
+            Thread(
+                target=enrich_contact,
+                args=(customer.id, workspace.id, message_data['message_body'], 'whatsapp'),
+                daemon=True
+            ).start()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning('Auto-enrichment failed: %s', e)
+        
         # Otomatik yanıt kontrolü
         try:
             from services.automation_engine import AutoReplyEngine

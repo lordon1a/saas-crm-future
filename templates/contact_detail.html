@@ -545,6 +545,10 @@
                         <button onclick="findContactDuplicates()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                             <i class="fas fa-copy text-gray-400 text-xs"></i> Kopya Bul
                         </button>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <button onclick="deleteContact()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                            <i class="fas fa-trash text-red-400 text-xs"></i> Kişiyi Sil
+                        </button>
                     </div>
                 </div>
                 <span id="inactivity-badge" class="hidden px-2 py-0.5 text-[10px] font-semibold rounded-full bg-orange-100 text-orange-700 whitespace-nowrap">
@@ -775,6 +779,20 @@
                             <span class="sidebar-field-label">Güncellenme</span>
                             <span class="sidebar-field-value text-gray-500">{{ contact.updated_at.strftime('%d.%m.%Y') if contact.updated_at else '-' }}</span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ── OTOMATIK GÜNCELLEME Section ── -->
+                <div class="sidebar-section" id="enrichment-section" style="display:none;">
+                    <div class="sidebar-section-header" onclick="toggleSection('enrichment')">
+                        <span class="sidebar-section-title">
+                            <i class="fas fa-magic" style="color:#7c3aed; font-size:10px; margin-right:4px;"></i>
+                            Otomatik Güncelleme
+                        </span>
+                        <i id="enrichment-icon" class="fas fa-chevron-down text-[10px] text-gray-400 transition-transform"></i>
+                    </div>
+                    <div id="enrichment-content" class="hidden sidebar-section-body">
+                        <div id="enrichment-log-list" style="font-size: 12px;"></div>
                     </div>
                 </div>
 
@@ -2485,6 +2503,54 @@
         }
 
         // ============================================================================
+        // ENRICHMENT LOG LOADING
+        // ============================================================================
+        async function loadEnrichmentLog() {
+            try {
+                const response = await fetch(`/api/ai/enrichment-log/${STATE.contactId}`);
+                if (!response.ok) return;
+                
+                const logs = await response.json();
+                if (!logs || logs.length === 0) return;
+                
+                // Section'ı göster
+                document.getElementById('enrichment-section').style.display = 'block';
+                
+                // İlk 5 log'u göster
+                const logList = document.getElementById('enrichment-log-list');
+                logList.innerHTML = logs.slice(0, 5).map(l => {
+                    const fieldNames = {
+                        'phone': 'Telefon',
+                        'email': 'E-posta',
+                        'company': 'Şirket'
+                    };
+                    const sourceIcons = {
+                        'whatsapp': '<i class="fab fa-whatsapp text-green-500"></i>',
+                        'telegram': '<i class="fab fa-telegram text-blue-500"></i>',
+                        'email': '<i class="fas fa-envelope text-gray-500"></i>'
+                    };
+                    
+                    return `
+                        <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                                ${sourceIcons[l.source] || ''}
+                                <span style="color: #111827; font-weight: 600; font-size: 11px;">${fieldNames[l.field] || l.field}</span>
+                                <span style="color: #9ca3af; font-size: 10px;">→</span>
+                                <span style="color: #374151; font-size: 11px;">${l.new}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #d1d5db; padding-left: 20px;">
+                                ${new Date(l.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                · Güven: ${Math.round(l.confidence * 100)}%
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.warn('Enrichment log yüklenemedi:', error);
+            }
+        }
+
+        // ============================================================================
         // QUICK ACTIONS
         // ============================================================================
         function sendEmail() {
@@ -3091,6 +3157,39 @@
         }
 
         // ============================================================================
+        // DELETE CONTACT
+        // ============================================================================
+        async function deleteContact() {
+            document.getElementById('more-actions-menu').classList.add('hidden');
+            
+            const contactName = document.getElementById('contact-name-display')?.textContent || 'Bu kişi';
+            
+            if (!confirm(`${contactName} kişisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/contacts/${STATE.contactId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Silme başarısız');
+                }
+                
+                showToast('Kişi başarıyla silindi', 'success');
+                
+                // Redirect to contacts page after short delay
+                setTimeout(() => {
+                    window.location.href = '/contacts';
+                }, 800);
+            } catch (error) {
+                console.error('Delete error:', error);
+                showToast('Silme işlemi başarısız', 'error');
+            }
+        }
+
+        // ============================================================================
         // EMAIL INTEGRATION
         // ============================================================================
         async function sendContactEmail() {
@@ -3262,6 +3361,7 @@
             loadFiles();
             loadTags();
             checkInactivity();
+            loadEnrichmentLog();
 
             // Lazy-load WhatsApp messages when tab is clicked
             document.querySelector('.tab-button[data-tab="whatsapp"]')?.addEventListener('click', () => {

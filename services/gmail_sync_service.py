@@ -185,6 +185,21 @@ class GmailSyncService:
                 email_sync.activity_id = activity.id
             
             db.session.commit()
+            
+            # Auto-enrichment: E-postadan contact bilgisi çıkar (arka planda)
+            if contact:
+                try:
+                    from threading import Thread
+                    from services.enrichment import enrich_contact
+                    email_body = body_text or body_html or message.get('snippet', '')
+                    Thread(
+                        target=enrich_contact,
+                        args=(contact.id, workspace_id, email_body[:1000], 'email'),
+                        daemon=True
+                    ).start()
+                except Exception as e:
+                    logger.warning(f'Auto-enrichment failed: {e}')
+            
             return True
             
         except Exception as e:

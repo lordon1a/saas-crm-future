@@ -1286,6 +1286,21 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Task reminders migration failed (may already exist): {e}")
             
+            # === ENRICHMENT LOGS ===
+            try:
+                from migrations.add_enrichment_logs import upgrade as enrichment_logs_upgrade
+                
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                enrichment_logs_upgrade()
+                
+                cur.close()
+                conn.close()
+                logger.info("✓ Enrichment logs migration completed")
+            except Exception as e:
+                logger.warning(f"Enrichment logs migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
 

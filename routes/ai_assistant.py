@@ -311,13 +311,23 @@ def chat():
         if clean.lower().startswith('json'):
             clean = clean[4:].strip()
 
-        # JSON aksiyon mı?
+        # JSON aksiyon mı? (Daha agresif parse)
         try:
+            # Önce direkt parse dene
             parsed = json_lib.loads(clean)
             if isinstance(parsed, dict) and parsed.get('requires_confirmation'):
                 return jsonify(parsed)
         except (json_lib.JSONDecodeError, ValueError):
-            pass
+            # JSON bulunamadı, text içinde JSON ara
+            import re
+            json_match = re.search(r'\{[^{}]*"requires_confirmation"[^{}]*\}', clean)
+            if json_match:
+                try:
+                    parsed = json_lib.loads(json_match.group(0))
+                    if isinstance(parsed, dict) and parsed.get('requires_confirmation'):
+                        return jsonify(parsed)
+                except:
+                    pass
 
         return jsonify({'response': response_text})
 
@@ -758,8 +768,10 @@ def _call_ai(messages, system=None, provider=None):
     ai = _get_workspace_ai(workspace_id)
 
     if provider is None:
-        # Priority: OpenRouter > Gemini > Anthropic
-        if ai['openrouter_key']:
+        # Priority: Groq > OpenRouter > Gemini > Anthropic
+        if ai['groq_key']:
+            provider = 'groq'
+        elif ai['openrouter_key']:
             provider = 'openrouter'
         elif ai['gemini_key']:
             provider = 'gemini'
@@ -814,6 +826,23 @@ def _call_ai(messages, system=None, provider=None):
             response = model.generate_content(gemini_messages)
             return jsonify({'response': response.text})
             
+        elif provider == 'groq' and ai['groq_client']:
+            # Groq API
+            try:
+                groq_messages = [{'role': 'system', 'content': system_prompt}] + messages if system_prompt else messages
+                response = ai['groq_client'].chat.completions.create(
+                    model=ai['groq_model'],
+                    messages=groq_messages,
+                    max_tokens=1024,
+                    temperature=0.7
+                )
+                return jsonify({'response': response.choices[0].message.content})
+            except Exception as groq_error:
+                logger.error(f"[Groq] Error: {str(groq_error)}")
+                import traceback
+                logger.error(f"[Groq] Traceback: {traceback.format_exc()}")
+                raise
+            
         elif provider == 'anthropic' and ai['anthropic_client']:
             response = ai['anthropic_client'].messages.create(
                 model=ai['anthropic_model'],
@@ -827,6 +856,67 @@ def _call_ai(messages, system=None, provider=None):
     except Exception as e:
         import traceback
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+
+
+def _call_ai_raw(messages: list, system: str, workspace_id: int) -> str:
+    """String döndüren AI çağrısı — enrichment için."""
+    ai = _get_workspace_ai(workspace_id)
+    if not ai:
+        return ''
+
+    try:
+        # Priority: Groq > OpenRouter > Gemini > Anthropic
+        if ai.get('groq_client'):
+            groq_messages = [{'role': 'system', 'content': system}] + messages
+            response = ai['groq_client'].chat.completions.create(
+                model=ai['groq_model'],
+                messages=groq_messages,
+                max_tokens=256,
+                temperature=0.3
+            )
+            return response.choices[0].message.content
+
+        elif ai.get('openrouter_key'):
+            headers = {
+                'Authorization': f"Bearer {ai['openrouter_key']}",
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://whatsapp-crm-saas.onrender.com',
+            }
+            payload = {
+                'model': ai['openrouter_model'],
+                'messages': [{'role': 'system', 'content': system}] + messages,
+                'max_tokens': 256,
+            }
+            response = requests.post('https://openrouter.ai/api/v1/chat/completions',
+                                    headers=headers, json=payload, timeout=15)
+            response.raise_for_status()
+            return response.json()['choices'][0]['message']['content']
+
+        elif ai.get('gemini_client'):
+            gemini_messages = []
+            for msg in messages:
+                role = 'user' if msg['role'] == 'user' else 'model'
+                gemini_messages.append({'role': role, 'parts': [msg['content']]})
+
+            model = ai['gemini_client'].GenerativeModel(ai['gemini_model'])
+            response = model.generate_content(gemini_messages)
+            return response.text
+
+        elif ai.get('anthropic_client'):
+            response = ai['anthropic_client'].messages.create(
+                model=ai['anthropic_model'],
+                max_tokens=256,
+                system=system,
+                messages=[{'role': m['role'], 'content': m['content']} for m in messages]
+            )
+            return response.content[0].text
+
+        return ''
+
+    except Exception as e:
+        logger.error(f"[_call_ai_raw] Error: {e}")
+        return ''
+
 
 
 @bp.route('/api/ai/execute-action', methods=['POST'])
@@ -1156,8 +1246,9 @@ def quick_log():
     """
     import logging
     from datetime import datetime, timedelta
-    from models import db, Note
-    from models_crm import Task, Deal, DealStage, Pipeline
+    from models import db
+    from models_crm import Task, Deal, DealStage, Pipeline, Contact
+    from models_contact_timeline import ContactActivityLog
     
     logger = logging.getLogger(__name__)
     
@@ -1201,31 +1292,37 @@ Context:
 
 Extract actions from the text. Return JSON array with these action types:
 
-1. add_note: Add a note/comment
+1. create_contact: Create a new contact/customer
+   - params: {{"name": "full name", "phone": "optional phone", "email": "optional email"}}
+   - requires_confirmation: false
+   - Use this when user wants to add/create a new customer/contact
+
+2. add_note: Add a note/comment (requires existing contact/deal/company context)
    - params: {{"content": "note text"}}
    - requires_confirmation: false
 
-2. create_task: Create a follow-up task
-   - params: {{"title": "task title", "due_days": number_of_days_from_now}}
+3. create_task: Create a follow-up task
+   - params: {{"title": "task title", "due_days": number_of_days_from_now, "contact_name": "optional contact name for linking"}}
    - requires_confirmation: false
 
-3. update_deal_stage: Move deal to different stage
+4. update_deal_stage: Move deal to different stage
    - params: {{"stage_name": "exact stage name from available stages"}}
    - requires_confirmation: true
 
-4. update_deal_status: Mark deal as won/lost
+5. update_deal_status: Mark deal as won/lost
    - params: {{"status": "won" or "lost", "reason": "optional reason"}}
    - requires_confirmation: true
 
-5. update_deal_value: Change deal value
+6. update_deal_value: Change deal value
    - params: {{"value": number}}
    - requires_confirmation: true
 
 Return ONLY valid JSON in this exact format:
 {{
   "actions": [
-    {{"type": "add_note", "params": {{"content": "..."}}, "requires_confirmation": false}},
-    {{"type": "create_task", "params": {{"title": "...", "due_days": 5}}, "requires_confirmation": false}}
+    {{"type": "create_contact", "params": {{"name": "...", "phone": "..."}}, "requires_confirmation": false}},
+    {{"type": "create_task", "params": {{"title": "...", "due_days": 1, "contact_name": "..."}}, "requires_confirmation": false}},
+    {{"type": "add_note", "params": {{"content": "..."}}, "requires_confirmation": false}}
   ],
   "summary": "Brief summary of what was detected"
 }}
@@ -1239,6 +1336,10 @@ Rules:
 
         # Call AI
         ai_response = _call_ai([{'role': 'user', 'content': prompt}])
+        
+        # _call_ai can return tuple (response, status_code) on error
+        if isinstance(ai_response, tuple):
+            return ai_response  # Return error tuple directly
         
         # _call_ai returns Flask Response, extract JSON
         if not ai_response:
@@ -1290,19 +1391,49 @@ Rules:
             
             # Execute safe actions immediately
             try:
-                if action_type == 'add_note':
-                    content = params.get('content', '')
-                    if content and (deal_id or contact_id or company_id):
-                        # Use Activity model for notes
-                        activity = Activity(
+                if action_type == 'create_contact':
+                    name = params.get('name', '').strip()
+                    phone = params.get('phone', '').strip()
+                    email = params.get('email', '').strip()
+                    
+                    if name:
+                        # Split name into first and last
+                        name_parts = name.split(' ', 1)
+                        first_name = name_parts[0]
+                        last_name = name_parts[1] if len(name_parts) > 1 else ''
+                        
+                        contact = Contact(
                             workspace_id=workspace_id,
-                            user_id=user_id,
-                            activity_type='note',
-                            deal_id=deal_id,
+                            first_name=first_name,
+                            last_name=last_name,
+                            phone=phone or None,
+                            email=email or None,
+                            created_at=datetime.utcnow()
+                        )
+                        db.session.add(contact)
+                        db.session.commit()
+                        
+                        # Store contact_id for subsequent actions
+                        contact_id = contact.id
+                        
+                        result['status'] = 'completed'
+                        result['message'] = f'Contact created: {name}'
+                        result['contact_id'] = contact.id
+                    else:
+                        result['status'] = 'skipped'
+                        result['message'] = 'No name provided for contact'
+                
+                elif action_type == 'add_note':
+                    content = params.get('content', '')
+                    # Use contact_id from context or newly created contact
+                    if content and contact_id:
+                        # Use ContactActivityLog for timeline
+                        activity = ContactActivityLog(
+                            workspace_id=workspace_id,
                             contact_id=contact_id,
-                            company_id=company_id,
-                            subject=f'Quick Log: {content[:50]}...',
-                            body=content,
+                            user_id=user_id,
+                            action_type='note_added',
+                            description=content,
                             created_at=datetime.utcnow()
                         )
                         db.session.add(activity)
@@ -1311,30 +1442,60 @@ Rules:
                         result['message'] = f'Note added: "{content[:50]}..."'
                     else:
                         result['status'] = 'skipped'
-                        result['message'] = 'No content or context for note'
+                        result['message'] = 'No content or contact_id for note'
                 
                 elif action_type == 'create_task':
                     title = params.get('title', '')
                     due_days = params.get('due_days', 7)
+                    contact_name = params.get('contact_name', '').strip()
+                    
+                    # If contact_name provided, try to find or use newly created contact
+                    task_contact_id = contact_id
+                    if contact_name and not task_contact_id:
+                        # Try to find contact by name
+                        name_parts = contact_name.split(' ', 1)
+                        first_name = name_parts[0]
+                        last_name = name_parts[1] if len(name_parts) > 1 else ''
+                        
+                        found_contact = Contact.query.filter_by(
+                            workspace_id=workspace_id,
+                            first_name=first_name
+                        ).filter(
+                            (Contact.last_name == last_name) | (Contact.last_name == None)
+                        ).first()
+                        
+                        if found_contact:
+                            task_contact_id = found_contact.id
                     
                     if title:
                         due_date = datetime.utcnow() + timedelta(days=due_days)
+                        # Set start_time to beginning of due date for calendar visibility
+                        # Use UTC time but set to 9 AM local time equivalent
+                        start_time = due_date.replace(hour=9, minute=0, second=0, microsecond=0)
+                        end_time = due_date.replace(hour=10, minute=0, second=0, microsecond=0)
+                        
                         task = Task(
                             workspace_id=workspace_id,
                             title=title,
                             description=f'Created from Quick Log: {text[:100]}',
                             assignee_id=user_id,
                             deal_id=deal_id,
-                            contact_id=contact_id,
+                            contact_id=task_contact_id,
                             company_id=company_id,
-                            due_date=due_date,
+                            due_date=due_date.date(),  # Store only date part
+                            start_time=start_time,
+                            end_time=end_time,
                             status='not_started',
-                            priority='medium'
+                            priority='medium',
+                            task_type='follow_up',  # Set task_type for calendar icon
+                            reminder_enabled=True,  # Enable reminder by default
+                            reminder_minutes_before=60,  # 1 hour before
+                            reminder_method='whatsapp'  # Default to WhatsApp
                         )
                         db.session.add(task)
                         db.session.commit()
                         result['status'] = 'completed'
-                        result['message'] = f'Task created: "{title}" — {due_days} days'
+                        result['message'] = f'Task created: "{title}" — {due_days} days (reminder: 1h before)'
                     else:
                         result['status'] = 'skipped'
                         result['message'] = 'No title for task'
