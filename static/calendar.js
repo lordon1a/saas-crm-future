@@ -308,14 +308,21 @@ class CalendarView {
             container.innerHTML = '';
         });
         
+        console.log('Rendering month events. Total events:', this.events.length);
+        
         this.events.forEach(event => {
+            console.log('Processing event:', event.id, event.title, 'start:', event.start);
             const eventDate = new Date(event.start);
             const dateStr = this.formatDateKey(eventDate);
+            console.log('Event date:', eventDate, 'dateStr:', dateStr);
             const container = document.getElementById(`events-${dateStr}`);
             
             if (container) {
+                console.log('Container found for', dateStr);
                 const element = this.createEventElement(event, 'month');
                 container.appendChild(element);
+            } else {
+                console.log('Container NOT found for', dateStr);
             }
         });
     }

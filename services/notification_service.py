@@ -21,7 +21,10 @@ class NotificationService:
         """
         now = datetime.utcnow()
         
-        # Gönderilmemiş ve zamanı gelmiş bildirimleri bul
+        # 1. Task reminder'ları kontrol et ve oluştur
+        NotificationService._check_and_create_task_reminders(now)
+        
+        # 2. Gönderilmemiş ve zamanı gelmiş bildirimleri bul
         pending = TaskNotification.query.filter(
             TaskNotification.is_sent == False,
             TaskNotification.notify_at <= now
@@ -43,6 +46,169 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Bildirim commit hatası: {str(e)}")
             db.session.rollback()
+    
+    @staticmethod
+    def _check_and_create_task_reminders(now):
+        """
+        Task reminder'larını kontrol et ve gerekirse oluştur.
+        Ayrıca WhatsApp/Email gönderimi yap.
+        
+        Args:
+            now: Şu anki zaman (UTC)
+        """
+        from models_crm import Task, Contact
+        from datetime import timedelta
+        
+        # Reminder aktif, henüz gönderilmemiş ve zamanı yaklaşan task'ları bul
+        # Şu andan itibaren 2 saat içinde başlayacak task'ları kontrol et
+        check_until = now + timedelta(hours=2)
+        
+        tasks = Task.query.filter(
+            Task.reminder_enabled == True,
+            Task.reminder_sent == False,
+            Task.start_time.isnot(None),
+            Task.start_time > now,
+            Task.start_time <= check_until,
+            Task.status.notin_(['completed', 'cancelled'])
+        ).all()
+        
+        for task in tasks:
+            try:
+                # Hatırlatma zamanını hesapla
+                reminder_time = task.start_time - timedelta(minutes=task.reminder_minutes_before or 60)
+                
+                # Hatırlatma zamanı geldi mi?
+                if now >= reminder_time:
+                    # WhatsApp/Email gönder
+                    NotificationService._send_task_reminder(task)
+                    
+                    # Task'ı gönderildi olarak işaretle
+                    task.reminder_sent = True
+                    
+                    # In-app notification oluştur
+                    if task.assignee_id:
+                        notification = TaskNotification(
+                            workspace_id=task.workspace_id,
+                            task_id=task.id,
+                            user_id=task.assignee_id,
+                            notify_at=now,
+                            message=f"Hatırlatma: '{task.title}' görevi {task.reminder_minutes_before} dakika sonra başlayacak",
+                            notification_type='task_reminder'
+                        )
+                        db.session.add(notification)
+                    
+            except Exception as e:
+                logger.error(f"Task reminder oluşturma hatası (Task ID: {task.id}): {str(e)}")
+                continue
+        
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Task reminder commit hatası: {str(e)}")
+            db.session.rollback()
+    
+    @staticmethod
+    def _send_task_reminder(task):
+        """
+        Task reminder'ı WhatsApp veya Email ile gönder.
+        
+        Args:
+            task: Task instance
+        """
+        from models_crm import Contact
+        
+        # Contact bilgisini al
+        contact = None
+        if task.contact_id:
+            contact = Contact.query.get(task.contact_id)
+        
+        # Mesaj içeriğini hazırla
+        task_time = task.start_time.strftime('%d.%m.%Y %H:%M')
+        message = f"🔔 Hatırlatma: '{task.title}' görevi {task_time} tarihinde başlayacak."
+        
+        if contact:
+            message += f"\n👤 Kişi: {contact.full_name}"
+        
+        if task.description:
+            message += f"\n📝 Açıklama: {task.description[:100]}"
+        
+        # Gönderim metoduna göre işlem yap
+        if task.reminder_method in ['whatsapp', 'both']:
+            NotificationService._send_whatsapp_reminder(task, contact, message)
+        
+        if task.reminder_method in ['email', 'both']:
+            NotificationService._send_email_reminder(task, contact, message)
+    
+    @staticmethod
+    def _send_whatsapp_reminder(task, contact, message):
+        """
+        WhatsApp ile hatırlatma gönder.
+        
+        Args:
+            task: Task instance
+            contact: Contact instance (opsiyonel)
+            message: Mesaj içeriği
+        """
+        try:
+            from meta_api_client import send_whatsapp_message
+            from models import User
+            
+            # Assignee'nin telefon numarasını al
+            if task.assignee_id:
+                user = User.query.get(task.assignee_id)
+                phone = None
+                
+                # Önce contact'ın telefonu varsa onu kullan
+                if contact and contact.whatsapp_phone:
+                    phone = contact.whatsapp_phone
+                # Yoksa user'ın telefonu varsa onu kullan
+                elif hasattr(user, 'phone') and user.phone:
+                    phone = user.phone
+                
+                if phone:
+                    send_whatsapp_message(phone, message)
+                    logger.info(f"WhatsApp reminder sent for task {task.id} to {phone}")
+                else:
+                    logger.warning(f"No phone number found for task {task.id} reminder")
+                    
+        except Exception as e:
+            logger.error(f"WhatsApp reminder gönderme hatası (Task ID: {task.id}): {str(e)}")
+    
+    @staticmethod
+    def _send_email_reminder(task, contact, message):
+        """
+        Email ile hatırlatma gönder.
+        
+        Args:
+            task: Task instance
+            contact: Contact instance (opsiyonel)
+            message: Mesaj içeriği
+        """
+        try:
+            from models import User
+            
+            # Assignee'nin email adresini al
+            if task.assignee_id:
+                user = User.query.get(task.assignee_id)
+                email = None
+                
+                # Önce contact'ın emaili varsa onu kullan
+                if contact and contact.email:
+                    email = contact.email
+                # Yoksa user'ın emaili varsa onu kullan
+                elif user and user.email:
+                    email = user.email
+                
+                if email:
+                    # Email gönderimi için email service kullan
+                    # TODO: Email service entegrasyonu eklenecek
+                    logger.info(f"Email reminder would be sent for task {task.id} to {email}")
+                    logger.info(f"Email content: {message}")
+                else:
+                    logger.warning(f"No email found for task {task.id} reminder")
+                    
+        except Exception as e:
+            logger.error(f"Email reminder gönderme hatası (Task ID: {task.id}): {str(e)}")
     
     @staticmethod
     def _emit_notification(notification):

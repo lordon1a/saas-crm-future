@@ -523,6 +523,12 @@
                         <span>Görünüm</span>
                     </button>
 
+                    <!-- Bulk Delete -->
+                    <button onclick="deleteAllContactsConfirm()" class="quick-action text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" title="Tüm Kişileri Sil">
+                        <i class="fas fa-trash text-red-500"></i>
+                        <span>Toplu Sil</span>
+                    </button>
+
                     <!-- Import -->
                     <button onclick="window.location.href='/import'" class="quick-action" title="İçe Aktar">
                         <i class="fas fa-file-import text-slate-500"></i>
@@ -623,6 +629,26 @@
                             class="w-56 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Bar (Hidden by default) -->
+        <div id="bulkActionsBar" class="hidden bg-blue-50 border-b border-blue-200 px-6 py-3 items-center justify-between">
+            <div class="flex items-center gap-4">
+                <span id="selectedCount" class="text-sm font-semibold text-blue-900">0 kişi seçildi</span>
+                <button onclick="clearSelection()" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    Seçimi Temizle
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openBulkEditModal()" class="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-all flex items-center gap-2">
+                    <i class="fas fa-edit text-xs"></i>
+                    Toplu Düzenle
+                </button>
+                <button onclick="bulkDeleteContacts()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all flex items-center gap-2">
+                    <i class="fas fa-trash text-xs"></i>
+                    Seçilenleri Sil
+                </button>
             </div>
         </div>
 

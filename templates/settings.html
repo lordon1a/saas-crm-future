@@ -201,6 +201,9 @@
                         <button onclick="switchTab('custom-fields')" id="tab-custom-fields" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-list-check w-4 text-center group-hover:scale-110 transition-transform"></i> Özel Alanlar
                         </button>
+                        <button onclick="switchTab('custom-objects')" id="tab-custom-objects" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-cubes w-4 text-center group-hover:scale-110 transition-transform"></i> Özel Nesneler
+                        </button>
                         <button onclick="switchTab('google')" id="tab-google" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fab fa-google w-4 text-center group-hover:scale-110 transition-transform"></i> Google Workspace
                         </button>
@@ -651,6 +654,26 @@
 
                         <div id="customFieldsList">
                             <!-- Dynamic content from custom-fields.js -->
+                        </div>
+                    </div>
+
+                    <!-- ═══ CUSTOM OBJECTS TAB ═══ -->
+                    <div id="panel-custom-objects" class="tab-panel space-y-8">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 mb-1">Özel Nesneler <span class="text-xs bg-brand-100 text-brand-600 px-2 py-0.5 rounded-full ml-1">BETA</span></h2>
+                                <p class="text-sm text-slate-500">Mülk, Araç gibi kendinize özel modüller oluşturup diğer varlıklarla (Kişi, Şirket) ilişkilendirin.</p>
+                            </div>
+                            <button onclick="openCustomObjectModal()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10 flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Yeni Özel Nesne
+                            </button>
+                        </div>
+
+                        <div id="customObjectsList" class="grid grid-cols-1 gap-4">
+                            <!-- Dynamic content from custom-objects.js -->
+                            <div class="bg-white border rounded-lg p-8 text-center text-slate-500">
+                                Yükleniyor...
+                            </div>
                         </div>
                     </div>
 
@@ -2957,6 +2980,7 @@
             }
         </script>
         <script src="/static/custom-fields.js"></script>
+        <script src="/static/custom-objects.js"></script>
     </main>
     <script src="/static/topbar-global.js"></script>
 {% include '_ai_sidebar.html' %}

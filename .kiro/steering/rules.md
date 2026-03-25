@@ -74,6 +74,13 @@ Kontrol listesi — her model değişikliğinde sor:
 - ✅ Meta API ile mesaj gönderme (meta_api_client.py)
 - ✅ Multi-tenant workspace izolasyonu
 - ✅ Super admin panel (JWT auth, tenant management, impersonation)
+# CRITICAL RULE: Backend-to-Frontend Serialization Safety
+Veritabanı modellerinde (SQLAlchemy vb.) yaptığın değişikliklerin "Sessizce" (Silent Failure) çökmesini engellemek için şu kurala KESİNLİKLE uy:
+
+1. THE "to_dict()" RULE: Bir veritabanı modeline yeni bir kolon/alan (column) eklediğinde veya mevcut mantığı değiştirdiğinde ALANIN [to_dict()](cci:1://file:///c:/Users/lordo/OneDrive/Masa%C3%BCst%C3%BC/sadas/models_crm.py:2033:4-2044:9) (ya da ilgili JSON serializer) metoduna eklendiğinden %100 EMİN OL. 
+2. Backend sorguları filtrelemeleri (Örn: is_active=True) doğru yapsa bile, API response'unda bu alanları taşımıyorsan Frontend'in (Javascript) bu alanları okumaya çalışırken `undefined` alacağını ve if-bloklarında ekranı çizmeyi erkenden durdurup boş beyaz alanlar bırakacağını ASLA unutma. 
+3. Frontend tarafına JS yazarken, API'den gelen verilerin eksik veya undefined dönme ihtimalini (Destructuring Fallbacks veya null-check) daima hesaba katarak ilerle. Sessizce "return" etmek yerine, objenin mantıksal kontrolünü dikkatle yap.
+
 
 ## SIKÇA YAPILAN HATALAR (YAPMA)
 - ❌ eventlet import etme — gevent kullanılıyor

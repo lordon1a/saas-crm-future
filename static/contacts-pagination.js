@@ -161,24 +161,29 @@ async function bulkDeleteContacts() {
     if (!confirmed) return;
     
     try {
-        const contactIds = Array.from(selectedContactIds);
-        const promises = contactIds.map(id => 
-            fetch(`/api/v1/contacts/${id}`, { method: 'DELETE' })
-        );
+        const response = await fetch('/api/v1/contacts/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contact_ids: Array.from(selectedContactIds)
+            })
+        });
         
-        const results = await Promise.all(promises);
-        const successCount = results.filter(r => r.ok).length;
+        if (!response.ok) {
+            throw new Error('Toplu silme başarısız');
+        }
         
-        if (successCount > 0) {
-            if (typeof showToast === 'function') {
-                showToast(`${successCount} kişi başarıyla silindi.`, 'success');
-            }
-            selectedContactIds.clear();
-            if (typeof loadContacts === 'function') {
-                loadContacts(window.currentPage || 1);
-            }
-        } else {
-            throw new Error('Hiçbir kişi silinemedi');
+        const data = await response.json();
+        
+        if (typeof showToast === 'function') {
+            showToast(`${data.deleted} kişi başarıyla silindi.`, 'success');
+        }
+        
+        selectedContactIds.clear();
+        updateBulkActionsBar();
+        
+        if (typeof loadContacts === 'function') {
+            loadContacts(window.currentPage || 1);
         }
     } catch (e) {
         console.error(e);

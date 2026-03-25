@@ -1131,8 +1131,8 @@ def update_ai_settings():
     data = request.get_json(silent=True) or {}
 
     provider = (data.get('provider') or '').strip().lower()
-    if provider not in ('gemini', 'anthropic', 'openai', 'openrouter'):
-        return jsonify({'error': 'Geçersiz provider (gemini/anthropic/openai/openrouter)'}), 400
+    if provider not in ('groq', 'gemini', 'anthropic', 'openai', 'openrouter'):
+        return jsonify({'error': 'Geçersiz provider (groq/gemini/anthropic/openai/openrouter)'}), 400
 
     api_key = (data.get('api_key') or '').strip()
     model_name = (data.get('model_name') or '').strip()
@@ -1200,7 +1200,19 @@ def test_ai_key():
         return jsonify({'success': False, 'error': 'API key gerekli'}), 400
 
     try:
-        if provider == 'gemini':
+        if provider == 'groq':
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            groq_model = model_name or 'llama-3.1-70b-versatile'
+            completion = client.chat.completions.create(
+                model=groq_model,
+                messages=[{'role': 'user', 'content': 'Say hello in one word'}],
+                max_tokens=10,
+                temperature=1
+            )
+            return jsonify({'success': True, 'message': f'{groq_model} bağlantısı başarılı'}), 200
+
+        elif provider == 'gemini':
             from google import genai
             client = genai.Client(api_key=api_key)
             gem_model = model_name or 'gemini-2.5-flash'
@@ -1227,7 +1239,7 @@ def test_ai_key():
                 'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json',
             }
-            or_model = model_name or 'minimax/minimax-m2.5:free'
+            or_model = model_name or 'openrouter/auto'
             payload = {
                 'model': or_model,
                 'messages': [{'role': 'user', 'content': 'Say hello in one word'}],

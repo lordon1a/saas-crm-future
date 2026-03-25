@@ -27,9 +27,9 @@ def test_enrichment():
     print("AUTO-ENRICHMENT ENGINE TEST")
     print("=" * 60)
     
-    # BURAYA KENDİ DEĞERLERINI GİR
-    contact_id = 1  # Mevcut bir contact ID
-    workspace_id = 1  # Mevcut bir workspace ID
+    # Gerçek değerler
+    contact_id = 12604  # Ahmet Yılmaz
+    workspace_id = 1
     
     with app.app_context():
         for i, test in enumerate(test_messages, 1):

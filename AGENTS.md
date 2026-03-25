@@ -28,6 +28,7 @@
 
 ## Change Safety Rules
 
+- **to_dict() Rule**: ALWAYS update the `to_dict()` or schema serializers if you add or rely on new database columns. Silent failures in JS formatting occur when properties are missing from the API JSON response due to incomplete `to_dict()` methods.
 - Never modify model relationships without checking cascade/orphan effects
 - Never expose sensitive data (passwords, tokens, API keys) in logs or responses
 - Never store passwords in plain text - use hashed passwords

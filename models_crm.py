@@ -2233,3 +2233,110 @@ class EnrichmentLog(db.Model):
     def __repr__(self):
         return f'<EnrichmentLog {self.contact_id} {self.field_name}>'
 
+# ============================================================================
+# CUSTOM OBJECTS & POLYMORPHIC RELATIONSHIPS
+# ============================================================================
+
+class CustomObject(db.Model):
+    """
+    SaaS kullanıcılarının oluşturduğu özel nesne türleri.
+    Örn: name='arac', plural_label='Araçlar', singular_label='Araç' vb.
+    """
+    __tablename__ = 'custom_objects'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # API kimliği (slug) — değiştirilemez
+    name = db.Column(db.String(100), nullable=False)
+    # Görünen isimler
+    singular_label = db.Column(db.String(100), nullable=True)  # Örn: Araç
+    plural_label = db.Column(db.String(100), nullable=True)    # Örn: Araçlar
+    # Geriye dönük uyumluluk için tutulan eski alan
+    plural_name = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    icon = db.Column(db.String(100), default='fas fa-cube')  # FontAwesome class
+    icon_color = db.Column(db.String(20), default='#6366f1')  # Marka rengi
+    
+    # Alan şeması — [{"name": "plaka", "label": "Plaka", "type": "text", "required": true}, ...]
+    schema_config = db.Column(db.JSON, default=list, nullable=False)
+    
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    records = db.relationship('CustomObjectRecord', backref='custom_object', lazy=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f'<CustomObject {self.name} (Workspace: {self.workspace_id})>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'singular_label': self.singular_label or self.name,
+            'plural_label': self.plural_label or self.plural_name or self.name,
+            'description': self.description,
+            'icon': self.icon or 'fas fa-cube',
+            'icon_color': self.icon_color or '#6366f1',
+            'schema_config': self.schema_config or [],
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class CustomObjectRecord(db.Model):
+    """
+    Özel nesnelere ait gerçek kayıtlar.
+    Örn: "34 ABC 123" (Araç), "Kadıköy Moda Daire" (Mülk)
+    """
+    __tablename__ = 'custom_object_records'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    custom_object_id = db.Column(db.Integer, db.ForeignKey('custom_objects.id'), nullable=False, index=True)
+    
+    record_name = db.Column(db.String(255), nullable=False) # Görünen ana isim/başlık
+    
+    # Tüm form/dinamik veriler burada JSON olarak yaşar.
+    properties = db.Column(db.JSON, default=dict, nullable=False)
+    
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<CustomObjectRecord {self.record_name}>'
+
+
+class EntityLink(db.Model):
+    """
+    Polymorphic Link (Bağlantı) Tablosu.
+    İki varlığı birbirine bağlar. (Örn: Contact -> Mülk, Şirket -> Araç)
+    """
+    __tablename__ = 'entity_links'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Kaynak obje (Hangi varlıktan başlıyor?)
+    # type enum: 'contact', 'company', 'deal', 'task', 'custom_object' vb.
+    from_entity_type = db.Column(db.String(50), nullable=False, index=True)
+    from_entity_id = db.Column(db.Integer, nullable=False, index=True)
+    
+    # Hedef obje (Kime/Neye bağlanıyor?)
+    to_entity_type = db.Column(db.String(50), nullable=False, index=True)
+    to_entity_id = db.Column(db.Integer, nullable=False, index=True)
+    
+    # İlişki etiketi (Örn: "Sahibi", "Kiralayan", "Şoför")
+    relationship_label = db.Column(db.String(100), nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('idx_entity_links_from', 'workspace_id', 'from_entity_type', 'from_entity_id'),
+        db.Index('idx_entity_links_to', 'workspace_id', 'to_entity_type', 'to_entity_id'),
+    )
+
+    def __repr__(self):
+        return f'<EntityLink {self.from_entity_type}({self.from_entity_id}) -> {self.to_entity_type}({self.to_entity_id})>'
+

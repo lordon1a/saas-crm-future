@@ -1301,8 +1301,106 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Enrichment logs migration failed (may already exist): {e}")
             
+            # === CUSTOM OBJECTS ===
+            try:
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS custom_objects (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                        name VARCHAR(100) NOT NULL,
+                        singular_label VARCHAR(100),
+                        plural_label VARCHAR(100),
+                        plural_name VARCHAR(100),
+                        description TEXT,
+                        icon VARCHAR(100) DEFAULT 'fas fa-cube',
+                        icon_color VARCHAR(20) DEFAULT '#6366f1',
+                        schema_config JSONB DEFAULT '[]' NOT NULL,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_custom_objects_workspace ON custom_objects(workspace_id)")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS custom_object_records (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                        custom_object_id INTEGER NOT NULL REFERENCES custom_objects(id) ON DELETE CASCADE,
+                        record_name VARCHAR(255) NOT NULL,
+                        properties JSONB DEFAULT '{}' NOT NULL,
+                        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_custom_obj_records_obj ON custom_object_records(custom_object_id)")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS entity_links (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                        from_entity_type VARCHAR(50) NOT NULL,
+                        from_entity_id INTEGER NOT NULL,
+                        to_entity_type VARCHAR(50) NOT NULL,
+                        to_entity_id INTEGER NOT NULL,
+                        relationship_label VARCHAR(100),
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_entity_links_from ON entity_links(workspace_id, from_entity_type, from_entity_id)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_entity_links_to ON entity_links(workspace_id, to_entity_type, to_entity_id)")
+                
+                # Add new columns if upgrading existing table
+                for col_name, col_type in [
+                    ("singular_label", "VARCHAR(100)"),
+                    ("plural_label", "VARCHAR(100)"),
+                    ("icon_color", "VARCHAR(20) DEFAULT '#6366f1'"),
+                ]:
+                    cur.execute(f"""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='custom_objects' AND column_name='{col_name}'
+                    """)
+                    if not cur.fetchone():
+                        cur.execute(f"ALTER TABLE custom_objects ADD COLUMN {col_name} {col_type}")
+                        logger.info(f"✓ Added {col_name} to custom_objects")
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                logger.info("✓ Custom Objects migration completed")
+            except Exception as e:
+                logger.warning(f"Custom Objects migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
+    
+    # SQLite fallback — creates all missing tables for local dev
+    try:
+        if str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('sqlite'):
+            db.create_all()
+            logger.info("✓ SQLite db.create_all() completed")
+            # Add new columns to existing custom_objects table if missing
+            try:
+                from sqlalchemy import inspect as sa_inspect, text as sa_text
+                inspector = sa_inspect(db.engine)
+                if 'custom_objects' in inspector.get_table_names():
+                    existing = [c['name'] for c in inspector.get_columns('custom_objects')]
+                    new_cols = [
+                        ('singular_label', 'VARCHAR(100)'),
+                        ('plural_label',   'VARCHAR(100)'),
+                        ('icon_color',     'VARCHAR(20)'),
+                    ]
+                    with db.engine.connect() as conn:
+                        for col_name, col_type in new_cols:
+                            if col_name not in existing:
+                                conn.execute(sa_text(f'ALTER TABLE custom_objects ADD COLUMN {col_name} {col_type}'))
+                                logger.info(f"✓ SQLite: added {col_name} to custom_objects")
+                        conn.commit()
+            except Exception as _col_err:
+                logger.warning(f"SQLite custom_objects ALTER TABLE warning: {_col_err}")
+    except Exception as e:
+        logger.warning(f"SQLite db.create_all() failed: {e}")
 
 def create_default_pipelines():
     """Create default pipeline for workspaces that don't have one"""
@@ -1448,6 +1546,9 @@ app.register_blueprint(docgen_route.bp, url_prefix='/api/docgen')
 app.register_blueprint(search_bp)
 from routes.marketplace import marketplace_bp
 app.register_blueprint(marketplace_bp)
+
+from routes.custom_objects import custom_objects_bp
+app.register_blueprint(custom_objects_bp, url_prefix='/api/custom-objects')
 
 from routes import ai_assistant
 app.register_blueprint(ai_assistant.bp)

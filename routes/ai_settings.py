@@ -156,7 +156,7 @@ def test_ai_key():
             from groq import Groq
             client = Groq(api_key=api_key)
             completion = client.chat.completions.create(
-                model=model_name or 'openai/gpt-oss-120b',
+                model=model_name or 'llama-3.1-70b-versatile',
                 messages=[{'role': 'user', 'content': 'Test'}],
                 max_tokens=10,
                 temperature=1
