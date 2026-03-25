@@ -58,6 +58,7 @@ async function loadTeamMembers() {
 
 function updateAssigneeSelect() {
     const select = document.getElementById('task-assignee');
+    if (!select) return; // Element not found, skip update
     const options = teamMembers.map(user => `<option value="${user.id}">${escapeHtml(user.name)} (${escapeHtml(user.role)})</option>`).join('');
     select.innerHTML = '<option value="">Unassigned</option>' + options;
 }
