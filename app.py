@@ -13,6 +13,7 @@ import uuid
 import atexit
 from datetime import datetime, UTC
 from urllib.parse import urlparse
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
@@ -22,6 +23,10 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Fix for HTTPS behind reverse proxy (Render, Heroku, etc.)
+# This ensures Flask recognizes X-Forwarded-Proto header and generates HTTPS URLs
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Eventlet-safe SQLAlchemy engine tuning for Render/runtime stability.
 db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
