@@ -1757,6 +1757,10 @@ def create_contact():
         except Exception as exc:
             logger.warning('Webhook dispatch failed for contact.created: %s', exc)
         
+        # Mark onboarding step as complete
+        from services.onboarding_service import OnboardingService
+        OnboardingService.complete_step(workspace_id, 'first_contact_added')
+        
         return jsonify({
             'id': contact.id,
             'first_name': contact.first_name,

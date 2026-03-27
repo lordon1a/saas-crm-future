@@ -2340,3 +2340,29 @@ class EntityLink(db.Model):
     def __repr__(self):
         return f'<EntityLink {self.from_entity_type}({self.from_entity_id}) -> {self.to_entity_type}({self.to_entity_id})>'
 
+
+class OnboardingProgress(db.Model):
+    __tablename__ = 'onboarding_progress'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, unique=True)
+    channel_connected = db.Column(db.Boolean, default=False)  # WhatsApp/Telegram
+    profile_setup = db.Column(db.Boolean, default=False)
+    first_contact_added = db.Column(db.Boolean, default=False)
+    first_deal_created = db.Column(db.Boolean, default=False)
+    team_member_invited = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    @property
+    def completion_percent(self):
+        steps = [self.channel_connected, self.profile_setup, self.first_contact_added,
+                 self.first_deal_created, self.team_member_invited]
+        return int(sum(steps) / len(steps) * 100)
+    
+    @property
+    def is_complete(self):
+        return self.completion_percent == 100
+    
+    def __repr__(self):
+        return f'<OnboardingProgress workspace={self.workspace_id} {self.completion_percent}%>'

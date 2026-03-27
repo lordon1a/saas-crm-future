@@ -115,7 +115,8 @@
 
                 if (res.ok) {
                     loginBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Yönlendiriliyor...';
-                    window.location.href = '/';
+                    const data = await res.json();
+                    window.location.href = data.redirect || '/';
                 } else {
                     const data = await res.json();
                     if (data.needs_2fa) {

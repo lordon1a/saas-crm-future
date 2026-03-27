@@ -51,8 +51,14 @@ def handle_webhook():
     try:
         result = WebhookHandler.process_incoming_message(data)
         if result.get('status') == 'success' and result.get('workspace_id'):
+            workspace_id = result.get('workspace_id')
+            
+            # Mark onboarding step as complete (first message = channel connected)
+            from services.onboarding_service import OnboardingService
+            OnboardingService.complete_step(workspace_id, 'channel_connected')
+            
             try:
-                emit_chat_message_event(result.get('message_id'), workspace_id=result.get('workspace_id'))
+                emit_chat_message_event(result.get('message_id'), workspace_id=workspace_id)
             except Exception as emit_exc:
                 logger.warning('Socket emit failed in webhook: %s', emit_exc)
 

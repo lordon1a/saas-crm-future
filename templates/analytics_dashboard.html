@@ -36,6 +36,11 @@
             <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Inbox">
                 <i class="fas fa-inbox text-lg"></i>
             </a>
+            {% if not onboarding_complete %}
+            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
+                <i class="fas fa-rocket text-lg"></i>
+            </a>
+            {% endif %}
             <a href="/analytics-dashboard" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Sales Analytics">
                 <i class="fas fa-chart-bar text-lg"></i>
             </a>

@@ -468,6 +468,10 @@ def create_deal():
         
         deal = PipelineService.create_deal(workspace_id, data)
         
+        # Mark onboarding step as complete
+        from services.onboarding_service import OnboardingService
+        OnboardingService.complete_step(workspace_id, 'first_deal_created')
+        
         return jsonify({
             'id': deal.id,
             'name': deal.name,

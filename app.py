@@ -156,6 +156,7 @@ from routes import custom_fields as custom_fields_route
 from routes import team as team_route
 from routes import assignments as assignments_route
 from routes import docgen as docgen_route
+from routes import onboarding as onboarding_route
 from routes.scheduled_messages import scheduled_messages_bp
 from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
@@ -1377,6 +1378,31 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Custom Objects migration failed (may already exist): {e}")
             
+            # === ONBOARDING PROGRESS ===
+            try:
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS onboarding_progress (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id INTEGER NOT NULL UNIQUE REFERENCES workspaces(id) ON DELETE CASCADE,
+                        channel_connected BOOLEAN DEFAULT FALSE,
+                        first_contact_added BOOLEAN DEFAULT FALSE,
+                        first_deal_created BOOLEAN DEFAULT FALSE,
+                        team_member_invited BOOLEAN DEFAULT FALSE,
+                        completed_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                logger.info("✓ Onboarding progress migration completed")
+            except Exception as e:
+                logger.warning(f"Onboarding progress migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
     
@@ -1544,6 +1570,7 @@ app.register_blueprint(email_hub_bp)
 app.register_blueprint(import_bp)
 app.register_blueprint(team_route.bp)
 app.register_blueprint(assignments_route.bp)
+app.register_blueprint(onboarding_route.bp)
 from routes.super_admin import bp as super_admin_bp
 app.register_blueprint(super_admin_bp)
 from routes import docgen as docgen_route
@@ -1561,21 +1588,31 @@ app.register_blueprint(ai_assistant.bp)
 # Context processor for installed apps (used in sidebar)
 @app.context_processor
 def inject_installed_apps():
-    """Inject installed apps list into all templates for dynamic sidebar"""
+    """Inject installed apps list and onboarding status into all templates for dynamic sidebar"""
     from models_crm import WorkspaceApp
+    
+    result = {"installed_apps": [], "onboarding_complete": False}
     
     if 'user_id' in session and 'workspace_id' in session:
         try:
             workspace_id = session.get('workspace_id')
+            
+            # Load installed apps
             installed = WorkspaceApp.query.filter_by(
                 workspace_id=workspace_id,
                 is_active=True
             ).with_entities(WorkspaceApp.app_slug).all()
-            return {"installed_apps": [r.app_slug for r in installed]}
+            result["installed_apps"] = [r.app_slug for r in installed]
+            
+            # Load onboarding status
+            from services.onboarding_service import OnboardingService
+            progress = OnboardingService.get_progress(workspace_id)
+            result["onboarding_complete"] = progress.is_complete
         except Exception as e:
-            logger.warning(f"Failed to load installed apps: {e}")
-            return {"installed_apps": []}
-    return {"installed_apps": []}
+            logger.warning(f"Failed to load context: {e}")
+            result["onboarding_complete"] = False
+    
+    return result
 
 # CSRF Exemptions for webhooks (external services)
 csrf.exempt(webhook.bp)

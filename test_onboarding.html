@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Onboarding Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <h1>Onboarding Test</h1>
+    <div id="status"></div>
+    <div id="onboarding-trigger" style="position: fixed; right: 80px; bottom: 24px; width: 48px; height: 48px; background: white; color: #7c3aed; border: 2px solid #7c3aed; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-rocket"></i>
+    </div>
+    
+    <script>
+        async function testOnboarding() {
+            try {
+                const res = await fetch('/api/onboarding/progress');
+                const data = await res.json();
+                document.getElementById('status').innerHTML = `
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (e) {
+                document.getElementById('status').innerHTML = `Error: ${e.message}`;
+            }
+        }
+        testOnboarding();
+    </script>
+</body>
+</html>

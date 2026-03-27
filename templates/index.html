@@ -212,9 +212,14 @@
         
         <nav class="flex-1 flex flex-col gap-3 w-full px-3">
             <!-- ① ANA İŞ AKIŞI -->
-            <a href="/" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+            <a href="/" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
                 <i class="fas fa-inbox text-lg"></i>
             </a>
+            {% if not onboarding_complete %}
+            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
+                <i class="fas fa-rocket text-lg"></i>
+            </a>
+            {% endif %}
             <a href="/pipeline" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
                 <i class="fas fa-filter text-lg"></i>
             </a>
@@ -437,20 +442,21 @@
         <!-- Empty State -->
         <div id="emptyChat" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 p-12">
             <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-6 text-brand-500 text-2xl">
-                <i class="fas fa-comment-dots"></i>
+                <i class="fas fa-comments"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Hoş Geldiniz</h2>
-            <p class="text-slate-500 text-center mb-8 text-sm max-w-xs">Sohbetlerinizi yönetmek için sol listeden bir kişi seçin veya kanallarınızı bağlayın.</p>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Henüz konuşma yok</h2>
+            <p class="text-slate-500 text-center mb-8 text-sm max-w-xs">Müşterilerinizle iletişime geçmek için bir kanal bağlayın veya kişi ekleyin.</p>
             
-            <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
-                <a href="/channels" class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-3 hover:border-brand-300 transition-all group">
-                    <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><i class="fab fa-whatsapp"></i></div>
-                    <span class="font-bold text-xs text-slate-700">WhatsApp Bağla</span>
+            <div class="flex gap-3 flex-wrap justify-center">
+                <a href="/channels" class="px-5 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700 transition-all flex items-center gap-2">
+                    <i class="fas fa-plug"></i> Kanal Bağla
                 </a>
-                <a href="/contacts" class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-3 hover:border-brand-300 transition-all group">
-                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><i class="fas fa-user-plus"></i></div>
-                    <span class="font-bold text-xs text-slate-700">Kişi Ekle</span>
+                <a href="/contacts" class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-all flex items-center gap-2">
+                    <i class="fas fa-user-plus"></i> Kişi Ekle
                 </a>
+                <button onclick="loadDemoData(event)" class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-all flex items-center gap-2">
+                    <i class="fas fa-database"></i> Demo Veri Yükle
+                </button>
             </div>
         </div>
 
@@ -638,7 +644,6 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="/static/team-selector.js"></script>
     <script src="/static/app.js"></script>
-    <script src="/static/topbar-global.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Fetch profile role for header
@@ -648,6 +653,41 @@
                 document.getElementById('userRole').textContent = data.role;
             });
         });
+        
+        async function loadDemoData(event) {
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/onboarding/load-demo', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' 
+                    }
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Yüklendi!';
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    btn.innerHTML = data.error || 'Hata';
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                    }, 2000);
+                }
+            } catch (e) {
+                btn.innerHTML = 'Hata oluştu';
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        }
     </script>
     <style>
         @keyframes bounce-in {
@@ -659,6 +699,7 @@
     </style>
     <script src="/static/topbar-global.js"></script>
 {% include '_ai_sidebar.html' %}
+{% include '_onboarding_checklist.html' %}
 </body>
 
 </html>

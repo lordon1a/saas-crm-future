@@ -149,6 +149,10 @@ def invite_member():
             role=role
         )
         
+        # Mark onboarding step as complete
+        from services.onboarding_service import OnboardingService
+        OnboardingService.complete_step(workspace_id, 'team_member_invited')
+        
         return jsonify({
             'status': 'ok',
             'invitation': {

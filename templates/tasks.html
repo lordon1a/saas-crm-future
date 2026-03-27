@@ -38,6 +38,11 @@
             <a href="/" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
                 <i class="fas fa-inbox text-lg"></i>
             </a>
+            {% if not onboarding_complete %}
+            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
+                <i class="fas fa-rocket text-lg"></i>
+            </a>
+            {% endif %}
             <a href="/pipeline" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
                 <i class="fas fa-filter text-lg"></i>
             </a>

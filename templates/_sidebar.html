@@ -7,10 +7,19 @@
 
     <!-- Nav -->
     <nav class="flex-1 flex flex-col gap-1.5 w-full px-3 sidebar-scroll overflow-y-auto">
+        <a href="/dashboard" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Dashboard">
+            <i class="fas fa-th-large text-[17px]"></i>
+        </a>
+        
         <!-- ① ANA İŞ AKIŞI -->
         <a href="/inbox" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Gelen Kutusu">
             <i class="fas fa-inbox text-[17px]"></i>
         </a>
+        {% if not onboarding_complete %}
+        <a href="/setup-guide" class="nav-item w-10 h-10 flex items-center justify-center text-brand-400 hover:text-brand-300 rounded-xl mx-auto bg-brand-500/10 mb-2 animate-pulse" title="Kurulum Rehberi">
+            <i class="fas fa-rocket text-[17px]"></i>
+        </a>
+        {% endif %}
         <a href="/pipeline" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Pipeline">
             <i class="fas fa-filter text-[17px]"></i>
         </a>

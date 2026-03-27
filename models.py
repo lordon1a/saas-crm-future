@@ -30,9 +30,25 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default='owner', nullable=False)  # owner, admin, member, viewer
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_first_login = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    # Personal preferences – Genel
+    avatar_url = db.Column(db.String(255), nullable=True)
+    timezone = db.Column(db.String(100), default='auto')
+    date_format = db.Column(db.String(20), default='DD/MM/YYYY')
+    language = db.Column(db.String(10), default='tr')
+    currency = db.Column(db.String(10), default='TRY')
+    # Personal preferences – Arayüz toggles
+    pref_activity_after_win = db.Column(db.Boolean, default=False)
+    pref_detail_deal = db.Column(db.Boolean, default=True)
+    pref_detail_contact = db.Column(db.Boolean, default=True)
+    pref_detail_org = db.Column(db.Boolean, default=True)
+    pref_us_phone = db.Column(db.Boolean, default=False)
+    pref_email_new_tab = db.Column(db.Boolean, default=False)
+    pref_win_celebration = db.Column(db.Boolean, default=True)
+    pref_auto_labels = db.Column(db.Boolean, default=False)
     messages = db.relationship('Message', backref='sender', lazy=True)
 
 class TeamInvitation(db.Model):

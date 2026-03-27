@@ -56,6 +56,19 @@
         .settings-content::-webkit-scrollbar-thumb:hover {
             background: #cbd5e1;
         }
+        /* Preference toggle switch */
+        .pref-toggle { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
+        .pref-toggle input { opacity:0; width:0; height:0; }
+        .pref-slider { position:absolute; cursor:pointer; inset:0; background:#e2e8f0; border-radius:24px; transition:.2s; }
+        .pref-slider:before { position:absolute; content:''; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.15); }
+        .pref-toggle input:checked + .pref-slider { background:#7c3aed; }
+        .pref-toggle input:checked + .pref-slider:before { transform:translateX(18px); }
+        /* Preference checkbox */
+        .pref-checkbox-wrap { position:relative; width:18px; height:18px; flex-shrink:0; }
+        .pref-cb { opacity:0; position:absolute; inset:0; cursor:pointer; margin:0; }
+        .pref-cb-box { display:block; width:18px; height:18px; border:2px solid #cbd5e1; border-radius:5px; background:white; transition:.15s; pointer-events:none; }
+        .pref-cb:checked ~ .pref-cb-box { background:#7c3aed; border-color:#7c3aed; }
+        .pref-cb:checked ~ .pref-cb-box::after { content:''; display:block; width:5px; height:9px; border:2px solid white; border-top:none; border-left:none; transform:rotate(45deg) translate(2px,-1px); }
     </style>
 </head>
 
@@ -72,6 +85,11 @@
             <a href="/" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
                 <i class="fas fa-inbox text-lg"></i>
             </a>
+            {% if not onboarding_complete %}
+            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
+                <i class="fas fa-rocket text-lg"></i>
+            </a>
+            {% endif %}
             <a href="/pipeline" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
                 <i class="fas fa-filter text-lg"></i>
             </a>
@@ -219,6 +237,9 @@
                     <nav class="space-y-1">
                         <button onclick="switchTab('profile')" id="tab-profile" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-user-circle w-4 text-center group-hover:scale-110 transition-transform"></i> Profilim
+                        </button>
+                        <button onclick="switchTab('preferences')" id="tab-preferences" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-sliders w-4 text-center group-hover:scale-110 transition-transform"></i> Kişisel Tercihler
                         </button>
                     </nav>
                 </div>
@@ -1026,6 +1047,210 @@
                         </section>
                     </div>
 
+                    <!-- ═══ PREFERENCES TAB ═══ -->
+                    <div id="panel-preferences" class="tab-panel space-y-8">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 mb-1">Kişisel Tercihler</h2>
+                            <p class="text-sm text-slate-500">Hesap bilgilerinizi ve arayüz davranışlarını özelleştirin.</p>
+                        </div>
+
+                        <!-- Genel -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Genel</h3>
+                            </div>
+                            <div class="p-8 space-y-8">
+
+                                <!-- Avatar -->
+                                <div class="flex items-start gap-6">
+                                    <div class="relative flex-shrink-0">
+                                        <div id="pref-avatar-circle" class="w-20 h-20 rounded-2xl bg-brand-100 text-brand-600 flex items-center justify-center text-3xl font-bold border border-brand-200 shadow-sm overflow-hidden">
+                                            <span id="pref-avatar-initials">?</span>
+                                            <img id="pref-avatar-img" class="hidden w-full h-full object-cover absolute inset-0" src="" alt="">
+                                        </div>
+                                        <label for="pref-avatar-input" class="absolute -bottom-2 -right-2 w-7 h-7 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-all">
+                                            <i class="fas fa-camera text-[11px]"></i>
+                                        </label>
+                                        <input type="file" id="pref-avatar-input" accept=".jpg,.jpeg,.png,.gif" class="hidden" onchange="handleAvatarUpload(this)">
+                                    </div>
+                                    <div class="pt-1">
+                                        <p class="text-sm font-semibold text-slate-700 mb-1">Profil Resmi</p>
+                                        <p class="text-xs text-slate-400 leading-relaxed">Maks boyut 2 MB. Biçimler: JPG, GIF, PNG.</p>
+                                        <label for="pref-avatar-input" class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 bg-brand-50 rounded-lg cursor-pointer hover:bg-brand-100 transition-all">
+                                            <i class="fas fa-upload text-[10px]"></i> Resim seç
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Name & Email -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Adınız</label>
+                                        <input type="text" id="pref-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">E-posta</label>
+                                        <input type="email" id="pref-email" disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-400 outline-none cursor-not-allowed">
+                                    </div>
+                                </div>
+
+                                <!-- Timezone -->
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Saat Dilimi</label>
+                                    <select id="pref-timezone" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                        <option value="auto">Otomatik (bilgisayar saat dilimini kullan)</option>
+                                        <option value="Europe/Istanbul">Europe/Istanbul (UTC+3)</option>
+                                        <option value="UTC">UTC</option>
+                                        <option value="America/New_York">America/New_York (UTC-5)</option>
+                                        <option value="America/Los_Angeles">America/Los_Angeles (UTC-8)</option>
+                                        <option value="Europe/London">Europe/London (UTC+0)</option>
+                                        <option value="Europe/Berlin">Europe/Berlin (UTC+1)</option>
+                                        <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
+                                    </select>
+                                    <p class="text-xs text-slate-400 ml-1">Saat dilimi bilgisayarınızın saat dilimiyle eşleşecek şekilde otomatik olarak güncellenir.</p>
+                                </div>
+
+                                <!-- Date Format & Language -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Tarih/Sayı Biçimi</label>
+                                        <select id="pref-date-format" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <option value="DD/MM/YYYY">DD/MM/YYYY (27/03/2026)</option>
+                                            <option value="MM/DD/YYYY">MM/DD/YYYY (03/27/2026)</option>
+                                            <option value="YYYY-MM-DD">YYYY-MM-DD (2026-03-27)</option>
+                                            <option value="DD.MM.YYYY">DD.MM.YYYY (27.03.2026)</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Dil</label>
+                                        <select id="pref-language" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <option value="tr">Türkçe</option>
+                                            <option value="en">English</option>
+                                            <option value="de">Deutsch</option>
+                                            <option value="fr">Français</option>
+                                            <option value="es">Español</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Currency -->
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Varsayılan Para Birimi</label>
+                                    <select id="pref-currency" class="w-full md:w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                        <option value="TRY">TRY – Türk Lirası (₺)</option>
+                                        <option value="USD">USD – US Dollar ($)</option>
+                                        <option value="EUR">EUR – Euro (€)</option>
+                                        <option value="GBP">GBP – British Pound (£)</option>
+                                        <option value="AED">AED – UAE Dirham (د.إ)</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex justify-end pt-2">
+                                    <button onclick="savePreferencesGeneral()" class="px-8 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
+                                        Kaydet
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Arayüz -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Arayüz</h3>
+                            </div>
+                            <div class="divide-y divide-slate-50">
+
+                                <div class="px-6 py-4 flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">Anlaşmayı kazandıktan sonra etkinlik ekleme modunu gösterin</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">Bir deal kazanıldığında takip etkinliği ekleme formu açılır.</p>
+                                    </div>
+                                    <label class="pref-toggle flex-shrink-0">
+                                        <input type="checkbox" id="pref-activity-after-win" onchange="savePrefToggle('pref_activity_after_win', this.checked)">
+                                        <span class="pref-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="px-6 py-4">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-700">Yeni bir öge oluşturduktan sonra detaylar görünümünü aç</p>
+                                            <p class="text-xs text-slate-400 mt-0.5">Aşağıdaki öge türleri için ayrı ayrı ayarlayabilirsiniz.</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 ml-4 space-y-3">
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <div class="pref-checkbox-wrap">
+                                                <input type="checkbox" id="pref-detail-deal" class="pref-cb" onchange="savePrefToggle('pref_detail_deal', this.checked)">
+                                                <span class="pref-cb-box"></span>
+                                            </div>
+                                            <span class="text-sm text-slate-600 font-medium">Müşteri adayı / Anlaşma</span>
+                                        </label>
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <div class="pref-checkbox-wrap">
+                                                <input type="checkbox" id="pref-detail-contact" class="pref-cb" onchange="savePrefToggle('pref_detail_contact', this.checked)">
+                                                <span class="pref-cb-box"></span>
+                                            </div>
+                                            <span class="text-sm text-slate-600 font-medium">Kişi</span>
+                                        </label>
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <div class="pref-checkbox-wrap">
+                                                <input type="checkbox" id="pref-detail-org" class="pref-cb" onchange="savePrefToggle('pref_detail_org', this.checked)">
+                                                <span class="pref-cb-box"></span>
+                                            </div>
+                                            <span class="text-sm text-slate-600 font-medium">Organizasyon</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="px-6 py-4 flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">Telefon numaralarını ABD telefon numarası biçimine dönüştür</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">Numaralar ABD formatında (+1 xxx-xxx-xxxx) görüntülenir.</p>
+                                    </div>
+                                    <label class="pref-toggle flex-shrink-0">
+                                        <input type="checkbox" id="pref-us-phone" onchange="savePrefToggle('pref_us_phone', this.checked)">
+                                        <span class="pref-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="px-6 py-4 flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">CRM içindeki e-posta bağlantılarına tıklandığında yeni sekme aç</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">E-posta linkleri yeni bir tarayıcı sekmesinde açılır.</p>
+                                    </div>
+                                    <label class="pref-toggle flex-shrink-0">
+                                        <input type="checkbox" id="pref-email-new-tab" onchange="savePrefToggle('pref_email_new_tab', this.checked)">
+                                        <span class="pref-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="px-6 py-4 flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">Her kazanılan anlaşmadan sonra kutlama animasyonu göster</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">Deal kazanıldığında confetti animasyonu oynatılır.</p>
+                                    </div>
+                                    <label class="pref-toggle flex-shrink-0">
+                                        <input type="checkbox" id="pref-win-celebration" onchange="savePrefToggle('pref_win_celebration', this.checked)">
+                                        <span class="pref-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="px-6 py-4 flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">"Müşteri adayını" ve "anlaşmayı" otomatik olarak müşteri adayı/anlaşma başlıklarına ekleyin</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">Yeni oluşturulan ögelerin başlığına otomatik etiket eklenir.</p>
+                                    </div>
+                                    <label class="pref-toggle flex-shrink-0">
+                                        <input type="checkbox" id="pref-auto-labels" onchange="savePrefToggle('pref_auto_labels', this.checked)">
+                                        <span class="pref-slider"></span>
+                                    </label>
+                                </div>
+
+                            </div>
+                        </section>
+                    </div>
+
                     <!-- ═══ GOOGLE WORKSPACE TAB ═══ -->
                     <div id="panel-google" class="tab-panel space-y-8">
                         <div>
@@ -1520,6 +1745,7 @@
                 document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
                 document.getElementById('tab-' + name).classList.add('active');
                 document.getElementById('panel-' + name).classList.add('active');
+                history.replaceState(null, '', '/settings?tab=' + name);
                 
                 if (name === 'branding') loadPortalBranding();
                 if (name === 'webhooks') loadWebhooks();
@@ -1528,6 +1754,7 @@
                 if (name === 'replies') loadReplies();
                 if (name === 'custom-fields') loadCustomFields();
                 if (name === 'profile') loadProfile();
+                if (name === 'preferences') loadPreferences();
                 if (name === 'google') loadGoogleStatus();
                 if (name === 'security') loadSecurityTab();
             }
@@ -2827,10 +3054,13 @@
                         window.history.replaceState({}, document.title, window.location.pathname);
                     }
                     
-                    // Auto-load if coming from a specific hash
+                    // Auto-load if coming from a specific tab param or hash
+                    const tabParam = urlParams.get('tab');
                     const hash = window.location.hash.replace('#', '');
-                    if (['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'google', 'security', 'ai-settings'].includes(hash)) {
-                        switchTab(hash);
+                    const validTabs = ['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'preferences', 'google', 'security', 'ai-settings'];
+                    const targetTab = tabParam || hash;
+                    if (validTabs.includes(targetTab)) {
+                        switchTab(targetTab);
                     }
                 } catch (e) {
                     console.error('Init error:', e);
@@ -2977,6 +3207,117 @@
                 if (errorCount > 0) {
                     showToast(errorCount + ' API anahtarı silinemedi', 'error');
                 }
+            }
+
+            // ═══ PERSONAL PREFERENCES ═══
+            async function loadPreferences() {
+                try {
+                    const data = await api('/api/settings/preferences');
+                    document.getElementById('pref-name').value = data.name || '';
+                    document.getElementById('pref-email').value = data.email || '';
+
+                    // Avatar
+                    const initials = (data.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+                    document.getElementById('pref-avatar-initials').textContent = initials;
+                    if (data.avatar_url) {
+                        const img = document.getElementById('pref-avatar-img');
+                        img.src = data.avatar_url;
+                        img.classList.remove('hidden');
+                        document.getElementById('pref-avatar-initials').classList.add('hidden');
+                    }
+
+                    setSelectValue('pref-timezone', data.timezone || 'auto');
+                    setSelectValue('pref-date-format', data.date_format || 'DD/MM/YYYY');
+                    setSelectValue('pref-language', data.language || 'tr');
+                    setSelectValue('pref-currency', data.currency || 'TRY');
+
+                    document.getElementById('pref-activity-after-win').checked = !!data.pref_activity_after_win;
+                    document.getElementById('pref-detail-deal').checked = data.pref_detail_deal !== false;
+                    document.getElementById('pref-detail-contact').checked = data.pref_detail_contact !== false;
+                    document.getElementById('pref-detail-org').checked = data.pref_detail_org !== false;
+                    document.getElementById('pref-us-phone').checked = !!data.pref_us_phone;
+                    document.getElementById('pref-email-new-tab').checked = !!data.pref_email_new_tab;
+                    document.getElementById('pref-win-celebration').checked = data.pref_win_celebration !== false;
+                    document.getElementById('pref-auto-labels').checked = !!data.pref_auto_labels;
+                } catch (e) {
+                    showToast('Tercihler yüklenemedi', 'error');
+                }
+            }
+
+            function setSelectValue(id, val) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                for (let opt of el.options) {
+                    if (opt.value === val) { el.value = val; return; }
+                }
+            }
+
+            async function savePreferencesGeneral() {
+                const name = document.getElementById('pref-name').value.trim();
+                if (!name) { showToast('Ad boş bırakılamaz', 'error'); return; }
+                try {
+                    await api('/api/settings/preferences', 'PUT', {
+                        name,
+                        timezone: document.getElementById('pref-timezone').value,
+                        date_format: document.getElementById('pref-date-format').value,
+                        language: document.getElementById('pref-language').value,
+                        currency: document.getElementById('pref-currency').value,
+                    });
+                    showToast('Tercihler kaydedildi');
+                    // refresh topbar name
+                    const nameEl = document.getElementById('userName');
+                    if (nameEl) nameEl.textContent = name;
+                } catch (e) {
+                    showToast('Kayıt başarısız', 'error');
+                }
+            }
+
+            async function savePrefToggle(field, value) {
+                try {
+                    await api('/api/settings/preferences', 'PUT', { [field]: value });
+                } catch (e) {
+                    showToast('Ayar kaydedilemedi', 'error');
+                }
+            }
+
+            function handleAvatarUpload(input) {
+                const file = input.files[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast('Dosya 2 MB sınırını aşıyor', 'error');
+                    input.value = '';
+                    return;
+                }
+                // Show local preview immediately
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('pref-avatar-img');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById('pref-avatar-initials').classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+                // Upload to server
+                const fd = new FormData();
+                fd.append('avatar', file);
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                fetch('/api/settings/avatar', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf },
+                    body: fd
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Profil resmi güncellendi');
+                        // Bust cache by adding timestamp
+                        const img = document.getElementById('pref-avatar-img');
+                        img.src = data.url + '?t=' + Date.now();
+                    } else {
+                        showToast(data.error || 'Resim kaydedilemedi', 'error');
+                    }
+                })
+                .catch(() => showToast('Resim yüklenemedi', 'error'));
             }
         </script>
         <script src="/static/custom-fields.js"></script>

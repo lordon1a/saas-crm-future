@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <title>Kurulum Rehberi - CRM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='search-logger.js') }}"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+                            400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+                            800: '#5b21b6', 900: '#4c1d95',
+                        },
+                        ai: {
+                            50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+        .sidebar-nav-btn { transition: all 0.2s ease; }
+        .sidebar-nav-btn:hover { transform: scale(1.05); }
+
+        /* Step list item */
+        .step-item { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); cursor: pointer; }
+        .step-item:hover { background: #f8fafc; }
+        .step-item.active { background: #f5f3ff; border-right: 3px solid #7c3aed; }
+        .step-item.active .step-title { color: #5b21b6; }
+
+        /* Progress ring */
+        .ring-track { fill: none; stroke: #f1f5f9; stroke-width: 8; }
+        .ring-progress { fill: none; stroke-width: 8; stroke-linecap: round;
+            transform: rotate(-90deg); transform-origin: 50% 50%;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        /* Detail panel animations */
+        .detail-panel { animation: slideIn 0.3s cubic-bezier(0.4,0,0.2,1); }
+        @keyframes slideIn { from { opacity:0; transform: translateX(16px); } to { opacity:1; transform: translateX(0); } }
+
+        /* Step number bubble */
+        .step-num { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+            font-size:13px; font-weight:700; flex-shrink:0; transition: all 0.3s ease; }
+        .step-num.done { background:#10b981; color:white; }
+        .step-num.active { background:#7c3aed; color:white; box-shadow:0 0 0 4px rgba(124,58,237,0.15); }
+        .step-num.pending { background:#f1f5f9; color:#94a3b8; }
+
+        /* CTA Button */
+        .cta-btn { background: linear-gradient(135deg,#7c3aed,#6d28d9);
+            transition: all 0.2s; box-shadow: 0 8px 24px -4px rgba(124,58,237,0.4); }
+        .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -4px rgba(124,58,237,0.5); }
+
+        /* Illustration area */
+        .illus-bg { background: linear-gradient(135deg, var(--illus-from), var(--illus-to)); border-radius: 20px; }
+
+        /* Scale-in overlay */
+        @keyframes scale-in { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }
+        .animate-scale-in { animation: scale-in 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+
+        /* Tip box */
+        .tip-box { background:linear-gradient(135deg,#fefce8,#fef9c3); border:1px solid #fde68a; border-radius:12px; padding:14px 16px; }
+
+        /* Checklist item */
+        .check-item { display:flex; align-items:flex-start; gap:10px; padding:8px 0; }
+        .check-dot { width:20px; height:20px; border-radius:50%; background:#ede9fe; color:#7c3aed;
+            display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; margin-top:1px; }
+
+        /* Demo data badge */
+        .demo-btn { border:1px dashed #c4b5fd; background:#faf5ff; color:#7c3aed; border-radius:10px;
+            padding:10px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;
+            display:flex; align-items:center; gap:8px; width:100%; }
+        .demo-btn:hover { background:#f5f3ff; border-color:#a78bfa; }
+
+        .fade-in { animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+
+    <!-- App Sidebar -->
+    <aside class="w-16 h-screen bg-white border-r border-slate-200 flex flex-col items-center pt-6 z-30 relative shadow-sm flex-shrink-0">
+        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
+            <span class="text-2xl">🐧</span>
+        </a>
+        <nav class="flex-1 flex flex-col gap-3 w-full px-3">
+            <a href="/" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu"><i class="fas fa-inbox text-lg"></i></a>
+            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi"><i class="fas fa-rocket text-lg"></i></a>
+            <a href="/pipeline" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline"><i class="fas fa-filter text-lg"></i></a>
+            <a href="/contacts" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler"><i class="fas fa-address-book text-lg"></i></a>
+            <a href="/companies" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler"><i class="fas fa-building text-lg"></i></a>
+            <div class="w-full h-px bg-slate-200 my-1"></div>
+            <a href="/tasks" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler"><i class="fas fa-list-check text-lg"></i></a>
+            <a href="/analytics" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar"><i class="fas fa-chart-line text-lg"></i></a>
+            <a href="/documents" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar"><i class="fas fa-file-lines text-lg"></i></a>
+            <div class="w-full h-px bg-slate-200 my-1"></div>
+            <a href="/automation" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon"><i class="fas fa-robot text-lg"></i></a>
+            <a href="/channels" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Entegrasyonlar"><i class="fas fa-plug text-lg"></i></a>
+            <a href="/broadcast" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj"><i class="fas fa-bullhorn text-lg"></i></a>
+        </nav>
+        <div class="mt-auto flex flex-col gap-3 w-full px-3 pb-4 border-t border-slate-200 pt-3">
+            <a href="/settings" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar"><i class="fas fa-cog text-lg"></i></a>
+            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış"><i class="fas fa-sign-out-alt text-lg"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Topbar -->
+        <header class="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
+            <div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(420px,1fr)_360px] items-center gap-4">
+                <div class="hidden lg:block"></div>
+                <div class="relative w-full max-w-3xl justify-self-center">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" data-topbar-search placeholder="CRM'de ara" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                </div>
+                <div class="flex items-center gap-2 justify-self-end">
+                    <button class="hidden md:flex w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition-all items-center justify-center" title="Yardım"><i class="fas fa-circle-question text-sm"></i></button>
+                    <div class="relative">
+                        <button data-topbar-menu-button class="h-10 pl-2.5 pr-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <div data-topbar-avatar class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">U</div>
+                            <span data-topbar-name class="hidden md:block text-xs font-semibold text-gray-700 max-w-[80px] truncate">Kullanıcı</span>
+                            <i class="fas fa-chevron-down text-[10px] text-gray-500"></i>
+                        </button>
+                        <div data-topbar-menu class="hidden absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
+                            <div data-topbar-menu-content></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Split Panel Content -->
+        <div class="flex-1 flex overflow-hidden">
+
+            <!-- LEFT PANEL: Step Navigation -->
+            <div class="w-[380px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
+
+                <!-- Welcome Header -->
+                <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+                    <p class="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Başlangıç Rehberi</p>
+                    <h2 class="text-xl font-extrabold text-slate-900 leading-tight" id="welcome-heading">Hoş geldin! 👋</h2>
+                    <p class="text-sm text-slate-500 mt-1">CRM'ini dakikalar içinde kullanmaya başla.</p>
+                </div>
+
+                <!-- Progress Ring -->
+                <div class="px-6 py-5 border-b border-slate-100">
+                    <div class="flex items-center gap-5">
+                        <div class="relative flex-shrink-0">
+                            <svg width="72" height="72" viewBox="0 0 72 72">
+                                <circle class="ring-track" cx="36" cy="36" r="30"/>
+                                <circle id="ringProgress" class="ring-progress" cx="36" cy="36" r="30"
+                                    stroke="url(#ringGrad)"
+                                    stroke-dasharray="188.5"
+                                    stroke-dashoffset="188.5"/>
+                                <defs>
+                                    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#8b5cf6"/>
+                                        <stop offset="100%" stop-color="#7c3aed"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="ringPercent" class="text-base font-extrabold text-slate-800">0%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-baseline gap-1">
+                                <span id="doneCount" class="text-3xl font-extrabold text-slate-900">0</span>
+                                <span id="totalCount" class="text-lg font-semibold text-slate-400">/5</span>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-0.5">adım tamamlandı</p>
+                            <div id="allDoneBadge" class="hidden mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+                                <i class="fas fa-party-horn"></i> Tamamlandı!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Steps List -->
+                <div id="stepsList" class="flex-1 overflow-y-auto">
+                    <div class="p-6 text-center text-slate-400">
+                        <i class="fas fa-circle-notch fa-spin text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Bottom Actions -->
+                <div class="px-4 py-4 border-t border-slate-100 space-y-2">
+                    <button onclick="loadDemoData()" id="demoBtn" class="demo-btn">
+                        <i class="fas fa-magic-wand-sparkles"></i>
+                        <span>Örnek veri yükle</span>
+                        <span class="ml-auto text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full font-bold">DEMO</span>
+                    </button>
+                    <button onclick="confirmDismiss()" class="w-full text-center text-xs text-slate-400 hover:text-slate-600 py-1 transition-colors">
+                        Rehberi kapat ve atla →
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Step Detail -->
+            <div class="flex-1 overflow-y-auto bg-slate-50">
+                <div id="detailPanel" class="h-full flex items-center justify-center p-8">
+                    <div class="text-center text-slate-400">
+                        <i class="fas fa-circle-notch fa-spin text-3xl mb-3"></i>
+                        <p class="text-sm">Yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Completion Overlay -->
+    <div id="completionOverlay" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center">
+        <div class="bg-white rounded-3xl p-10 max-w-md w-full mx-4 text-center shadow-2xl animate-scale-in">
+            <div class="text-7xl mb-4">🎉</div>
+            <h2 class="text-2xl font-extrabold text-slate-900 mb-2">Kurulum Tamamlandı!</h2>
+            <p class="text-slate-500 mb-8 leading-relaxed">Harika iş! CRM'in tam anlamıyla kullanıma hazır. Artık müşterilerini yönetmeye başlayabilirsin.</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="closeCelebration(); window.location.href='/';" class="cta-btn w-full px-6 py-3.5 text-white rounded-xl font-bold text-base">
+                    <i class="fas fa-rocket mr-2"></i> CRM'e Geç
+                </button>
+                <button onclick="closeCelebration()" class="text-slate-400 hover:text-slate-600 text-sm font-medium py-1 transition-colors">Sayfada kal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const STEP_DETAILS = {
+        profile_setup: {
+            gradient: ['#dbeafe','#ede9fe'], icon: 'fa-user-circle', iconColor: '#6366f1',
+            badge: 'Hızlı', badgeColor: 'blue',
+            bullets: ['Görünen adını ve profil fotoğrafını ayarla','Rol ve ünvanını belirle','İletişim bilgilerini güncelle'],
+            tip: 'Eksiksiz bir profil, müşterilerin sana olan güvenini artırır ve ekip içi iletişimi kolaylaştırır.'
+        },
+        channel_connected: {
+            gradient: ['#dcfce7','#d1fae5'], icon: 'fa-plug-circle-check', iconColor: '#10b981',
+            badge: 'Kritik', badgeColor: 'green',
+            bullets: ['WhatsApp Business veya Telegram hesabını bağla','Otomatik yanıtları etkinleştir','Mesajları CRM üzerinden yönet'],
+            tip: 'WhatsApp 2 milyar+ kullanıcısıyla birincil iletişim kanalın. Bağlantı sonrası tüm mesajlar otomatik kaydedilir.'
+        },
+        first_contact_added: {
+            gradient: ['#ede9fe','#fce7f3'], icon: 'fa-user-plus', iconColor: '#8b5cf6',
+            badge: 'Temel', badgeColor: 'purple',
+            bullets: ['Müşteri adı, telefon ve e-posta bilgilerini gir','Etiket ve segment ekle','CSV ile toplu kişi içe aktar'],
+            tip: 'İpucu: CSV dosyası ile yüzlerce kişiyi tek seferde içe aktarabilirsin.'
+        },
+        import_contacts: {
+            gradient: ['#f0fdf4','#dcfce7'], icon: 'fa-file-import', iconColor: '#16a34a',
+            badge: 'Zaman Kazandır', badgeColor: 'green',
+            bullets: ['CSV veya Excel dosyası seç','Sütunları eşleştir','Kişileri tek tıkla içe aktar'],
+            tip: 'Binlerce kişiyi dakikalar içinde aktarabilirsin. Desteklenen format: .csv, .xlsx'
+        },
+        first_deal_created: {
+            gradient: ['#fef3c7','#fde68a'], icon: 'fa-handshake', iconColor: '#d97706',
+            badge: 'Gelir', badgeColor: 'amber',
+            bullets: ['Satış fırsatı adı ve değerini belirle','Pipeline aşamasına yerleştir','Sorumlu kişi ve kapanış tarihi ata'],
+            tip: 'Deal takibi, satış sürecini görselleştirir ve gelir tahminini %40 daha doğru hale getirir.'
+        },
+        setup_pipeline: {
+            gradient: ['#fdf4ff','#fae8ff'], icon: 'fa-filter', iconColor: '#a855f7',
+            badge: 'Özelleştir', badgeColor: 'purple',
+            bullets: ["Pipeline aşamalarını iş sürecine göre yeniden adlandır","Renk ve sıra düzenle","Çoklu pipeline oluştur"],
+            tip: "Pipeline'ını iş sürecine göre özelleştirmek, satışların hangi aşamada olduğunu anında görmen sağlar."
+        },
+        team_member_invited: {
+            gradient: ['#fce7f3','#ffe4e6'], icon: 'fa-users', iconColor: '#ec4899',
+            badge: 'Büyüme', badgeColor: 'pink',
+            bullets: ['E-posta ile ekip üyesi davet et','Rol ve yetki seviyesi belirle','Ortak deal ve kişilerde iş birliği yap'],
+            tip: 'Birden fazla üyeli ekipler ortalama %30 daha fazla anlaşma kapatır.'
+        },
+        send_broadcast: {
+            gradient: ['#fff7ed','#ffedd5'], icon: 'fa-bullhorn', iconColor: '#ea580c',
+            badge: 'İletişim', badgeColor: 'amber',
+            bullets: ['Hedef kişi segmenti seç','Mesaj şablonu oluştur veya seç','Gönderim zamanı ayarla'],
+            tip: 'Toplu mesajlarda kişiselleştirme kullan (isim, şirket) — açılma oranı 3x artar.'
+        },
+        setup_automation: {
+            gradient: ['#eff6ff','#dbeafe'], icon: 'fa-robot', iconColor: '#3b82f6',
+            badge: 'Otomasyon', badgeColor: 'blue',
+            bullets: ['Tetikleyici olay seç (yeni mesaj, deal kazanıldı vb.)','Otomatik eylem tanımla','Koşul ve filtre ekle'],
+            tip: 'Otomasyon ile manuel işlemleri ortadan kaldırarak haftada ortalama 5 saat kazanabilirsin.'
+        },
+        view_analytics: {
+            gradient: ['#f0fdf4','#dcfce7'], icon: 'fa-chart-line', iconColor: '#16a34a',
+            badge: 'Analitik', badgeColor: 'green',
+            bullets: ['Konuşma ve mesaj istatistiklerini gör','Satış hunisi raporunu incele','Ekip performansını karşılaştır'],
+            tip: 'Verilere dayalı kararlar, sezgisel kararlardan %6x daha fazla gelir artışı sağlar.'
+        }
+    };
+
+    const BADGE_COLORS = {
+        blue:   { bg:'#dbeafe', text:'#1d4ed8' },
+        green:  { bg:'#dcfce7', text:'#166534' },
+        purple: { bg:'#ede9fe', text:'#6d28d9' },
+        amber:  { bg:'#fef3c7', text:'#92400e' },
+        pink:   { bg:'#fce7f3', text:'#9d174d' },
+    };
+
+    // localStorage key for untracked step completion
+    const LS_KEY = 'crm_onboarding_done';
+    function getLocalDone() {
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+    }
+    function setLocalDone(key) {
+        const d = getLocalDone(); d[key] = true;
+        localStorage.setItem(LS_KEY, JSON.stringify(d));
+    }
+
+    let groupsData = [];
+    let stepsMap = {};      // key -> step object (with completed merged)
+    let activeKey = null;
+    let lastPercent = 0;
+    let celebrationShown = false;
+    let collapsedGroups = {};
+
+    async function loadSteps() {
+        const res = await fetch('/api/onboarding/progress');
+        const data = await res.json();
+
+        const localDone = getLocalDone();
+
+        // Merge untracked completions from localStorage
+        groupsData = (data.groups || []).map(g => ({
+            ...g,
+            steps: g.steps.map(s => ({
+                ...s,
+                completed: s.tracked ? s.completed : (localDone[s.key] || false)
+            }))
+        }));
+        // Recalculate done count per group
+        groupsData.forEach(g => {
+            g.done = g.steps.filter(s => s.completed).length;
+        });
+
+        // Flat lookup map
+        stepsMap = {};
+        groupsData.forEach(g => g.steps.forEach(s => { stepsMap[s.key] = s; }));
+
+        updateRing(data.percent);
+
+        // Total tracked done / total (for ring, use server percent)
+        const allSteps = groupsData.flatMap(g => g.steps);
+        const totalDone = allSteps.filter(s => s.completed).length;
+        document.getElementById('doneCount').textContent = totalDone;
+        document.getElementById('totalCount').textContent = '/' + allSteps.length;
+        document.getElementById('allDoneBadge').classList.toggle('hidden', !data.is_complete);
+
+        if (data.percent > lastPercent && lastPercent > 0) popConfetti();
+        lastPercent = data.percent;
+
+        if (data.is_complete && !celebrationShown) {
+            celebrationShown = true;
+            setTimeout(showCompletionCelebration, 600);
+        }
+
+        renderGroupsList();
+
+        if (!activeKey) {
+            const firstIncomplete = allSteps.find(s => !s.completed);
+            selectStep((firstIncomplete || allSteps[0])?.key);
+        } else {
+            renderDetail(stepsMap[activeKey]);
+        }
+    }
+
+    function updateRing(percent) {
+        const circ = 188.5;
+        document.getElementById('ringProgress').style.strokeDashoffset = circ - (circ * percent / 100);
+        document.getElementById('ringPercent').textContent = percent + '%';
+    }
+
+    function toggleGroup(groupKey) {
+        collapsedGroups[groupKey] = !collapsedGroups[groupKey];
+        renderGroupsList();
+    }
+
+    function renderGroupsList() {
+        const el = document.getElementById('stepsList');
+        let html = '';
+        groupsData.forEach(group => {
+            const isCollapsed = collapsedGroups[group.key];
+            const allDone = group.done === group.total;
+            const progressPct = group.total > 0 ? Math.round(group.done / group.total * 100) : 0;
+            html += `
+            <div class="border-b border-slate-100">
+                <!-- Group Header -->
+                <div class="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors select-none"
+                     onclick="toggleGroup('${group.key}')">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
+                        ${allDone ? 'bg-green-100 text-green-600' : 'bg-brand-50 text-brand-600'}">
+                        <i class="fas ${allDone ? 'fa-check' : group.icon} text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-bold ${allDone ? 'text-slate-400' : 'text-slate-700'} truncate">${group.title}</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <div class="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-700 ${allDone ? 'bg-green-400' : 'bg-brand-500'}"
+                                     style="width:${progressPct}%"></div>
+                            </div>
+                            <span class="text-[10px] font-semibold ${allDone ? 'text-green-500' : 'text-slate-400'} flex-shrink-0">${group.done}/${group.total}</span>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'} text-[10px] text-slate-300 flex-shrink-0"></i>
+                </div>
+                <!-- Steps -->
+                ${isCollapsed ? '' : group.steps.map(step => {
+                    const isActive = step.key === activeKey;
+                    const numClass = step.completed ? 'done' : (isActive ? 'active' : 'pending');
+                    return `
+                    <div class="step-item pl-14 pr-5 py-3 flex items-center gap-3 ${isActive ? 'active' : ''}"
+                         onclick="selectStep('${step.key}')">
+                        <div class="step-num ${numClass}" style="width:24px;height:24px;font-size:11px;">
+                            ${step.completed ? '<i class="fas fa-check" style="font-size:9px"></i>' : ''}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="step-title text-xs font-semibold truncate
+                                ${step.completed ? 'text-slate-400 line-through' : isActive ? 'text-brand-700' : 'text-slate-700'}">
+                                ${step.title}
+                            </div>
+                            <div class="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                <i class="far fa-clock"></i> ${step.estimated_time || '2 dk'}
+                                ${!step.tracked ? '<span class="text-brand-400 ml-1">Opsiyonel</span>' : ''}
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-[9px] ${isActive ? 'text-brand-300' : 'text-slate-200'}"></i>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        });
+        el.innerHTML = html;
+    }
+
+    function selectStep(key) {
+        if (!key) return;
+        activeKey = key;
+        renderGroupsList();
+        renderDetail(stepsMap[key]);
+    }
+
+    function renderDetail(step) {
+        if (!step) return;
+        const d = STEP_DETAILS[step.key] || {};
+        const bc = BADGE_COLORS[d.badgeColor] || BADGE_COLORS.purple;
+        const fromColor = (d.gradient || ['#ede9fe','#ddd6fe'])[0];
+        const toColor   = (d.gradient || ['#ede9fe','#ddd6fe'])[1];
+        const bullets = (d.bullets || []).map(b =>
+            `<div class="check-item"><div class="check-dot"><i class="fas fa-check text-[9px]"></i></div>
+             <p class="text-sm text-slate-700 leading-relaxed">${b}</p></div>`).join('');
+
+        document.getElementById('detailPanel').innerHTML = `
+        <div class="detail-panel max-w-2xl w-full mx-auto py-8 px-6">
+            <div class="rounded-2xl p-8 mb-6 flex items-center justify-between overflow-hidden relative"
+                 style="background:linear-gradient(135deg,${fromColor},${toColor});">
+                <div class="relative z-10">
+                    <span class="inline-block text-xs font-bold px-3 py-1 rounded-full mb-3"
+                          style="background:${bc.bg};color:${bc.text};">${d.badge || (step.tracked ? 'Temel' : 'Opsiyonel')}</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900 mb-2 max-w-xs leading-tight">${step.title}</h2>
+                    <p class="text-sm text-slate-600 max-w-xs leading-relaxed">${step.description}</p>
+                </div>
+                <div class="flex-shrink-0 w-28 h-28 flex items-center justify-center">
+                    <div class="w-24 h-24 rounded-2xl bg-white/50 flex items-center justify-center shadow-lg">
+                        <i class="fas ${d.icon || step.icon || 'fa-star'} text-5xl" style="color:${d.iconColor||'#7c3aed'};"></i>
+                    </div>
+                </div>
+            </div>
+            ${step.completed ? `
+            <div class="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-5">
+                <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-check text-white text-sm"></i>
+                </div>
+                <div><p class="text-sm font-bold text-green-800">Bu adım tamamlandı</p>
+                     <p class="text-xs text-green-600">Harika iş! Bir sonraki adıma geçebilirsin.</p></div>
+            </div>` : ''}
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-5">
+                <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-list-check text-brand-500"></i> Bu adımda neler yapacaksın?
+                </h3>
+                <div class="divide-y divide-slate-50">${bullets}</div>
+            </div>
+            ${!step.completed ? `
+            <div class="flex gap-3 mb-5">
+                <a href="${step.link}" class="cta-btn flex-1 flex items-center justify-center gap-2 px-5 py-3 text-white rounded-xl font-bold text-sm">
+                    <i class="fas ${d.icon||'fa-arrow-right'} text-sm"></i> ${step.action_label||'Hemen Başla'}
+                </a>
+                <button onclick="markStepComplete('${step.key}')"
+                    class="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold text-sm transition-all">
+                    <i class="fas fa-check-circle text-green-500"></i> Tamamladım
+                </button>
+            </div>` : `
+            <div class="flex gap-3 mb-5">
+                <a href="${step.link}" class="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-semibold text-sm transition-all">
+                    <i class="fas fa-arrow-right text-sm"></i> Tekrar ziyaret et
+                </a>
+            </div>`}
+            ${d.tip ? `<div class="tip-box flex items-start gap-3">
+                <div class="text-xl flex-shrink-0">💡</div>
+                <p class="text-sm text-amber-800 leading-relaxed"><strong>İpucu:</strong> ${d.tip}</p>
+            </div>` : ''}
+        </div>`;
+    }
+
+    async function markStepComplete(key) {
+        const btn = event.target.closest('button');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-1"></i> Kaydediliyor...'; }
+        const res = await fetch(`/api/onboarding/complete/${key}`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+        });
+        const data = await res.json();
+        if (data.untracked) setLocalDone(key);
+        popConfetti();
+        await loadSteps();
+    }
+
+    async function loadDemoData() {
+        const btn = document.getElementById('demoBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> <span>Yükleniyor...</span>';
+        const res = await fetch('/api/onboarding/load-demo', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            btn.innerHTML = '<i class="fas fa-check-circle text-green-500"></i> <span>Yüklendi!</span>';
+            await loadSteps();
+        } else {
+            btn.innerHTML = '<i class="fas fa-magic-wand-sparkles"></i> <span>' + (data.error || 'Hata') + '</span>';
+            btn.disabled = false;
+        }
+    }
+
+    async function confirmDismiss() {
+        if (!confirm('Kurulum rehberini kapatmak istediğine emin misin? İstediğin zaman sol menüden tekrar açabilirsin.')) return;
+        await fetch('/api/onboarding/dismiss', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+        });
+        window.location.href = '/';
+    }
+
+    function showCompletionCelebration() {
+        document.getElementById('completionOverlay').classList.remove('hidden');
+        popConfetti(true);
+    }
+    function closeCelebration() {
+        document.getElementById('completionOverlay').classList.add('hidden');
+    }
+    function popConfetti(big = false) {
+        confetti({ particleCount: big ? 250 : 100, spread: big ? 110 : 65,
+            origin: { y: 0.6 }, colors: ['#8b5cf6','#7c3aed','#10b981','#f59e0b','#3b82f6'] });
+    }
+
+    async function loadUserName() {
+        try {
+            const res = await fetch('/api/settings/topbar');
+            const data = await res.json();
+            const name = data.name || data.user?.name || '';
+            if (name) document.getElementById('welcome-heading').textContent = `Hoş geldin, ${name.split(' ')[0]}! 👋`;
+        } catch(e) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { loadSteps(); loadUserName(); });
+    </script>
+
+    <script src="{{ url_for('static', filename='topbar-global.js') }}"></script>
+</body>
+</html>

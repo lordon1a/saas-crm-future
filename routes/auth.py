@@ -109,7 +109,13 @@ def login():
         except Exception as exc:
             logger.error('Session activity write failed during login for user %s: %s', user.id, exc)
         AuditService.log_event(user.workspace_id, user.id, 'auth.login', 'user', entity_id=user.id)
-        return jsonify({'status': 'ok', 'name': user.name, 'role': user.role}), 200
+        
+        # Check if first login - redirect to setup guide
+        redirect_url = '/'
+        if user.is_first_login:
+            redirect_url = '/setup-guide'
+        
+        return jsonify({'status': 'ok', 'name': user.name, 'role': user.role, 'redirect': redirect_url}), 200
     except Exception as exc:
         logger.exception('Unexpected login error: %s', exc)
         db.session.rollback()
@@ -190,7 +196,7 @@ def register():
             timeout_minutes=timeout_minutes,
         )
 
-        return jsonify({'status': 'ok', 'redirect': '/'}), 201
+        return jsonify({'status': 'ok', 'redirect': '/setup-guide'}), 201
 
     except Exception as e:
         db.session.rollback()

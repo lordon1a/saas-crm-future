@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, current_app
 from models import db, Workspace, User, MessageTemplate
 from models_crm import PortalBranding, AuditLog, WorkspacePreference
 from services.auth_manager import AuthManager
@@ -842,6 +842,12 @@ def update_profile():
     if 'name' in data and data['name'].strip():
         user.name = data['name'].strip()
         db.session.commit()
+        
+        # Mark onboarding step as complete
+        from services.onboarding_service import OnboardingService
+        workspace_id = session.get('workspace_id')
+        OnboardingService.complete_step(workspace_id, 'profile_setup')
+        
         # Session'daki name'i de güncellemek gerekebilir (opsiyonel)
         return jsonify({'status': 'updated', 'name': user.name}), 200
     
@@ -1259,3 +1265,112 @@ def test_ai_key():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+
+
+# ─── Avatar Upload ───────────────────────────────────────────────────────────
+
+ALLOWED_AVATAR_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2 MB
+
+@bp.route('/avatar', methods=['POST'])
+@login_required_api
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'Dosya bulunamadı'}), 400
+    file = request.files['avatar']
+    if not file or file.filename == '':
+        return jsonify({'error': 'Geçersiz dosya'}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_AVATAR_EXTENSIONS:
+        return jsonify({'error': 'Desteklenmeyen format. JPG, PNG veya GIF kullanın.'}), 400
+
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_AVATAR_SIZE:
+        return jsonify({'error': 'Dosya 2 MB sınırını aşıyor'}), 400
+
+    user_id = session.get('user_id')
+    filename = f'user_{user_id}.{ext}'
+    upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'avatars')
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Remove old avatar files for this user
+    for old_ext in ALLOWED_AVATAR_EXTENSIONS:
+        old_path = os.path.join(upload_dir, f'user_{user_id}.{old_ext}')
+        if os.path.exists(old_path) and old_ext != ext:
+            os.remove(old_path)
+
+    save_path = os.path.join(upload_dir, filename)
+    file.save(save_path)
+
+    url = f'/static/uploads/avatars/{filename}'
+    user = User.query.get(user_id)
+    user.avatar_url = url
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({'success': True, 'url': url}), 200
+
+
+# ─── Personal Preferences ────────────────────────────────────────────────────
+
+@bp.route('/preferences', methods=['GET'])
+@login_required_api
+def get_preferences():
+    user_id = session.get('user_id')
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'name': user.name,
+        'email': user.email,
+        'avatar_url': user.avatar_url,
+        'timezone': user.timezone or 'auto',
+        'date_format': user.date_format or 'DD/MM/YYYY',
+        'language': user.language or 'tr',
+        'currency': user.currency or 'TRY',
+        'pref_activity_after_win': bool(user.pref_activity_after_win),
+        'pref_detail_deal': bool(user.pref_detail_deal) if user.pref_detail_deal is not None else True,
+        'pref_detail_contact': bool(user.pref_detail_contact) if user.pref_detail_contact is not None else True,
+        'pref_detail_org': bool(user.pref_detail_org) if user.pref_detail_org is not None else True,
+        'pref_us_phone': bool(user.pref_us_phone),
+        'pref_email_new_tab': bool(user.pref_email_new_tab),
+        'pref_win_celebration': bool(user.pref_win_celebration) if user.pref_win_celebration is not None else True,
+        'pref_auto_labels': bool(user.pref_auto_labels),
+    }), 200
+
+
+@bp.route('/preferences', methods=['PUT'])
+@login_required_api
+def update_preferences():
+    user_id = session.get('user_id')
+    user = User.query.get_or_404(user_id)
+    data = request.get_json() or {}
+
+    string_fields = ['timezone', 'date_format', 'language', 'currency']
+    bool_fields = [
+        'pref_activity_after_win', 'pref_detail_deal', 'pref_detail_contact',
+        'pref_detail_org', 'pref_us_phone', 'pref_email_new_tab',
+        'pref_win_celebration', 'pref_auto_labels',
+    ]
+
+    if 'name' in data and data['name'].strip():
+        user.name = data['name'].strip()
+
+    for field in string_fields:
+        if field in data:
+            setattr(user, field, str(data[field]))
+
+    for field in bool_fields:
+        if field in data:
+            setattr(user, field, bool(data[field]))
+
+    try:
+        db.session.commit()
+        return jsonify({'status': 'updated'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
