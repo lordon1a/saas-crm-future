@@ -163,6 +163,7 @@ from routes.email_hub import email_hub_bp
 from routes.import_wizard import import_bp
 from routes.pipeline_settings import pipeline_settings_bp
 from routes.search import search_bp
+from routes.dashboard import dashboard_bp
 from services import portal_notification_service  # noqa: F401
 from services.security_service import SecurityService
 from services.task_scheduler import TaskScheduler
@@ -1172,6 +1173,23 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Created indexes on search_logs table")
             
+            # === USERS TABLE: is_first_login COLUMN ===
+            # Check if is_first_login column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='is_first_login'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add is_first_login column to users...")
+                cur.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN is_first_login BOOLEAN DEFAULT TRUE NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added is_first_login column to users table")
+            
             cur.close()
             conn.close()
             logger.info("✓ All migrations completed")
@@ -1403,6 +1421,16 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Onboarding progress migration failed (may already exist): {e}")
             
+            # === ACTION DASHBOARD TABLES ===
+            try:
+                from migrations.add_action_dashboard_tables import upgrade as action_dashboard_upgrade
+                
+                logger.info("Running migration: add action dashboard tables...")
+                action_dashboard_upgrade()
+                logger.info("✓ Action dashboard migration completed")
+            except Exception as e:
+                logger.warning(f"Action dashboard migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
     
@@ -1576,6 +1604,7 @@ app.register_blueprint(super_admin_bp)
 from routes import docgen as docgen_route
 app.register_blueprint(docgen_route.bp, url_prefix='/api/docgen')
 app.register_blueprint(search_bp)
+app.register_blueprint(dashboard_bp)
 from routes.marketplace import marketplace_bp
 app.register_blueprint(marketplace_bp)
 
