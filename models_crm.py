@@ -2366,3 +2366,112 @@ class OnboardingProgress(db.Model):
     
     def __repr__(self):
         return f'<OnboardingProgress workspace={self.workspace_id} {self.completion_percent}%>'
+
+
+# ============================================================================
+# DAILY ACTION DASHBOARD MODELS
+# ============================================================================
+
+class DismissedAction(db.Model):
+    """
+    Tracks dismissed action items to hide them for 24 hours.
+    Used by the daily action dashboard bell in topbar.
+    """
+    __tablename__ = 'dismissed_actions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    action_id = db.Column(db.String(100), nullable=False, index=True)  # Format: "contact:123"
+    dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)  # dismissed_at + 24 hours
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'user_id': self.user_id,
+            'action_id': self.action_id,
+            'dismissed_at': self.dismissed_at.isoformat() if self.dismissed_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None
+        }
+    
+    def __repr__(self):
+        return f'<DismissedAction {self.action_id} user={self.user_id}>'
+
+
+class DashboardSettings(db.Model):
+    """
+    Workspace-level configuration for action priority thresholds.
+    Allows admins to customize when actions appear in the daily action bell.
+    """
+    __tablename__ = 'dashboard_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, unique=True, index=True)
+    
+    # Lead score thresholds
+    high_score_threshold = db.Column(db.Integer, default=70, nullable=False)
+    medium_score_threshold = db.Column(db.Integer, default=50, nullable=False)
+    
+    # Staleness thresholds (days)
+    high_score_staleness_days = db.Column(db.Integer, default=3, nullable=False)
+    medium_score_staleness_days = db.Column(db.Integer, default=7, nullable=False)
+    
+    # Deal thresholds
+    deal_close_warning_days = db.Column(db.Integer, default=7, nullable=False)
+    deal_stage_stale_days = db.Column(db.Integer, default=14, nullable=False)
+    deal_negotiation_stale_days = db.Column(db.Integer, default=5, nullable=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'high_score_threshold': self.high_score_threshold,
+            'medium_score_threshold': self.medium_score_threshold,
+            'high_score_staleness_days': self.high_score_staleness_days,
+            'medium_score_staleness_days': self.medium_score_staleness_days,
+            'deal_close_warning_days': self.deal_close_warning_days,
+            'deal_stage_stale_days': self.deal_stage_stale_days,
+            'deal_negotiation_stale_days': self.deal_negotiation_stale_days,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def __repr__(self):
+        return f'<DashboardSettings workspace={self.workspace_id}>'
+
+
+class WidgetEngagement(db.Model):
+    """
+    Tracks user interactions with the action bell widget for analytics.
+    Events: widget_viewed, action_clicked, action_dismissed, action_completed
+    """
+    __tablename__ = 'widget_engagements'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    event_type = db.Column(db.String(50), nullable=False, index=True)
+    action_id = db.Column(db.String(100), nullable=True, index=True)
+    action_type = db.Column(db.String(50), nullable=True)  # contact_followup, deal_update, task_overdue
+    priority = db.Column(db.String(20), nullable=True)  # urgent, high, medium
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'user_id': self.user_id,
+            'event_type': self.event_type,
+            'action_id': self.action_id,
+            'action_type': self.action_type,
+            'priority': self.priority,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f'<WidgetEngagement {self.event_type} user={self.user_id}>'
