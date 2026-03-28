@@ -36,7 +36,7 @@ def get_ai_settings():
     
     # Return all providers with their status
     providers = []
-    for provider in ['groq', 'gemini', 'anthropic', 'openrouter']:
+    for provider in ['groq', 'gemini', 'anthropic', 'openrouter', 'minimax']:
         s = settings_dict.get(provider)
         if s and s.api_key_encrypted:
             # Mask the key for display
@@ -72,7 +72,7 @@ def save_ai_settings():
     model_name = data.get('model_name', '').strip()
     is_active = data.get('is_active', True)
     
-    if not provider or provider not in ['groq', 'gemini', 'anthropic', 'openrouter']:
+    if not provider or provider not in ['groq', 'gemini', 'anthropic', 'openrouter', 'minimax']:
         return jsonify({'error': 'Invalid provider'}), 400
     
     # Don't save if key is masked
@@ -199,6 +199,34 @@ def test_ai_key():
             )
             response.raise_for_status()
             return jsonify({'success': True, 'message': 'OpenRouter connection successful'}), 200
+        
+        elif provider == 'minimax':
+            import requests
+            headers = {
+                'Authorization': f'Bearer {api_key}',
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            }
+            payload = {
+                'model': model_name or 'MiniMax-M2.7',
+                'max_tokens': 10,
+                'messages': [{'role': 'user', 'content': 'Say hello in one word'}]
+            }
+            response = requests.post(
+                'https://api.minimax.io/anthropic/v1/messages',
+                headers=headers,
+                json=payload,
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            # MiniMax returns Anthropic-compatible format
+            if data.get('content') and len(data['content']) > 0:
+                content_block = data['content'][0]
+                response_text = content_block.get('text', content_block.get('content', ''))
+            else:
+                response_text = 'Connection successful'
+            return jsonify({'success': True, 'message': f"MiniMax connection successful: {response_text[:50]}"}), 200
         
         return jsonify({'error': 'Unknown provider'}), 400
         

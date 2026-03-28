@@ -1137,8 +1137,8 @@ def update_ai_settings():
     data = request.get_json(silent=True) or {}
 
     provider = (data.get('provider') or '').strip().lower()
-    if provider not in ('groq', 'gemini', 'anthropic', 'openai', 'openrouter'):
-        return jsonify({'error': 'Geçersiz provider (groq/gemini/anthropic/openai/openrouter)'}), 400
+    if provider not in ('groq', 'gemini', 'anthropic', 'openai', 'openrouter', 'minimax'):
+        return jsonify({'error': 'Geçersiz provider (groq/gemini/anthropic/openai/openrouter/minimax)'}), 400
 
     api_key = (data.get('api_key') or '').strip()
     model_name = (data.get('model_name') or '').strip()
@@ -1259,6 +1259,35 @@ def test_ai_key():
             )
             resp.raise_for_status()
             return jsonify({'success': True, 'message': f'{or_model} bağlantısı başarılı'}), 200
+
+        elif provider == 'minimax':
+            import requests
+            headers = {
+                'x-api-key': api_key,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            }
+            min_model = model_name or 'MiniMax-M2.7'
+            payload = {
+                'model': min_model,
+                'max_tokens': 10,
+                'messages': [{'role': 'user', 'content': 'Say hello in one word'}]
+            }
+            resp = requests.post(
+                'https://api.minimax.io/anthropic/v1/messages',
+                headers=headers,
+                json=payload,
+                timeout=10
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            # MiniMax returns Anthropic-compatible format
+            if data.get('content') and len(data['content']) > 0:
+                content_block = data['content'][0]
+                response_text = content_block.get('text', content_block.get('content', 'Connection successful'))
+            else:
+                response_text = 'Connection successful'
+            return jsonify({'success': True, 'message': f'{min_model} bağlantısı başarılı: {response_text[:30]}'}), 200
 
         else:
             return jsonify({'success': False, 'error': f'Test desteklenmiyor: {provider}'}), 400

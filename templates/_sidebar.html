@@ -1,58 +1,72 @@
 <!-- ═══════════════ SIDEBAR ═══════════════ -->
-<aside class="w-[68px] bg-dark-850 border-r border-dark-700/50 flex flex-col items-center py-5 z-30 flex-shrink-0">
+<aside id="mainSidebar" class="w-[68px] bg-dark-850 border-r border-dark-700/50 flex flex-col items-center py-5 z-30 flex-shrink-0 dark-sidebar" data-collapsed="false">
     <!-- Logo -->
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-8 glow-brand-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
-        <span class="text-xl">🐧</span>
+    <div class="sidebar-logo mb-8">
+        <div class="sidebar-logo-icon w-10 h-10 rounded-xl flex items-center justify-center glow-brand-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+            <span class="text-xl">🐧</span>
+        </div>
+        <span class="sidebar-logo-text">Sleek CRM</span>
     </div>
 
     <!-- Nav -->
     <nav class="flex-1 flex flex-col gap-1.5 w-full px-3 sidebar-scroll overflow-y-auto">
-        <a href="/dashboard" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Dashboard">
+        <a href="/dashboard" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Dashboard">
             <i class="fas fa-th-large text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Dashboard</span>
         </a>
-        
+
         <!-- ① ANA İŞ AKIŞI -->
-        <a href="/inbox" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Gelen Kutusu">
+        <a href="/inbox" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Gelen Kutusu">
             <i class="fas fa-inbox text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Gelen Kutusu</span>
         </a>
         {% if not onboarding_complete %}
-        <a href="/setup-guide" class="nav-item w-10 h-10 flex items-center justify-center text-brand-400 hover:text-brand-300 rounded-xl mx-auto bg-brand-500/10 mb-2 animate-pulse" title="Kurulum Rehberi">
+        <a href="/setup-guide" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-brand-400 hover:text-brand-300 rounded-xl mx-auto bg-brand-500/10" title="Kurulum Rehberi">
             <i class="fas fa-rocket text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Kurulum</span>
         </a>
         {% endif %}
-        <a href="/pipeline" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Pipeline">
+        <a href="/pipeline" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Pipeline">
             <i class="fas fa-filter text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Pipeline</span>
         </a>
-        <a href="/contacts" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Kişiler">
+        <a href="/contacts" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Kişiler">
             <i class="fas fa-address-book text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Kişiler</span>
         </a>
 
         <!-- Ayraç 1 -->
         <div class="w-full h-px bg-dark-700/50 my-2"></div>
 
         <!-- ② ÇALIŞMA ARAÇLARI -->
-        <a href="/tasks" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Görevler">
+        <a href="/tasks" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Görevler">
             <i class="fas fa-list-check text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Görevler</span>
         </a>
-        <a href="/calendar" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Takvim">
+        <a href="/calendar" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Takvim">
             <i class="fas fa-calendar-days text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Takvim</span>
         </a>
-        <a href="/analytics" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Raporlar">
+        <a href="/analytics" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Raporlar">
             <i class="fas fa-chart-line text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Raporlar</span>
         </a>
 
         <!-- Ayraç 2 -->
         <div class="w-full h-px bg-dark-700/50 my-2"></div>
 
         <!-- ③ SİSTEM -->
-        <a href="/marketplace" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Mağaza">
+        <a href="/marketplace" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Mağaza">
             <i class="fas fa-store text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Mağaza</span>
         </a>
-        <a href="/automation" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Otomasyon">
+        <a href="/automation" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Otomasyon">
             <i class="fas fa-robot text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Otomasyon</span>
         </a>
-        <a href="/channels" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Entegrasyonlar">
+        <a href="/channels" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Entegrasyonlar">
             <i class="fas fa-plug text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Entegrasyonlar</span>
         </a>
 
         <!-- Spacer - Alta itmek için -->
@@ -62,18 +76,25 @@
         <div class="w-full h-px bg-dark-700/50 my-2"></div>
 
         <!-- Alt Menü -->
-        <a href="/team" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Takım">
+        <a href="/team" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Takım">
             <i class="fas fa-users text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Takım</span>
         </a>
-        <a href="/settings" class="nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Ayarlar">
+        <a href="/settings" class="sidebar-nav-item nav-item w-full h-10 flex items-center justify-center text-dark-400 hover:text-brand-300 rounded-xl mx-auto" title="Ayarlar">
             <i class="fas fa-cog text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Ayarlar</span>
         </a>
     </nav>
 
     <!-- Bottom -->
     <div class="flex flex-col gap-2 w-full px-3 pt-3 border-t border-dark-700/50">
-        <a href="/logout" class="w-10 h-10 flex items-center justify-center text-dark-400 hover:text-red-400 rounded-xl mx-auto transition-all" title="Çıkış">
+        <!-- Sidebar Toggle -->
+        <button id="sidebarToggle" class="sidebar-toggle mx-auto" title="Sidebar'ı Aç/Kapat">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <a href="/logout" class="sidebar-nav-item w-10 h-10 flex items-center justify-center text-dark-400 hover:text-red-400 rounded-xl mx-auto transition-all" title="Çıkış">
             <i class="fas fa-sign-out-alt text-[17px]"></i>
+            <span class="nav-text ml-3 text-sm font-medium">Çıkış</span>
         </a>
     </div>
 </aside>

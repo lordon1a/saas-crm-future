@@ -416,4 +416,144 @@
   }
 
   document.addEventListener("DOMContentLoaded", initGlobalTopbar);
+
+  // ============================================
+  // ACTION BELL INITIALIZATION
+  // ============================================
+  document.addEventListener("DOMContentLoaded", function() {
+    // Initialize action bell if ActionBell class is available
+    if (typeof ActionBell !== 'undefined') {
+      try {
+        window.actionBell = new ActionBell();
+        window.actionBell.init();
+        console.log('Action bell initialized');
+      } catch (error) {
+        console.error('Failed to initialize action bell:', error);
+      }
+    }
+  });
+
+  // ============================================
+  // SIDEBAR COLLAPSE FUNCTIONALITY
+  // ============================================
+  function initSidebarCollapse() {
+    var sidebar = document.getElementById('mainSidebar');
+    var toggleBtn = document.getElementById('sidebarToggle');
+
+    console.log('initSidebarCollapse running...');
+    console.log('sidebar:', sidebar, 'toggleBtn:', toggleBtn);
+
+    if (!sidebar) {
+      console.log('Sidebar not found, returning early');
+      return;
+    }
+
+    // Load saved state from localStorage
+    var savedState = localStorage.getItem('sidebarCollapsed');
+    var isCollapsed = savedState === 'true';
+    console.log('Sidebar init - localStorage value:', savedState, 'isCollapsed:', isCollapsed);
+
+    // Prevent transition flash on initial load
+    if (isCollapsed) {
+      // Clear transition completely with !important to override Tailwind
+      sidebar.style.setProperty('transition', 'none', 'important');
+      // Remove existing width classes and add collapsed class
+      sidebar.classList.remove('w-64', 'w-[68px]');
+      sidebar.classList.add('w-16');
+      // Force layout to apply changes
+      sidebar.offsetHeight;
+      // Apply collapsed state to nav items
+      sidebar.querySelectorAll('.sidebar-text, .nav-text').forEach(function(el) {
+        el.classList.add('opacity-0', 'w-0', 'overflow-hidden');
+      });
+      sidebar.querySelectorAll('.sidebar-toggle-icon, .sidebar-toggle i').forEach(function(el) {
+        el.classList.add('rotate-180');
+      });
+      sidebar.dataset.collapsed = 'true';
+      // html.sidebar-collapsed is already set by sidebar-early-init.js
+    } else {
+      sidebar.classList.remove('w-16', 'w-[68px]');
+      sidebar.classList.add('w-64');
+      sidebar.dataset.collapsed = 'false';
+      // Remove sidebar-collapsed class from html since not collapsed
+      document.documentElement.classList.remove('sidebar-collapsed');
+    }
+    console.log('After init - computed width:', getComputedStyle(sidebar).width);
+
+    // After first paint, restore Tailwind's transition for subsequent toggle animations
+    requestAnimationFrame(function() {
+      sidebar.style.transition = '';
+    });
+
+    // Toggle button click handler
+    console.log('Toggle button found:', toggleBtn);
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Toggle clicked!');
+        toggleSidebar();
+      });
+    } else {
+      console.log('Toggle button NOT found in DOM!');
+    }
+  }
+
+  function toggleSidebar() {
+    var sidebar = document.getElementById('mainSidebar');
+    if (!sidebar) {
+      console.log('Sidebar not found in toggle!');
+      return;
+    }
+
+    console.log('toggleSidebar called');
+    var isCollapsed = sidebar.dataset.collapsed === 'true';
+    var newCollapsedState = !isCollapsed;
+    console.log('Current collapsed:', isCollapsed, 'New state:', newCollapsedState);
+
+    // Toggle width using Tailwind classes
+    if (newCollapsedState) {
+      // Collapsed: use w-16 (64px)
+      sidebar.classList.remove('w-64', 'w-[68px]');
+      sidebar.classList.add('w-16');
+      // Hide text elements
+      sidebar.querySelectorAll('.sidebar-text, .nav-text').forEach(function(el) {
+        el.classList.add('opacity-0', 'w-0', 'overflow-hidden');
+      });
+      // Rotate toggle icon
+      sidebar.querySelectorAll('.sidebar-toggle-icon, .sidebar-toggle i').forEach(function(el) {
+        el.classList.add('rotate-180');
+      });
+      // Add sidebar-collapsed class to html for CSS rule
+      document.documentElement.classList.add('sidebar-collapsed');
+    } else {
+      // Expanded: use w-64 (256px)
+      sidebar.classList.remove('w-16', 'w-[68px]');
+      sidebar.classList.add('w-64');
+      // Show text elements
+      sidebar.querySelectorAll('.sidebar-text, .nav-text').forEach(function(el) {
+        el.classList.remove('opacity-0', 'w-0', 'overflow-hidden');
+      });
+      // Reset toggle icon rotation
+      sidebar.querySelectorAll('.sidebar-toggle-icon, .sidebar-toggle i').forEach(function(el) {
+        el.classList.remove('rotate-180');
+      });
+      // Remove sidebar-collapsed class from html
+      document.documentElement.classList.remove('sidebar-collapsed');
+    }
+
+    sidebar.dataset.collapsed = newCollapsedState.toString();
+    console.log('Sidebar toggled, now collapsed:', newCollapsedState);
+    localStorage.setItem('sidebarCollapsed', newCollapsedState.toString());
+  }
+
+  // Expose to global scope
+  window.toggleSidebar = toggleSidebar;
+
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarCollapse);
+  } else {
+    initSidebarCollapse();
+  }
 })();

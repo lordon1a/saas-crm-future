@@ -31,3 +31,64 @@ input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 30px white inset !important;
 }
+
+/* ============================================
+   COLLAPSIBLE SIDEBAR STYLES
+   ============================================ */
+
+/* Sidebar collapsed state - applied via JS before first paint */
+html.sidebar-collapsed #mainSidebar {
+    width: 64px !important;
+}
+
+html.sidebar-collapsed #mainSidebar .sidebar-text,
+html.sidebar-collapsed #mainSidebar .nav-text {
+    opacity: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
+
+html.sidebar-collapsed #mainSidebar .sidebar-toggle-icon,
+html.sidebar-collapsed #mainSidebar .sidebar-toggle i {
+    transform: rotate(180deg) !important;
+}
+
+/* Prevent transition flash on initial page load */
+#mainSidebar.no-transition,
+#mainSidebar.no-init-transition {
+    transition: none !important;
+}
+
+/* Nav items transition */
+.sidebar-nav-item {
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Text visibility */
+.sidebar-text {
+    transition: opacity 0.15s ease;
+}
+
+/* Toggle button rotation */
+.sidebar-toggle-icon {
+    transition: transform 0.2s ease;
+}
+
+/* Tooltip for collapsed sidebar */
+[data-collapsed="true"] .sidebar-nav-item[title]:hover::after {
+    content: attr(title);
+    position: fixed;
+    left: 70px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+}

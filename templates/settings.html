@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='sidebar-early-init.js') }}"></script>
     <title>WhatsApp CRM - Ayarlar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
@@ -74,70 +75,93 @@
 
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
     <!-- Main Sidebar (Global) -->
-        <!-- Sidebar -->
-    <aside class="w-16 h-screen bg-white border-r border-slate-200 flex flex-col items-center pt-6 z-30 relative shadow-sm flex-shrink-0">
-        <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mb-8 hover:scale-105 transition-transform" title="Ana Sayfa">
-            <span class="text-2xl">🐧</span>
-        </a>
-        
-        <nav class="flex-1 flex flex-col gap-3 w-full px-3">
+    <aside id="mainSidebar" data-collapsed="false" class="h-screen bg-white border-r border-slate-200 flex flex-col pt-6 z-30 relative shadow-sm flex-shrink-0 w-64 transition-[width] duration-200 ease-linear">
+        <div class="flex items-center px-3 mb-6">
+            <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg hover:scale-105 transition-transform flex-shrink-0" title="Ana Sayfa">
+                <span class="text-2xl">🐧</span>
+            </a>
+            <span class="sidebar-text text-base font-bold text-slate-800 pl-3 whitespace-nowrap overflow-hidden">Sleek CRM</span>
+        </div>
+
+        <nav class="flex-1 flex flex-col gap-1 w-full px-3 sidebar-scroll overflow-y-auto">
             <!-- ① ANA İŞ AKIŞI -->
-            <a href="/" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
-                <i class="fas fa-inbox text-lg"></i>
+            <a href="/" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Gelen Kutusu</span>
             </a>
             {% if not onboarding_complete %}
-            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
-                <i class="fas fa-rocket text-lg"></i>
+            <a href="/setup-guide" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
+                <i class="fas fa-rocket text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Kurulum</span>
             </a>
             {% endif %}
-            <a href="/pipeline" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
-                <i class="fas fa-filter text-lg"></i>
+            <a href="/pipeline" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-filter text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Pipeline</span>
             </a>
-            <a href="/contacts" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
-                <i class="fas fa-address-book text-lg"></i>
+            <a href="/contacts" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Kişiler</span>
             </a>
-            <a href="/companies" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
-                <i class="fas fa-building text-lg"></i>
+            <a href="/companies" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
+                <i class="fas fa-building text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Şirketler</span>
             </a>
 
             <!-- Ayraç 1 -->
             <div class="w-full h-px bg-slate-200 my-2"></div>
 
             <!-- ② ÇALIŞMA ARAÇLARI -->
-            <a href="/tasks" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
-                <i class="fas fa-list-check text-lg"></i>
+            <a href="/tasks" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Görevler</span>
             </a>
-            <a href="/calendar" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Takvim">
-                <i class="fas fa-calendar-days text-lg"></i>
+            <a href="/calendar" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Takvim">
+                <i class="fas fa-calendar-days text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Takvim</span>
             </a>
-            <a href="/analytics" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
-                <i class="fas fa-chart-line text-lg"></i>
+            <a href="/analytics" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Raporlar</span>
             </a>
-            <a href="/documents" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar">
-                <i class="fas fa-file-lines text-lg"></i>
+            <a href="/documents" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar">
+                <i class="fas fa-file-lines text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Dokümanlar</span>
             </a>
 
             <!-- Ayraç 2 -->
             <div class="w-full h-px bg-slate-200 my-2"></div>
 
             <!-- ③ SİSTEM -->
-            <a href="/marketplace" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Mağaza">
-                <i class="fas fa-store text-lg"></i>
+            <a href="/marketplace" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Mağaza">
+                <i class="fas fa-store text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Mağaza</span>
             </a>
-            <a href="/automation" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
-                <i class="fas fa-robot text-lg"></i>
+            <a href="/automation" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
+                <i class="fas fa-robot text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Otomasyon</span>
             </a>
-            <a href="/channels" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Entegrasyonlar">
-                <i class="fas fa-plug text-lg"></i>
+            <a href="/channels" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Entegrasyonlar">
+                <i class="fas fa-plug text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Entegrasyonlar</span>
             </a>
-            <a href="/broadcast" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
-                <i class="fas fa-bullhorn text-lg"></i>
+            <a href="/broadcast" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Toplu Mesaj">
+                <i class="fas fa-bullhorn text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Toplu Mesaj</span>
             </a>
         </nav>
 
-        <div class="mt-auto flex flex-col gap-3 w-full px-3 pb-4 border-t border-slate-200 pt-3">
-            <a href="/logout" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış">
-                <i class="fas fa-sign-out-alt text-lg"></i>
+        <div class="flex flex-col gap-2 w-full px-3 pb-4 border-t border-slate-200 pt-3">
+            <button id="sidebarToggle" class="w-7 h-7 mx-auto rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center transition-all" title="Sidebar'ı Aç/Kapat">
+                <i class="sidebar-toggle-icon fas fa-chevron-left text-xs"></i>
+            </button>
+            <a href="/settings" class="sidebar-nav-item h-10 flex items-center text-brand-600 bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Ayarlar</span>
+            </a>
+            <a href="/logout" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Çıkış">
+                <i class="fas fa-sign-out-alt text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Çıkış</span>
             </a>
         </div>
     </aside>
@@ -195,8 +219,8 @@
                 <div class="p-6">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 ml-2">Sistem Ayarları</p>
                     <nav class="space-y-1">
-                        <button onclick="switchTab('workspace')" id="tab-workspace" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-slate-50 group">
-                            <i class="fas fa-building w-4 text-center group-hover:scale-110 transition-transform"></i> Çalışma Alanı
+                        <button onclick="switchTab('preferences')" id="tab-preferences" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn active text-slate-600 hover:bg-slate-50 group">
+                            <i class="fas fa-sliders w-4 text-center group-hover:scale-110 transition-transform"></i> Kişisel Tercihler
                         </button>
                         <button onclick="switchTab('import-export')" id="tab-import-export" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-file-import w-4 text-center group-hover:scale-110 transition-transform"></i> İçe/Dışa Aktar
@@ -238,9 +262,6 @@
                         <button onclick="switchTab('profile')" id="tab-profile" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
                             <i class="fas fa-user-circle w-4 text-center group-hover:scale-110 transition-transform"></i> Profilim
                         </button>
-                        <button onclick="switchTab('preferences')" id="tab-preferences" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all tab-btn text-slate-600 hover:bg-slate-50 group">
-                            <i class="fas fa-sliders w-4 text-center group-hover:scale-110 transition-transform"></i> Kişisel Tercihler
-                        </button>
                     </nav>
                 </div>
             </aside>
@@ -248,105 +269,6 @@
             <!-- Content Area -->
             <div class="flex-1 overflow-y-auto bg-slate-50 settings-content">
                 <div class="max-w-4xl mx-auto px-8 py-10">
-                    
-                    <!-- ═══ WORKSPACE TAB ═══ -->
-                    <div id="panel-workspace" class="tab-panel active space-y-8">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-800 mb-1">Çalışma Alanı</h2>
-                            <p class="text-sm text-slate-500">Sistem yapılandırması ve WhatsApp entegrasyonu.</p>
-                        </div>
-
-                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Genel Bilgiler</h3>
-                            </div>
-                            <div class="p-6 space-y-6">
-                                <div class="space-y-2">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">�?irket Adı</label>
-                                    <input type="text" id="ws_company_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Örn: Sleek CRM">
-                                </div>
-                                <div class="flex justify-end pt-2">
-                                    <button onclick="saveWorkspace()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">Değişiklikleri Kaydet</button>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">WhatsApp API Entegrasyonu</h3>
-                                <div id="apiStatus" class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-white px-2.5 py-1 rounded-full border border-slate-200">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-                                    <span>Kontrol edilmedi</span>
-                                </div>
-                            </div>
-                            <div class="p-6 space-y-6">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="space-y-2">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Phone Number ID</label>
-                                        <input type="text" id="ws_phone_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Meta Dashboard'dan alabilirsiniz">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">WABA ID (Opsiyonel)</label>
-                                        <input type="text" id="ws_waba_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="WhatsApp Business Account ID">
-                                    </div>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Access Token</label>
-                                    <input type="password" id="ws_token" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Süresiz sistem token'ı kullanılması önerilir">
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Telegram Bot Token</label>
-                                    <div class="flex gap-2">
-                                        <input type="password" id="ws_telegram_token" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all" placeholder="Telegram bot token girin">
-                                        <button onclick="setupTelegramWebhook()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all whitespace-nowrap">Bağla/Webhook Kur</button>
-                                    </div>
-                                </div>
-                                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center justify-between gap-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-                                            <i class="fas fa-link text-xs"></i>
-                                        </div>
-                                        <div>
-                                            <p class="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Webhook URL</p>
-                                            <p class="text-xs font-mono text-blue-600 mt-0.5" id="webhookUrl">...</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="copyWebhook()" class="px-3 py-1.5 bg-white text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-50 transition-all shadow-sm border border-blue-100">Kopyala</button>
-                                </div>
-                                <div class="flex justify-end gap-3 pt-2">
-                                    <button onclick="testWhatsApp()" class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">Bağlantıyı Test Et</button>
-                                    <button onclick="saveAPI()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">API Bilgilerini Kaydet</button>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Analytics Görünüm Tercihi</h3>
-                            </div>
-                            <div class="p-6 space-y-4">
-                                <div class="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-slate-700">Dashboard Insights bölümü</p>
-                                        <p class="text-xs text-slate-500 mt-1">
-                                            Bu ayar açıksa, <span class="font-semibold text-slate-600">Analytics</span> sayfasında
-                                            gelişmiş dashboard kartları, pipeline/win-loss grafikleri ve task completion bölümü görünür.
-                                            Kapalıysa bu bölüm tamamen gizlenir.
-                                        </p>
-                                    </div>
-                                    <label class="inline-flex items-center cursor-pointer select-none mt-1">
-                                        <input id="pref_dashboard_insights" type="checkbox" class="sr-only peer">
-                                        <div class="relative w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-brand-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
-                                    </label>
-                                </div>
-                                <div class="flex justify-end">
-                                    <button onclick="saveWorkspacePreferences()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
-                                        Tercihi Kaydet
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
 
                     <!-- ═══ IMPORT/EXPORT TAB ═══ -->
                     <div id="panel-import-export" class="tab-panel space-y-8">
@@ -966,6 +888,47 @@
                                     </div>
                                 </div>
 
+                                <!-- MiniMax -->
+                                <div class="border border-purple-200 rounded-xl p-5 space-y-4 bg-purple-50/30">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
+                                                <i class="fas fa-robot text-purple-600 text-sm"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-sm font-bold text-slate-800">MiniMax <span class="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full ml-1">ANTHROPIC API</span></h4>
+                                                <p class="text-xs text-slate-500" id="ai-minimax-status">Yapılandırılmadı</p>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="ai-minimax-active" class="sr-only peer" checked onchange="toggleAIProvider('minimax', this.checked)">
+                                            <div class="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                        </label>
+                                    </div>
+                                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-700">
+                                        <i class="fas fa-info-circle mr-1"></i> Anthropic uyumlu API. MiniMax developer platformundan API key alın.
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">API Key</label>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="ai-minimax-key" placeholder="eyJhbGci..." class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none">
+                                            <button onclick="toggleKeyVisibility('ai-minimax-key')" class="px-3 py-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 text-sm"><i class="fas fa-eye"></i></button>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1.5"><a href="https://platform.minimaxi.com" target="_blank" class="text-purple-600 hover:underline">API key al</a></p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Model</label>
+                                        <select id="ai-minimax-model" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none">
+                                            <option value="MiniMax-M2.7">MiniMax M2.7 (Önerilen)</option>
+                                            <option value="MiniMax-Text-01">MiniMax Text 01</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="testAIKey('minimax')" class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all"><i class="fas fa-plug mr-1"></i> Test Et</button>
+                                        <button onclick="saveAIKey('minimax')" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 transition-all"><i class="fas fa-save mr-1"></i> Kaydet</button>
+                                    </div>
+                                </div>
+
                             </div>
                         </section>
 
@@ -1048,7 +1011,7 @@
                     </div>
 
                     <!-- ═══ PREFERENCES TAB ═══ -->
-                    <div id="panel-preferences" class="tab-panel space-y-8">
+                    <div id="panel-preferences" class="tab-panel active space-y-8">
                         <div>
                             <h2 class="text-lg font-bold text-slate-800 mb-1">Kişisel Tercihler</h2>
                             <p class="text-sm text-slate-500">Hesap bilgilerinizi ve arayüz davranışlarını özelleştirin.</p>
@@ -1153,6 +1116,80 @@
                             </div>
                         </section>
 
+                        <!-- Dashboard Ayarları -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Dashboard Ayarları</h3>
+                            </div>
+                            <div class="p-8 space-y-8">
+                                <p class="text-sm text-slate-600 mb-6">
+                                    "Bugün Ne Yapmalıyım?" özelliği için öncelik eşiklerini ayarlayın. Bu ayarlar hangi aksiyonların topbar'daki zil butonunda gösterileceğini belirler.
+                                </p>
+
+                                <!-- Contact Score Thresholds -->
+                                <div class="space-y-4">
+                                    <h4 class="text-sm font-bold text-slate-700">Kişi Lead Score Eşikleri</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Yüksek Öncelik Eşiği</label>
+                                            <input type="number" id="dashboard-high-score" min="0" max="100" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Bu değerin üzerindeki lead score'a sahip kişiler yüksek öncelikli olarak işaretlenir.</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Orta Öncelik Eşiği</label>
+                                            <input type="number" id="dashboard-medium-score" min="0" max="100" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Bu değerin üzerindeki lead score'a sahip kişiler orta öncelikli olarak işaretlenir.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staleness Days -->
+                                <div class="space-y-4">
+                                    <h4 class="text-sm font-bold text-slate-700">Aktivite Eskime Süreleri (Gün)</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Yüksek Score İçin Eskime</label>
+                                            <input type="number" id="dashboard-high-staleness" min="1" max="365" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Yüksek score'lu kişiler bu kadar gün aktivitesiz kalırsa uyarı verilir.</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Orta Score İçin Eskime</label>
+                                            <input type="number" id="dashboard-medium-staleness" min="1" max="365" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Orta score'lu kişiler bu kadar gün aktivitesiz kalırsa uyarı verilir.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Deal Thresholds -->
+                                <div class="space-y-4">
+                                    <h4 class="text-sm font-bold text-slate-700">Deal Uyarı Eşikleri (Gün)</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Kapanış Tarihi Uyarısı</label>
+                                            <input type="number" id="dashboard-deal-close-warning" min="1" max="90" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Kapanış tarihine bu kadar gün kala uyarı verilir.</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Stage Eskime Süresi</label>
+                                            <input type="number" id="dashboard-deal-stage-stale" min="1" max="180" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Deal bu kadar gün aynı stage'de kalırsa uyarı verilir.</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Müzakere Eskime Süresi</label>
+                                            <input type="number" id="dashboard-deal-negotiation-stale" min="1" max="90" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-500 transition-all">
+                                            <p class="text-xs text-slate-400 ml-1">Müzakere/Teklif stage'inde bu kadar gün aktivitesiz kalırsa uyarı verilir.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end pt-2">
+                                    <button onclick="saveDashboardSettings()" class="px-8 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
+                                        Kaydet
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
                         <!-- Arayüz -->
                         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                             <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
@@ -1247,6 +1284,34 @@
                                     </label>
                                 </div>
 
+                            </div>
+                        </section>
+
+                        <!-- Analytics Görünüm Tercihi -->
+                        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Analytics Görünüm Tercihi</h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700">Dashboard Insights bölümü</p>
+                                        <p class="text-xs text-slate-500 mt-1">
+                                            Bu ayar açıksa, <span class="font-semibold text-slate-600">Analytics</span> sayfasında
+                                            gelişmiş dashboard kartları, pipeline/win-loss grafikleri ve task completion bölümü görünür.
+                                            Kapalıysa bu bölüm tamamen gizlenir.
+                                        </p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer select-none mt-1">
+                                        <input id="pref_dashboard_insights" type="checkbox" class="sr-only peer">
+                                        <div class="relative w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-brand-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                                    </label>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button onclick="saveWorkspacePreferences()" class="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-600/10">
+                                        Tercihi Kaydet
+                                    </button>
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -1733,12 +1798,6 @@
                 }
             }
 
-            function copyWebhook() {
-                const url = document.getElementById('webhookUrl').textContent;
-                navigator.clipboard.writeText(url);
-                showToast('Webhook URL kopyalandı');
-            }
-
             // Tabs
             function switchTab(name) {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1754,7 +1813,10 @@
                 if (name === 'replies') loadReplies();
                 if (name === 'custom-fields') loadCustomFields();
                 if (name === 'profile') loadProfile();
-                if (name === 'preferences') loadPreferences();
+                if (name === 'preferences') {
+                    loadPreferences();
+                    loadDashboardSettings();
+                }
                 if (name === 'google') loadGoogleStatus();
                 if (name === 'security') loadSecurityTab();
             }
@@ -1801,23 +1863,7 @@
                 }, 3000);
             }
 
-            // ═══ WORKSPACE ═══
-            async function loadWorkspace() {
-                const data = await api('/api/settings/workspace');
-                document.getElementById('ws_company_name').value = data.company_name;
-                document.getElementById('ws_phone_id').value = data.whatsapp_phone_number_id || '';
-                document.getElementById('ws_token').value = data.whatsapp_access_token === '***' ? '' : data.whatsapp_access_token;
-                document.getElementById('ws_telegram_token').value = data.telegram_bot_token === '***' ? '' : data.telegram_bot_token;
-                document.getElementById('ws_waba_id').value = data.waba_id || '';
-                document.getElementById('webhookUrl').textContent = window.location.origin + '/webhook';
-
-                await loadWorkspacePreferences();
-                
-                if (data.whatsapp_phone_number_id) {
-                    updateAPIStatus(true, 'Bağlı');
-                }
-            }
-
+            // ═══ WORKSPACE PREFERENCES ═══
             async function loadWorkspacePreferences() {
                 try {
                     const prefs = await api('/api/settings/workspace/preferences');
@@ -1833,60 +1879,6 @@
                     show_dashboard_insights: showDashboardInsights,
                 });
                 showToast('Analytics görünüm tercihi kaydedildi');
-            }
-
-            function updateAPIStatus(ok, text) {
-                const status = document.getElementById('apiStatus');
-                status.querySelector('div').className = `w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500 animate-pulse'}`;
-                status.querySelector('span').textContent = text;
-                status.querySelector('span').className = ok ? 'text-emerald-600' : 'text-red-600';
-            }
-
-            async function saveWorkspace() {
-                const name = document.getElementById('ws_company_name').value.trim();
-                await api('/api/settings/workspace', 'PUT', { company_name: name });
-                showToast('�?irket bilgileri güncellendi');
-            }
-
-            async function saveAPI() {
-                const body = {
-                    whatsapp_phone_number_id: document.getElementById('ws_phone_id').value.trim(),
-                    whatsapp_access_token: document.getElementById('ws_token').value.trim() || '***',
-                    telegram_bot_token: document.getElementById('ws_telegram_token').value.trim() || '***',
-                    waba_id: document.getElementById('ws_waba_id').value.trim()
-                };
-                await api('/api/settings/workspace', 'PUT', body);
-                showToast('API bilgileri kaydedildi');
-                updateAPIStatus(true, 'Bağlı');
-            }
-
-            async function setupTelegramWebhook() {
-                try {
-                    const token = document.getElementById('ws_telegram_token').value.trim();
-                    if (!token) {
-                        showToast('Önce Telegram Bot Token girin', 'error');
-                        return;
-                    }
-                    await api('/api/settings/telegram/config', 'PUT', { telegram_bot_token: token });
-                    const res = await api('/api/settings/telegram/set-webhook', 'POST', { base_url: window.location.origin });
-                    showToast('Telegram webhook kuruldu');
-                    console.log('Telegram webhook:', res.webhook_url);
-                } catch (e) {
-                    showToast('Telegram webhook kurulamadı', 'error');
-                }
-            }
-
-            async function testWhatsApp() {
-                try {
-                    updateAPIStatus(false, 'Test ediliyor...');
-                    const res = await api('/api/settings/workspace/test-whatsapp', 'POST');
-                    if (res.success) {
-                        showToast(`Bağlantı başarılı: ${res.data.verified_name}`);
-                        updateAPIStatus(true, 'Aktif: ' + res.data.display_phone_number);
-                    }
-                } catch (e) {
-                    updateAPIStatus(false, 'Hatalı');
-                }
             }
 
             // ═══ PORTAL BRANDING ═══
@@ -3039,7 +3031,6 @@
             async function init() {
                 try {
                     await loadProfile(); // This sets currentUser
-                    await loadWorkspace();
                     await loadPortalBranding();
                     await loadWebhooks();
                     
@@ -3057,8 +3048,8 @@
                     // Auto-load if coming from a specific tab param or hash
                     const tabParam = urlParams.get('tab');
                     const hash = window.location.hash.replace('#', '');
-                    const validTabs = ['workspace', 'branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'preferences', 'google', 'security', 'ai-settings'];
-                    const targetTab = tabParam || hash;
+                    const validTabs = ['branding', 'webhooks', 'team', 'templates', 'replies', 'custom-fields', 'profile', 'preferences', 'google', 'security', 'ai-settings'];
+                    const targetTab = tabParam || 'preferences';
                     if (validTabs.includes(targetTab)) {
                         switchTab(targetTab);
                     }
@@ -3178,7 +3169,7 @@
                     return;
                 }
                 
-                const providers = ['gemini', 'anthropic', 'openrouter'];
+                const providers = ['gemini', 'anthropic', 'openrouter', 'minimax'];
                 let successCount = 0;
                 let errorCount = 0;
                 
@@ -3249,6 +3240,60 @@
                 if (!el) return;
                 for (let opt of el.options) {
                     if (opt.value === val) { el.value = val; return; }
+                }
+            }
+
+            async function saveDashboardSettings() {
+                try {
+                    const settings = {
+                        high_score_threshold: parseInt(document.getElementById('dashboard-high-score').value) || 80,
+                        medium_score_threshold: parseInt(document.getElementById('dashboard-medium-score').value) || 60,
+                        high_score_staleness_days: parseInt(document.getElementById('dashboard-high-staleness').value) || 7,
+                        medium_score_staleness_days: parseInt(document.getElementById('dashboard-medium-staleness').value) || 14,
+                        deal_close_warning_days: parseInt(document.getElementById('dashboard-deal-close-warning').value) || 7,
+                        deal_stage_stale_days: parseInt(document.getElementById('dashboard-deal-stage-stale').value) || 30,
+                        deal_negotiation_stale_days: parseInt(document.getElementById('dashboard-deal-negotiation-stale').value) || 7
+                    };
+
+                    const response = await fetch('/api/dashboard/settings', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        },
+                        body: JSON.stringify(settings)
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.error || 'Kayıt başarısız');
+                    }
+
+                    showToast('Dashboard ayarları kaydedildi', 'success');
+                } catch (e) {
+                    console.error('Dashboard settings save error:', e);
+                    showToast(e.message || 'Kayıt başarısız', 'error');
+                }
+            }
+
+            async function loadDashboardSettings() {
+                try {
+                    const response = await fetch('/api/dashboard/settings');
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+                    if (data.success && data.settings) {
+                        const s = data.settings;
+                        document.getElementById('dashboard-high-score').value = s.high_score_threshold || 80;
+                        document.getElementById('dashboard-medium-score').value = s.medium_score_threshold || 60;
+                        document.getElementById('dashboard-high-staleness').value = s.high_score_staleness_days || 7;
+                        document.getElementById('dashboard-medium-staleness').value = s.medium_score_staleness_days || 14;
+                        document.getElementById('dashboard-deal-close-warning').value = s.deal_close_warning_days || 7;
+                        document.getElementById('dashboard-deal-stage-stale').value = s.deal_stage_stale_days || 30;
+                        document.getElementById('dashboard-deal-negotiation-stale').value = s.deal_negotiation_stale_days || 7;
+                    }
+                } catch (e) {
+                    console.error('Dashboard settings load error:', e);
                 }
             }
 
@@ -3323,6 +3368,7 @@
         <script src="/static/custom-fields.js"></script>
         <script src="/static/custom-objects.js"></script>
     </main>
+    <script src="{{ url_for('static', filename='action-bell.js') }}"></script>
     <script src="/static/topbar-global.js"></script>
 {% include '_ai_sidebar.html' %}
 </body>

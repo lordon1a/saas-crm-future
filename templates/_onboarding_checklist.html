@@ -160,6 +160,7 @@ async function loadOnboarding() {
         
         // Trigger butonunu göster
         const trigger = document.getElementById('onboarding-trigger');
+        if (!trigger) return;
         if (data.is_complete) {
             trigger.style.display = 'none';
             return;
@@ -179,33 +180,40 @@ async function loadOnboarding() {
 
         // Tamamlanma durumu
         if (data.is_complete) {
-            document.getElementById('onboarding-celebration').style.display = 'flex';
+            const celebration = document.getElementById('onboarding-celebration');
+            if (celebration) celebration.style.display = 'flex';
             confetti({
                 particleCount: 200,
                 spread: 160,
                 origin: { y: 0.6 }
             });
         }
-        
+
         // Badge güncelle
         const remaining = data.steps ? data.steps.filter(s => !s.completed).length : 0;
-        document.getElementById('onboarding-badge').textContent = remaining;
-        
+        const badge = document.getElementById('onboarding-badge');
+        if (badge) badge.textContent = remaining;
+
         // Progress güncelle
-        document.getElementById('onboarding-progress-bar').style.width = (data.percent || 0) + '%';
-        document.getElementById('onboarding-percent').textContent = data.percent || 0;
-        document.getElementById('onboarding-step-count').textContent = `${(data.steps.length - remaining)}/${data.steps.length}`;
-        
+        const progressBar = document.getElementById('onboarding-progress-bar');
+        const percent = document.getElementById('onboarding-percent');
+        const stepCount = document.getElementById('onboarding-step-count');
+        if (progressBar) progressBar.style.width = (data.percent || 0) + '%';
+        if (percent) percent.textContent = data.percent || 0;
+        if (stepCount && data.steps) stepCount.textContent = `${(data.steps.length - remaining)}/${data.steps.length}`;
+
         // Adımları render et
         if (data.steps && data.steps.length > 0) {
-            const colors = { 
-                green: { bg: '#f0fdf4', text: '#10b981', iconBg: '#dcfce7' }, 
-                blue: { bg: '#eff6ff', text: '#3b82f6', iconBg: '#dbeafe' }, 
-                purple: { bg: '#f5f3ff', text: '#8b5cf6', iconBg: '#ede9fe' }, 
-                amber: { bg: '#fffbeb', text: '#f59e0b', iconBg: '#fef3c7' } 
+            const colors = {
+                green: { bg: '#f0fdf4', text: '#10b981', iconBg: '#dcfce7' },
+                blue: { bg: '#eff6ff', text: '#3b82f6', iconBg: '#dbeafe' },
+                purple: { bg: '#f5f3ff', text: '#8b5cf6', iconBg: '#ede9fe' },
+                amber: { bg: '#fffbeb', text: '#f59e0b', iconBg: '#fef3c7' }
             };
-            
-            document.getElementById('onboarding-steps').innerHTML = data.steps.map(step => {
+
+            const stepsContainer = document.getElementById('onboarding-steps');
+            if (stepsContainer) {
+                stepsContainer.innerHTML = data.steps.map(step => {
                 const color = colors[step.color] || colors.blue;
                 return `
                     <a href="${step.completed ? '#' : step.link}" class="onboarding-step-card" style="${step.completed ? 'opacity: 0.5; pointer-events: none;' : ''}">
@@ -226,6 +234,7 @@ async function loadOnboarding() {
                     </a>
                 `;
             }).join('');
+            }
         }
         
         // Progress ring update
@@ -237,7 +246,6 @@ async function loadOnboarding() {
         }
         
         // Badge rengini güncelle (tüm adımlar tamamlandıysa yeşil olsun)
-        const badge = document.getElementById('onboarding-badge');
         if (badge && remaining === 0) {
             badge.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
             badge.textContent = '✓';
@@ -256,9 +264,11 @@ async function loadOnboarding() {
 
 function showWelcomeModal() {
     const modal = document.getElementById('onboarding-welcome-modal');
+    const content = document.getElementById('welcome-modal-content');
+    if (!modal || !content) return;
     modal.style.display = 'flex';
     setTimeout(() => {
-        document.getElementById('welcome-modal-content').style.transform = 'scale(1)';
+        content.style.transform = 'scale(1)';
     }, 10);
     localStorage.setItem('onboarding_welcome_shown', '1');
 }
