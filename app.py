@@ -1431,6 +1431,43 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"Action dashboard migration failed (may already exist): {e}")
             
+            # === USER PREFERENCES COLUMNS ===
+            try:
+                conn = psycopg2.connect(database_url)
+                cur = conn.cursor()
+                
+                user_pref_columns = [
+                    ("avatar_url",              "VARCHAR(255)"),
+                    ("timezone",                "VARCHAR(100) DEFAULT 'auto'"),
+                    ("date_format",             "VARCHAR(20) DEFAULT 'DD/MM/YYYY'"),
+                    ("language",                "VARCHAR(10) DEFAULT 'tr'"),
+                    ("currency",                "VARCHAR(10) DEFAULT 'TRY'"),
+                    ("pref_activity_after_win",  "BOOLEAN DEFAULT FALSE"),
+                    ("pref_detail_deal",         "BOOLEAN DEFAULT TRUE"),
+                    ("pref_detail_contact",      "BOOLEAN DEFAULT TRUE"),
+                    ("pref_detail_org",          "BOOLEAN DEFAULT TRUE"),
+                    ("pref_us_phone",           "BOOLEAN DEFAULT FALSE"),
+                    ("pref_email_new_tab",       "BOOLEAN DEFAULT FALSE"),
+                    ("pref_win_celebration",     "BOOLEAN DEFAULT TRUE"),
+                    ("pref_auto_labels",         "BOOLEAN DEFAULT FALSE"),
+                ]
+                
+                for col_name, col_type in user_pref_columns:
+                    cur.execute(f"""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='users' AND column_name='{col_name}'
+                    """)
+                    if not cur.fetchone():
+                        cur.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+                        logger.info(f"✓ Added {col_name} to users")
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                logger.info("✓ User preferences migration completed")
+            except Exception as e:
+                logger.warning(f"User preferences migration failed (may already exist): {e}")
+            
     except Exception as e:
         logger.warning(f"Migration check failed (may be normal if already applied): {e}")
     
