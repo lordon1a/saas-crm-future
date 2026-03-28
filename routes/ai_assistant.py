@@ -61,10 +61,12 @@ def _get_workspace_ai(workspace_id):
         'anthropic_key': ANTHROPIC_KEY,
         'groq_key': GROQ_KEY,
         'openrouter_key': None,
+        'minimax_key': None,
         'gemini_model': 'gemini-2.5-flash',
         'anthropic_model': 'claude-3-5-sonnet-latest',
         'groq_model': 'llama-3.1-70b-versatile',
         'openrouter_model': 'openrouter/auto',
+        'minimax_model': 'MiniMax-M2.7',
     }
     try:
         from models_crm import AISettings
@@ -115,11 +117,16 @@ def _get_workspace_ai(workspace_id):
                     logger.info(f"[AI] Using workspace Groq key, model={result['groq_model']}")
                 except ImportError:
                     logger.warning("[AI] Groq package not installed")
+            elif row.provider == 'minimax' and decrypted:
+                result['minimax_key'] = decrypted
+                if row.model_name:
+                    result['minimax_model'] = row.model_name
+                logger.info(f"[AI] Using workspace MiniMax key, model={result['minimax_model']}")
     except Exception as e:
         logger.error(f"[AI] Failed to load workspace AI settings: {e}")
     return result
 
-SYSTEM_PROMPT = """You are a CRM assistant. Respond in Turkish.
+SYSTEM_PROMPT = """You are a CRM assistant.
 
 Rules:
 - "hello"/"hi"/"thanks" → brief friendly reply only
@@ -195,7 +202,7 @@ def chat():
         workspace_id = session.get('workspace_id')
         ai = _get_workspace_ai(workspace_id)
 
-        # Sağlayıcı fallback sırası: Groq -> Anthropic -> Gemini -> OpenRouter
+        # Sağlayıcı fallback sırası: Groq -> Anthropic -> Gemini -> OpenRouter -> MiniMax
         provider_attempted = False
         provider_errors = []
 
@@ -286,6 +293,41 @@ def chat():
                     }), 400
             except Exception as e:
                 provider_errors.append(('openrouter', e))
+
+        if not response_text and ai['minimax_key']:
+            provider_attempted = True
+            try:
+                headers = {
+                    'Authorization': f"Bearer {ai['minimax_key']}",
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json',
+                }
+                minimax_messages = ([{'role': 'system', 'content': system}] if system else []) + messages
+                payload = {
+                    'model': ai['minimax_model'],
+                    'max_tokens': 512,
+                    'messages': [{'role': m['role'], 'content': m['content']} for m in minimax_messages]
+                }
+                resp = requests.post(
+                    'https://api.minimax.io/anthropic/v1/messages',
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                # MiniMax returns Anthropic-compatible format with content blocks
+                # Response may contain multiple blocks (thinking, text, etc.)
+                # Iterate through ALL blocks to find type='text'
+                if data.get('content') and isinstance(data['content'], list):
+                    for content_block in data['content']:
+                        if isinstance(content_block, dict) and content_block.get('type') == 'text':
+                            text_content = content_block.get('text', '')
+                            if text_content:
+                                response_text = text_content
+                                break
+            except Exception as e:
+                provider_errors.append(('minimax', e))
 
         if not response_text and not provider_attempted:
             return jsonify({'error': 'API anahtarı bulunamadı. Ayarlar > AI Ayarları bölümünden API anahtarınızı ekleyin.'}), 500
@@ -768,11 +810,13 @@ def _call_ai(messages, system=None, provider=None):
     ai = _get_workspace_ai(workspace_id)
 
     if provider is None:
-        # Priority: Groq > OpenRouter > Gemini > Anthropic
+        # Priority: Groq > OpenRouter > MiniMax > Gemini > Anthropic
         if ai['groq_key']:
             provider = 'groq'
         elif ai['openrouter_key']:
             provider = 'openrouter'
+        elif ai['minimax_key']:
+            provider = 'minimax'
         elif ai['gemini_key']:
             provider = 'gemini'
         else:
@@ -843,6 +887,53 @@ def _call_ai(messages, system=None, provider=None):
                 logger.error(f"[Groq] Traceback: {traceback.format_exc()}")
                 raise
             
+        elif provider == 'minimax' and ai['minimax_key']:
+            # MiniMax Anthropic-compatible API
+            try:
+                headers = {
+                    'Authorization': f"Bearer {ai['minimax_key']}",
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json',
+                }
+                minimax_messages = [{'role': 'system', 'content': system_prompt}] + messages if system_prompt else messages
+                payload = {
+                    'model': ai['minimax_model'],
+                    'max_tokens': 1024,
+                    'messages': [{'role': m['role'], 'content': m['content']} for m in minimax_messages]
+                }
+                logger.info(f"[MiniMax] Sending request to MiniMax API, model={ai['minimax_model']}, key_len={len(ai['minimax_key'])}")
+                logger.info(f"[MiniMax] Payload messages: {len(payload['messages'])}")
+                response = requests.post(
+                    'https://api.minimax.io/anthropic/v1/messages',
+                    headers=headers,
+                    json=payload,
+                    timeout=30
+                )
+                logger.info(f"[MiniMax] Status: {response.status_code}")
+                logger.info(f"[MiniMax] Response body: {response.text[:1000]}")
+                response.raise_for_status()
+                data = response.json()
+                logger.info(f"[MiniMax] Response data keys: {list(data.keys())}")
+                logger.info(f"[MiniMax] Content type: {type(data.get('content'))}")
+                logger.info(f"[MiniMax] Content: {data.get('content')}")
+                # MiniMax returns Anthropic-compatible format with content blocks
+                if data.get('content') and len(data['content']) > 0:
+                    content_block = data['content'][0]
+                    logger.info(f"[MiniMax] Content block: {content_block}")
+                    if content_block.get('type') == 'text':
+                        response_text = content_block.get('text', '')
+                        logger.info(f"[MiniMax] Extracted text: {response_text[:100] if response_text else 'EMPTY'}")
+                        return jsonify({'response': response_text})
+                    elif content_block.get('text'):
+                        return jsonify({'response': content_block.get('text')})
+                logger.warning(f"[MiniMax] No valid content in response, returning empty")
+                return jsonify({'response': ''})
+            except Exception as minimax_error:
+                logger.error(f"[MiniMax] Error: {str(minimax_error)}")
+                import traceback
+                logger.error(f"[MiniMax] Traceback: {traceback.format_exc()}")
+                raise
+            
         elif provider == 'anthropic' and ai['anthropic_client']:
             response = ai['anthropic_client'].messages.create(
                 model=ai['anthropic_model'],
@@ -865,7 +956,7 @@ def _call_ai_raw(messages: list, system: str, workspace_id: int) -> str:
         return ''
 
     try:
-        # Priority: Groq > OpenRouter > Gemini > Anthropic
+        # Priority: Groq > OpenRouter > MiniMax > Gemini > Anthropic
         if ai.get('groq_client'):
             groq_messages = [{'role': 'system', 'content': system}] + messages
             response = ai['groq_client'].chat.completions.create(
@@ -891,6 +982,34 @@ def _call_ai_raw(messages: list, system: str, workspace_id: int) -> str:
                                     headers=headers, json=payload, timeout=15)
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
+
+        elif ai.get('minimax_key'):
+            headers = {
+                'Authorization': f"Bearer {ai['minimax_key']}",
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            }
+            minimax_messages = [{'role': 'system', 'content': system}] + messages
+            payload = {
+                'model': ai['minimax_model'],
+                'max_tokens': 256,
+                'messages': [{'role': m['role'], 'content': m['content']} for m in minimax_messages]
+            }
+            response = requests.post(
+                'https://api.minimax.io/anthropic/v1/messages',
+                headers=headers,
+                json=payload,
+                timeout=15
+            )
+            response.raise_for_status()
+            data = response.json()
+            if data.get('content') and len(data['content']) > 0:
+                content_block = data['content'][0]
+                if content_block.get('type') == 'text':
+                    return content_block.get('text', '')
+                elif content_block.get('text'):
+                    return content_block.get('text')
+            return str(data)
 
         elif ai.get('gemini_client'):
             gemini_messages = []
