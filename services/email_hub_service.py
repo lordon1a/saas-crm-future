@@ -1033,3 +1033,76 @@ For security reasons, never share this link with anyone.
                 user_email, str(exc)
             )
             return None
+    
+    @staticmethod
+    def send_workflow_email(workspace_id: int, to_email: str, subject: str, body: str, from_name: str = None) -> dict:
+        """
+        Send email from workflow automation.
+        Used by WorkflowService to send emails triggered by workflows.
+        
+        Args:
+            workspace_id: Workspace ID for tracking/logging
+            to_email: Recipient email address
+            subject: Email subject
+            body: Email body (HTML supported)
+            from_name: Optional sender name
+        
+        Returns:
+            dict with 'success' bool and 'message_id' or 'error'
+        """
+        try:
+            # Check if SMTP is configured
+            if not Config.SMTP_HOST or not Config.SMTP_FROM_EMAIL:
+                logger.warning(
+                    'SMTP not configured. Workflow email not sent. to=%s subject=%s',
+                    to_email, subject
+                )
+                return {'success': False, 'error': 'SMTP not configured'}
+            
+            # Build HTML email
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            {body}
+        </div>
+        <div style="text-align: center; margin-top: 20px; padding: 20px; color: #666; font-size: 12px;">
+            <p>Bu email otomatik olarak gönderilmiştir.</p>
+            <p>Sleek CRM - Otomasyon Sistemi</p>
+        </div>
+    </div>
+</body>
+</html>
+            """
+            
+            # Plain text fallback - strip HTML tags using regex
+            text_body = re.sub(r'<[^>]*>', '', body).strip()
+            
+            # Get provider and send
+            provider = EmailHubService._provider()
+            message_id = provider.send(
+                to_email=to_email,
+                subject=subject,
+                body_text=text_body,
+                body_html=html_body
+            )
+            
+            logger.info(
+                'Workflow email sent successfully. to=%s subject=%s message_id=%s workspace=%s',
+                to_email, subject, message_id, workspace_id
+            )
+            
+            return {'success': True, 'message_id': message_id}
+            
+        except Exception as exc:
+            logger.error(
+                'Failed to send workflow email. to=%s subject=%s error=%s',
+                to_email, subject, str(exc)
+            )
+            return {'success': False, 'error': str(exc)}

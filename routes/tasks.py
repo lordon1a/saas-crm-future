@@ -467,6 +467,18 @@ def complete_task(task_id):
             status='completed'
         )
         
+        # Trigger workflow automation for task_completed
+        try:
+            from services.workflow_service import WorkflowService
+            WorkflowService.trigger_event(
+                workspace_id=current_user.workspace_id,
+                trigger_type='task_completed',
+                entity_type='task',
+                entity_id=task.id
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for task_completed: {e}")
+        
         return jsonify({
             'id': task.id,
             'title': task.title,

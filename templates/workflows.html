@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='sidebar-early-init.js') }}"></script>
+    <title>WhatsApp CRM - Workflow Otomasyonları</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React 18 CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- ReactFlow CDN - using older version that works with UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/reactflow@11.10.4/dist/umd/index.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reactflow@11.10.4/dist/style.min.css" />
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.sidebar-collapsed #mainSidebar { width: 64px !important; transition: none !important; }
+        html.sidebar-collapsed #mainSidebar .sidebar-text,
+        html.sidebar-collapsed #mainSidebar .nav-text { opacity: 0 !important; width: 0 !important; overflow: hidden !important; }
+        html.sidebar-collapsed #mainSidebar .sidebar-toggle-icon,
+        html.sidebar-collapsed #mainSidebar .sidebar-toggle i { transform: rotate(180deg) !important; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        .condition-row, .action-row { transition: all 0.2s; }
+        .condition-row:hover, .action-row:hover { background-color: #f8fafc; }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+        .dragging { opacity: 0.5; }
+        
+        /* Node Palette Styles */
+        .node-palette-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: grab;
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            transition: all 0.12s ease;
+            user-select: none;
+        }
+        .node-palette-item:hover {
+            background: #f5f3ff;
+            border-color: #7c3aed;
+            color: #6d28d9;
+            transform: translateX(2px);
+        }
+        .node-palette-item:active {
+            cursor: grabbing;
+        }
+        .node-palette-item-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .node-palette-section {
+            margin-bottom: 16px;
+        }
+        .palette-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #9ca3af;
+            padding: 12px 4px 6px;
+        }
+        .node-palette-section:first-child .palette-section-label {
+            padding-top: 4px;
+        }
+        
+        /* Workflow Node Styles - N8N Design */
+        .wf-node {
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+            min-width: 200px;
+            max-width: 240px;
+            padding: 0;
+            overflow: hidden;
+            cursor: default;
+            position: relative;
+            transition: box-shadow 0.15s ease, transform 0.1s ease;
+        }
+        .wf-node:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .wf-node.selected {
+            box-shadow: 0 0 0 2px #7c3aed, 0 4px 16px rgba(124,58,237,0.15);
+            border-color: #7c3aed;
+        }
+        
+        /* Left accent border */
+        .wf-node::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            border-radius: 8px 0 0 8px;
+        }
+        .wf-node.trigger::before { background: #3b82f6; }
+        .wf-node.condition::before { background: #f59e0b; }
+        .wf-node.action::before { background: #22c55e; }
+        
+        /* Node header — colored strip at top */
+        .wf-node-header {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .wf-node-header.trigger { background: linear-gradient(135deg, #eff6ff, #dbeafe20); }
+        .wf-node-header.condition { background: linear-gradient(135deg, #fffbeb, #fef3c720); }
+        .wf-node-header.action { background: linear-gradient(135deg, #f0fdf4, #dcfce720); }
+        
+        /* Icon box — colored square like n8n */
+        .wf-node-icon-box {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .wf-node-icon-box.trigger { background: #3b82f6; }
+        .wf-node-icon-box.condition { background: #f59e0b; }
+        .wf-node-icon-box.action { background: #22c55e; }
+        
+        /* Text next to icon */
+        .wf-node-meta {
+            flex: 1;
+            min-width: 0;
+        }
+        .wf-node-type {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #9ca3af;
+            margin-bottom: 1px;
+        }
+        .wf-node-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #111827;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Config summary shown below header */
+        .wf-node-body {
+            padding: 6px 12px 8px;
+            background: white;
+        }
+        .wf-node-config-summary {
+            font-size: 11px;
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Delete button */
+        .wf-node-delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 1.5px solid #e5e7eb;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 9px;
+            color: #9ca3af;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+            line-height: 1;
+        }
+        .wf-node:hover .wf-node-delete-btn {
+            display: flex;
+        }
+        .wf-node-delete-btn:hover {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #ef4444;
+        }
+        
+        /* Properties Panel */
+        .properties-panel {
+            background: #ffffff;
+            border-left: 1px solid #e5e7eb;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .properties-panel.hidden {
+            display: none;
+        }
+        
+        /* ReactFlow Controls */
+        .react-flow__controls {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+        .react-flow__controls-button {
+            border: none;
+            background: white;
+            border-bottom: 1px solid #f3f4f6;
+            color: #6b7280;
+            width: 28px;
+            height: 28px;
+        }
+        .react-flow__controls-button:hover {
+            background: #f9fafb;
+            color: #374151;
+        }
+        
+        /* ReactFlow Handles */
+        .react-flow__handle {
+            width: 12px;
+            height: 12px;
+            background: #ffffff;
+            border: 2px solid #9ca3af;
+            border-radius: 50%;
+        }
+        .react-flow__handle:hover {
+            border-color: #7c3aed !important;
+            background: #7c3aed !important;
+        }
+        
+        /* ReactFlow overrides */
+        .react-flow__node {
+            border-radius: 8px !important;
+        }
+        .react-flow__edge-path {
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside id="mainSidebar" data-collapsed="false" class="h-screen bg-white border-r border-slate-200 flex flex-col pt-6 z-30 relative shadow-sm flex-shrink-0 w-64 transition-[width] duration-200 ease-linear">
+        <div class="flex items-center px-3 mb-6">
+            <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg hover:scale-105 transition-transform flex-shrink-0" title="Ana Sayfa">
+                <span class="text-2xl">🐧</span>
+            </a>
+            <span class="sidebar-text text-base font-bold text-slate-800 pl-3 whitespace-nowrap overflow-hidden">Sleek CRM</span>
+        </div>
+
+        <nav class="flex-1 flex flex-col gap-1 w-full px-3 sidebar-scroll overflow-y-auto">
+            <a href="/" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Gelen Kutusu</span>
+            </a>
+            <a href="/analytics" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Raporlar</span>
+            </a>
+            <a href="/contacts" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Kişiler</span>
+            </a>
+            <a href="/companies" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
+                <i class="fas fa-building text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Şirketler</span>
+            </a>
+            <a href="/broadcast" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Broadcast">
+                <i class="fas fa-bullhorn text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Broadcast</span>
+            </a>
+
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+
+            <a href="/automation" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Otomasyon">
+                <i class="fas fa-robot text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Otomasyon</span>
+            </a>
+            <a href="/workflows" class="sidebar-nav-item h-10 flex items-center text-brand-600 bg-brand-50 rounded-xl transition-all" title="Workflows">
+                <i class="fas fa-project-diagram text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Workflows</span>
+            </a>
+            <a href="/pipeline" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-filter text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Pipeline</span>
+            </a>
+            <a href="/tasks" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Görevler</span>
+            </a>
+            <a href="/documents" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar">
+                <i class="fas fa-file-alt text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Dokümanlar</span>
+            </a>
+            <a href="/channels" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
+                <i class="fas fa-satellite-dish text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Kanallar</span>
+            </a>
+
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+
+            <a href="/settings" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Ayarlar</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 h-screen overflow-hidden flex flex-col">
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Workflow Otomasyonları</h1>
+                <p class="text-sm text-slate-500">IF X happens → THEN do Y kuralları oluştur ve yönet</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="activeCount" class="bg-brand-100 text-brand-700 text-sm font-medium px-3 py-1 rounded-full">0 aktif</span>
+                <button onclick="WorkflowBuilder.showNewWorkflow()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-plus"></i>
+                    Yeni Workflow
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-hidden p-6">
+            <div class="h-full flex gap-6">
+                <!-- Left: Workflow List -->
+                <div class="w-96 flex-shrink-0 flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="searchWorkflows" placeholder="Workflow ara..." 
+                                class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                oninput="WorkflowBuilder.filterWorkflows(this.value)">
+                        </div>
+                    </div>
+                    <div id="workflowList" class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <!-- Workflow items will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Right: Workflow Builder (ReactFlow Canvas) -->
+                <div id="workflowBuilder" class="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden hidden">
+                    <!-- Builder Header -->
+                    <div class="p-4 border-b border-slate-200 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 flex-1">
+                            <button type="button" id="closeBuilder" class="text-slate-400 hover:text-slate-600 transition-colors" title="Kapat">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <input type="hidden" id="workflowId">
+                            <input type="text" id="workflowName" 
+                                class="flex-1 text-lg font-semibold text-slate-800 border border-transparent hover:border-slate-200 focus:border-brand-500 rounded-lg px-3 py-1 transition-colors outline-none"
+                                placeholder="Workflow adı...">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="workflowActive" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" checked>
+                                <span class="text-sm font-medium text-slate-600">Aktif</span>
+                            </label>
+                            <button type="button" id="deleteWorkflow" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors" title="Sil">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button type="button" id="saveWorkflow" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                                <i class="fas fa-save"></i>
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Bar -->
+                    <div class="flex items-center gap-4 px-4 border-b border-slate-200">
+                        <button type="button" id="canvasTab" class="px-4 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600">
+                            Canvas
+                        </button>
+                        <button type="button" id="historyTab" class="px-4 py-3 text-sm font-medium text-slate-500 hover:text-brand-600 transition-colors border-b-2 border-transparent">
+                            Çalışma Geçmişi
+                        </button>
+                    </div>
+
+                    <!-- Canvas Tab Content -->
+                    <div id="canvasTabContent" class="h-[calc(100%-110px)] flex">
+                        <!-- Node Palette (Left 200px) -->
+                        <div class="w-[200px] border-r border-slate-200 overflow-y-auto p-3 pr-1 bg-slate-50">
+                            <!-- Triggers -->
+                            <div class="node-palette-section">
+                                <div class="palette-section-label">TETİKLEYİCİLER</div>
+                                <div class="space-y-2">
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="contact_created">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">👤</div>
+                                        <span>Kişi Oluşturuldu</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="deal_created">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">💰</div>
+                                        <span>Deal Oluşturuldu</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="deal_stage_changed">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">🔄</div>
+                                        <span>Aşama Değişti</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="deal_won">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">🏆</div>
+                                        <span>Deal Kazanıldı</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="deal_lost">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">❌</div>
+                                        <span>Deal Kaybedildi</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="contact_no_activity">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">⏰</div>
+                                        <span>İnaktif Kişi</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="task_completed">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">✅</div>
+                                        <span>Görev Tamamlandı</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="trigger" data-node-subtype="deal_close_date_approaching">
+                                        <div class="node-palette-item-icon" style="background:#dbeafe">📅</div>
+                                        <span>Kapanış Yaklaşıyor</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Conditions -->
+                            <div class="node-palette-section">
+                                <div class="palette-section-label">KOŞULLAR</div>
+                                <div class="space-y-2">
+                                    <div class="node-palette-item" draggable="true" data-node-type="condition" data-node-subtype="check_field">
+                                        <div class="node-palette-item-icon" style="background:#fef3c7">🔀</div>
+                                        <span>Alan Kontrolü</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="condition" data-node-subtype="check_score">
+                                        <div class="node-palette-item-icon" style="background:#fef3c7">⭐</div>
+                                        <span>Skor Kontrolü</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="node-palette-section">
+                                <div class="palette-section-label">AKSİYONLAR</div>
+                                <div class="space-y-2">
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="create_task">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">📋</div>
+                                        <span>Görev Oluştur</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="send_email">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">📧</div>
+                                        <span>Email Gönder</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="notify_owner">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">🔔</div>
+                                        <span>Bildirim Gönder</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="update_deal_stage">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">🔄</div>
+                                        <span>Aşama Güncelle</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="update_contact_field">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">✏️</div>
+                                        <span>Alan Güncelle</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="create_note">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">📝</div>
+                                        <span>Not Ekle</span>
+                                    </div>
+                                    <div class="node-palette-item" draggable="true" data-node-type="action" data-node-subtype="wait">
+                                        <div class="node-palette-item-icon" style="background:#dcfce7">⏳</div>
+                                        <span>Bekle</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ReactFlow Canvas (Center flex-1) -->
+                        <div id="react-workflow-root" class="flex-1"></div>
+
+                        <!-- Properties Panel (Right 256px, hidden by default) -->
+                        <div id="propertiesPanel" class="properties-panel hidden w-[256px]">
+                            <div class="p-4 border-b border-slate-200">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="font-semibold text-slate-800">Özellikler</h3>
+                                    <button type="button" id="closeProperties" class="text-slate-400 hover:text-slate-600">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="propertiesContent" class="p-4">
+                                <!-- Dynamic properties will be rendered here -->
+                                <p class="text-sm text-slate-500">Bir node seçmek için çift tıklayın</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Tab Content (hidden by default) -->
+                    <div id="historyTabContent" class="hidden h-[calc(100%-110px)] overflow-y-auto p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-slate-700">Son Çalışmalar</h3>
+                            <span class="text-xs text-slate-500" id="executionCount"></span>
+                        </div>
+                        <div id="executionList" class="space-y-2">
+                            <!-- populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State (when no workflow selected) -->
+                <div id="emptyState" class="flex-1 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-project-diagram text-3xl text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-slate-700 mb-2">Workflow Seçin veya Yeni Oluşturun</h3>
+                        <p class="text-sm text-slate-500 mb-4">IF X happens → THEN do Y kuralları ile işlerinizi otomatikleştirin</p>
+                        <button onclick="WorkflowBuilder.showNewWorkflow()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors inline-flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            Yeni Workflow Oluştur
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Modal: Test Results -->
+    <div id="testModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl w-full max-w-lg mx-4 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-slate-800">Test Sonuçları</h3>
+                <button onclick="document.getElementById('testModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="testResults" class="space-y-3">
+                <!-- Test results will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='workflow-builder.js') }}"></script>
+    <script src="{{ url_for('static', filename='workflow-canvas.js') }}"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script>
+        // CSRF headers helper
+        function getCsrfHeaders() {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            return csrfToken ? { 'X-CSRFToken': csrfToken } : {};
+        }
+
+        // Toast notification helper
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-slate-700';
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 fade-in`;
+            toast.innerHTML = `
+                <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

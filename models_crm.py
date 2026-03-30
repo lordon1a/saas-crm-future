@@ -7,9 +7,11 @@ This module contains database models for CRM features including:
 - Tasks and projects
 - Activity timeline
 - Documents
+- Workflow automation
 """
 from models import db
 from datetime import datetime
+import json
 
 
 # ============================================================================
@@ -2475,3 +2477,223 @@ class WidgetEngagement(db.Model):
     
     def __repr__(self):
         return f'<WidgetEngagement {self.event_type} user={self.user_id}>'
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WORKFLOW AUTOMATION MODELS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class WorkflowAutomation(db.Model):
+    """
+    Workflow Automation Rules - IF X happens THEN do Y
+    Supports trigger types: deal_stage_changed, deal_created, deal_won, deal_lost, contact_created, etc.
+    """
+    __tablename__ = 'workflow_automations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Basic info
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    
+    # Trigger configuration
+    trigger_type = db.Column(db.String(50), nullable=False, index=True)
+    trigger_config = db.Column(db.Text)  # JSON: trigger-specific config
+    
+    # Condition logic
+    condition_logic = db.Column(db.String(10), default='AND', nullable=False)  # AND | OR
+    
+    # Canvas data (ReactFlow positions and edges)
+    canvas_data = db.Column(db.Text)  # JSON: {nodes: [{id, position}], edges: [{id, source, target}]}
+    
+    # Ownership
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Statistics
+    run_count = db.Column(db.Integer, default=0)
+    last_run_at = db.Column(db.DateTime)
+    
+    # Relationships
+    workspace = db.relationship('Workspace', backref=db.backref('workflow_automations', lazy='dynamic'))
+    conditions = db.relationship('WorkflowCondition', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
+    actions = db.relationship('WorkflowAction', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
+    executions = db.relationship('WorkflowExecution', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'name': self.name,
+            'description': self.description,
+            'is_active': self.is_active,
+            'trigger_type': self.trigger_type,
+            'trigger_config': json.loads(self.trigger_config) if self.trigger_config else {},
+            'condition_logic': self.condition_logic,
+            'canvas_data': json.loads(self.canvas_data) if self.canvas_data else None,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'run_count': self.run_count,
+            'last_run_at': self.last_run_at.isoformat() if self.last_run_at else None
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowAutomation {self.id}: {self.name}>'
+
+
+class WorkflowCondition(db.Model):
+    """
+    Conditions for workflow execution
+    Evaluated against entity fields using operators
+    """
+    __tablename__ = 'workflow_conditions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automations.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Condition definition
+    field_name = db.Column(db.String(100), nullable=False)  # e.g., "deal_amount", "contact.lead_score"
+    operator = db.Column(db.String(50), nullable=False)  # equals, not_equals, greater_than, less_than, contains, is_empty, is_not_empty
+    value = db.Column(db.String(500))  # The value to compare against
+    
+    order_index = db.Column(db.Integer, default=0, nullable=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workflow_id': self.workflow_id,
+            'field_name': self.field_name,
+            'operator': self.operator,
+            'value': self.value,
+            'order_index': self.order_index
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowCondition {self.field_name} {self.operator} {self.value}>'
+
+
+class WorkflowAction(db.Model):
+    """
+    Actions to execute when workflow triggers
+    Actions have a delay and execute in order
+    """
+    __tablename__ = 'workflow_actions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automations.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Action definition
+    action_type = db.Column(db.String(50), nullable=False)  # create_task, send_email, notify_owner, add_tag, update_deal_field, etc.
+    action_config = db.Column(db.Text)  # JSON: action-specific config
+    
+    # Execution settings
+    delay_minutes = db.Column(db.Integer, default=0, nullable=False)
+    order_index = db.Column(db.Integer, default=0, nullable=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workflow_id': self.workflow_id,
+            'workspace_id': self.workspace_id,
+            'action_type': self.action_type,
+            'action_config': json.loads(self.action_config) if self.action_config else {},
+            'delay_minutes': self.delay_minutes,
+            'order_index': self.order_index
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowAction {self.action_type}>'
+
+
+class WorkflowExecution(db.Model):
+    """
+    Execution log for workflow runs
+    Records status, timing, and results
+    """
+    __tablename__ = 'workflow_executions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automations.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Entity context
+    entity_type = db.Column(db.String(50))  # deal, contact, task
+    entity_id = db.Column(db.Integer)
+    
+    # Execution status
+    status = db.Column(db.String(20), default='pending', nullable=False, index=True)  # pending, running, completed, failed, skipped
+    triggered_by = db.Column(db.String(100))  # The trigger type that fired
+    
+    # Timing
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    completed_at = db.Column(db.DateTime)
+    
+    # Results
+    error_message = db.Column(db.Text)
+    actions_executed = db.Column(db.Text)  # JSON: list of action results
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workflow_id': self.workflow_id,
+            'workspace_id': self.workspace_id,
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'status': self.status,
+            'triggered_by': self.triggered_by,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'error_message': self.error_message,
+            'actions_executed': json.loads(self.actions_executed) if self.actions_executed else []
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowExecution {self.id} status={self.status}>'
+
+
+class WorkflowExecutionQueue(db.Model):
+    """
+    Queue for delayed actions
+    When an action has delay_minutes > 0, it's queued here
+    """
+    __tablename__ = 'workflow_execution_queue'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automations.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Entity context
+    entity_type = db.Column(db.String(50))
+    entity_id = db.Column(db.Integer)
+    
+    # Action reference
+    action_id = db.Column(db.Integer, db.ForeignKey('workflow_actions.id'), nullable=False)
+    
+    # Scheduling
+    scheduled_at = db.Column(db.DateTime, nullable=False, index=True)
+    executed_at = db.Column(db.DateTime)
+    
+    # Status
+    status = db.Column(db.String(20), default='pending', nullable=False, index=True)  # pending, executed, cancelled
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workflow_id': self.workflow_id,
+            'workspace_id': self.workspace_id,
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'action_id': self.action_id,
+            'scheduled_at': self.scheduled_at.isoformat() if self.scheduled_at else None,
+            'executed_at': self.executed_at.isoformat() if self.executed_at else None,
+            'status': self.status
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowExecutionQueue {self.id} status={self.status}>'

@@ -472,6 +472,18 @@ def create_deal():
         from services.onboarding_service import OnboardingService
         OnboardingService.complete_step(workspace_id, 'first_deal_created')
         
+        # Trigger workflow automation for deal_created
+        try:
+            from services.workflow_service import WorkflowService
+            WorkflowService.trigger_event(
+                workspace_id=workspace_id,
+                trigger_type='deal_created',
+                entity_type='deal',
+                entity_id=deal.id
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for deal_created: {e}")
+        
         return jsonify({
             'id': deal.id,
             'name': deal.name,
@@ -617,7 +629,13 @@ def move_deal_stage(deal_id):
             logger.warning(f"Access denied: user {user.id} attempted to move deal {deal_id} stage")
             return jsonify({'error': 'Access denied to this deal'}), 403
         
+        # Store old stage_id for workflow trigger
+        old_stage_id = deal.stage_id
+        new_stage_id = data['stage_id']
+        
         # Move stage
+        # Note: Workflow trigger for deal_stage_changed is handled asynchronously
+        # in PipelineService.move_deal_to_stage() via gevent spawn
         deal = PipelineService.move_deal_to_stage(
             workspace_id, 
             deal_id, 
@@ -850,7 +868,13 @@ def close_deal(deal_id):
             logger.warning(f"Access denied: user {user.id} attempted to close deal {deal_id}")
             return jsonify({'error': 'Access denied to this deal'}), 403
         
+        # Store old status for workflow trigger
+        old_status = deal.status
+        new_status = data['status']
+        
         # Close deal
+        # Note: Workflow trigger for deal_won/deal_lost is handled asynchronously
+        # in PipelineService.close_deal() via gevent spawn
         deal = PipelineService.close_deal(
             workspace_id,
             deal_id,

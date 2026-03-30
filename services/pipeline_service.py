@@ -468,7 +468,64 @@ class PipelineService:
         except Exception as webhook_error:
             logger.warning(f"Webhook spawn failed (non-blocking): {webhook_error}")
         
+        # Workflow trigger AFTER commit (asenkron, spawn edilir)
+        try:
+            import gevent
+            gevent.spawn(
+                PipelineService._trigger_deal_workflows,
+                workspace_id,
+                deal.id,
+                old_stage_id,
+                stage_id
+            )
+        except Exception as workflow_error:
+            logger.warning(f"Workflow trigger spawn failed (non-blocking): {workflow_error}")
+        
         return deal
+    
+    @staticmethod
+    def _trigger_deal_workflows(workspace_id: int, deal_id: int, old_stage_id: int, new_stage_id: int):
+        """
+        Trigger workflow automations for deal stage changes.
+        Called asynchronously after deal stage update commits.
+        """
+        try:
+            from services.workflow_service import WorkflowService
+            
+            # Trigger deal_stage_changed workflow
+            WorkflowService.trigger_event(
+                workspace_id=workspace_id,
+                trigger_type='deal_stage_changed',
+                entity_type='deal',
+                entity_id=deal_id,
+                context={
+                    'from_stage_id': old_stage_id,
+                    'to_stage_id': new_stage_id
+                }
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for deal {deal_id}: {e}")
+    
+    @staticmethod
+    def _trigger_deal_status_workflows(workspace_id: int, deal_id: int, status: str):
+        """
+        Trigger workflow automations for deal won/lost status changes.
+        Called asynchronously after deal close commits.
+        """
+        try:
+            from services.workflow_service import WorkflowService
+            
+            # Trigger deal_won or deal_lost workflow
+            trigger_type = f'deal_{status}'  # 'deal_won' or 'deal_lost'
+            WorkflowService.trigger_event(
+                workspace_id=workspace_id,
+                trigger_type=trigger_type,
+                entity_type='deal',
+                entity_id=deal_id,
+                context={'status': status}
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for deal {deal_id}: {e}")
     
     @staticmethod
     def close_deal(workspace_id: int, deal_id: int, status: str, win_loss_reason: str, user_id: int, win_loss_reason_id: Optional[int] = None) -> Deal:
@@ -591,8 +648,20 @@ class PipelineService:
         except Exception as webhook_error:
             logger.warning(f"Webhook dispatch failed (non-blocking): {webhook_error}")
         
+        # Workflow trigger AFTER commit (asenkron, spawn edilir)
+        try:
+            import gevent
+            gevent.spawn(
+                PipelineService._trigger_deal_status_workflows,
+                workspace_id,
+                deal.id,
+                status
+            )
+        except Exception as workflow_error:
+            logger.warning(f"Workflow trigger spawn failed (non-blocking): {workflow_error}")
+        
         return deal
-
+    
     @staticmethod
     def reopen_deal(workspace_id: int, deal_id: int, user_id: int) -> Deal:
         """

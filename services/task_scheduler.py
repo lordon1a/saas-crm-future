@@ -58,6 +58,25 @@ class TaskScheduler:
             replace_existing=True
         )
         
+        # Her dakika: workflow delayed action queue processor
+        cls.scheduler.add_job(
+            func=cls._process_workflow_queue_job,
+            trigger=IntervalTrigger(minutes=1),
+            id='workflow_queue_processor',
+            name='Process workflow action queue',
+            replace_existing=True
+        )
+        
+        # Her gün 00:05: zaman bazlı workflow trigger kontrolü
+        from apscheduler.triggers.cron import CronTrigger
+        cls.scheduler.add_job(
+            func=cls._check_workflow_time_triggers_job,
+            trigger=CronTrigger(hour=0, minute=5),
+            id='workflow_time_triggers',
+            name='Check time-based workflow triggers',
+            replace_existing=True
+        )
+        
         cls.scheduler.start()
         logger.info("TaskScheduler başlatıldı - bildirim ve overdue kontrol job'ları aktif")
     
@@ -119,3 +138,41 @@ class TaskScheduler:
                     
         except Exception as e:
             logger.error(f"Overdue kontrolü job hatası: {str(e)}", exc_info=True)
+    
+    @classmethod
+    def _process_workflow_queue_job(cls):
+        """
+        Workflow delayed action queue processor.
+        Her dakika çalışır ve zamanı gelmiş delayed aksiyonları işler.
+        """
+        if not cls.app:
+            logger.error("Flask app instance not available for workflow queue job")
+            return
+        
+        try:
+            with cls.app.app_context():
+                from services.workflow_service import WorkflowService
+                processed = WorkflowService.process_queue()
+                if processed > 0:
+                    logger.info(f"Workflow queue: processed {processed} delayed actions")
+        except Exception as e:
+            logger.error(f"Workflow queue job hatası: {str(e)}", exc_info=True)
+    
+    @classmethod
+    def _check_workflow_time_triggers_job(cls):
+        """
+        Zaman bazlı workflow trigger kontrolü.
+        Her gün 00:05'te çalışır ve scheduled triggerları kontrol eder.
+        contact_no_activity, deal_close_date_approaching gibi triggerları tetikler.
+        """
+        if not cls.app:
+            logger.error("Flask app instance not available for workflow time triggers job")
+            return
+        
+        try:
+            with cls.app.app_context():
+                from services.workflow_service import WorkflowService
+                WorkflowService.check_time_based_triggers()
+                logger.info("Workflow time triggers check completed")
+        except Exception as e:
+            logger.error(f"Workflow time triggers job hatası: {str(e)}", exc_info=True)

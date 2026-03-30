@@ -1757,6 +1757,18 @@ def create_contact():
         except Exception as exc:
             logger.warning('Webhook dispatch failed for contact.created: %s', exc)
         
+        # Trigger workflow automation for contact_created
+        try:
+            from services.workflow_service import WorkflowService
+            WorkflowService.trigger_event(
+                workspace_id=workspace_id,
+                trigger_type='contact_created',
+                entity_type='contact',
+                entity_id=contact.id
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for contact_created: {e}")
+        
         # Mark onboarding step as complete
         from services.onboarding_service import OnboardingService
         OnboardingService.complete_step(workspace_id, 'first_contact_added')

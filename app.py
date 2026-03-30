@@ -244,6 +244,23 @@ def run_migrations():
                 conn.commit()
                 logger.info("✓ Added stage_entered_at column")
             
+            # === WORKFLOW_AUTOMATIONS TABLE MIGRATIONS ===
+            # Check if canvas_data column exists
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='workflow_automations' AND column_name='canvas_data'
+            """)
+            
+            if not cur.fetchone():
+                logger.info("Running migration: add canvas_data column...")
+                cur.execute("""
+                    ALTER TABLE workflow_automations 
+                    ADD COLUMN canvas_data TEXT DEFAULT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added canvas_data column")
+            
             # Check if is_deleted column exists
             cur.execute("""
                 SELECT column_name 
@@ -1651,6 +1668,9 @@ app.register_blueprint(custom_objects_bp, url_prefix='/api/custom-objects')
 from routes import ai_assistant
 app.register_blueprint(ai_assistant.bp)
 
+from routes.workflows import bp as workflows_bp
+app.register_blueprint(workflows_bp)
+
 # Context processor for installed apps (used in sidebar)
 @app.context_processor
 def inject_installed_apps():
@@ -1988,8 +2008,14 @@ def handle_unexpected_error(error):
 @app.route('/')
 def landing():
     if session.get('user_id'):
-        return render_template('index.html')
+        return render_template('home.html')
     return render_template('landing.html')
+
+
+@app.route('/inbox')
+@login_required
+def inbox():
+    return render_template('index.html')
 
 
 @app.route('/channels')
@@ -2055,6 +2081,12 @@ def broadcast():
 @login_required
 def automation():
     return render_template('automation.html')
+
+
+@app.route('/workflows')
+@login_required
+def workflows():
+    return render_template('workflows.html')
 
 
 @app.route('/pipeline')
