@@ -6,6 +6,7 @@ import WorkflowCanvas, { type WorkflowCanvasHandle } from './components/Workflow
 import NodePalette from './components/NodePalette'
 import NodePropertiesPanel from './components/NodePropertiesPanel'
 import ExecutionHistory from './components/ExecutionHistory'
+import ExecutionOutputPanel from './components/ExecutionOutputPanel'
 import { NODE_CONFIGS } from './constants/nodeConfigs'
 import type { WorkflowItem } from './types'
 
@@ -159,12 +160,15 @@ export default function App() {
     isSaving, setIsSaving,
     selectedNodeId, setSelectedNode,
     setStages,
+    isExecuting, setIsExecuting,
+    addExecutionLog, updateExecutionLog, clearExecutionLogs,
   } = useWorkflowStore()
 
   const canvasRef = useRef<WorkflowCanvasHandle>(null)
   const [workflowName, setWorkflowName] = useState('')
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [addMenuParentId, setAddMenuParentId] = useState<string | null>(null)
+  const [showOutput, setShowOutput] = useState(false)
 
   // Load stages for stage_select fields
   useEffect(() => {
@@ -264,6 +268,53 @@ export default function App() {
     setSelectedNode(null)
   }
 
+  const handleRun = async () => {
+    if (!selectedWorkflow || isExecuting) return
+
+    setIsExecuting(true)
+    clearExecutionLogs()
+    setShowOutput(true)
+
+    const canvasData = canvasRef.current?.getCanvasData()
+    if (!canvasData?.nodes?.length) {
+      setToast({ message: 'Çalıştırılacak adım yok', type: 'error' })
+      setIsExecuting(false)
+      return
+    }
+
+    // Simulate execution for each node
+    for (const node of canvasData.nodes) {
+      const nodeConfig = NODE_CONFIGS[node.data.subtype]
+      const logId = `log-${Date.now()}-${Math.random()}`
+
+      addExecutionLog({
+        id: logId,
+        nodeId: node.id,
+        nodeName: nodeConfig?.title || node.data.subtype || 'Bilinmeyen',
+        nodeType: node.data.nodeType || 'action',
+        status: 'running',
+        startedAt: new Date().toISOString(),
+      })
+
+      // Simulate execution delay
+      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000))
+
+      // Simulate success/failure (mostly success)
+      const isSuccess = Math.random() > 0.1
+
+      updateExecutionLog(logId, {
+        status: isSuccess ? 'success' : 'failed',
+        completedAt: new Date().toISOString(),
+        durationMs: Math.floor(500 + Math.random() * 1000),
+        output: isSuccess ? { success: true, message: 'İşlem tamamlandı' } : undefined,
+        error: isSuccess ? undefined : 'Bağlantı hatası oluştu',
+      })
+    }
+
+    setIsExecuting(false)
+    setToast({ message: 'İş akışı çalıştırıldı', type: 'success' })
+  }
+
   const handleUpdateNode = useCallback((nodeId: string, patch: Record<string, unknown>) => {
     canvasRef.current?.updateNodeData(nodeId, patch)
     // Also update store's selectedNodeData if this is the selected node
@@ -343,6 +394,46 @@ export default function App() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Output toggle */}
+                <button
+                  onClick={() => setShowOutput(!showOutput)}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: showOutput ? '#dbeafe' : 'transparent',
+                    border: 'none', cursor: 'pointer',
+                    color: showOutput ? '#1e40af' : '#94a3b8',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = showOutput ? '#dbeafe' : 'transparent' }}
+                  title="Çıktı Paneli"
+                >
+                  <i className="fas fa-terminal" style={{ fontSize: 13 }} />
+                </button>
+
+                {/* Run button */}
+                <button
+                  onClick={handleRun}
+                  disabled={isExecuting}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 16px', borderRadius: 8,
+                    background: isExecuting ? '#64748b' : '#22c55e',
+                    color: '#ffffff', border: 'none',
+                    cursor: isExecuting ? 'not-allowed' : 'pointer',
+                    fontSize: 13, fontWeight: 600,
+                    boxShadow: '0 2px 4px rgba(34,197,94,0.25)',
+                    opacity: isExecuting ? 0.7 : 1,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={(e) => { if (!isExecuting) e.currentTarget.style.background = '#16a34a' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isExecuting ? '#64748b' : '#22c55e' }}
+                >
+                  <i className={`fas ${isExecuting ? 'fa-spinner fa-spin' : 'fa-play'}`} style={{ fontSize: 12 }} />
+                  {isExecuting ? 'Çalışıyor...' : 'Çalıştır'}
+                </button>
+
                 {/* Active toggle button */}
                 <button
                   onClick={handleToggle}
@@ -443,6 +534,7 @@ export default function App() {
                   {selectedNodeId && (
                     <NodePropertiesPanel onUpdateNode={handleUpdateNode} />
                   )}
+                  {showOutput && <ExecutionOutputPanel />}
                 </>
               ) : (
                 <ExecutionHistory />

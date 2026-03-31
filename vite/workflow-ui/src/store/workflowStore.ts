@@ -1,6 +1,20 @@
 import { create } from 'zustand'
 import type { WorkflowItem, Execution, Stage, WorkflowNodeData } from '../types'
 
+// Execution log entry for live output panel
+export interface ExecutionLogEntry {
+  id: string
+  nodeId: string
+  nodeName: string
+  nodeType: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  startedAt: string
+  completedAt?: string
+  durationMs?: number
+  output?: unknown
+  error?: string
+}
+
 interface WorkflowStore {
   // Workflow list
   workflows: WorkflowItem[]
@@ -23,6 +37,14 @@ interface WorkflowStore {
   // Executions
   executions: Execution[]
   setExecutions: (executions: Execution[]) => void
+
+  // Live execution output
+  isExecuting: boolean
+  setIsExecuting: (executing: boolean) => void
+  executionLogs: ExecutionLogEntry[]
+  addExecutionLog: (log: ExecutionLogEntry) => void
+  updateExecutionLog: (id: string, update: Partial<ExecutionLogEntry>) => void
+  clearExecutionLogs: () => void
 
   // Search
   searchQuery: string
@@ -56,6 +78,20 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
 
   executions: [],
   setExecutions: (executions) => set({ executions }),
+
+  isExecuting: false,
+  setIsExecuting: (isExecuting) => set({ isExecuting }),
+
+  executionLogs: [],
+  addExecutionLog: (log) => set((state) => ({
+    executionLogs: [...state.executionLogs, log]
+  })),
+  updateExecutionLog: (id, update) => set((state) => ({
+    executionLogs: state.executionLogs.map((log) =>
+      log.id === id ? { ...log, ...update } : log
+    )
+  })),
+  clearExecutionLogs: () => set({ executionLogs: [] }),
 
   searchQuery: '',
   setSearchQuery: (searchQuery) => set({ searchQuery }),
