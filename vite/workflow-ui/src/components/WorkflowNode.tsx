@@ -59,6 +59,13 @@ export default function WorkflowNode({ id, data, selected }: NodeProps) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
+        <Handle type="target" position={Position.Top} 
+          style={{ 
+            width: 12, height: 12, background: '#e5e7eb', border: '2px solid #fff',
+            top: -6, opacity: hovered ? 1 : 0.5, transition: 'opacity 0.15s'
+          }} 
+        />
+        
         <div
           onClick={handleClick}
           style={{
@@ -96,7 +103,12 @@ export default function WorkflowNode({ id, data, selected }: NodeProps) {
 
         {/* Add button below */}
         {renderAddButton(showAdd, handleAddClick)}
-        <Handle type="source" position={Position.Bottom} style={{ opacity: 0, pointerEvents: 'none', bottom: -6 }} />
+        <Handle type="source" position={Position.Bottom} 
+          style={{ 
+            width: 12, height: 12, background: '#e5e7eb', border: '2px solid #fff',
+            bottom: -6, opacity: hovered ? 1 : 0.5, transition: 'opacity 0.15s'
+          }} 
+        />
       </div>
     )
   }
@@ -108,7 +120,12 @@ export default function WorkflowNode({ id, data, selected }: NodeProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Handle type="target" position={Position.Top} style={{ opacity: 0, top: -6 }} />
+      <Handle type="target" position={Position.Top} 
+        style={{ 
+          width: 12, height: 12, background: '#e5e7eb', border: '2px solid #fff',
+          top: -6, opacity: hovered ? 1 : 0.5, transition: 'opacity 0.15s'
+        }} 
+      />
 
       <div
         onClick={handleClick}
@@ -217,7 +234,12 @@ export default function WorkflowNode({ id, data, selected }: NodeProps) {
 
       {/* Add button below */}
       {renderAddButton(showAdd, handleAddClick)}
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0, bottom: -6, pointerEvents: 'none' }} />
+      <Handle type="source" position={Position.Bottom} 
+        style={{ 
+          width: 12, height: 12, background: '#e5e7eb', border: '2px solid #fff',
+          bottom: -6, opacity: hovered ? 1 : 0.5, transition: 'opacity 0.15s'
+        }} 
+      />
     </div>
   )
 }

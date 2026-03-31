@@ -13,6 +13,7 @@ import {
   type Node,
   type NodeTypes,
   MarkerType,
+  ConnectionLineType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -288,13 +289,15 @@ const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, object>((_props, ref) =>
         nodeTypes={nodeTypes}
         proOptions={{ hideAttribution: true }}
         nodesDraggable
-        nodesConnectable={false}
+        nodesConnectable={true}
         deleteKeyCode="Delete"
         defaultViewport={{ x: 80, y: 40, zoom: 0.9 }}
         onInit={(instance) => { rfInstance.current = instance }}
         onContextMenu={(e) => e.preventDefault()}
         snapToGrid
         snapGrid={[20, 20]}
+        connectionLineStyle={{ stroke: '#7c3aed', strokeWidth: 2 }}
+        connectionLineType={ConnectionLineType.SmoothStep}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#e2e8f0" />
         <Controls showInteractive={false} />
