@@ -1,0 +1,152 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* ═══════════════════════════════════════════════════════════════════
+   Base styles — scoped to #workflow-react-root
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  #workflow-react-root {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #workflow-react-root *,
+  #workflow-react-root *::before,
+  #workflow-react-root *::after {
+    box-sizing: border-box;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ReactFlow overrides
+   ═══════════════════════════════════════════════════════════════════ */
+
+#workflow-react-root .react-flow__node {
+  cursor: default;
+}
+
+#workflow-react-root .react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+#workflow-react-root .react-flow__handle:hover {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+#workflow-react-root .react-flow__controls {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+#workflow-react-root .react-flow__controls-button {
+  border: none !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  width: 30px !important;
+  height: 30px !important;
+  transition: all 0.1s !important;
+}
+
+#workflow-react-root .react-flow__controls-button:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+#workflow-react-root .react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+#workflow-react-root .react-flow__minimap {
+  display: none;
+}
+
+/* Edge animation on hover */
+#workflow-react-root .react-flow__edge-path {
+  transition: stroke 0.15s ease;
+}
+
+#workflow-react-root .react-flow__edge:hover .react-flow__edge-path {
+  stroke: #7c3aed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Scrollbar styling
+   ═══════════════════════════════════════════════════════════════════ */
+
+#workflow-react-root ::-webkit-scrollbar {
+  width: 6px;
+}
+
+#workflow-react-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#workflow-react-root ::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+#workflow-react-root ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

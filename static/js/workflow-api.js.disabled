@@ -1,0 +1,310 @@
+/**
+ * Workflow API Wrapper
+ * Handles all API calls for workflow operations
+ */
+
+class WorkflowAPI {
+    constructor() {
+        this.baseUrl = '/api/v1/workflows';
+    }
+
+    /**
+     * Get CSRF headers
+     */
+    getHeaders() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                         document.querySelector('input[name="csrf_token"]')?.value ||
+                         window.csrfToken || '';
+        
+        return {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+        };
+    }
+
+    /**
+     * List all workflows
+     */
+    async list() {
+        try {
+            const response = await fetch(this.baseUrl, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to list workflows: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.list error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get single workflow with conditions and actions
+     */
+    async get(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to get workflow: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.get error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create new workflow
+     */
+    async create(data) {
+        try {
+            const response = await fetch(this.baseUrl, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to create workflow: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.create error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update existing workflow
+     */
+    async update(id, data) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to update workflow: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.update error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete workflow
+     */
+    async delete(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to delete workflow: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Toggle workflow active status
+     */
+    async toggle(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}/toggle`, {
+                method: 'PATCH',
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to toggle workflow: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.toggle error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get workflow executions
+     */
+    async getExecutions(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}/executions`, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to get executions: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.getExecutions error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get workflow statistics
+     */
+    async getStats(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}/stats`, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to get stats: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.getStats error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Test workflow (dry run)
+     */
+    async test(id, entityType, entityId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}/test`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify({
+                    entity_type: entityType,
+                    entity_id: entityId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to test workflow: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.test error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * List all executions (workspace-wide)
+     */
+    async listExecutions(filters = {}) {
+        try {
+            const params = new URLSearchParams();
+            
+            if (filters.status) params.append('status', filters.status);
+            if (filters.workflow_id) params.append('workflow_id', filters.workflow_id);
+            
+            const url = `${this.baseUrl}/executions${params.toString() ? '?' + params.toString() : ''}`;
+            
+            const response = await fetch(url, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to list executions: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.listExecutions error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * List workflow templates
+     */
+    async listTemplates() {
+        try {
+            const response = await fetch(`${this.baseUrl}/templates`, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to list templates: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.listTemplates error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create workflow from template
+     */
+    async useTemplate(templateId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/templates/${templateId}/use`, {
+                method: 'POST',
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to use template: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.useTemplate error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Save canvas data (positions only)
+     */
+    async saveCanvas(id, canvasData) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify({ canvas_data: canvasData })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to save canvas: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('WorkflowAPI.saveCanvas error:', error);
+            throw error;
+        }
+    }
+}
+
+// Create global instance
+window.WorkflowAPI = new WorkflowAPI();

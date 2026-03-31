@@ -1,0 +1,299 @@
+/**
+ * Workflow Builder JavaScript
+ * Handles workflow list management and integration with ReactFlow canvas.
+ */
+
+const WorkflowBuilder = {
+    currentWorkflow: null,
+    isEditing: false,
+    elements: {},
+
+    init() {
+        this.cacheElements();
+        this.bindEvents();
+        this.loadWorkflows();
+    },
+
+    cacheElements() {
+        this.elements = {
+            workflowList: document.getElementById('workflowList'),
+            favoritesCardContainer: document.getElementById('favoritesCardContainer')
+        };
+    },
+
+    bindEvents() {
+        // Canvas-specific handlers live in workflow-canvas.js
+    },
+
+    async loadWorkflows() {
+        try {
+            const response = await fetch('/api/v1/workflows', {
+                headers: getCsrfHeaders()
+            });
+            const data = await response.json();
+
+            if (data.workflows) {
+                this.renderWorkflowList(data.workflows);
+            }
+
+            this.updateStats(data);
+        } catch (error) {
+            console.error('Error loading workflows:', error);
+            showToast('Otomasyonlar yuklenirken hata olustu', 'error');
+        }
+    },
+
+    renderWorkflowList(workflows) {
+        if (!this.elements.workflowList) return;
+
+        this.elements.workflowList.innerHTML = '';
+        this.renderFavorites(workflows);
+
+        if (workflows.length === 0) {
+            this.elements.workflowList.innerHTML = `
+                <div class="px-5 py-12 text-center text-slate-500 border-b border-slate-200">
+                    <i class="fas fa-diagram-project text-3xl mb-3 text-slate-300"></i>
+                    <p class="text-base font-semibold text-slate-700 mb-1">No workflows yet</p>
+                    <p class="text-sm">Click "New workflow" to create your first rule</p>
+                </div>
+            `;
+            return;
+        }
+
+        this.elements.workflowList.insertAdjacentHTML(
+            'beforeend',
+            '<div class="px-5 py-2 text-sm leading-none text-slate-700 border-b border-slate-200 bg-slate-50">Unpublished <span class="text-slate-500">1</span></div>'
+        );
+
+        workflows.forEach((workflow) => {
+            const item = this.createWorkflowListItem(workflow);
+            this.elements.workflowList.appendChild(item);
+        });
+    },
+
+    renderFavorites(workflows) {
+        if (!this.elements.favoritesCardContainer) return;
+
+        if (!workflows || workflows.length === 0) {
+            this.elements.favoritesCardContainer.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-300 min-h-[170px] flex flex-col items-center justify-center text-center text-slate-500">
+                    <p class="text-xl leading-none font-semibold mb-3 text-slate-700">Favorites</p>
+                    <p class="text-sm leading-none">Workflows that you favorite will appear here</p>
+                </div>
+            `;
+            return;
+        }
+
+        const fav = workflows[0];
+        this.elements.favoritesCardContainer.innerHTML = `
+            <div class="w-[300px] rounded-xl border border-slate-200 bg-white p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="WorkflowBuilder.editWorkflow({ id: ${fav.id} })">
+                <div class="h-[100px] rounded-lg border border-slate-200 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:10px_10px] flex items-center justify-center gap-3 mb-3">
+                    <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 inline-flex items-center justify-center"><i class="fas fa-file-signature text-xs"></i></span>
+                    <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 inline-flex items-center justify-center"><i class="fas fa-clock text-xs"></i></span>
+                    <span class="w-7 h-7 rounded-lg bg-pink-100 text-pink-600 inline-flex items-center justify-center"><i class="fas fa-filter text-xs"></i></span>
+                    <span class="w-7 h-7 rounded-lg bg-violet-100 text-violet-600 inline-flex items-center justify-center"><i class="far fa-calendar-alt text-xs"></i></span>
+                    <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 inline-flex items-center justify-center"><i class="fas fa-file-signature text-xs"></i></span>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="truncate text-lg font-semibold text-slate-800">${fav.name || 'Untitled Workflow'}</div>
+                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${fav.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}">${fav.is_active ? 'Active' : 'Draft'}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    createWorkflowListItem(workflow) {
+        const div = document.createElement('div');
+        const isActive = workflow.is_active;
+        const triggerIcon = this.getTriggerIcon(workflow.trigger_type);
+
+        div.className = 'grid grid-cols-12 gap-3 px-5 py-4 border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer';
+        div.dataset.workflowId = workflow.id;
+        div.dataset.workflowRow = '1';
+        div.dataset.search = `${workflow.name || ''} ${this.getTriggerName(workflow.trigger_type) || ''}`.toLowerCase();
+
+        div.innerHTML = `
+            <div class="col-span-4 flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-lg ${isActive ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center flex-shrink-0">
+                    <i class="${triggerIcon} text-sm"></i>
+                </div>
+                <div class="min-w-0">
+                    <h4 class="text-sm leading-none font-semibold text-slate-800 truncate">${workflow.name || 'Untitled Workflow'}</h4>
+                </div>
+            </div>
+            <div class="col-span-1 text-sm leading-none text-slate-500 flex items-center">${workflow.run_count || 0}</div>
+            <div class="col-span-1 flex items-center">
+                <span class="inline-flex items-center rounded-lg px-2 py-1 text-xs leading-none font-medium ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}">
+                    ${isActive ? 'Active' : 'Draft'}
+                </span>
+            </div>
+            <div class="col-span-2 flex items-center text-sm leading-none text-slate-700 truncate">
+                <span class="w-4 h-4 rounded-full bg-amber-500 inline-block mr-2 flex-shrink-0"></span>
+                ${workflow.created_by_name || workflow.created_by || 'owner'}
+            </div>
+            <div class="col-span-2 flex items-center text-sm leading-none text-slate-500">
+                ${this.getPublishedDate(workflow)}
+            </div>
+            <div class="col-span-2 flex items-center justify-between gap-2">
+                <span class="text-sm leading-none text-slate-400"><i class="far fa-star"></i></span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="event.stopPropagation(); WorkflowBuilder.deleteWorkflow(${workflow.id})"
+                        class="w-7 h-7 rounded-md text-red-600 hover:bg-red-50 inline-flex items-center justify-center"
+                        title="Delete">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                    <label class="relative inline-flex items-center cursor-pointer" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="sr-only peer" ${isActive ? 'checked' : ''} onchange="WorkflowBuilder.toggleWorkflow(${workflow.id}, this.checked)">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+                    </label>
+                </div>
+            </div>
+        `;
+
+        div.addEventListener('click', (e) => {
+            if (!e.target.closest('label') && !e.target.closest('button')) {
+                this.editWorkflow(workflow);
+            }
+        });
+
+        return div;
+    },
+
+    async deleteWorkflow(workflowId) {
+        if (!confirm('Bu workflow\'u silmek istediginizden emin misiniz?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/v1/workflows/${workflowId}`, {
+                method: 'DELETE',
+                headers: getCsrfHeaders()
+            });
+
+            if (response.ok) {
+                showToast('Workflow silindi', 'success');
+                this.loadWorkflows();
+            } else {
+                const error = await response.json();
+                showToast(error.error || 'Silme basarisiz', 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting workflow:', error);
+            showToast('Workflow silinemedi', 'error');
+        }
+    },
+
+    async toggleWorkflow(id, isActive) {
+        try {
+            const response = await fetch(`/api/v1/workflows/${id}/toggle`, {
+                method: 'PATCH',
+                headers: getCsrfHeaders()
+            });
+
+            if (response.ok) {
+                showToast(`Otomasyon ${isActive ? 'aktif' : 'pasif'} hale getirildi`, 'success');
+                this.loadWorkflows();
+            }
+        } catch (error) {
+            console.error('Error toggling workflow:', error);
+            showToast('Durum degistirilemedi', 'error');
+        }
+    },
+
+    async editWorkflow(workflow) {
+        try {
+            const response = await fetch(`/api/v1/workflows/${workflow.id}`, {
+                headers: getCsrfHeaders()
+            });
+            const data = await response.json();
+
+            this.currentWorkflow = data;
+            this.isEditing = true;
+
+            if (window.WorkflowCanvas) {
+                WorkflowCanvas.loadWorkflow(data);
+            }
+        } catch (error) {
+            console.error('Error loading workflow:', error);
+            showToast('Otomasyon yuklenemedi', 'error');
+        }
+    },
+
+    showNewWorkflow() {
+        this.isEditing = false;
+        this.currentWorkflow = null;
+
+        if (window.WorkflowCanvas) {
+            WorkflowCanvas.showNewWorkflow();
+        }
+    },
+
+    filterWorkflows(searchTerm) {
+        const items = document.querySelectorAll('#workflowList [data-workflow-row="1"]');
+        const term = (searchTerm || '').toLowerCase().trim();
+
+        items.forEach((item) => {
+            const searchable = item.dataset.search || '';
+            if (!term || searchable.includes(term)) {
+                item.classList.remove('hidden');
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+    },
+
+    updateStats(data) {
+        const activeCount = data.workflows?.filter((w) => w.is_active).length || 0;
+        const countEl = document.getElementById('activeCount');
+        if (countEl) {
+            countEl.textContent = `${activeCount} active`;
+        }
+    },
+
+    getTriggerIcon(triggerType) {
+        const icons = {
+            deal_stage_changed: 'fas fa-exchange-alt',
+            deal_created: 'fas fa-plus-circle',
+            deal_won: 'fas fa-trophy',
+            deal_lost: 'fas fa-times-circle',
+            contact_created: 'fas fa-user-plus',
+            contact_no_activity: 'fas fa-clock',
+            task_completed: 'fas fa-check-circle'
+        };
+        return icons[triggerType] || 'fas fa-bolt';
+    },
+
+    getTriggerName(triggerType) {
+        const names = {
+            deal_stage_changed: 'Asama degisti',
+            deal_created: 'Yeni anlasma',
+            deal_won: 'Anlasma kazanildi',
+            deal_lost: 'Anlasma kaybedildi',
+            contact_created: 'Yeni kisi',
+            contact_no_activity: 'Kisi hareketsiz',
+            deal_no_activity: 'Anlasma hareketsiz',
+            task_completed: 'Gorev tamamlandi'
+        };
+        return names[triggerType] || triggerType;
+    },
+
+    formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    },
+
+    getPublishedDate(workflow) {
+        return this.formatDate(workflow.last_published_at || workflow.updated_at || workflow.last_run_at || workflow.created_at) || '-';
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('workflowList')) {
+        WorkflowBuilder.init();
+
+        if (window.WorkflowCanvas) {
+            WorkflowCanvas.init();
+        }
+    }
+});

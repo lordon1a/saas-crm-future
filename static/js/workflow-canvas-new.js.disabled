@@ -1,0 +1,806 @@
+/**
+ * Workflow Canvas - Twenty-Style ReactFlow Integration
+ * Visual workflow builder with Twenty CRM styling
+ */
+
+// ============================================================================
+// TWENTY-STYLE THEME COLORS
+// ============================================================================
+const WORKFLOW_THEME = {
+    colors: {
+        blue: '#3b82f6',
+        blue2: '#dbeafe',
+        turquoise: '#22c55e',
+        turquoise2: '#d1fae5',
+        yellow: '#f59e0b',
+        yellow2: '#fef3c7',
+        red: '#ef4444',
+        red2: '#fee2e2',
+        gray: {
+            50: '#f8fafc',
+            100: '#f1f5f9',
+            200: '#e2e8f0',
+            300: '#cbd5e1',
+            400: '#94a3b8',
+            500: '#64748b',
+            600: '#475569',
+            700: '#334155',
+            800: '#1e293b',
+            900: '#0f172a'
+        }
+    },
+    spacing: {
+        1: '4px',
+        2: '8px',
+        3: '12px',
+        4: '16px',
+        5: '20px',
+        6: '24px'
+    },
+    borderRadius: {
+        sm: '6px',
+        md: '8px',
+        lg: '12px'
+    }
+};
+
+// ============================================================================
+// NODE CONFIGURATIONS - Twenty-style
+// ============================================================================
+const TWENTY_NODE_CONFIGS = {
+    // TRIGGERS
+    trigger: {
+        icon: 'fa-bolt',
+        colorClass: 'trigger'
+    },
+    contact_created: {
+        label: 'Record created',
+        icon: 'fa-user-plus',
+        colorClass: 'trigger'
+    },
+    deal_created: {
+        label: 'Record created',
+        icon: 'fa-dollar-sign',
+        colorClass: 'trigger'
+    },
+    deal_stage_changed: {
+        label: 'Record updated',
+        icon: 'fa-pen',
+        colorClass: 'trigger'
+    },
+    deal_won: {
+        label: 'Deal won',
+        icon: 'fa-trophy',
+        colorClass: 'trigger'
+    },
+    deal_lost: {
+        label: 'Deal lost',
+        icon: 'fa-times',
+        colorClass: 'trigger'
+    },
+    contact_no_activity: {
+        label: 'No activity',
+        icon: 'fa-clock',
+        colorClass: 'trigger'
+    },
+    task_completed: {
+        label: 'Task completed',
+        icon: 'fa-check',
+        colorClass: 'trigger'
+    },
+    deal_close_date_approaching: {
+        label: 'Date approaching',
+        icon: 'fa-calendar',
+        colorClass: 'trigger'
+    },
+    manual: {
+        label: 'Manual trigger',
+        icon: 'fa-play',
+        colorClass: 'trigger'
+    },
+    
+    // ACTIONS
+    action: {
+        icon: 'fa-cube',
+        colorClass: 'action'
+    },
+    create_task: {
+        label: 'Create task',
+        icon: 'fa-check-square',
+        colorClass: 'action'
+    },
+    send_email: {
+        label: 'Send email',
+        icon: 'fa-envelope',
+        colorClass: 'action'
+    },
+    notify_owner: {
+        label: 'Notify owner',
+        icon: 'fa-bell',
+        colorClass: 'action'
+    },
+    add_tag: {
+        label: 'Add tag',
+        icon: 'fa-tag',
+        colorClass: 'action'
+    },
+    remove_tag: {
+        label: 'Remove tag',
+        icon: 'fa-tag',
+        colorClass: 'action'
+    },
+    update_deal_field: {
+        label: 'Update deal',
+        icon: 'fa-edit',
+        colorClass: 'action'
+    },
+    update_contact_field: {
+        label: 'Update contact',
+        icon: 'fa-edit',
+        colorClass: 'action'
+    },
+    update_deal_stage: {
+        label: 'Change stage',
+        icon: 'fa-exchange-alt',
+        colorClass: 'action'
+    },
+    create_note: {
+        label: 'Add note',
+        icon: 'fa-sticky-note',
+        colorClass: 'action'
+    },
+    delay: {
+        label: 'Wait',
+        icon: 'fa-hourglass-half',
+        colorClass: 'action'
+    },
+    
+    // CONDITIONS
+    condition: {
+        label: 'Condition',
+        icon: 'fa-question',
+        colorClass: 'condition'
+    },
+    if_else: {
+        label: 'If / Else',
+        icon: 'fa-code-branch',
+        colorClass: 'condition'
+    },
+    filter: {
+        label: 'Filter',
+        icon: 'fa-filter',
+        colorClass: 'condition'
+    }
+};
+
+// ============================================================================
+// REACT & REACTFLOW SETUP
+// ============================================================================
+const { React, ReactDOM } = window;
+const RF = window.ReactFlow || {};
+const ReactFlow = RF.default || RF.ReactFlow || RF;
+const {
+    Background,
+    Controls,
+    MiniMap,
+    useNodesState,
+    useEdgesState,
+    addEdge,
+    Handle,
+    Position
+} = RF;
+
+// ============================================================================
+// TWENTY-STYLE CUSTOM NODE COMPONENT
+// ============================================================================
+function TwentyNodeComponent({ id, data, selected }) {
+    const config = TWENTY_NODE_CONFIGS[data.subtype] || TWENTY_NODE_CONFIGS[data.type] || {
+        label: data.type || 'Node',
+        icon: 'fa-square',
+        colorClass: 'action'
+    };
+    
+    const isTrigger = data.type === 'trigger';
+    const colorClass = config.colorClass || (isTrigger ? 'trigger' : 'action');
+    
+    const handleClick = (e) => {
+        e.stopPropagation();
+        if (window.WorkflowCanvas) {
+            window.WorkflowCanvas.openProperties(id, data);
+        }
+    };
+    
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (window.WorkflowCanvas) {
+            window.WorkflowCanvas.deleteNode(id);
+        }
+    };
+    
+    const blockDrag = (e) => {
+        e.stopPropagation();
+    };
+    
+    // Build node class names
+    const nodeClass = `workflow-node ${colorClass} ${selected ? 'selected' : ''}`;
+    
+    return React.createElement('div', {
+        className: nodeClass,
+        onClick: handleClick,
+        'data-node-id': id
+    }, [
+        // Delete button
+        React.createElement('button', {
+            key: 'delete',
+            type: 'button',
+            className: 'workflow-node-delete-btn',
+            onClick: handleDelete,
+            onMouseDown: blockDrag
+        }, React.createElement('i', { className: 'fas fa-times' })),
+        
+        // Target handle (input)
+        React.createElement(Handle, {
+            key: 'handle-target',
+            type: 'target',
+            position: Position.Top,
+            className: 'workflow-handle workflow-handle-top'
+        }),
+        
+        // Header
+        React.createElement('div', { key: 'header', className: 'workflow-node-header' }, [
+            React.createElement('div', { key: 'icon', className: 'workflow-node-icon' },
+                React.createElement('i', { className: `fas ${config.icon}` })
+            ),
+            React.createElement('div', { key: 'info', className: 'workflow-node-header-info' }, [
+                React.createElement('div', { key: 'type', className: 'workflow-node-type' },
+                    isTrigger ? 'Trigger' : 'Action'
+                ),
+                React.createElement('div', { key: 'name', className: 'workflow-node-name' },
+                    config.label || data.name || 'Untitled'
+                )
+            ])
+        ]),
+        
+        // Content (show description or first field)
+        React.createElement('div', { key: 'content', className: 'workflow-node-content' },
+            React.createElement('div', { key: 'field', className: 'workflow-node-field' },
+                data.description || data.config?.description || ''
+            )
+        ),
+        
+        // Source handle (output)
+        React.createElement(Handle, {
+            key: 'handle-source',
+            type: 'source',
+            position: Position.Bottom,
+            className: 'workflow-handle workflow-handle-bottom'
+        })
+    ]);
+}
+
+// ============================================================================
+// EMPTY NODE COMPONENT
+// ============================================================================
+function EmptyNodeComponent({ data, selected }) {
+    const handleClick = () => {
+        if (window.WorkflowCanvas) {
+            window.WorkflowCanvas.showAddStepMenu();
+        }
+    };
+    
+    return React.createElement('div', {
+        className: `workflow-node empty-node ${selected ? 'selected' : ''}`,
+        onClick: handleClick
+    }, [
+        React.createElement('div', { key: 'content', className: 'workflow-empty-node-content' }, [
+            React.createElement('div', { key: 'icon', className: 'workflow-empty-node-icon' }, '+'),
+            React.createElement('div', { key: 'text', className: 'workflow-empty-node-text' }, 'Add a step')
+        ]),
+        React.createElement(Handle, {
+            key: 'handle-target',
+            type: 'target',
+            position: Position.Top,
+            className: 'workflow-handle workflow-handle-top'
+        })
+    ]);
+}
+
+// ============================================================================
+// WORKFLOW CANVAS CLASS
+// ============================================================================
+class TwentyWorkflowCanvas {
+    constructor() {
+        this.reactRoot = null;
+        this.reactFlowInstance = null;
+        this.currentWorkflowId = null;
+        this._nodes = [];
+        this._edges = [];
+        this._selectedNode = null;
+        
+        this.nodeTypes = {
+            workflowNode: TwentyNodeComponent,
+            empty: EmptyNodeComponent
+        };
+    }
+    
+    /**
+     * Initialize the canvas
+     */
+    init(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error('TwentyWorkflowCanvas: Container not found', containerId);
+            return;
+        }
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Create React root
+        this.reactRoot = ReactDOM.createRoot(container);
+        
+        // Render initial state
+        this.reactRoot.render(
+            React.createElement(ReactFlow, {
+                nodes: this._nodes,
+                edges: this._edges,
+                onNodesChange: (changes) => this._onNodesChange(changes),
+                onEdgesChange: (changes) => this._onEdgesChange(changes),
+                onConnect: (connection) => this._onConnect(connection),
+                nodeTypes: this.nodeTypes,
+                onNodeClick: (event, node) => this._onNodeClick(event, node),
+                onPaneClick: () => this._onPaneClick(),
+                fitView: true,
+                snapToGrid: true,
+                snapGrid: [16, 16],
+                defaultEdgeOptions: {
+                    type: 'smoothstep',
+                    style: { stroke: '#94a3b8', strokeWidth: 2 }
+                }
+            },
+                React.createElement(Background, { color: '#e2e8f0', gap: 16 }),
+                React.createElement(Controls, { style: { width: 32, height: 32 } }),
+                React.createElement(MiniMap, { 
+                    nodeColor: (node) => {
+                        if (node.data.type === 'trigger') return '#3b82f6';
+                        if (node.data.type === 'condition') return '#f59e0b';
+                        return '#22c55e';
+                    },
+                    maskColor: 'rgba(0,0,0,0.1)'
+                })
+            )
+        );
+        
+        console.log('TwentyWorkflowCanvas: Initialized');
+    }
+    
+    /**
+     * Handle node changes
+     */
+    _onNodesChange(changes) {
+        // Apply changes to internal state
+        this._nodes = this._applyNodeChanges(changes, this._nodes);
+        this._updateReactFlow();
+        this._autoSave();
+    }
+    
+    /**
+     * Handle edge changes
+     */
+    _onEdgesChange(changes) {
+        this._edges = this._applyEdgeChanges(changes, this._edges);
+        this._updateReactFlow();
+        this._autoSave();
+    }
+    
+    /**
+     * Handle new connection
+     */
+    _onConnect(connection) {
+        const newEdge = {
+            id: `edge-${Date.now()}`,
+            source: connection.source,
+            target: connection.target,
+            sourceHandle: connection.sourceHandle,
+            targetHandle: connection.targetHandle,
+            type: 'smoothstep',
+            animated: false,
+            style: { stroke: '#94a3b8', strokeWidth: 2 }
+        };
+        
+        this._edges = addEdge(newEdge, this._edges);
+        this._updateReactFlow();
+        this._autoSave();
+    }
+    
+    /**
+     * Handle node click
+     */
+    _onNodeClick(event, node) {
+        this._selectedNode = node;
+        this._updateReactFlow();
+    }
+    
+    /**
+     * Handle pane click (deselect)
+     */
+    _onPaneClick() {
+        this._selectedNode = null;
+        this._updateReactFlow();
+    }
+    
+    /**
+     * Update ReactFlow rendering
+     */
+    _updateReactFlow() {
+        if (this.reactRoot) {
+            this.reactRoot.render(
+                React.createElement(ReactFlow, {
+                    nodes: this._nodes,
+                    edges: this._edges,
+                    onNodesChange: (changes) => this._onNodesChange(changes),
+                    onEdgesChange: (changes) => this._onEdgesChange(changes),
+                    onConnect: (connection) => this._onConnect(connection),
+                    nodeTypes: this.nodeTypes,
+                    onNodeClick: (event, node) => this._onNodeClick(event, node),
+                    onPaneClick: () => this._onPaneClick(),
+                    fitView: true,
+                    snapToGrid: true,
+                    snapGrid: [16, 16],
+                    defaultEdgeOptions: {
+                        type: 'smoothstep',
+                        style: { stroke: '#94a3b8', strokeWidth: 2 }
+                    }
+                },
+                    React.createElement(Background, { color: '#e2e8f0', gap: 16 }),
+                    React.createElement(Controls, { style: { width: 32, height: 32 } }),
+                    React.createElement(MiniMap, { 
+                        nodeColor: (node) => {
+                            if (node.data.type === 'trigger') return '#3b82f6';
+                            if (node.data.type === 'condition') return '#f59e0b';
+                            return '#22c55e';
+                        },
+                        maskColor: 'rgba(0,0,0,0.1)'
+                    })
+                )
+            );
+        }
+    }
+    
+    /**
+     * Apply node changes
+     */
+    _applyNodeChanges(changes, nodes) {
+        return changes.reduce((acc, change) => {
+            switch (change.type) {
+                case 'position':
+                    return acc.map(node => 
+                        node.id === change.id 
+                            ? { ...node, position: change.position }
+                            : node
+                    );
+                case 'dimensions':
+                    return acc.map(node =>
+                        node.id === change.id
+                            ? { ...node, ...change.dimensions }
+                            : node
+                    );
+                case 'select':
+                    return acc.map(node =>
+                        node.id === change.id
+                            ? { ...node, selected: change.selected }
+                            : node
+                    );
+                case 'remove':
+                    return acc.filter(node => node.id !== change.id);
+                default:
+                    return acc;
+            }
+        }, nodes);
+    }
+    
+    /**
+     * Apply edge changes
+     */
+    _applyEdgeChanges(changes, edges) {
+        return changes.reduce((acc, change) => {
+            switch (change.type) {
+                case 'remove':
+                    return acc.filter(edge => edge.id !== change.id);
+                case 'select':
+                    return acc.map(edge =>
+                        edge.id === change.id
+                            ? { ...edge, selected: change.selected }
+                            : edge
+                    );
+                default:
+                    return acc;
+            }
+        }, edges);
+    }
+    
+    /**
+     * Load workflow onto canvas
+     */
+    loadWorkflow(workflowData) {
+        this.currentWorkflowId = workflowData.id;
+        
+        const nodes = [];
+        const edges = [];
+        let yPosition = 100;
+        
+        // Create trigger node
+        if (workflowData.trigger_type) {
+            nodes.push({
+                id: 'trigger_1',
+                type: 'workflowNode',
+                position: { x: 300, y: yPosition },
+                data: {
+                    type: 'trigger',
+                    subtype: workflowData.trigger_type,
+                    name: this._getTriggerName(workflowData.trigger_type),
+                    config: typeof workflowData.trigger_config === 'string' 
+                        ? JSON.parse(workflowData.trigger_config) 
+                        : (workflowData.trigger_config || {})
+                }
+            });
+            yPosition += 150;
+        }
+        
+        // Create condition nodes
+        if (workflowData.conditions && workflowData.conditions.length > 0) {
+            workflowData.conditions.forEach((condition, index) => {
+                nodes.push({
+                    id: `condition_${index + 1}`,
+                    type: 'workflowNode',
+                    position: { x: 300, y: yPosition },
+                    data: {
+                        type: 'condition',
+                        subtype: 'condition',
+                        name: `If ${condition.field_name} ${condition.operator} ${condition.value}`,
+                        config: condition
+                    }
+                });
+                
+                // Connect to previous node
+                edges.push({
+                    id: `edge_cond_${index}`,
+                    source: index === 0 ? 'trigger_1' : `action_${index}`,
+                    target: `condition_${index + 1}`,
+                    type: 'smoothstep',
+                    style: { stroke: '#94a3b8', strokeWidth: 2 }
+                });
+                
+                yPosition += 150;
+            });
+        }
+        
+        // Create action nodes
+        if (workflowData.actions && workflowData.actions.length > 0) {
+            const startIndex = workflowData.conditions?.length > 0 
+                ? workflowData.conditions.length + 1 
+                : 1;
+            
+            workflowData.actions.forEach((action, index) => {
+                const nodeId = `action_${startIndex + index}`;
+                
+                nodes.push({
+                    id: nodeId,
+                    type: 'workflowNode',
+                    position: { x: 300, y: yPosition },
+                    data: {
+                        type: 'action',
+                        subtype: action.action_type,
+                        name: this._getActionName(action.action_type),
+                        config: typeof action.action_config === 'string'
+                            ? JSON.parse(action.action_config)
+                            : (action.action_config || {})
+                    }
+                });
+                
+                // Connect to previous node
+                if (nodes.length > 1) {
+                    edges.push({
+                        id: `edge_action_${index}`,
+                        source: index === 0 
+                            ? (workflowData.conditions?.length > 0 ? `condition_${workflowData.conditions.length}` : 'trigger_1')
+                            : `action_${startIndex + index - 1}`,
+                        target: nodeId,
+                        type: 'smoothstep',
+                        style: { stroke: '#94a3b8', strokeWidth: 2 }
+                    });
+                }
+                
+                yPosition += 150;
+            });
+        }
+        
+        // Add empty end node if there are actions
+        if (workflowData.actions && workflowData.actions.length > 0) {
+            nodes.push({
+                id: 'empty_end',
+                type: 'empty',
+                position: { x: 300, y: yPosition },
+                data: { type: 'empty' }
+            });
+            
+            edges.push({
+                id: 'edge_end',
+                source: `action_${startIndex + workflowData.actions.length - 1}`,
+                target: 'empty_end',
+                type: 'smoothstep',
+                style: { stroke: '#94a3b8', strokeWidth: 2 }
+            });
+        }
+        
+        this._nodes = nodes;
+        this._edges = edges;
+        this._updateReactFlow();
+        
+        console.log('TwentyWorkflowCanvas: Loaded workflow', { nodes, edges });
+    }
+    
+    /**
+     * Get workflow data from canvas
+     */
+    getWorkflowData() {
+        const triggerNode = this._nodes.find(n => n.data.type === 'trigger');
+        const conditionNodes = this._nodes.filter(n => n.data.type === 'condition');
+        const actionNodes = this._nodes.filter(n => n.data.type === 'action');
+        
+        return {
+            name: document.getElementById('workflowName')?.value?.trim() || 'Untitled Workflow',
+            is_active: document.getElementById('workflowActive')?.checked || false,
+            trigger_type: triggerNode?.data?.subtype || 'manual',
+            trigger_config: triggerNode?.data?.config || {},
+            conditions: conditionNodes.map((node, index) => ({
+                field_name: node.data.config?.field_name || '',
+                operator: node.data.config?.operator || 'equals',
+                value: node.data.config?.value || '',
+                order_index: index
+            })),
+            actions: actionNodes.map((node, index) => ({
+                action_type: node.data.subtype,
+                action_config: node.data.config || {},
+                delay_minutes: node.data.config?.delay_minutes || 0,
+                order_index: index
+            }))
+        };
+    }
+    
+    /**
+     * Add a new node
+     */
+    addNode(type, subtype, config = {}) {
+        const id = `${type}_${Date.now()}`;
+        const maxY = this._nodes.reduce((max, node) => 
+            Math.max(max, node.position?.y || 0), 0);
+        
+        const newNode = {
+            id,
+            type: 'workflowNode',
+            position: { x: 300, y: maxY + 150 },
+            data: { type, subtype, name: this._getNodeName(type, subtype), config }
+        };
+        
+        this._nodes = [...this._nodes, newNode];
+        
+        // Connect to last action node if exists
+        const lastAction = this._nodes
+            .filter(n => n.data.type === 'action')
+            .sort((a, b) => (b.position?.y || 0) - (a.position?.y || 0))[0];
+        
+        if (lastAction) {
+            this._edges = [...this._edges, {
+                id: `edge_${Date.now()}`,
+                source: lastAction.id,
+                target: id,
+                type: 'smoothstep',
+                style: { stroke: '#94a3b8', strokeWidth: 2 }
+            }];
+        }
+        
+        this._updateReactFlow();
+        this._autoSave();
+        
+        return newNode;
+    }
+    
+    /**
+     * Delete a node
+     */
+    deleteNode(nodeId) {
+        this._nodes = this._nodes.filter(n => n.id !== nodeId);
+        this._edges = this._edges.filter(e => e.source !== nodeId && e.target !== nodeId);
+        this._updateReactFlow();
+        this._autoSave();
+    }
+    
+    /**
+     * Open properties panel for a node
+     */
+    openProperties(nodeId, nodeData) {
+        console.log('TwentyWorkflowCanvas: Open properties', { nodeId, nodeData });
+        // This would open a side panel for editing
+        if (window.WorkflowBuilder) {
+            window.WorkflowBuilder.showNodeConfig(nodeId, nodeData);
+        }
+    }
+    
+    /**
+     * Auto-save canvas state
+     */
+    _autoSave() {
+        if (!this.currentWorkflowId) return;
+        
+        const canvasData = {
+            nodes: this._nodes.map(n => ({
+                id: n.id,
+                position: n.position,
+                data: n.data
+            })),
+            edges: this._edges.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target
+            }))
+        };
+        
+        // Debounced save
+        clearTimeout(this._autoSaveTimeout);
+        this._autoSaveTimeout = setTimeout(() => {
+            WorkflowAPI.saveCanvas(this.currentWorkflowId, canvasData)
+                .catch(err => console.error('Auto-save failed:', err));
+        }, 1000);
+    }
+    
+    /**
+     * Helper: Get trigger display name
+     */
+    _getTriggerName(triggerType) {
+        const names = {
+            contact_created: 'Record created',
+            deal_created: 'Record created',
+            deal_stage_changed: 'Record updated',
+            deal_won: 'Deal won',
+            deal_lost: 'Deal lost',
+            contact_no_activity: 'No activity',
+            task_completed: 'Task completed',
+            deal_close_date_approaching: 'Date approaching',
+            manual: 'Manual trigger'
+        };
+        return names[triggerType] || triggerType;
+    }
+    
+    /**
+     * Helper: Get action display name
+     */
+    _getActionName(actionType) {
+        const names = {
+            create_task: 'Create task',
+            send_email: 'Send email',
+            notify_owner: 'Notify owner',
+            add_tag: 'Add tag',
+            remove_tag: 'Remove tag',
+            update_deal_field: 'Update deal',
+            update_contact_field: 'Update contact',
+            update_deal_stage: 'Change stage',
+            create_note: 'Add note',
+            delay: 'Wait'
+        };
+        return names[actionType] || actionType;
+    }
+    
+    /**
+     * Helper: Get node display name
+     */
+    _getNodeName(type, subtype) {
+        if (type === 'trigger') return this._getTriggerName(subtype);
+        if (type === 'action') return this._getActionName(subtype);
+        return subtype || type;
+    }
+}
+
+// Create global instance
+window.TwentyWorkflowCanvas = new TwentyWorkflowCanvas();

@@ -141,11 +141,11 @@ def create_workflow():
         
         db.session.commit()
         
-        return jsonify({
-            'id': workflow.id,
-            'name': workflow.name,
-            'status': 'created'
-        }), 201
+        # Return full workflow object so React can use it directly
+        workflow_data = workflow.to_dict()
+        workflow_data['conditions_count'] = workflow.conditions.count()
+        workflow_data['actions_count'] = workflow.actions.count()
+        return jsonify(workflow_data), 201
         
     except Exception as e:
         db.session.rollback()

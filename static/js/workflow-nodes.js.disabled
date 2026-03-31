@@ -1,0 +1,332 @@
+/**
+ * Workflow Custom Node Renderers
+ * Twenty-style nodes for ReactFlow canvas
+ */
+
+class WorkflowNodeRenderer {
+    constructor() {
+        this.nodeIcons = {
+            'contact_created': '👤',
+            'contact_updated': '👤',
+            'contact_deleted': '👤',
+            'deal_created': '💰',
+            'deal_updated': '💰',
+            'deal_stage_changed': '📊',
+            'deal_won': '🎉',
+            'deal_lost': '😞',
+            'task_created': '✅',
+            'task_completed': '✅',
+            'manual': '🎯',
+            'schedule': '⏰',
+            'webhook': '🔗',
+            'create_task': '✅',
+            'notify_owner': '🔔',
+            'send_email': '📧',
+            'add_tag': '🏷️',
+            'remove_tag': '🏷️',
+            'update_deal_field': '✏️',
+            'update_contact_field': '✏️',
+            'update_deal_stage': '📊',
+            'create_note': '📝',
+            'condition': '❓',
+            'if_else': '🔀',
+            'iterator': '🔄',
+            'delay': '⏱️',
+            'code': '⚙️',
+            'http_request': '🌐',
+            'ai_agent': '🤖'
+        };
+    }
+
+    /**
+     * Create a trigger node element
+     */
+    createTriggerNode(triggerType, config) {
+        const icon = this.nodeIcons[triggerType] || '⚡';
+        const triggerName = this.getTriggerName(triggerType);
+        const triggerDesc = this.getTriggerDescription(triggerType, config);
+        
+        return `
+            <div class="workflow-node trigger" data-type="trigger" data-subtype="${triggerType}">
+                <div class="workflow-node-header">
+                    <div class="workflow-node-icon">${icon}</div>
+                    <div class="workflow-node-header-info">
+                        <div class="workflow-node-type">Trigger</div>
+                        <div class="workflow-node-name">${triggerName}</div>
+                    </div>
+                </div>
+                <div class="workflow-node-content">
+                    <div class="workflow-node-field">
+                        <span class="workflow-node-field-value">${triggerDesc}</span>
+                    </div>
+                </div>
+                <div class="workflow-node-actions">
+                    <button class="workflow-node-action-btn" onclick="WorkflowCanvas.editNode('trigger')" title="Edit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="workflow-handle workflow-handle-bottom" data-handle="bottom"></div>
+            </div>
+        `;
+    }
+
+    /**
+     * Create an action node element
+     */
+    createActionNode(actionType, config, index) {
+        const icon = this.nodeIcons[actionType] || '⚡';
+        const actionName = this.getActionName(actionType);
+        const actionSummary = this.getActionSummary(actionType, config);
+        
+        return `
+            <div class="workflow-node action" data-type="action" data-subtype="${actionType}" data-index="${index}">
+                <div class="workflow-node-header">
+                    <div class="workflow-node-icon">${icon}</div>
+                    <div class="workflow-node-header-info">
+                        <div class="workflow-node-type">Action ${index > 0 ? '#' + index : ''}</div>
+                        <div class="workflow-node-name">${actionName}</div>
+                    </div>
+                </div>
+                <div class="workflow-node-content">
+                    <div class="workflow-node-field">
+                        <span class="workflow-node-field-value">${actionSummary}</span>
+                    </div>
+                </div>
+                <div class="workflow-node-actions">
+                    <button class="workflow-node-action-btn" onclick="WorkflowCanvas.editNode('action', ${index})" title="Edit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="workflow-node-action-btn delete" onclick="WorkflowCanvas.deleteNode('action', ${index})" title="Delete">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="workflow-handle workflow-handle-top" data-handle="top"></div>
+                <div class="workflow-handle workflow-handle-bottom" data-handle="bottom"></div>
+            </div>
+        `;
+    }
+
+    /**
+     * Create a condition node element
+     */
+    createConditionNode(condition, index) {
+        const icon = this.nodeIcons['condition'] || '❓';
+        const fieldName = condition.field_name || 'field';
+        const operator = this.getOperatorLabel(condition.operator || 'equals');
+        const value = condition.value || 'value';
+        
+        return `
+            <div class="workflow-node condition" data-type="condition" data-index="${index}">
+                <div class="workflow-node-header">
+                    <div class="workflow-node-icon">${icon}</div>
+                    <div class="workflow-node-header-info">
+                        <div class="workflow-node-type">Condition</div>
+                        <div class="workflow-node-name">If ${fieldName}</div>
+                    </div>
+                </div>
+                <div class="workflow-node-content">
+                    <div class="workflow-node-field">
+                        <span class="workflow-node-field-label">Check:</span>
+                        <span class="workflow-node-field-value">${operator} "${value}"</span>
+                    </div>
+                </div>
+                <div class="workflow-node-actions">
+                    <button class="workflow-node-action-btn" onclick="WorkflowCanvas.editNode('condition', ${index})" title="Edit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="workflow-node-action-btn delete" onclick="WorkflowCanvas.deleteNode('condition', ${index})" title="Delete">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="workflow-handle workflow-handle-top" data-handle="top"></div>
+                <div class="workflow-handle workflow-handle-bottom" data-handle="bottom"></div>
+            </div>
+        `;
+    }
+
+    /**
+     * Create an empty/add node
+     */
+    createEmptyNode() {
+        return `
+            <div class="workflow-node empty-node" data-type="empty">
+                <div class="workflow-empty-node-content">
+                    <div class="workflow-empty-node-icon">+</div>
+                    <div class="workflow-empty-node-text">Add a step</div>
+                </div>
+                <div class="workflow-handle workflow-handle-top" data-handle="top"></div>
+            </div>
+        `;
+    }
+
+    /**
+     * Get human-readable trigger name
+     */
+    getTriggerName(triggerType) {
+        const names = {
+            'contact_created': 'New Contact',
+            'contact_updated': 'Contact Updated',
+            'contact_deleted': 'Contact Deleted',
+            'deal_created': 'New Deal',
+            'deal_updated': 'Deal Updated',
+            'deal_stage_changed': 'Stage Changed',
+            'deal_won': 'Deal Won',
+            'deal_lost': 'Deal Lost',
+            'task_created': 'Task Created',
+            'task_completed': 'Task Completed',
+            'manual': 'Manual Trigger',
+            'schedule': 'Scheduled',
+            'webhook': 'Webhook'
+        };
+        return names[triggerType] || triggerType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    /**
+     * Get trigger description
+     */
+    getTriggerDescription(triggerType, config) {
+        if (!config) return 'No configuration';
+        
+        if (triggerType === 'deal_stage_changed') {
+            const from = config.from_stage_name || 'any';
+            const to = config.to_stage_name || 'any';
+            return `${from} → ${to}`;
+        }
+        
+        if (triggerType === 'schedule') {
+            const time = config.time || '00:00';
+            const days = config.days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+            return `Daily at ${time}`;
+        }
+        
+        return 'Triggered automatically';
+    }
+
+    /**
+     * Get human-readable action name
+     */
+    getActionName(actionType) {
+        const names = {
+            'create_task': 'Create Task',
+            'notify_owner': 'Notify Owner',
+            'send_email': 'Send Email',
+            'add_tag': 'Add Tag',
+            'remove_tag': 'Remove Tag',
+            'update_deal_field': 'Update Deal',
+            'update_contact_field': 'Update Contact',
+            'update_deal_stage': 'Change Stage',
+            'create_note': 'Add Note',
+            'condition': 'Condition',
+            'if_else': 'If / Else',
+            'iterator': 'For Each',
+            'delay': 'Wait',
+            'code': 'Code',
+            'http_request': 'HTTP Request',
+            'ai_agent': 'AI Agent'
+        };
+        return names[actionType] || actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    /**
+     * Get action summary text
+     */
+    getActionSummary(actionType, config) {
+        if (!config) return 'No configuration';
+        
+        switch (actionType) {
+            case 'create_task':
+                return config.title || 'Create a task';
+            case 'send_email':
+                return config.to || '{{contact.email}}';
+            case 'add_tag':
+            case 'remove_tag':
+                return config.tag_name || 'No tag specified';
+            case 'update_deal_field':
+                return `${config.field || 'field'} = ${config.value || '...'}`;
+            case 'update_deal_stage':
+                return `Stage: ${config.stage_name || '...'}`;
+            case 'create_note':
+                return (config.body || '').substring(0, 50) + '...';
+            case 'delay':
+                return `${config.minutes || 0} minutes`;
+            default:
+                return actionType;
+        }
+    }
+
+    /**
+     * Get operator label
+     */
+    getOperatorLabel(operator) {
+        const labels = {
+            'equals': 'equals',
+            'not_equals': 'not equals',
+            'greater_than': '>',
+            'less_than': '<',
+            'greater_than_or_equals': '>=',
+            'less_than_or_equals': '<=',
+            'contains': 'contains',
+            'not_contains': 'not contains',
+            'starts_with': 'starts with',
+            'ends_with': 'ends with',
+            'is_empty': 'is empty',
+            'is_not_empty': 'is not empty',
+            'changed_to': 'changed to'
+        };
+        return labels[operator] || operator;
+    }
+
+    /**
+     * Get trigger options for the sidebar
+     */
+    getTriggerOptions() {
+        return [
+            { type: 'contact_created', name: 'New Contact', icon: '👤', desc: 'When a contact is created' },
+            { type: 'contact_updated', name: 'Contact Updated', icon: '👤', desc: 'When a contact is updated' },
+            { type: 'deal_created', name: 'New Deal', icon: '💰', desc: 'When a deal is created' },
+            { type: 'deal_stage_changed', name: 'Stage Changed', icon: '📊', desc: 'When deal stage changes' },
+            { type: 'deal_won', name: 'Deal Won', icon: '🎉', desc: 'When a deal is won' },
+            { type: 'deal_lost', name: 'Deal Lost', icon: '😞', desc: 'When a deal is lost' },
+            { type: 'task_created', name: 'Task Created', icon: '✅', desc: 'When a task is created' },
+            { type: 'task_completed', name: 'Task Completed', icon: '✅', desc: 'When a task is completed' },
+            { type: 'manual', name: 'Manual', icon: '🎯', desc: 'Trigger manually' }
+        ];
+    }
+
+    /**
+     * Get action options for the sidebar
+     */
+    getActionOptions() {
+        return [
+            { type: 'create_task', name: 'Create Task', icon: '✅', desc: 'Create a new task' },
+            { type: 'send_email', name: 'Send Email', icon: '📧', desc: 'Send an email' },
+            { type: 'notify_owner', name: 'Notify Owner', icon: '🔔', desc: 'Send a notification' },
+            { type: 'add_tag', name: 'Add Tag', icon: '🏷️', desc: 'Add a tag to record' },
+            { type: 'remove_tag', name: 'Remove Tag', icon: '🏷️', desc: 'Remove a tag' },
+            { type: 'update_deal_field', name: 'Update Deal', icon: '✏️', desc: 'Update deal field' },
+            { type: 'update_contact_field', name: 'Update Contact', icon: '✏️', desc: 'Update contact field' },
+            { type: 'update_deal_stage', name: 'Change Stage', icon: '📊', desc: 'Move deal to stage' },
+            { type: 'create_note', name: 'Add Note', icon: '📝', desc: 'Create a note' },
+            { type: 'condition', name: 'Condition', icon: '❓', desc: 'Add a condition' },
+            { type: 'delay', name: 'Wait', icon: '⏱️', desc: 'Wait/delay' }
+        ];
+    }
+}
+
+// Create global instance
+window.WorkflowNodeRenderer = new WorkflowNodeRenderer();

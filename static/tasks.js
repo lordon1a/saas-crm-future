@@ -324,6 +324,9 @@ function resetTaskForm() {
     document.getElementById('comments-list').innerHTML = '';
     document.getElementById('attachments-list').innerHTML = '';
     updateDependencySelect([]);
+    if (typeof setTaskAssignee !== 'undefined') {
+        setTaskAssignee('');
+    }
 }
 
 async function loadTaskDetails(taskId) {
@@ -344,7 +347,14 @@ async function loadTaskDetails(taskId) {
         document.getElementById('task-priority').value = task.priority || 'medium';
         document.getElementById('task-status').value = task.status || 'not_started';
         document.getElementById('task-milestone').value = task.milestone_id || '';
-        document.getElementById('task-assignee').value = task.assignee_id || '';
+        
+        if (typeof setTaskAssignee !== 'undefined') {
+            setTaskAssignee(task.assignee_id || '');
+        } else {
+            const assigneeSelect = document.getElementById('task-assignee');
+            if (assigneeSelect) assigneeSelect.value = task.assignee_id || '';
+        }
+        
         document.getElementById('task-customer-facing').checked = Boolean(task.is_customer_facing);
         document.getElementById('task-due-date').value = task.due_date ? toDateTimeLocal(task.due_date) : '';
 
@@ -374,7 +384,8 @@ async function saveTask(event) {
 
     const dueDate = document.getElementById('task-due-date').value;
     const milestoneId = document.getElementById('task-milestone').value;
-    const assigneeId = document.getElementById('task-assignee').value;
+    const assigneeSelect = document.getElementById('task-assignee');
+    const assigneeId = typeof getTaskAssignee !== 'undefined' ? getTaskAssignee() : (assigneeSelect ? assigneeSelect.value : null);
 
     if (dueDate) {
         payload.due_date = new Date(dueDate).toISOString();

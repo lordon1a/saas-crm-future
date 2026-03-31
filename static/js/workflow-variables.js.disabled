@@ -1,0 +1,396 @@
+/**
+ * Workflow Variable Picker
+ * Twenty-style variable selection for workflow fields
+ */
+
+class WorkflowVariablePicker {
+    constructor() {
+        this.availableVariables = this.getAvailableVariables();
+        this.listeners = [];
+    }
+
+    /**
+     * Get available variables for workflow
+     */
+    getAvailableVariables() {
+        return {
+            contact: {
+                label: 'Contact',
+                icon: '👤',
+                fields: [
+                    { name: 'id', label: 'ID', type: 'number' },
+                    { name: 'first_name', label: 'First Name', type: 'text' },
+                    { name: 'last_name', label: 'Last Name', type: 'text' },
+                    { name: 'email', label: 'Email', type: 'text' },
+                    { name: 'phone', label: 'Phone', type: 'text' },
+                    { name: 'company', label: 'Company', type: 'text' },
+                    { name: 'job_title', label: 'Job Title', type: 'text' },
+                    { name: 'lead_score', label: 'Lead Score', type: 'number' },
+                    { name: 'tags', label: 'Tags', type: 'text' },
+                    { name: 'created_at', label: 'Created At', type: 'date' },
+                    { name: 'updated_at', label: 'Updated At', type: 'date' }
+                ]
+            },
+            deal: {
+                label: 'Deal',
+                icon: '💰',
+                fields: [
+                    { name: 'id', label: 'ID', type: 'number' },
+                    { name: 'name', label: 'Name', type: 'text' },
+                    { name: 'value', label: 'Value', type: 'number' },
+                    { name: 'stage_name', label: 'Stage', type: 'text' },
+                    { name: 'pipeline_name', label: 'Pipeline', type: 'text' },
+                    { name: 'company_name', label: 'Company', type: 'text' },
+                    { name: 'contact_name', label: 'Contact', type: 'text' },
+                    { name: 'expected_close_date', label: 'Expected Close', type: 'date' },
+                    { name: 'probability', label: 'Probability %', type: 'number' },
+                    { name: 'owner_name', label: 'Owner', type: 'text' },
+                    { name: 'created_at', label: 'Created At', type: 'date' }
+                ]
+            },
+            task: {
+                label: 'Task',
+                icon: '✅',
+                fields: [
+                    { name: 'id', label: 'ID', type: 'number' },
+                    { name: 'title', label: 'Title', type: 'text' },
+                    { name: 'description', label: 'Description', type: 'text' },
+                    { name: 'status', label: 'Status', type: 'text' },
+                    { name: 'priority', label: 'Priority', type: 'text' },
+                    { name: 'due_date', label: 'Due Date', type: 'date' },
+                    { name: 'assignee_name', label: 'Assignee', type: 'text' },
+                    { name: 'created_at', label: 'Created At', type: 'date' }
+                ]
+            },
+            company: {
+                label: 'Company',
+                icon: '🏢',
+                fields: [
+                    { name: 'id', label: 'ID', type: 'number' },
+                    { name: 'name', label: 'Name', type: 'text' },
+                    { name: 'domain', label: 'Domain', type: 'text' },
+                    { name: 'industry', label: 'Industry', type: 'text' },
+                    { name: 'employees', label: 'Employees', type: 'number' },
+                    { name: 'created_at', label: 'Created At', type: 'date' }
+                ]
+            },
+            workflow: {
+                label: 'Workflow',
+                icon: '⚡',
+                fields: [
+                    { name: 'name', label: 'Workflow Name', type: 'text' },
+                    { name: 'trigger_type', label: 'Trigger Type', type: 'text' },
+                    { name: 'run_count', label: 'Run Count', type: 'number' }
+                ]
+            },
+            context: {
+                label: 'Trigger Context',
+                icon: '📌',
+                fields: [
+                    { name: 'from_stage_id', label: 'From Stage ID', type: 'number' },
+                    { name: 'from_stage_name', label: 'From Stage', type: 'text' },
+                    { name: 'to_stage_id', label: 'To Stage ID', type: 'number' },
+                    { name: 'to_stage_name', label: 'To Stage', type: 'text' }
+                ]
+            }
+        };
+    }
+
+    /**
+     * Create variable picker dropdown
+     */
+    createPicker(inputElement, onSelect) {
+        const picker = document.createElement('div');
+        picker.className = 'workflow-variable-picker';
+        picker.innerHTML = this.getPickerHTML();
+        
+        // Position picker below input
+        const rect = inputElement.getBoundingClientRect();
+        picker.style.position = 'fixed';
+        picker.style.left = rect.left + 'px';
+        picker.style.top = (rect.bottom + 4) + 'px';
+        picker.style.zIndex = '9999';
+        
+        // Add to DOM
+        document.body.appendChild(picker);
+        
+        // Setup event listeners
+        this.setupPickerEvents(picker, inputElement, onSelect);
+        
+        return picker;
+    }
+
+    /**
+     * Get picker HTML
+     */
+    getPickerHTML() {
+        let html = `
+            <div class="variable-picker-search">
+                <input type="text" class="variable-picker-search-input" placeholder="Search variables...">
+            </div>
+            <div class="variable-picker-content">
+        `;
+        
+        // Group variables by category
+        for (const [category, data] of Object.entries(this.availableVariables)) {
+            html += `
+                <div class="variable-picker-category" data-category="${category}">
+                    <div class="variable-picker-category-header">
+                        <span class="variable-picker-category-icon">${data.icon}</span>
+                        <span class="variable-picker-category-label">${data.label}</span>
+                    </div>
+                    <div class="variable-picker-items">
+            `;
+            
+            for (const field of data.fields) {
+                const variable = `{{${category}.${field.name}}}`;
+                html += `
+                    <div class="variable-picker-item" data-variable="${variable}" data-type="${field.type}">
+                        <span class="variable-picker-item-name">${field.label}</span>
+                        <code class="variable-picker-item-code">${variable}</code>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+            </div>
+            <div class="variable-picker-footer">
+                <span class="variable-picker-hint">Click to insert variable</span>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    /**
+     * Setup picker event listeners
+     */
+    setupPickerEvents(picker, inputElement, onSelect) {
+        const searchInput = picker.querySelector('.variable-picker-search-input');
+        const items = picker.querySelectorAll('.variable-picker-item');
+        const categories = picker.querySelectorAll('.variable-picker-category');
+        
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            items.forEach(item => {
+                const name = item.querySelector('.variable-picker-item-name').textContent.toLowerCase();
+                const code = item.querySelector('.variable-picker-item-code').textContent.toLowerCase();
+                const matches = name.includes(searchTerm) || code.includes(searchTerm);
+                item.style.display = matches ? '' : 'none';
+            });
+            
+            categories.forEach(cat => {
+                const visibleItems = cat.querySelectorAll('.variable-picker-item[style=""], .variable-picker-item:not([style])');
+                const hasVisible = Array.from(visibleItems).some(item => item.style.display !== 'none');
+                cat.style.display = hasVisible ? '' : 'none';
+            });
+        });
+        
+        // Item click
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                const variable = item.dataset.variable;
+                onSelect(variable);
+                this.closePicker(picker);
+            });
+        });
+        
+        // Click outside to close
+        const closeHandler = (e) => {
+            if (!picker.contains(e.target) && e.target !== inputElement) {
+                this.closePicker(picker);
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeHandler);
+        }, 100);
+    }
+
+    /**
+     * Close picker
+     */
+    closePicker(picker) {
+        if (picker && picker.parentNode) {
+            picker.parentNode.removeChild(picker);
+        }
+    }
+
+    /**
+     * Insert variable into input at cursor position
+     */
+    insertVariable(inputElement, variable) {
+        const start = inputElement.selectionStart;
+        const end = inputElement.selectionEnd;
+        const text = inputElement.value;
+        
+        inputElement.value = text.substring(0, start) + variable + text.substring(end);
+        inputElement.selectionStart = inputElement.selectionEnd = start + variable.length;
+        inputElement.focus();
+        
+        // Trigger input event for any listeners
+        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    /**
+     * Parse text and extract variables
+     */
+    parseVariables(text) {
+        const regex = /\{\{([^}]+)\}\}/g;
+        const variables = [];
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+            variables.push({
+                full: match[0],
+                path: match[1],
+                parts: match[1].split('.')
+            });
+        }
+        
+        return variables;
+    }
+
+    /**
+     * Resolve variable to actual value (for display)
+     */
+    resolveVariable(variable, data) {
+        const parts = variable.replace(/\{\{|\}\}/g, '').split('.');
+        let value = data;
+        
+        for (const part of parts) {
+            if (value && typeof value === 'object') {
+                value = value[part];
+            } else {
+                return undefined;
+            }
+        }
+        
+        return value;
+    }
+}
+
+// Create global instance
+window.WorkflowVariablePicker = new WorkflowVariablePicker();
+
+// CSS for variable picker
+const variablePickerCSS = `
+.workflow-variable-picker {
+    width: 320px;
+    max-height: 400px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.variable-picker-search {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.variable-picker-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.variable-picker-search-input:focus {
+    border-color: #3b82f6;
+}
+
+.variable-picker-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.variable-picker-category {
+    margin-bottom: 8px;
+}
+
+.variable-picker-category-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.variable-picker-category-icon {
+    font-size: 14px;
+}
+
+.variable-picker-category-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.variable-picker-items {
+    padding-left: 8px;
+}
+
+.variable-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.variable-picker-item:hover {
+    background: #f1f5f9;
+}
+
+.variable-picker-item-name {
+    font-size: 13px;
+    color: #1e293b;
+}
+
+.variable-picker-item-code {
+    font-size: 11px;
+    font-family: 'SF Mono', Monaco, monospace;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.variable-picker-footer {
+    padding: 8px 12px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.variable-picker-hint {
+    font-size: 11px;
+    color: #94a3b8;
+}
+`;
+
+// Inject CSS
+const styleSheet = document.createElement('style');
+styleSheet.textContent = variablePickerCSS;
+document.head.appendChild(styleSheet);
