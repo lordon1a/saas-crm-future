@@ -295,6 +295,83 @@ export const NODE_CONFIGS: Record<string, NodeConfig> = {
       { key: 'timeout', label: 'Timeout (saniye)', type: 'number', default: 30 }
     ]
   },
+
+  // ─── N8N-STYLE NODES ──────────────────────────────────────────────
+  code: {
+    label: 'Aksiyon', title: 'Kod Çalıştır',
+    icon: 'code', faIcon: 'fa-code',
+    color: 'action', iconBg: '#8b5cf6', iconColor: '#ffffff',
+    fields: [
+      { key: 'language', label: 'Dil', type: 'select',
+        options: [
+          { value: 'javascript', label: 'JavaScript' },
+          { value: 'python', label: 'Python' }
+        ]
+      },
+      { key: 'code', label: 'Kod', type: 'textarea',
+        placeholder: '// Değişkenler: items, entity\nreturn items;' }
+    ]
+  },
+  loop_over_items: {
+    label: 'Logic', title: 'Döngü (Loop)',
+    icon: 'repeat', faIcon: 'fa-redo',
+    color: 'condition', iconBg: '#f59e0b', iconColor: '#ffffff',
+    fields: [
+      { key: 'max_concurrency', label: 'Eşzamanlı İşlem', type: 'number', default: 1 }
+    ]
+  },
+  if: {
+    label: 'Logic', title: 'IF/Else',
+    icon: 'code-branch', faIcon: 'fa-code-branch',
+    color: 'condition', iconBg: '#f59e0b', iconColor: '#ffffff',
+    fields: [
+      { key: 'conditions', label: 'Koşullar', type: 'textarea',
+        placeholder: '[{"field": "email", "operator": "contains", "value": "@"}]' }
+    ]
+  },
+  error_trigger: {
+    label: 'Logic', title: 'Hata Yakalama',
+    icon: 'exclamation-triangle', faIcon: 'fa-exclamation-triangle',
+    color: 'condition', iconBg: '#ef4444', iconColor: '#ffffff',
+    fields: [
+      { key: 'on_error_action', label: 'Hata Sonrası', type: 'select',
+        options: [
+          { value: 'stop', label: 'Durdur' },
+          { value: 'continue', label: 'Devam Et' },
+          { value: 'retry', label: 'Tekrar Dene' }
+        ]
+      },
+      { key: 'max_retries', label: 'Max Tekrar', type: 'number', default: 3 }
+    ]
+  },
+  split_in_batches: {
+    label: 'Logic', title: 'Batch İşleme',
+    icon: 'layer-group', faIcon: 'fa-layer-group',
+    color: 'condition', iconBg: '#0ea5e9', iconColor: '#ffffff',
+    fields: [
+      { key: 'batch_size', label: 'Batch Büyüklüğü', type: 'number', default: 10 }
+    ]
+  },
+  wait_until: {
+    label: 'Aksiyon', title: 'Tarihe Kadar Bekle',
+    icon: 'calendar-alt', faIcon: 'fa-calendar-alt',
+    color: 'action', iconBg: '#64748b', iconColor: '#ffffff',
+    fields: [
+      { key: 'timestamp_field', label: 'Tarih Alanı', type: 'text',
+        placeholder: '{{contact.next_follow_up}}' },
+      { key: 'timeout_hours', label: 'Timeout (saat)', type: 'number', default: 72 }
+    ]
+  },
+  set_node: {
+    label: 'Aksiyon', title: 'Değer Ayarla',
+    icon: 'pen', faIcon: 'fa-pen',
+    color: 'action', iconBg: '#10b981', iconColor: '#ffffff',
+    fields: [
+      { key: 'field_name', label: 'Alan Adı', type: 'text' },
+      { key: 'field_value', label: 'Değer', type: 'text',
+        placeholder: '{{contact.email}}' }
+    ]
+  },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -318,7 +395,7 @@ export const PALETTE_GROUPS = [
     color: TYPE_COLORS.condition.bg,
     lightColor: TYPE_COLORS.condition.light,
     textColor: TYPE_COLORS.condition.text,
-    items: ['check_field', 'check_score']
+    items: ['check_field', 'check_score', 'loop_over_items', 'if', 'error_trigger', 'split_in_batches']
   },
   {
     label: 'Aksiyonlar',
@@ -329,7 +406,8 @@ export const PALETTE_GROUPS = [
       'create_task', 'send_email', 'send_whatsapp', 'notify_owner',
       'update_deal_stage', 'update_deal_field', 'update_contact_field',
       'add_tag', 'remove_tag', 'assign_owner',
-      'create_note', 'webhook', 'wait', 'http_request'
+      'create_note', 'webhook', 'wait', 'http_request',
+      'code', 'wait_until', 'set_node'
     ]
   }
 ]
