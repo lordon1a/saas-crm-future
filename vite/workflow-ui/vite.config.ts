@@ -5,6 +5,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   base: '/static/react/',
+  server: {
+    port: 3000,
+    host: true
+  },
   build: {
     outDir: '../../sadas/static/react',
     emptyOutDir: true,
