@@ -102,3 +102,25 @@ export interface Stage {
   id: number
   name: string
 }
+
+// HTTP Request types
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type AuthType = 'none' | 'bearer' | 'basic' | 'api_key'
+
+export interface HttpRequestConfig {
+  url: string
+  method: HttpMethod
+  auth_type: AuthType
+  header_key?: string
+  header_value?: string
+  body?: string
+  timeout?: number
+}
+
+export interface HttpTestResult {
+  success: boolean
+  status?: number
+  data?: unknown
+  error?: string
+  duration_ms?: number
+}

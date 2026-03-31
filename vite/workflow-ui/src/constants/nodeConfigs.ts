@@ -262,6 +262,39 @@ export const NODE_CONFIGS: Record<string, NodeConfig> = {
       { key: 'delay_minutes', label: 'Dakika', type: 'number', default: 60 }
     ]
   },
+  http_request: {
+    label: 'Aksiyon', title: 'HTTP İsteği',
+    icon: 'globe', faIcon: 'fa-globe',
+    color: 'action', iconBg: '#6366f1', iconColor: '#ffffff',
+    fields: [
+      { key: 'url', label: 'URL', type: 'text',
+        placeholder: 'https://api.example.com/endpoint' },
+      { key: 'method', label: 'HTTP Metodu', type: 'select',
+        options: [
+          { value: 'GET', label: 'GET' },
+          { value: 'POST', label: 'POST' },
+          { value: 'PUT', label: 'PUT' },
+          { value: 'PATCH', label: 'PATCH' },
+          { value: 'DELETE', label: 'DELETE' }
+        ]
+      },
+      { key: 'auth_type', label: 'Kimlik Doğrulama', type: 'select',
+        options: [
+          { value: 'none', label: 'Yok' },
+          { value: 'bearer', label: 'Bearer Token' },
+          { value: 'basic', label: 'Basic Auth' },
+          { value: 'api_key', label: 'API Key' }
+        ]
+      },
+      { key: 'header_key', label: 'Header Key', type: 'text',
+        placeholder: 'Authorization' },
+      { key: 'header_value', label: 'Header Value', type: 'text',
+        placeholder: 'Bearer your-token-here' },
+      { key: 'body', label: 'Body (JSON)', type: 'textarea',
+        placeholder: '{"key": "{{contact.email}}"}' },
+      { key: 'timeout', label: 'Timeout (saniye)', type: 'number', default: 30 }
+    ]
+  },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -296,7 +329,7 @@ export const PALETTE_GROUPS = [
       'create_task', 'send_email', 'send_whatsapp', 'notify_owner',
       'update_deal_stage', 'update_deal_field', 'update_contact_field',
       'add_tag', 'remove_tag', 'assign_owner',
-      'create_note', 'webhook', 'wait'
+      'create_note', 'webhook', 'wait', 'http_request'
     ]
   }
 ]

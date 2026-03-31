@@ -81,6 +81,33 @@ export const workflowApi = {
     return res.json()
   },
 
+  httpTest: async (config: {
+    url: string
+    method: string
+    auth_type: string
+    header_key: string
+    header_value: string
+    body: string
+    timeout: number
+  }): Promise<{
+    success: boolean
+    status?: number
+    data?: unknown
+    error?: string
+    duration_ms?: number
+  }> => {
+    const res = await fetch('/api/v1/workflows/http-test', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(config)
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'HTTP test başarısız' }))
+      throw new Error(err.error || 'HTTP test başarısız')
+    }
+    return res.json()
+  },
+
   stages: async (): Promise<Stage[]> => {
     try {
       const res = await fetch('/api/v1/pipeline/stages')

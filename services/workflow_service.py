@@ -414,6 +414,9 @@ class WorkflowService:
             elif action_type == 'create_note':
                 return WorkflowService._action_create_note(action, entity, context)
             
+            elif action_type == 'http_request':
+                return WorkflowService._action_http_request(action, entity, context)
+            
             else:
                 logger.warning(f"Unknown action type: {action_type}")
                 return {'status': 'skipped', 'reason': f'Unknown action type: {action_type}'}
@@ -846,6 +849,87 @@ class WorkflowService:
             return {'status': 'success', 'note_id': note.id}
         except Exception as e:
             db.session.rollback()
+            return {'status': 'failed', 'error': str(e)}
+
+    @staticmethod
+    def _action_http_request(action, entity, context: Dict) -> Dict:
+        """Execute an HTTP request"""
+        import httpx
+        import base64
+        
+        config = json.loads(action.action_config) if action.action_config else {}
+        
+        url = WorkflowService.resolve_template(config.get('url', ''), entity, context)
+        method = config.get('method', 'GET').upper()
+        auth_type = config.get('auth_type', 'none')
+        header_key = config.get('header_key', '')
+        header_value = WorkflowService.resolve_template(config.get('header_value', ''), entity, context)
+        body = WorkflowService.resolve_template(config.get('body', ''), entity, context)
+        timeout = config.get('timeout', 30)
+        
+        if not url:
+            return {'status': 'skipped', 'reason': 'No URL specified'}
+        
+        headers = {}
+        
+        # Apply authentication
+        if auth_type == 'bearer' and header_value:
+            headers['Authorization'] = f'Bearer {header_value}'
+        elif auth_type == 'basic' and header_value:
+            encoded = base64.b64encode(header_value.encode()).decode()
+            headers['Authorization'] = f'Basic {encoded}'
+        elif auth_type == 'api_key' and header_key and header_value:
+            headers[header_key] = header_value
+        elif header_key and header_value:
+            headers[header_key] = header_value
+        
+        # Set default content-type for body
+        if body and 'Content-Type' not in headers:
+            headers['Content-Type'] = 'application/json'
+        
+        try:
+            start_time = datetime.utcnow()
+            
+            with httpx.Client(timeout=timeout) as client:
+                if method == 'GET':
+                    response = client.get(url, headers=headers)
+                elif method == 'POST':
+                    response = client.post(url, headers=headers, content=body)
+                elif method == 'PUT':
+                    response = client.put(url, headers=headers, content=body)
+                elif method == 'PATCH':
+                    response = client.patch(url, headers=headers, content=body)
+                elif method == 'DELETE':
+                    response = client.delete(url, headers=headers)
+                else:
+                    return {'status': 'failed', 'error': f'Unsupported method: {method}'}
+            
+            end_time = datetime.utcnow()
+            duration_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Try to parse response as JSON
+            try:
+                response_data = response.json()
+            except:
+                response_data = response.text[:500] if response.text else ''
+            
+            logger.info(f"HTTP {method} {url} -> {response.status_code} ({duration_ms}ms)")
+            
+            return {
+                'status': 'success',
+                'http_status': response.status_code,
+                'response': response_data,
+                'duration_ms': duration_ms
+            }
+            
+        except httpx.TimeoutException:
+            logger.error(f"HTTP {method} {url} timed out after {timeout}s")
+            return {'status': 'failed', 'error': f'Request timed out after {timeout} seconds'}
+        except httpx.ConnectError as e:
+            logger.error(f"HTTP {method} {url} connection error: {e}")
+            return {'status': 'failed', 'error': f'Connection error: {str(e)}'}
+        except Exception as e:
+            logger.error(f"HTTP {method} {url} error: {e}")
             return {'status': 'failed', 'error': str(e)}
     
     @staticmethod

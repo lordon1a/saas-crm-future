@@ -463,6 +463,104 @@ def test_workflow(workflow_id):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# HTTP REQUEST TEST ENDPOINT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@bp.route('/http-test', methods=['POST'])
+@login_required_api
+def test_http_request():
+    """
+    Test an HTTP request configuration.
+    Used to test http_request action nodes before saving.
+    """
+    import httpx
+    import base64
+    
+    data = request.get_json() or {}
+    
+    url = data.get('url', '')
+    method = data.get('method', 'GET').upper()
+    auth_type = data.get('auth_type', 'none')
+    header_key = data.get('header_key', '')
+    header_value = data.get('header_value', '')
+    body = data.get('body', '')
+    timeout = data.get('timeout', 30)
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    headers = {}
+    
+    # Apply authentication
+    if auth_type == 'bearer' and header_value:
+        headers['Authorization'] = f'Bearer {header_value}'
+    elif auth_type == 'basic' and header_value:
+        encoded = base64.b64encode(header_value.encode()).decode()
+        headers['Authorization'] = f'Basic {encoded}'
+    elif auth_type == 'api_key' and header_key and header_value:
+        headers[header_key] = header_value
+    elif header_key and header_value:
+        headers[header_key] = header_value
+    
+    # Set default content-type for body
+    if body and 'Content-Type' not in headers:
+        headers['Content-Type'] = 'application/json'
+    
+    result = {
+        'success': False,
+        'url': url,
+        'method': method,
+        'status': None,
+        'data': None,
+        'error': None,
+        'duration_ms': None
+    }
+    
+    try:
+        start_time = datetime.utcnow()
+        
+        with httpx.Client(timeout=timeout) as client:
+            if method == 'GET':
+                response = client.get(url, headers=headers)
+            elif method == 'POST':
+                response = client.post(url, headers=headers, content=body)
+            elif method == 'PUT':
+                response = client.put(url, headers=headers, content=body)
+            elif method == 'PATCH':
+                response = client.patch(url, headers=headers, content=body)
+            elif method == 'DELETE':
+                response = client.delete(url, headers=headers)
+            else:
+                result['error'] = f'Unsupported method: {method}'
+                return jsonify(result), 200
+        
+        end_time = datetime.utcnow()
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        result['success'] = True
+        result['status'] = response.status_code
+        result['duration_ms'] = duration_ms
+        
+        # Try to parse response as JSON
+        try:
+            result['data'] = response.json()
+        except:
+            result['data'] = response.text[:1000] if response.text else ''
+        
+        return jsonify(result), 200
+        
+    except httpx.TimeoutException:
+        result['error'] = f'Request timed out after {timeout} seconds'
+        return jsonify(result), 200
+    except httpx.ConnectError as e:
+        result['error'] = f'Connection error: {str(e)}'
+        return jsonify(result), 200
+    except Exception as e:
+        result['error'] = str(e)
+        return jsonify(result), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # GLOBAL EXECUTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
