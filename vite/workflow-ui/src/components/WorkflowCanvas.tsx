@@ -296,17 +296,17 @@ const WorkflowCanvas = forwardRef<WorkflowCanvasHandle, object>((_props, ref) =>
         onContextMenu={(e) => e.preventDefault()}
         snapToGrid
         snapGrid={[20, 20]}
-        connectionLineStyle={{ stroke: '#8b5cf6', strokeWidth: 3 }}
+        connectionLineStyle={{ stroke: '#ef4444', strokeWidth: 3 }}
         connectionLineType={ConnectionLineType.Bezier}
         defaultEdgeOptions={{
           type: 'bezier',
           animated: true,
           style: { 
-            stroke: '#6366f1', 
+            stroke: '#ef4444', 
             strokeWidth: 4,
-            filter: 'drop-shadow(0 2px 4px rgba(99, 102, 241, 0.4))'
+            filter: 'drop-shadow(0 2px 4px rgba(239, 68, 68, 0.4))'
           },
-          markerEnd: { type: 'arrowclosed' as const, color: '#6366f1' }
+          markerEnd: { type: 'arrowclosed' as const, color: '#ef4444' }
         }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#e2e8f0" />
