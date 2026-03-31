@@ -52,15 +52,15 @@ function LogEntry({ log }: { log: ExecutionLogEntry }) {
       </div>
 
       {/* Duration */}
-      {log.durationMs !== undefined && (
+      {log.durationMs != null && (
         <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
           <i className="fas fa-clock" style={{ marginRight: 4 }} />
-          {formatDuration(log.durationMs)}
+          {formatDuration(log.durationMs ?? 0)}
         </div>
       )}
 
       {/* Output/Error */}
-      {log.output && log.status === 'success' && (
+      {log.output != null && log.status === 'success' && (
         <div style={{
           background: '#0f172a',
           borderRadius: 8,
