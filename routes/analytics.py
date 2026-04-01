@@ -4,10 +4,11 @@ Provides comprehensive analytics endpoints for pipeline, deals, and performance 
 """
 from flask import Blueprint, request, jsonify, session
 from models import db
-from models_crm import Deal, DealStage, Pipeline
+from models_crm import Deal, DealStage, Pipeline, DashboardWidget
 from datetime import datetime, timedelta, UTC
 from sqlalchemy import func
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -302,4 +303,328 @@ def get_dashboard_data():
     except Exception as e:
         logger.error(f'Dashboard data error: {e}', exc_info=True)
         return jsonify({'error': 'Failed to fetch dashboard data'}), 500
+
+
+# =============================================================================
+# Widget CRUD Endpoints (Feature 1.3 - Customizable Dashboard Widgets)
+# =============================================================================
+
+@bp.route('/widgets', methods=['GET'])
+@login_required_api
+def get_widgets():
+    """
+    GET /api/v1/analytics/widgets
+    Returns user's widget list for the current workspace.
+    """
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        widgets = DashboardWidget.query.filter(
+            DashboardWidget.workspace_id == workspace_id,
+            DashboardWidget.user_id == user_id
+        ).order_by(DashboardWidget.pos_y, DashboardWidget.pos_x).all()
+        
+        return jsonify({
+            'success': True,
+            'widgets': [w.to_dict() for w in widgets]
+        }), 200
+        
+    except Exception as e:
+        logger.error(f'Get widgets error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to fetch widgets'}), 500
+
+
+@bp.route('/widgets', methods=['POST'])
+@login_required_api
+def create_widget():
+    """
+    POST /api/v1/analytics/widgets
+    Create a new dashboard widget.
+    Request body: {
+        widget_type: string (required),
+        title: string (required),
+        config_json: object (optional),
+        pos_x: int (optional, default 0),
+        pos_y: int (optional, default 0),
+        width: int (optional, default 4),
+        height: int (optional, default 3)
+    }
+    """
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        widget_type = data.get('widget_type')
+        title = data.get('title')
+        
+        if not widget_type or not title:
+            return jsonify({'error': 'widget_type and title are required'}), 400
+        
+        # Validate widget_type
+        valid_types = ['kpi_card', 'bar_chart', 'funnel', 'pie_chart', 'leaderboard', 'activity_feed', 'goal_progress', 'heatmap']
+        if widget_type not in valid_types:
+            return jsonify({'error': f'Invalid widget_type. Must be one of: {", ".join(valid_types)}'}), 400
+        
+        config_json = data.get('config_json', {})
+        widget = DashboardWidget(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            widget_type=widget_type,
+            title=title,
+            config_json=json.dumps(config_json) if isinstance(config_json, dict) else config_json,
+            pos_x=data.get('pos_x', 0),
+            pos_y=data.get('pos_y', 0),
+            width=data.get('width', 4),
+            height=data.get('height', 3)
+        )
+        
+        db.session.add(widget)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'widget': widget.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Create widget error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to create widget'}), 500
+
+
+@bp.route('/widgets/<int:widget_id>', methods=['PATCH'])
+@login_required_api
+def update_widget(widget_id):
+    """
+    PATCH /api/v1/analytics/widgets/<id>
+    Update widget configuration or position.
+    Request body (all optional): {
+        title: string,
+        config_json: object,
+        pos_x: int,
+        pos_y: int,
+        width: int,
+        height: int
+    }
+    """
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        widget = DashboardWidget.query.filter(
+            DashboardWidget.id == widget_id,
+            DashboardWidget.workspace_id == workspace_id,
+            DashboardWidget.user_id == user_id
+        ).first()
+        
+        if not widget:
+            return jsonify({'error': 'Widget not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        # Update fields if provided
+        if 'title' in data:
+            widget.title = data['title']
+        
+        if 'config_json' in data:
+            widget.config_json = json.dumps(data['config_json']) if isinstance(data['config_json'], dict) else data['config_json']
+        
+        if 'pos_x' in data:
+            widget.pos_x = data['pos_x']
+        
+        if 'pos_y' in data:
+            widget.pos_y = data['pos_y']
+        
+        if 'width' in data:
+            widget.width = data['width']
+        
+        if 'height' in data:
+            widget.height = data['height']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'widget': widget.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Update widget error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to update widget'}), 500
+
+
+@bp.route('/widgets/<int:widget_id>', methods=['DELETE'])
+@login_required_api
+def delete_widget(widget_id):
+    """
+    DELETE /api/v1/analytics/widgets/<id>
+    Delete a dashboard widget.
+    """
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        widget = DashboardWidget.query.filter(
+            DashboardWidget.id == widget_id,
+            DashboardWidget.workspace_id == workspace_id,
+            DashboardWidget.user_id == user_id
+        ).first()
+        
+        if not widget:
+            return jsonify({'error': 'Widget not found'}), 404
+        
+        db.session.delete(widget)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Widget deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Delete widget error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to delete widget'}), 500
+
+
+@bp.route('/widgets/reorder', methods=['POST'])
+@login_required_api
+def reorder_widgets():
+    """
+    POST /api/v1/analytics/widgets/reorder
+    Bulk update widget positions after drag-and-drop.
+    Request body: {
+        widgets: [
+            {id: int, pos_x: int, pos_y: int},
+            ...
+        ]
+    }
+    """
+    try:
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        data = request.get_json()
+        if not data or 'widgets' not in data:
+            return jsonify({'error': 'widgets array is required'}), 400
+        
+        widget_updates = data['widgets']
+        if not isinstance(widget_updates, list):
+            return jsonify({'error': 'widgets must be an array'}), 400
+        
+        updated_widgets = []
+        for update in widget_updates:
+            if 'id' not in update:
+                continue
+            
+            widget = DashboardWidget.query.filter(
+                DashboardWidget.id == update['id'],
+                DashboardWidget.workspace_id == workspace_id,
+                DashboardWidget.user_id == user_id
+            ).first()
+            
+            if widget:
+                if 'pos_x' in update:
+                    widget.pos_x = update['pos_x']
+                if 'pos_y' in update:
+                    widget.pos_y = update['pos_y']
+                updated_widgets.append(widget)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'widgets': [w.to_dict() for w in updated_widgets]
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Reorder widgets error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to reorder widgets'}), 500
+
+
+@bp.route('/widget-data/<int:widget_id>', methods=['GET'])
+@login_required_api
+def get_widget_data(widget_id):
+    """
+    GET /api/v1/analytics/widget-data/<id>
+    Fetch data for a specific widget using AnalyticsService.
+    """
+    try:
+        from services.analytics_service import AnalyticsService
+        
+        user_id = session.get('user_id')
+        workspace_id = session.get('workspace_id')
+        
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+        
+        widget = DashboardWidget.query.filter(
+            DashboardWidget.id == widget_id,
+            DashboardWidget.workspace_id == workspace_id,
+            DashboardWidget.user_id == user_id
+        ).first()
+        
+        if not widget:
+            return jsonify({'error': 'Widget not found'}), 404
+        
+        # Get widget config
+        config = json.loads(widget.config_json) if widget.config_json else {}
+        
+        # Route to appropriate AnalyticsService method based on widget_type
+        widget_type = widget.widget_type
+        data = {}
+        
+        if widget_type == 'kpi_card':
+            data = AnalyticsService.get_kpi_metrics(workspace_id, config)
+        elif widget_type == 'bar_chart':
+            data = AnalyticsService.get_bar_chart_data(workspace_id, config)
+        elif widget_type == 'funnel':
+            data = AnalyticsService.get_funnel_data(workspace_id, config)
+        elif widget_type == 'pie_chart':
+            data = AnalyticsService.get_pie_chart_data(workspace_id, config)
+        elif widget_type == 'leaderboard':
+            data = AnalyticsService.get_leaderboard_data(workspace_id, config)
+        elif widget_type == 'activity_feed':
+            data = AnalyticsService.get_activity_feed_data(workspace_id, config)
+        elif widget_type == 'goal_progress':
+            data = AnalyticsService.get_goal_progress_data(workspace_id, config)
+        elif widget_type == 'heatmap':
+            data = AnalyticsService.get_heatmap_data(workspace_id, config)
+        else:
+            return jsonify({'error': f'Unknown widget type: {widget_type}'}), 400
+        
+        return jsonify({
+            'success': True,
+            'widget_id': widget_id,
+            'widget_type': widget_type,
+            'data': data
+        }), 200
+        
+    except Exception as e:
+        logger.error(f'Get widget data error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to fetch widget data'}), 500
 

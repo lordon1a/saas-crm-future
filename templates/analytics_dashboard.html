@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -27,6 +28,7 @@
         }
     </script>
 </head>
+
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
     <!-- Sidebar -->
     <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 relative shadow-sm flex-shrink-0">
@@ -37,11 +39,6 @@
             <a href="/" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Inbox">
                 <i class="fas fa-inbox text-lg"></i>
             </a>
-            {% if not onboarding_complete %}
-            <a href="/setup-guide" class="sidebar-nav-btn w-10 h-10 flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kurulum Rehberi">
-                <i class="fas fa-rocket text-lg"></i>
-            </a>
-            {% endif %}
             <a href="/analytics-dashboard" class="w-10 h-10 flex items-center justify-center text-brand-600 bg-brand-50 rounded-xl shadow-sm transition-all" title="Sales Analytics">
                 <i class="fas fa-chart-bar text-lg"></i>
             </a>
@@ -87,7 +84,11 @@
                 <p class="text-sm text-slate-500 mt-1">Pipeline performance & revenue insights</p>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="refreshDashboard()" class="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-all shadow-sm flex items-center gap-2">
+                <button onclick="addWidget()" class="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-plus text-xs"></i>
+                    Add Widget
+                </button>
+                <button onclick="refreshDashboard()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2">
                     <i class="fas fa-sync-alt text-xs"></i>
                     Refresh
                 </button>
@@ -104,114 +105,369 @@
                 </div>
             </div>
 
-            <!-- Dashboard Grid -->
-            <div id="dashboardContent" class="hidden space-y-8">
-                <!-- KPI Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Total Revenue -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Revenue</span>
-                        </div>
-                        <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiTotalRevenue">$0</h3>
-                        <p class="text-sm text-slate-500">Total Won Deals</p>
-                    </div>
-
-                    <!-- Open Opportunities -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-handshake text-blue-600 text-xl"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pipeline</span>
-                        </div>
-                        <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiOpenOpportunities">0</h3>
-                        <p class="text-sm text-slate-500">Open Opportunities</p>
-                    </div>
-
-                    <!-- Total Contacts -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-users text-brand-600 text-xl"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Contacts</span>
-                        </div>
-                        <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiTotalContacts">0</h3>
-                        <p class="text-sm text-slate-500">Total Contacts</p>
-                    </div>
-
-                    <!-- Active Tasks -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-tasks text-orange-600 text-xl"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasks</span>
-                        </div>
-                        <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiActiveTasks">0</h3>
-                        <p class="text-sm text-slate-500">Active Tasks</p>
-                    </div>
-                </div>
-
-                <!-- Charts Row 1 -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Pipeline Distribution -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-lg font-bold text-slate-900">Pipeline Distribution</h3>
-                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">By Stage</span>
-                        </div>
-                        <div class="h-80">
-                            <canvas id="pipelineChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Win/Loss Ratio -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-lg font-bold text-slate-900">Win/Loss Ratio</h3>
-                            <span class="text-xs font-semibold text-slate-400" id="winRateText">0% Win Rate</span>
-                        </div>
-                        <div class="h-80 flex items-center justify-center">
-                            <canvas id="winLossChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Task Completion -->
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-bold text-slate-900">Task Completion</h3>
-                        <span class="text-xs font-semibold text-slate-400" id="completionRateText">0% Complete</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="text-center p-6 bg-slate-50 rounded-xl border border-slate-100">
-                            <p class="text-3xl font-bold text-slate-900 mb-2" id="totalTasks">0</p>
-                            <p class="text-sm font-medium text-slate-600">Total Tasks</p>
-                        </div>
-                        <div class="text-center p-6 bg-green-50 rounded-xl border border-green-100">
-                            <p class="text-3xl font-bold text-green-600 mb-2" id="completedTasks">0</p>
-                            <p class="text-sm font-medium text-slate-600">Completed</p>
-                        </div>
-                        <div class="text-center p-6 bg-red-50 rounded-xl border border-red-100">
-                            <p class="text-3xl font-bold text-red-600 mb-2" id="overdueTasks">0</p>
-                            <p class="text-sm font-medium text-slate-600">Overdue</p>
-                        </div>
-                        <div class="text-center p-6 bg-blue-50 rounded-xl border border-blue-100">
-                            <p class="text-3xl font-bold text-blue-600 mb-2" id="completedThisMonth">0</p>
-                            <p class="text-sm font-medium text-slate-600">This Month</p>
-                        </div>
-                    </div>
+            <!-- Dashboard Grid (Sortable) -->
+            <div id="dashboardContent" class="hidden">
+                <div id="widget-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Default KPI Widgets will be inserted here -->
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="/static/analytics-dashboard.js"></script>
-{% include '_ai_sidebar.html' %}
+    <!-- Add Widget Modal -->
+    <div id="addWidgetModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900">Add Widget</h3>
+                <button onclick="closeAddWidgetModal()" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Widget Type</label>
+                    <select id="widget-type" onchange="updateWidgetPreview()" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100">
+                        <option value="kpi_card">KPI Card</option>
+                        <option value="bar_chart">Bar Chart</option>
+                        <option value="pie_chart">Pie Chart</option>
+                        <option value="funnel">Funnel</option>
+                        <option value="leaderboard">Leaderboard</option>
+                        <option value="activity_feed">Activity Feed</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Title</label>
+                    <input type="text" id="widget-title" placeholder="My Widget" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100">
+                </div>
+                <div id="metric-select" class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Metric</label>
+                    <select id="widget-metric" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100">
+                        <option value="total_revenue">Total Revenue</option>
+                        <option value="won_deals">Won Deals</option>
+                        <option value="open_deals">Open Deals</option>
+                        <option value="avg_deal_value">Avg Deal Value</option>
+                    </select>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="closeAddWidgetModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button onclick="createWidget()" class="flex-1 px-4 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors">
+                        Add Widget
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 text-white font-medium bg-green-600">
+        <i id="toast-icon" class="fas fa-check-circle"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const API = '/api/v1/analytics';
+        let widgets = [];
+        let sortable = null;
+        let pipelineChart = null;
+        let winLossChart = null;
+
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(endpoint, options);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Request failed');
+            return data;
+        }
+
+        async function refreshDashboard() {
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            
+            try {
+                await loadWidgets();
+                await loadAnalytics();
+            } catch (err) {
+                showToast('Failed to load dashboard: ' + err.message, 'error');
+            } finally {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('dashboardContent').classList.remove('hidden');
+            }
+        }
+
+        async function loadWidgets() {
+            try {
+                const data = await api(`${API}/widgets`);
+                widgets = data.widgets || [];
+                renderWidgets();
+            } catch (err) {
+                console.log('No custom widgets or error loading:', err.message);
+                widgets = [];
+                renderDefaultWidgets();
+            }
+        }
+
+        function renderDefaultWidgets() {
+            const grid = document.getElementById('widget-grid');
+            grid.innerHTML = `
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 widget-card" data-widget-id="kpi-revenue">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Revenue</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiTotalRevenue">$0</h3>
+                    <p class="text-sm text-slate-500">Total Won Deals</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 widget-card" data-widget-id="kpi-pipeline">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-handshake text-blue-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pipeline</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiOpenOpportunities">0</h3>
+                    <p class="text-sm text-slate-500">Open Opportunities</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 widget-card" data-widget-id="kpi-contacts">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-users text-brand-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Contacts</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiTotalContacts">0</h3>
+                    <p class="text-sm text-slate-500">Total Contacts</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 widget-card" data-widget-id="kpi-tasks">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-tasks text-orange-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasks</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 mb-1" id="kpiActiveTasks">0</h3>
+                    <p class="text-sm text-slate-500">Active Tasks</p>
+                </div>
+            `;
+            initSortable();
+        }
+
+        function renderWidgets() {
+            const grid = document.getElementById('widget-grid');
+            
+            if (!widgets.length) {
+                renderDefaultWidgets();
+                return;
+            }
+
+            grid.innerHTML = widgets.map(w => `
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 widget-card" data-widget-id="${w.id}">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 ${getWidgetColor(w.widget_type)} rounded-xl flex items-center justify-center">
+                            <i class="${getWidgetIcon(w.widget_type)} text-xl"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="deleteWidget(${w.id})" class="w-7 h-7 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors" title="Delete">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 mb-1">${escapeHtml(w.title)}</h3>
+                    <p class="text-sm text-slate-500">${getWidgetMetricLabel(w.config_json)}</p>
+                </div>
+            `).join('');
+            
+            initSortable();
+        }
+
+        function getWidgetIcon(type) {
+            const icons = {
+                'kpi_card': 'fas fa-chart-line',
+                'bar_chart': 'fas fa-chart-bar',
+                'pie_chart': 'fas fa-chart-pie',
+                'funnel': 'fas fa-filter',
+                'leaderboard': 'fas fa-trophy',
+                'activity_feed': 'fas fa-stream'
+            };
+            return icons[type] || 'fas fa-widget';
+        }
+
+        function getWidgetColor(type) {
+            const colors = {
+                'kpi_card': 'bg-green-100 text-green-600',
+                'bar_chart': 'bg-blue-100 text-blue-600',
+                'pie_chart': 'bg-purple-100 text-purple-600',
+                'funnel': 'bg-orange-100 text-orange-600',
+                'leaderboard': 'bg-yellow-100 text-yellow-600',
+                'activity_feed': 'bg-cyan-100 text-cyan-600'
+            };
+            return colors[type] || 'bg-slate-100 text-slate-600';
+        }
+
+        function getWidgetMetricLabel(config) {
+            if (!config) return '';
+            try {
+                const c = typeof config === 'string' ? JSON.parse(config) : config;
+                return c.metric || '';
+            } catch {
+                return '';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function initSortable() {
+            if (sortable) sortable.destroy();
+            
+            sortable = new Sortable(document.getElementById('widget-grid'), {
+                animation: 150,
+                ghostClass: 'opacity-50',
+                onEnd: async function(evt) {
+                    await saveWidgetOrder();
+                }
+            });
+        }
+
+        async function saveWidgetOrder() {
+            const items = document.querySelectorAll('.widget-card');
+            const order = Array.from(items).map((el, idx) => ({
+                id: el.dataset.widgetId,
+                pos_x: idx % 4,
+                pos_y: Math.floor(idx / 4)
+            }));
+            
+            try {
+                await api(`${API}/widgets/reorder`, 'POST', { widgets: order });
+                showToast('Widget order saved');
+            } catch (err) {
+                console.error('Failed to save order:', err);
+            }
+        }
+
+        function addWidget() {
+            document.getElementById('addWidgetModal').classList.remove('hidden');
+            document.getElementById('widget-title').value = '';
+            updateWidgetPreview();
+        }
+
+        function closeAddWidgetModal() {
+            document.getElementById('addWidgetModal').classList.add('hidden');
+        }
+
+        function updateWidgetPreview() {
+            const type = document.getElementById('widget-type').value;
+            const metricSelect = document.getElementById('metric-select');
+            const metrics = {
+                'kpi_card': ['total_revenue', 'won_deals', 'open_deals', 'avg_deal_value'],
+                'bar_chart': ['revenue_by_month', 'deals_by_stage', 'tasks_by_assignee'],
+                'pie_chart': ['deals_by_source', 'contacts_by_segment'],
+                'funnel': ['pipeline_funnel'],
+                'leaderboard': ['won_deals', 'revenue', 'tasks_completed'],
+                'activity_feed': ['recent_contacts', 'recent_deals', 'recent_tasks']
+            };
+            
+            const metricSelectEl = document.getElementById('widget-metric');
+            const metricOptions = metrics[type] || ['total_revenue'];
+            metricSelectEl.innerHTML = metricOptions.map(m => 
+                `<option value="${m}">${m.replace(/_/g, ' ')}</option>`
+            ).join('');
+        }
+
+        async function createWidget() {
+            const type = document.getElementById('widget-type').value;
+            const title = document.getElementById('widget-title').value || 'My Widget';
+            const metric = document.getElementById('widget-metric').value;
+            
+            const config = { metric };
+            
+            try {
+                await api(`${API}/widgets`, 'POST', {
+                    widget_type: type,
+                    title,
+                    config_json: JSON.stringify(config),
+                    pos_x: widgets.length % 4,
+                    pos_y: Math.floor(widgets.length / 4),
+                    width: 1,
+                    height: 1
+                });
+                closeAddWidgetModal();
+                showToast('Widget added successfully');
+                await loadWidgets();
+            } catch (err) {
+                showToast('Failed to create widget: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteWidget(id) {
+            if (!confirm('Delete this widget?')) return;
+            try {
+                await api(`${API}/widgets/${id}`, 'DELETE');
+                showToast('Widget deleted');
+                await loadWidgets();
+            } catch (err) {
+                showToast('Failed to delete widget: ' + err.message, 'error');
+            }
+        }
+
+        async function loadAnalytics() {
+            try {
+                const res = await fetch('/api/v1/deals/analytics');
+                const data = await res.json();
+                
+                document.getElementById('kpiTotalRevenue').textContent = 
+                    '$' + (data.total_won_value || 0).toLocaleString();
+                document.getElementById('kpiOpenOpportunities').textContent = 
+                    data.open_deals || 0;
+                document.getElementById('kpiTotalContacts').textContent = 
+                    data.total_contacts || 0;
+                document.getElementById('kpiActiveTasks').textContent = 
+                    data.active_tasks || 0;
+                
+                // Update KPI widgets if they exist
+                const revenueWidget = document.querySelector('[data-widget-id="kpi-revenue"] h3');
+                if (revenueWidget) revenueWidget.textContent = '$' + (data.total_won_value || 0).toLocaleString();
+                
+            } catch (err) {
+                console.error('Failed to load analytics:', err);
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            
+            toast.className = `fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 text-white font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            msg.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshDashboard();
+        });
+    </script>
 </body>
 </html>

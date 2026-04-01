@@ -135,6 +135,10 @@ class GmailSyncService:
             date_str = headers.get('Date', '')
             received_at = GmailSyncService._parse_date(date_str)
             
+            # Extract reply headers for sequence unenrollment
+            in_reply_to = headers.get('In-Reply-To', '')
+            references = headers.get('References', '')
+            
             # Match to contact
             contact = GmailSyncService._match_contact(workspace_id, from_email, to_emails)
             company_id = contact.company_id if contact else None
@@ -185,6 +189,14 @@ class GmailSyncService:
                 email_sync.activity_id = activity.id
             
             db.session.commit()
+            
+            # Reply detection for sequence unenrollment
+            if in_reply_to:
+                try:
+                    from services.email_hub_service import EmailHubService
+                    EmailHubService.process_reply(workspace_id, from_email, in_reply_to)
+                except Exception as e:
+                    logger.warning(f'Reply detection failed: {e}')
             
             # Auto-enrichment: E-postadan contact bilgisi çıkar (arka planda)
             if contact:

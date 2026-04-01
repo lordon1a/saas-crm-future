@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ form.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .form-field { @apply mb-4; }
+        .form-label { @apply block text-sm font-medium text-gray-700 mb-1; }
+        .form-input { @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500; }
+        .form-error { @apply text-red-500 text-sm mt-1; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center py-12 px-4">
+    <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">{{ form.name }}</h1>
+        </div>
+
+        <!-- Success Message -->
+        <div id="success-message" class="hidden bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-bold text-green-800 mb-2">Thank You!</h2>
+            <p class="text-green-700">Your submission has been received.</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error-message" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p class="text-red-700" id="error-text">An error occurred.</p>
+        </div>
+
+        <!-- Form -->
+        <form id="form-submit" class="space-y-4">
+            <input type="hidden" id="form_id" value="{{ form.id }}">
+            
+            {% for field in fields %}
+            <div class="form-field">
+                <label for="{{ field.id }}" class="form-label">
+                    {{ field.label }}
+                    {% if field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                
+                {% if field.type == 'text' %}
+                <input type="text" id="{{ field.id }}" name="{{ field.id }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    class="form-input">
+                
+                {% elif field.type == 'email' %}
+                <input type="email" id="{{ field.id }}" name="{{ field.id }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    class="form-input">
+                
+                {% elif field.type == 'tel' %}
+                <input type="tel" id="{{ field.id }}" name="{{ field.id }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    class="form-input">
+                
+                {% elif field.type == 'number' %}
+                <input type="number" id="{{ field.id }}" name="{{ field.id }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    class="form-input">
+                
+                {% elif field.type == 'date' %}
+                <input type="date" id="{{ field.id }}" name="{{ field.id }}"
+                    {% if field.required %}required{% endif %}
+                    class="form-input">
+                
+                {% elif field.type == 'textarea' %}
+                <textarea id="{{ field.id }}" name="{{ field.id }}" rows="4"
+                    {% if field.required %}required{% endif %}
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    class="form-input"></textarea>
+                
+                {% elif field.type == 'select' %}
+                <select id="{{ field.id }}" name="{{ field.id }}"
+                    {% if field.required %}required{% endif %}
+                    class="form-input">
+                    <option value="">Select...</option>
+                    {% if field.options %}
+                    {% for option in field.options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+                
+                {% elif field.type == 'checkbox' %}
+                <div class="mt-2">
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" id="{{ field.id }}" name="{{ field.id }}" value="yes"
+                            class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">{{ field.placeholder or 'Yes' }}</span>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <button type="submit" id="submit-btn"
+                class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
+                Submit
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('form-submit').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formId = document.getElementById('form_id').value;
+            const submitBtn = document.getElementById('submit-btn');
+            
+            // Collect form data
+            const formData = new FormData(this);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            try {
+                const response = await fetch(`/api/v1/public/forms/${formId}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    document.getElementById('form-submit').classList.add('hidden');
+                    document.getElementById('success-message').classList.remove('hidden');
+                    
+                    // Redirect if specified
+                    if (result.redirect_url) {
+                        setTimeout(() => {
+                            window.location.href = result.redirect_url;
+                        }, 2000);
+                    }
+                } else {
+                    document.getElementById('error-message').classList.remove('hidden');
+                    document.getElementById('error-text').textContent = result.errors?.join(', ') || result.error || 'Submission failed';
+                }
+            } catch (error) {
+                document.getElementById('error-message').classList.remove('hidden');
+                document.getElementById('error-text').textContent = 'Network error. Please try again.';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+    </script>
+</body>
+</html>

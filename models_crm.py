@@ -12,6 +12,7 @@ This module contains database models for CRM features including:
 from models import db
 from datetime import datetime
 import json
+from flask import request
 
 
 # ============================================================================
@@ -216,6 +217,14 @@ class Contact(db.Model):
     
     # Lead Management Fields
     lead_source = db.Column(db.String(100), index=True)  # web, referral, cold_call, email_campaign, social_media, event, partner, other
+    utm_source = db.Column(db.String(120), nullable=True, index=True)
+    utm_medium = db.Column(db.String(120), nullable=True, index=True)
+    utm_campaign = db.Column(db.String(180), nullable=True, index=True)
+    utm_content = db.Column(db.String(180), nullable=True, index=True)
+    gclid = db.Column(db.String(255), nullable=True, index=True)
+    fbclid = db.Column(db.String(255), nullable=True, index=True)
+    linkedin_url = db.Column(db.String(500), nullable=True)
+    linkedin_enriched_at = db.Column(db.DateTime, nullable=True)
     lifecycle_stage = db.Column(db.String(50), default='lead', nullable=False, index=True)  # lead, qualified_lead, customer, evangelist
     qualified_at = db.Column(db.DateTime, nullable=True)  # When lead was qualified
     converted_at = db.Column(db.DateTime, nullable=True)  # When lead became customer
@@ -1733,6 +1742,8 @@ class EmailTemplate(db.Model):
     subject_template = db.Column(db.String(500), nullable=False)
     body_template = db.Column(db.Text, nullable=False)
     variables_json = db.Column(db.Text)  # JSON array of variable names
+    design_json = db.Column(db.Text, nullable=True)  # Unlayer exportDesign() output
+    editor_type = db.Column(db.String(20), default='html')  # 'html' or 'visual'
     is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -1791,6 +1802,321 @@ class EmailSequenceStep(db.Model):
 
     def __repr__(self):
         return f'<EmailSequenceStep sequence={self.sequence_id} order={self.step_order}>'
+
+
+class EmailSequenceEnrollment(db.Model):
+    """
+    Tracks contact enrollment in email sequences with status, progress, and scheduling.
+    """
+    __tablename__ = 'email_sequence_enrollments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    sequence_id = db.Column(db.Integer, db.ForeignKey('email_sequences.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False, index=True)
+    enrolled_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), default='active', nullable=False, index=True)  # 'active'|'paused'|'completed'|'stopped'
+    current_step_index = db.Column(db.Integer, default=0, nullable=False)
+    next_send_at = db.Column(db.DateTime, nullable=True, index=True)
+    stopped_reason = db.Column(db.String(255), nullable=True)  # 'reply_detected'|'manual'|'bounced'
+    enrolled_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    sequence = db.relationship('EmailSequence', backref='enrollments', lazy=True)
+    contact = db.relationship('Contact', backref='email_sequence_enrollments', lazy=True)
+    enroller = db.relationship('User', foreign_keys=[enrolled_by], backref='email_enrollments')
+
+    __table_args__ = (
+        db.UniqueConstraint('sequence_id', 'contact_id', name='uix_enrollment_contact_sequence'),
+        db.Index('idx_enrollments_sequence_status', 'sequence_id', 'status'),
+        db.Index('idx_enrollments_active_queue', 'status', 'next_send_at'),
+    )
+
+    def __repr__(self):
+        return f'<EmailSequenceEnrollment contact={self.contact_id} sequence={self.sequence_id} status={self.status}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'sequence_id': self.sequence_id,
+            'contact_id': self.contact_id,
+            'enrolled_by': self.enrolled_by,
+            'status': self.status,
+            'current_step_index': self.current_step_index,
+            'next_send_at': self.next_send_at.isoformat() if self.next_send_at else None,
+            'stopped_reason': self.stopped_reason,
+            'enrolled_at': self.enrolled_at.isoformat() if self.enrolled_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+# ============================================================================
+# CONTACT SEGMENTS
+# ============================================================================
+
+class ContactSegment(db.Model):
+    """
+    Dynamic or static segment of contacts based on filter criteria.
+    """
+    __tablename__ = 'contact_segments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(500))
+    is_dynamic = db.Column(db.Boolean, default=True, nullable=False)
+    filter_json = db.Column(db.Text)  # FilterService format
+    member_count = db.Column(db.Integer, default=0, nullable=False)
+    last_synced_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    memberships = db.relationship('SegmentMembership', backref='segment', lazy='dynamic', cascade='all, delete-orphan')
+    creator = db.relationship('User', foreign_keys=[created_by], backref='segments')
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='uix_segment_workspace_name'),
+    )
+
+    def __repr__(self):
+        return f'<ContactSegment {self.name} workspace={self.workspace_id} dynamic={self.is_dynamic}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'created_by': self.created_by,
+            'name': self.name,
+            'description': self.description,
+            'is_dynamic': self.is_dynamic,
+            'filter_json': self.filter_json,
+            'member_count': self.member_count,
+            'last_synced_at': self.last_synced_at.isoformat() if self.last_synced_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class SegmentMembership(db.Model):
+    """
+    Tracks which contacts belong to which segments.
+    """
+    __tablename__ = 'segment_memberships'
+
+    id = db.Column(db.Integer, primary_key=True)
+    segment_id = db.Column(db.Integer, db.ForeignKey('contact_segments.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=False, index=True)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    removed_at = db.Column(db.DateTime, nullable=True)
+    is_current = db.Column(db.Boolean, default=True, nullable=False, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('segment_id', 'contact_id', name='uix_segment_contact'),
+        db.Index('idx_membership_current', 'segment_id', 'is_current'),
+    )
+
+    def __repr__(self):
+        return f'<SegmentMembership segment={self.segment_id} contact={self.contact_id} current={self.is_current}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'segment_id': self.segment_id,
+            'contact_id': self.contact_id,
+            'added_at': self.added_at.isoformat() if self.added_at else None,
+            'removed_at': self.removed_at.isoformat() if self.removed_at else None,
+            'is_current': self.is_current
+        }
+
+
+# ============================================================================
+# MEETING LINKS & BOOKINGS
+# ============================================================================
+
+class MeetingLink(db.Model):
+    """
+    Self-booking meeting links for scheduling appointments.
+    """
+    __tablename__ = 'meeting_links'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    duration_minutes = db.Column(db.Integer, default=30, nullable=False)
+    buffer_minutes = db.Column(db.Integer, default=0, nullable=False)
+    max_days_ahead = db.Column(db.Integer, default=60, nullable=False)
+    availability_json = db.Column(db.Text)  # {"monday": [{"start":"09:00","end":"17:00"}], ...}
+    video_provider = db.Column(db.String(20), default='none', nullable=False)  # none, zoom, google_meet
+    location = db.Column(db.String(255))
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    bookings = db.relationship('MeetingBooking', backref='meeting_link', lazy='dynamic', cascade='all, delete-orphan')
+    owner = db.relationship('User', foreign_keys=[user_id], backref='meeting_links')
+
+    def __repr__(self):
+        return f'<MeetingLink {self.slug} user={self.user_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'user_id': self.user_id,
+            'slug': self.slug,
+            'title': self.title,
+            'duration_minutes': self.duration_minutes,
+            'buffer_minutes': self.buffer_minutes,
+            'max_days_ahead': self.max_days_ahead,
+            'availability_json': self.availability_json,
+            'video_provider': self.video_provider,
+            'location': self.location,
+            'description': self.description,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'booking_url': f'/book/{self.slug}'
+        }
+
+
+class MeetingBooking(db.Model):
+    """
+    Booking/reservation made via a meeting link.
+    """
+    __tablename__ = 'meeting_bookings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    meeting_link_id = db.Column(db.Integer, db.ForeignKey('meeting_links.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True)
+    booker_name = db.Column(db.String(200), nullable=False)
+    booker_email = db.Column(db.String(255), nullable=False, index=True)
+    booker_notes = db.Column(db.Text)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), default='confirmed', nullable=False)  # confirmed, cancelled, no_show
+    google_calendar_event_id = db.Column(db.String(255))
+    zoom_meeting_url = db.Column(db.String(500))
+    confirmation_token = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    contact = db.relationship('Contact', foreign_keys=[contact_id])
+
+    def __repr__(self):
+        return f'<MeetingBooking {self.id} {self.booker_email} status={self.status}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'meeting_link_id': self.meeting_link_id,
+            'workspace_id': self.workspace_id,
+            'contact_id': self.contact_id,
+            'booker_name': self.booker_name,
+            'booker_email': self.booker_email,
+            'booker_notes': self.booker_notes,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'status': self.status,
+            'google_calendar_event_id': self.google_calendar_event_id,
+            'zoom_meeting_url': self.zoom_meeting_url,
+            'cancel_url': f'/api/v1/public/book/cancel/{self.confirmation_token}',
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# ============================================================================
+# WEB FORMS & FORM SUBMISSIONS
+# ============================================================================
+
+class WebForm(db.Model):
+    """
+    Embeddable web forms for lead capture.
+    """
+    __tablename__ = 'web_forms'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    name = db.Column(db.String(200), nullable=False)
+    fields_json = db.Column(db.Text)  # [{"id":"f1","type":"text","label":"Name","field_map":"name","required":true}, ...]
+    submit_action = db.Column(db.String(50), default='create_contact')  # create_contact, update_contact, create_deal
+    redirect_url = db.Column(db.String(500))
+    notify_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    submission_count = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    submissions = db.relationship('FormSubmission', backref='form', lazy='dynamic', cascade='all, delete-orphan')
+    creator = db.relationship('User', foreign_keys=[created_by], backref='web_forms')
+    notifier = db.relationship('User', foreign_keys=[notify_user_id])
+
+    def __repr__(self):
+        return f'<WebForm {self.name} workspace={self.workspace_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'created_by': self.created_by,
+            'name': self.name,
+            'fields_json': self.fields_json,
+            'submit_action': self.submit_action,
+            'redirect_url': self.redirect_url,
+            'notify_user_id': self.notify_user_id,
+            'is_active': self.is_active,
+            'submission_count': self.submission_count,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'form_url': f'/f/{self.id}',
+            'embed_code': f'<script src="{request.host_url}static/form-embed.js" data-form-id="{self.id}"></script>' if hasattr(request, 'host_url') else f'/f/{self.id}'
+        }
+
+
+class FormSubmission(db.Model):
+    """
+    Tracks form submissions from web forms.
+    """
+    __tablename__ = 'form_submissions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    form_id = db.Column(db.Integer, db.ForeignKey('web_forms.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    data_json = db.Column(db.Text, nullable=False)  # Raw form data
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    contact = db.relationship('Contact', foreign_keys=[contact_id])
+
+    def __repr__(self):
+        return f'<FormSubmission {self.id} form={self.form_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'form_id': self.form_id,
+            'workspace_id': self.workspace_id,
+            'data_json': self.data_json,
+            'contact_id': self.contact_id,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 
 class EmailSendQueue(db.Model):
@@ -2517,11 +2843,15 @@ class WorkflowAutomation(db.Model):
     run_count = db.Column(db.Integer, default=0)
     last_run_at = db.Column(db.DateTime)
     
+    # Re-enrollment control: 'always' | 'never' | 'once_per_day' | 'once_per_week'
+    re_enrollment_mode = db.Column(db.String(30), default='always', nullable=False)
+    
     # Relationships
     workspace = db.relationship('Workspace', backref=db.backref('workflow_automations', lazy='dynamic'))
     conditions = db.relationship('WorkflowCondition', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
     actions = db.relationship('WorkflowAction', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
     executions = db.relationship('WorkflowExecution', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
+    enrollments = db.relationship('WorkflowEnrollment', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
@@ -2538,7 +2868,8 @@ class WorkflowAutomation(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'run_count': self.run_count,
-            'last_run_at': self.last_run_at.isoformat() if self.last_run_at else None
+            'last_run_at': self.last_run_at.isoformat() if self.last_run_at else None,
+            're_enrollment_mode': self.re_enrollment_mode
         }
     
     def __repr__(self):
@@ -2609,6 +2940,42 @@ class WorkflowAction(db.Model):
     
     def __repr__(self):
         return f'<WorkflowAction {self.action_type}>'
+
+
+class WorkflowEnrollment(db.Model):
+    """
+    Workflow enrollment tracking
+    Records when entities (contacts, deals) are enrolled in workflows
+    to control re-enrollment based on workflow's re_enrollment_mode
+    """
+    __tablename__ = 'workflow_enrollments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automations.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    entity_id = db.Column(db.Integer, nullable=False)
+    entity_type = db.Column(db.String(50), nullable=False)  # 'contact', 'deal', etc.
+    enrolled_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(20), default='running', nullable=False)  # 'running' | 'completed' | 'failed'
+    
+    # Relationships
+    workspace = db.relationship('Workspace', backref=db.backref('workflow_enrollments', lazy='dynamic'))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workflow_id': self.workflow_id,
+            'workspace_id': self.workspace_id,
+            'entity_id': self.entity_id,
+            'entity_type': self.entity_type,
+            'enrolled_at': self.enrolled_at.isoformat() if self.enrolled_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'status': self.status
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowEnrollment {self.id}: {self.entity_type}:{self.entity_id} in workflow {self.workflow_id}>'
 
 
 class WorkflowExecution(db.Model):
@@ -2697,3 +3064,344 @@ class WorkflowExecutionQueue(db.Model):
     
     def __repr__(self):
         return f'<WorkflowExecutionQueue {self.id} status={self.status}>'
+
+
+class WorkflowVersion(db.Model):
+    """
+    Version history for workflow automations.
+    Each time a workflow is published, a new version is created.
+    """
+    __tablename__ = 'workflow_versions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automations.id'), nullable=False, index=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    version_number = db.Column(db.Integer, nullable=False, default=1)
+    
+    # Snapshot of workflow state at publish time
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    trigger_type = db.Column(db.String(50), nullable=False)
+    trigger_config = db.Column(db.Text)
+    condition_logic = db.Column(db.String(10), default='AND')
+    canvas_data = db.Column(db.Text)
+    
+    # Version status
+    status = db.Column(db.String(20), default='draft', nullable=False)  # draft, published, archived
+    
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    published_at = db.Column(db.DateTime)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workflow_id': self.workflow_id,
+            'workspace_id': self.workspace_id,
+            'version_number': self.version_number,
+            'name': self.name,
+            'description': self.description,
+            'trigger_type': self.trigger_type,
+            'trigger_config': json.loads(self.trigger_config) if self.trigger_config else {},
+            'condition_logic': self.condition_logic,
+            'canvas_data': json.loads(self.canvas_data) if self.canvas_data else None,
+            'status': self.status,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowVersion {self.workflow_id} v{self.version_number}>'
+
+
+class WorkflowUsage(db.Model):
+    """
+    Tracks workflow execution usage per workspace.
+    Used for credits/limits dashboard.
+    """
+    __tablename__ = 'workflow_usage'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    
+    # Period tracking
+    year = db.Column(db.Integer, nullable=False, index=True)
+    month = db.Column(db.Integer, nullable=False, index=True)
+    
+    # Usage counters
+    total_executions = db.Column(db.Integer, default=0)
+    total_actions = db.Column(db.Integer, default=0)
+    total_errors = db.Column(db.Integer, default=0)
+    total_duration_ms = db.Column(db.BigInteger, default=0)
+    
+    # Per-action-type breakdown (JSON)
+    action_breakdown = db.Column(db.Text)  # {"send_email": 50, "create_task": 30, ...}
+    
+    # Limits
+    max_executions = db.Column(db.Integer, default=10000)
+    
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'year': self.year,
+            'month': self.month,
+            'total_executions': self.total_executions,
+            'total_actions': self.total_actions,
+            'total_errors': self.total_errors,
+            'total_duration_ms': self.total_duration_ms,
+            'action_breakdown': json.loads(self.action_breakdown) if self.action_breakdown else {},
+            'max_executions': self.max_executions,
+            'usage_percent': round((self.total_executions / self.max_executions) * 100, 1) if self.max_executions > 0 else 0,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+    
+    def __repr__(self):
+        return f'<WorkflowUsage ws={self.workspace_id} {self.year}-{self.month:02d}>'
+
+
+class DashboardWidget(db.Model):
+    """
+    Customizable dashboard widgets for user workspaces.
+    Supports multiple widget types: kpi_card, bar_chart, funnel, pie_chart,
+    leaderboard, activity_feed, goal_progress, heatmap.
+    """
+    __tablename__ = 'dashboard_widgets'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    widget_type = db.Column(db.String(50), nullable=False)
+    # Types: 'kpi_card' | 'bar_chart' | 'funnel' | 'pie_chart' | 'leaderboard' | 'activity_feed' | 'goal_progress' | 'heatmap'
+    title = db.Column(db.String(255), nullable=False)
+    config_json = db.Column(db.Text, nullable=True)  # JSON config
+    pos_x = db.Column(db.Integer, default=0, nullable=False)
+    pos_y = db.Column(db.Integer, default=0, nullable=False)
+    width = db.Column(db.Integer, default=4, nullable=False)
+    height = db.Column(db.Integer, default=3, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    workspace = db.relationship('Workspace', backref='dashboard_widgets')
+    user = db.relationship('User', backref='dashboard_widgets')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'user_id': self.user_id,
+            'widget_type': self.widget_type,
+            'title': self.title,
+            'config_json': json.loads(self.config_json) if self.config_json else {},
+            'pos_x': self.pos_x,
+            'pos_y': self.pos_y,
+            'width': self.width,
+            'height': self.height,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+    
+    def __repr__(self):
+        return f'<DashboardWidget {self.widget_type} - {self.title}>'
+
+
+# ============================================================================
+# PHASE 3: WEBCHAT, CALLS, INTEGRATIONS
+# ============================================================================
+
+class WebChatConfig(db.Model):
+    __tablename__ = 'webchat_configs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, unique=True, index=True)
+    widget_title = db.Column(db.String(120), default='Merhaba', nullable=False)
+    welcome_message = db.Column(db.Text, default='Size nasil yardimci olabiliriz?', nullable=False)
+    primary_color = db.Column(db.String(20), default='#0ea5e9', nullable=False)
+    bot_name = db.Column(db.String(80), default='Asistan', nullable=False)
+    collect_name = db.Column(db.Boolean, default=True, nullable=False)
+    collect_email = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    auto_create_contact = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'widget_title': self.widget_title,
+            'welcome_message': self.welcome_message,
+            'primary_color': self.primary_color,
+            'bot_name': self.bot_name,
+            'collect_name': self.collect_name,
+            'collect_email': self.collect_email,
+            'is_active': self.is_active,
+            'auto_create_contact': self.auto_create_contact,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ChatSession(db.Model):
+    __tablename__ = 'chat_sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)
+    visitor_id = db.Column(db.String(120), nullable=False, index=True)
+    status = db.Column(db.String(20), default='open', nullable=False, index=True)  # open|assigned|closed
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    source_url = db.Column(db.String(500), nullable=True)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_message_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    messages = db.relationship('ChatMessage', backref='session', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'contact_id': self.contact_id,
+            'visitor_id': self.visitor_id,
+            'status': self.status,
+            'assigned_to': self.assigned_to,
+            'source_url': self.source_url,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'last_message_at': self.last_message_at.isoformat() if self.last_message_at else None,
+        }
+
+
+class ChatMessage(db.Model):
+    __tablename__ = 'chat_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_sessions.id'), nullable=False, index=True)
+    sender_type = db.Column(db.String(20), nullable=False, index=True)  # visitor|agent|bot
+    sender_id = db.Column(db.Integer, nullable=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'sender_type': self.sender_type,
+            'sender_id': self.sender_id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class CallLog(db.Model):
+    __tablename__ = 'call_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contacts.id'), nullable=True, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deals.id'), nullable=True, index=True)
+    logged_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    direction = db.Column(db.String(20), default='outbound', nullable=False, index=True)
+    phone_number = db.Column(db.String(50), nullable=False)
+    duration_seconds = db.Column(db.Integer, default=0, nullable=False)
+    outcome = db.Column(db.String(30), default='connected', nullable=False, index=True)
+    notes = db.Column(db.Text, nullable=True)
+    recording_url = db.Column(db.String(500), nullable=True)
+    external_call_id = db.Column(db.String(120), nullable=True, index=True)
+    called_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'contact_id': self.contact_id,
+            'deal_id': self.deal_id,
+            'logged_by': self.logged_by,
+            'direction': self.direction,
+            'phone_number': self.phone_number,
+            'duration_seconds': self.duration_seconds,
+            'outcome': self.outcome,
+            'notes': self.notes,
+            'recording_url': self.recording_url,
+            'external_call_id': self.external_call_id,
+            'called_at': self.called_at.isoformat() if self.called_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ZoomIntegration(db.Model):
+    __tablename__ = 'zoom_integrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=True)
+    token_expires_at = db.Column(db.DateTime, nullable=True, index=True)
+    zoom_user_id = db.Column(db.String(120), nullable=True)
+    zoom_email = db.Column(db.String(255), nullable=True, index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', name='uix_zoom_integration_workspace_user'),
+    )
+
+
+class LinkedInIntegration(db.Model):
+    __tablename__ = 'linkedin_integrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=True)
+    token_expires_at = db.Column(db.DateTime, nullable=True, index=True)
+    linkedin_member_id = db.Column(db.String(120), nullable=True, index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', name='uix_linkedin_integration_workspace_user'),
+    )
+
+
+class FacebookAdsIntegration(db.Model):
+    __tablename__ = 'facebook_ads_integrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    page_id = db.Column(db.String(120), nullable=True, index=True)
+    page_name = db.Column(db.String(255), nullable=True)
+    access_token = db.Column(db.Text, nullable=False)
+    webhook_subscribed = db.Column(db.Boolean, default=False, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class GoogleAdsIntegration(db.Model):
+    __tablename__ = 'google_ads_integrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    customer_id = db.Column(db.String(120), nullable=True, index=True)
+    conversion_action_id = db.Column(db.String(120), nullable=True)
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=True)
+    token_expires_at = db.Column(db.DateTime, nullable=True, index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'user_id', name='uix_google_ads_integration_workspace_user'),
+    )

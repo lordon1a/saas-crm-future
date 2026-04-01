@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='sidebar-early-init.js') }}"></script>
+    <title>Segments - WhatsApp CRM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col pt-6 z-30 relative shadow-sm flex-shrink-0">
+        <div class="flex items-center px-3 mb-6">
+            <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg hover:scale-105 transition-transform flex-shrink-0">
+                <span class="text-2xl">🐧</span>
+            </a>
+            <span class="text-base font-bold text-slate-800 pl-3">Sleek CRM</span>
+        </div>
+
+        <nav class="flex-1 flex flex-col gap-1 w-full px-3 sidebar-scroll overflow-y-auto">
+            <a href="/" class="h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+                <i class="fas fa-inbox text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="text-sm font-medium">Inbox</span>
+            </a>
+            <a href="/contacts" class="h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+                <i class="fas fa-address-book text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="text-sm font-medium">Contacts</span>
+            </a>
+            <a href="/segments" class="h-10 flex items-center text-brand-600 bg-brand-50 rounded-xl transition-all">
+                <i class="fas fa-layer-group text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="text-sm font-medium">Segments</span>
+            </a>
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+            <a href="/analytics" class="h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+                <i class="fas fa-chart-line text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="text-sm font-medium">Reports</span>
+            </a>
+            <a href="/automation" class="h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+                <i class="fas fa-robot text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="text-sm font-medium">Automation</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between flex-shrink-0">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Segments</h1>
+                <p class="text-sm text-slate-500 mt-1">Organize contacts into dynamic or static groups</p>
+            </div>
+            <button onclick="openCreateModal()" class="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-all shadow-sm flex items-center gap-2">
+                <i class="fas fa-plus text-xs"></i>
+                New Segment
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-8">
+            <!-- Tabs -->
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="switchTab('all')" id="tab-all" class="px-4 py-2 text-sm font-semibold border-b-2 border-brand-600 text-brand-600">
+                    All Segments
+                </button>
+                <button onclick="switchTab('dynamic')" id="tab-dynamic" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+                    Dynamic
+                </button>
+                <button onclick="switchTab('static')" id="tab-static" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+                    Static
+                </button>
+            </div>
+
+            <!-- Segments Grid -->
+            <div id="segments-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Segments will be loaded here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden text-center py-16">
+                <i class="fas fa-layer-group text-5xl text-slate-300 mb-4"></i>
+                <h3 class="text-lg font-semibold text-slate-600 mb-2">No segments yet</h3>
+                <p class="text-sm text-slate-500 mb-6">Create your first segment to organize contacts</p>
+                <button onclick="openCreateModal()" class="px-6 py-3 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-all shadow-sm">
+                    Create Segment
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create/Edit Segment Modal -->
+    <div id="segment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 id="modal-title" class="text-lg font-bold text-slate-900">Create Segment</h3>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="segment-id">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Segment Name</label>
+                    <input type="text" id="segment-name" placeholder="VIP Customers" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                    <textarea id="segment-description" placeholder="Optional description..." rows="2" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 resize-none"></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Segment Type</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="segment-type" value="true" checked onchange="toggleDynamic()" class="w-4 h-4 text-brand-600">
+                            <span class="text-sm">Dynamic</span>
+                            <span class="text-xs text-slate-500">(auto-synced)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="segment-type" value="false" onchange="toggleDynamic()" class="w-4 h-4 text-brand-600">
+                            <span class="text-sm">Static</span>
+                            <span class="text-xs text-slate-500">(manual)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="filter-section" class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Filter (JSON)</label>
+                    <textarea id="segment-filter" rows="4" placeholder='{"filters":[{"field":"lead_score","operator":"greater_than","value":80}]}' class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 resize-none"></textarea>
+                    <p class="text-xs text-slate-500 mt-1">Use FilterService format: filters array with field, operator, value</p>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button onclick="saveSegment()" class="flex-1 px-4 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors">
+                        Save Segment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segment Detail Modal -->
+    <div id="detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h3 id="detail-title" class="text-lg font-bold text-slate-900"></h3>
+                    <p id="detail-description" class="text-sm text-slate-500"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="syncSegment()" id="sync-btn" class="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg hover:bg-blue-200 transition-colors hidden">
+                        <i class="fas fa-sync-alt mr-1"></i> Sync
+                    </button>
+                    <button onclick="deleteCurrentSegment()" class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-semibold rounded-lg hover:bg-red-200 transition-colors">
+                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                    </button>
+                    <button onclick="closeDetailModal()" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="px-3 py-1.5 bg-slate-100 rounded-lg text-sm">
+                        <span class="font-semibold" id="detail-count">0</span> members
+                    </div>
+                    <div id="detail-sync-info" class="text-xs text-slate-500 hidden">
+                        Last synced: <span id="detail-last-sync"></span>
+                    </div>
+                </div>
+                
+                <h4 class="text-sm font-semibold text-slate-700 mb-3">Members</h4>
+                <div id="members-list" class="space-y-2">
+                    <!-- Members will be loaded here -->
+                </div>
+                <div id="members-empty" class="hidden text-center py-8 text-sm text-slate-500">
+                    No members in this segment
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 text-white font-medium bg-green-600">
+        <i id="toast-icon" class="fas fa-check-circle"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const API = '/api/v1/segments';
+        let segments = [];
+        let currentTab = 'all';
+        let currentSegmentId = null;
+
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(endpoint, options);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Request failed');
+            return data;
+        }
+
+        async function loadSegments() {
+            try {
+                const data = await api(API);
+                segments = data.segments || [];
+                renderSegments();
+            } catch (err) {
+                showToast('Failed to load segments: ' + err.message, 'error');
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['all', 'dynamic', 'static'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (t === tab) {
+                    el.classList.add('border-brand-600', 'text-brand-600');
+                    el.classList.remove('border-transparent', 'text-slate-500');
+                } else {
+                    el.classList.remove('border-brand-600', 'text-brand-600');
+                    el.classList.add('border-transparent', 'text-slate-500');
+                }
+            });
+            renderSegments();
+        }
+
+        function renderSegments() {
+            const grid = document.getElementById('segments-grid');
+            const empty = document.getElementById('empty-state');
+            
+            let filtered = segments;
+            if (currentTab === 'dynamic') {
+                filtered = segments.filter(s => s.is_dynamic);
+            } else if (currentTab === 'static') {
+                filtered = segments.filter(s => !s.is_dynamic);
+            }
+            
+            if (!filtered.length) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            grid.innerHTML = filtered.map(seg => `
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onclick="openDetail(${seg.id})">
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl ${seg.is_dynamic ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'} flex items-center justify-center">
+                                    <i class="fas ${seg.is_dynamic ? 'fa-sync-alt' : 'fa-hand-pointer'}"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-900">${escapeHtml(seg.name)}</h3>
+                                    <span class="text-xs ${seg.is_dynamic ? 'text-blue-600' : 'text-purple-600'}">${seg.is_dynamic ? 'Dynamic' : 'Static'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-500 mb-4 line-clamp-2">${escapeHtml(seg.description || 'No description')}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-slate-600">
+                                <i class="fas fa-users mr-1"></i>
+                                <span id="count-${seg.id}">${seg.member_count || 0}</span> members
+                            </span>
+                            ${seg.is_dynamic ? `
+                                <span class="text-xs text-slate-400" id="sync-${seg.id}">
+                                    ${seg.last_synced_at ? 'Synced ' + formatDate(seg.last_synced_at) : 'Not synced'}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            document.getElementById('modal-title').textContent = 'Create Segment';
+            document.getElementById('segment-id').value = '';
+            document.getElementById('segment-name').value = '';
+            document.getElementById('segment-description').value = '';
+            document.getElementById('segment-filter').value = '';
+            document.querySelector('input[name="segment-type"][value="true"]').checked = true;
+            document.getElementById('filter-section').classList.remove('hidden');
+            document.getElementById('segment-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('segment-modal').classList.add('hidden');
+        }
+
+        function toggleDynamic() {
+            const isDynamic = document.querySelector('input[name="segment-type"][value="true"]').checked;
+            document.getElementById('filter-section').classList.toggle('hidden', !isDynamic);
+        }
+
+        async function saveSegment() {
+            const id = document.getElementById('segment-id').value;
+            const name = document.getElementById('segment-name').value.trim();
+            const description = document.getElementById('segment-description').value.trim();
+            const isDynamic = document.querySelector('input[name="segment-type"][value="true"]').checked;
+            const filterJson = document.getElementById('segment-filter').value.trim();
+            
+            if (!name) {
+                showToast('Name is required', 'error');
+                return;
+            }
+            
+            const payload = {
+                name,
+                description,
+                is_dynamic: isDynamic
+            };
+            
+            if (isDynamic && filterJson) {
+                payload.filter_json = filterJson;
+            }
+            
+            try {
+                if (id) {
+                    await api(`${API}/${id}`, 'PATCH', payload);
+                    showToast('Segment updated');
+                } else {
+                    await api(API, 'POST', payload);
+                    showToast('Segment created');
+                }
+                closeModal();
+                loadSegments();
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            }
+        }
+
+        async function openDetail(id) {
+            currentSegmentId = id;
+            try {
+                const data = await api(`${API}/${id}`);
+                const seg = data.segment;
+                const members = data.members;
+                
+                document.getElementById('detail-title').textContent = seg.name;
+                document.getElementById('detail-description').textContent = seg.description || '';
+                document.getElementById('detail-count').textContent = seg.member_count || 0;
+                document.getElementById('detail-last-sync').textContent = seg.last_synced_at ? formatDate(seg.last_synced_at) : 'Never';
+                
+                const syncBtn = document.getElementById('sync-btn');
+                const syncInfo = document.getElementById('detail-sync-info');
+                if (seg.is_dynamic) {
+                    syncBtn.classList.remove('hidden');
+                    syncInfo.classList.remove('hidden');
+                } else {
+                    syncBtn.classList.add('hidden');
+                    syncInfo.classList.add('hidden');
+                }
+                
+                renderMembers(members);
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                showToast('Error loading segment: ' + err.message, 'error');
+            }
+        }
+
+        function renderMembers(membersData) {
+            const list = document.getElementById('members-list');
+            const empty = document.getElementById('members-empty');
+            const items = membersData.items || [];
+            
+            if (!items.length) {
+                list.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            list.innerHTML = items.map(item => `
+                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-semibold text-sm">
+                        ${getInitials(item.contact.name)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-slate-900 truncate">${escapeHtml(item.contact.name || 'Unknown')}</div>
+                        <div class="text-xs text-slate-500 truncate">${escapeHtml(item.contact.email || 'No email')}</div>
+                    </div>
+                    ${!isDynamicSegment ? `
+                        <button onclick="removeMember(${item.membership.id})" class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                            Remove
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+            currentSegmentId = null;
+        }
+
+        async function syncSegment() {
+            if (!currentSegmentId) return;
+            try {
+                await api(`${API}/${currentSegmentId}/sync`, 'POST');
+                showToast('Segment synced');
+                openDetail(currentSegmentId);
+                loadSegments();
+            } catch (err) {
+                showToast('Sync failed: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteCurrentSegment() {
+            if (!currentSegmentId) return;
+            if (!confirm('Delete this segment?')) return;
+            try {
+                await api(`${API}/${currentSegmentId}`, 'DELETE');
+                showToast('Segment deleted');
+                closeDetailModal();
+                loadSegments();
+            } catch (err) {
+                showToast('Delete failed: ' + err.message, 'error');
+            }
+        }
+
+        async function removeMember(membershipId) {
+            if (!confirm('Remove this contact from segment?')) return;
+            try {
+                await api(`${API}/${currentSegmentId}/members/${membershipId}`, 'DELETE');
+                showToast('Contact removed');
+                openDetail(currentSegmentId);
+                loadSegments();
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            }
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            
+            toast.className = `fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 text-white font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            msg.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadSegments);
+    </script>
+</body>
+</html>

@@ -956,6 +956,34 @@ def get_contact(contact_id):
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+@contacts_bp.route('/api/v1/contacts/<int:contact_id>/segments', methods=['GET'])
+@login_required
+def get_contact_segments(contact_id):
+    """Get all current segments for a contact."""
+    try:
+        workspace_id = session.get('workspace_id')
+        if not workspace_id:
+            return jsonify({'error': 'Workspace not found'}), 400
+
+        from models_crm import Contact
+        from services.segment_service import SegmentService
+
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+
+        segments = SegmentService.get_contact_segments(contact_id, workspace_id)
+        return jsonify({'success': True, 'segments': segments}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting contact segments: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+
 @contacts_bp.route('/companies/<int:company_id>')
 @login_required
 def view_company_page(company_id):
@@ -1852,7 +1880,19 @@ def update_contact(contact_id):
             entity_id=contact.id,
             message=f'Takip ettiginiz kisi guncellendi: {contact.full_name}',
         )
-        
+
+        # Trigger workflow automation for contact_updated
+        try:
+            from services.workflow_service import WorkflowService
+            WorkflowService.trigger_event(
+                workspace_id=workspace_id,
+                trigger_type='contact_updated',
+                entity_type='contact',
+                entity_id=contact.id
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for contact_updated: {e}")
+
         return jsonify({
             'id': contact.id,
             'first_name': contact.first_name,
@@ -3694,6 +3734,20 @@ def get_contact_tags(contact_id):
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+def _trigger_contact_tag_added(workspace_id, contact_id, tag_name):
+    try:
+        from services.workflow_service import WorkflowService
+        WorkflowService.trigger_event(
+            workspace_id=workspace_id,
+            trigger_type='contact_tag_added',
+            entity_type='contact',
+            entity_id=contact_id,
+            context={'tag_name': tag_name}
+        )
+    except Exception as e:
+        logger.error(f"Workflow trigger error for contact_tag_added: {e}")
+
+
 @contacts_bp.route('/api/v1/contacts/<int:contact_id>/tags', methods=['POST'])
 @login_required
 def add_contact_tags(contact_id):
@@ -3713,6 +3767,7 @@ def add_contact_tags(contact_id):
         if 'tag_name' in data:
             tag = TagService.get_or_create_tag(workspace_id, data['tag_name'], data.get('color', '#6366f1'))
             tags = TagService.add_tags_to_contact(workspace_id, contact_id, [tag.id])
+            _trigger_contact_tag_added(workspace_id, contact_id, data['tag_name'])
             return jsonify({'tags': [t.to_dict() for t in tags]}), 200
 
         tag_ids = data.get('tag_ids', [])
@@ -3720,6 +3775,7 @@ def add_contact_tags(contact_id):
             return jsonify({'error': 'tag_ids or tag_name is required'}), 400
 
         tags = TagService.add_tags_to_contact(workspace_id, contact_id, tag_ids)
+        _trigger_contact_tag_added(workspace_id, contact_id, '')
         return jsonify({'tags': [t.to_dict() for t in tags]}), 200
 
     except LookupError as e:

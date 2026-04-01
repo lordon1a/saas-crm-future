@@ -77,6 +77,24 @@ class TaskScheduler:
             replace_existing=True
         )
         
+        # Her 15 dakikada email sequence enrollment queue işleme
+        cls.scheduler.add_job(
+            func=cls._process_email_enrollment_queue_job,
+            trigger=IntervalTrigger(minutes=15),
+            id='email_enrollment_queue_processor',
+            name='Process email sequence enrollment queue',
+            replace_existing=True
+        )
+
+        # Her 30 dakikada tüm workspace'lerde dinamik segment sync
+        cls.scheduler.add_job(
+            func=cls._sync_dynamic_segments_job,
+            trigger=IntervalTrigger(minutes=30),
+            id='dynamic_segment_sync',
+            name='Sync dynamic contact segments globally',
+            replace_existing=True
+        )
+        
         cls.scheduler.start()
         logger.info("TaskScheduler başlatıldı - bildirim ve overdue kontrol job'ları aktif")
     
@@ -176,3 +194,39 @@ class TaskScheduler:
                 logger.info("Workflow time triggers check completed")
         except Exception as e:
             logger.error(f"Workflow time triggers job hatası: {str(e)}", exc_info=True)
+    
+    @classmethod
+    def _process_email_enrollment_queue_job(cls):
+        """
+        Email sequence enrollment queue processor.
+        Her 15 dakikada çalışır ve zamanı gelmiş enrollmentları işler.
+        """
+        if not cls.app:
+            logger.error("Flask app instance not available for email enrollment queue job")
+            return
+        
+        try:
+            with cls.app.app_context():
+                from services.email_hub_service import EmailHubService
+                EmailHubService.process_enrollment_queue()
+                logger.info("Email enrollment queue processed")
+        except Exception as e:
+            logger.error(f"Email enrollment queue job hatası: {str(e)}", exc_info=True)
+
+    @classmethod
+    def _sync_dynamic_segments_job(cls):
+        """
+        Dynamic contact segment synchronization job.
+        Her 30 dakikada tüm workspace'lerdeki dinamik segmentleri sync eder.
+        """
+        if not cls.app:
+            logger.error("Flask app instance not available for dynamic segments job")
+            return
+
+        try:
+            with cls.app.app_context():
+                from services.segment_service import SegmentService
+                SegmentService.sync_all_dynamic_segments_globally()
+                logger.info("Dynamic segment global sync completed")
+        except Exception as e:
+            logger.error(f"Dynamic segment sync job hatası: {str(e)}", exc_info=True)

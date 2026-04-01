@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book a Meeting - {{ meeting_link.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .slot-btn {
+            @apply px-4 py-2 rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all text-sm font-medium;
+        }
+        .slot-btn.selected {
+            @apply border-blue-500 bg-blue-100 text-blue-700;
+        }
+        .day-column {
+            @apply min-w-[120px] p-3 bg-white rounded-lg shadow;
+        }
+        .day-header {
+            @apply font-semibold text-gray-700 mb-2 text-center pb-2 border-b;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto py-8 px-4">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">{{ meeting_link.title }}</h1>
+            {% if meeting_link.description %}
+            <p class="mt-2 text-gray-600">{{ meeting_link.description }}</p>
+            {% endif %}
+            <div class="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500">
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    {{ meeting_link.duration_minutes }} minutes
+                </span>
+                {% if meeting_link.location %}
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    </svg>
+                    {{ meeting_link.location }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Success Message (hidden by default) -->
+        <div id="success-message" class="hidden bg-green-50 border border-green-200 rounded-xl p-8 text-center mb-8">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-green-800 mb-2">Booking Confirmed!</h2>
+            <p class="text-green-700 mb-4">You will receive a confirmation email shortly.</p>
+            <p class="text-sm text-green-600">Check your spam folder if you don't see it within a few minutes.</p>
+        </div>
+
+        <!-- Error Message (hidden by default) -->
+        <div id="error-message" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 text-center mb-8">
+            <p class="text-red-700" id="error-text">An error occurred. Please try again.</p>
+        </div>
+
+        <!-- Booking Form -->
+        <div id="booking-form">
+            <!-- Step 1: Select Date & Time -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Select a Date & Time</h2>
+                
+                <div class="overflow-x-auto pb-4">
+                    <div class="flex gap-4" id="slots-container" style="min-width: max-content;">
+                        <!-- Slots will be loaded here -->
+                        <div class="text-gray-500 py-8">Loading available slots...</div>
+                    </div>
+                </div>
+                
+                {% if slots_by_date %}
+                <div class="mt-4 text-sm text-gray-500">
+                    <p>Showing next 30 days. More dates may be available.</p>
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <p>No available slots in the next 30 days.</p>
+                    <p class="text-sm mt-2">Please check back later.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Step 2: Your Details -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Your Details</h2>
+                
+                <form id="bookingForm" class="space-y-4">
+                    <input type="hidden" id="meeting_link_id" value="{{ meeting_link.id }}">
+                    <input type="hidden" id="selected_slot" name="start_time" value="">
+                    
+                    <div>
+                        <label for="booker_name" class="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
+                        <input type="text" id="booker_name" name="booker_name" required
+                            value="{{ prefill_name }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="John Doe">
+                    </div>
+                    
+                    <div>
+                        <label for="booker_email" class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                        <input type="email" id="booker_email" name="booker_email" required
+                            value="{{ prefill_email }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="john@example.com">
+                    </div>
+                    
+                    <div>
+                        <label for="booker_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                        <textarea id="booker_notes" name="booker_notes" rows="3"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Any additional information..."></textarea>
+                    </div>
+                    
+                    <!-- Selected Slot Summary -->
+                    <div id="selected-summary" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-700">
+                            Selected: <span id="summary-datetime" class="font-semibold"></span>
+                        </p>
+                    </div>
+                    
+                    <button type="submit" id="submit-btn"
+                        class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                        Confirm Booking
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-sm text-gray-500">
+            <p>Powered by <span class="font-medium">WhatsApp CRM</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Pre-fill data from template
+        const meetingLinkId = {{ meeting_link.id }};
+        const slotsByDate = {{ slots_by_date | tojson | safe }};
+        
+        // Build slots HTML
+        function renderSlots() {
+            const container = document.getElementById('slots-container');
+            
+            if (Object.keys(slotsByDate).length === 0) {
+                container.innerHTML = '<div class="text-gray-500 py-8">No available slots</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const [date, slots] of Object.entries(slotsByDate)) {
+                const dateObj = new Date(date + 'T00:00:00');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const monthDay = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                html += `
+                    <div class="day-column">
+                        <div class="day-header">
+                            <div class="text-lg font-bold">${dayName}</div>
+                            <div class="text-sm text-gray-500">${monthDay}</div>
+                        </div>
+                        <div class="space-y-2">
+                `;
+                
+                for (const slot of slots) {
+                    html += `
+                        <button type="button" class="slot-btn w-full" 
+                            data-datetime="${date}T${slot.time}:00"
+                            onclick="selectSlot(this, '${date} ${slot.time}')">
+                            ${slot.time}
+                        </button>
+                    `;
+                }
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        let selectedDateTime = null;
+        
+        function selectSlot(btn, datetime) {
+            // Remove previous selection
+            document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+            
+            // Select this button
+            btn.classList.add('selected');
+            
+            // Store selection
+            selectedDateTime = datetime;
+            document.getElementById('selected_slot').value = datetime;
+            
+            // Show summary
+            const summary = document.getElementById('selected-summary');
+            summary.classList.remove('hidden');
+            document.getElementById('summary-datetime').textContent = formatDateTime(datetime);
+        }
+        
+        function formatDateTime(datetime) {
+            const date = new Date(datetime);
+            return date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+        
+        // Form submission
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!selectedDateTime) {
+                alert('Please select a time slot first.');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Booking...';
+            
+            const data = {
+                booker_name: document.getElementById('booker_name').value,
+                booker_email: document.getElementById('booker_email').value,
+                booker_notes: document.getElementById('booker_notes').value,
+                start_time: selectedDateTime
+            };
+            
+            try {
+                const response = await fetch(`/api/v1/public/book/${meetingLinkId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    // Show success
+                    document.getElementById('booking-form').classList.add('hidden');
+                    document.getElementById('success-message').classList.remove('hidden');
+                } else {
+                    // Show error
+                    document.getElementById('error-text').textContent = result.error || 'Booking failed';
+                    document.getElementById('error-message').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('error-text').textContent = 'Network error. Please try again.';
+                document.getElementById('error-message').classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirm Booking';
+            }
+        });
+        
+        // Initialize
+        renderSlots();
+    </script>
+</body>
+</html>

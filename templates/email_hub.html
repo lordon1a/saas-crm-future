@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='sidebar-early-init.js') }}"></script>
+    <title>Email Hub - WhatsApp CRM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.sidebar-collapsed #mainSidebar { width: 64px !important; transition: none !important; }
+        html.sidebar-collapsed #mainSidebar .sidebar-text,
+        html.sidebar-collapsed #mainSidebar .nav-text { opacity: 0 !important; width: 0 !important; overflow: hidden !important; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex font-sans antialiased">
+    <!-- Sidebar -->
+    <aside id="mainSidebar" data-collapsed="false" class="h-screen bg-white border-r border-slate-200 flex flex-col pt-6 z-30 relative shadow-sm flex-shrink-0 w-64 transition-[width] duration-200 ease-linear">
+        <div class="flex items-center px-3 mb-6">
+            <a href="/" class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg hover:scale-105 transition-transform flex-shrink-0" title="Ana Sayfa">
+                <span class="text-2xl">🐧</span>
+            </a>
+            <span class="sidebar-text text-base font-bold text-slate-800 pl-3 whitespace-nowrap overflow-hidden">Sleek CRM</span>
+        </div>
+
+        <nav class="flex-1 flex flex-col gap-1 w-full px-3 sidebar-scroll overflow-y-auto">
+            <a href="/" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Gelen Kutusu">
+                <i class="fas fa-inbox text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Gelen Kutusu</span>
+            </a>
+            <a href="/pipeline" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Pipeline">
+                <i class="fas fa-filter text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Pipeline</span>
+            </a>
+            <a href="/contacts" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kişiler">
+                <i class="fas fa-address-book text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Kişiler</span>
+            </a>
+            <a href="/companies" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Şirketler">
+                <i class="fas fa-building text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Şirketler</span>
+            </a>
+
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+
+            <a href="/tasks" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Görevler">
+                <i class="fas fa-list-check text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Görevler</span>
+            </a>
+            <a href="/calendar" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Takvim">
+                <i class="fas fa-calendar-days text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Takvim</span>
+            </a>
+            <a href="/analytics" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Raporlar">
+                <i class="fas fa-chart-line text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Raporlar</span>
+            </a>
+
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+
+            <a href="/broadcast" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Broadcast">
+                <i class="fas fa-bullhorn text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Broadcast</span>
+            </a>
+            <a href="/email-hub" class="sidebar-nav-item h-10 flex items-center text-brand-600 bg-brand-50 rounded-xl transition-all" title="Email Hub">
+                <i class="fas fa-envelope text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Email Hub</span>
+            </a>
+            <a href="/automation" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Automation">
+                <i class="fas fa-robot text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Automation</span>
+            </a>
+
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+
+            <a href="/documents" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Dokümanlar">
+                <i class="fas fa-folder text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Dokümanlar</span>
+            </a>
+            <a href="/channels" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Kanallar">
+                <i class="fas fa-plug text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Kanallar</span>
+            </a>
+
+            <div class="w-full h-px bg-slate-200 my-2"></div>
+
+            <a href="/settings" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Ayarlar">
+                <i class="fas fa-cog text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Ayarlar</span>
+            </a>
+            <a href="/logout" class="sidebar-nav-item h-10 flex items-center text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Çıkış">
+                <i class="fas fa-sign-out-alt text-lg w-10 text-center flex-shrink-0"></i>
+                <span class="sidebar-text text-sm font-medium whitespace-nowrap overflow-hidden">Çıkış</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between flex-shrink-0">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Email Hub</h1>
+                <p class="text-sm text-slate-500 mt-1">Email sequence automation & enrollment management</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="loadSequences()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-sync-alt text-xs"></i>
+                    Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-8">
+            <!-- Tab Navigation -->
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-200 pb-4">
+                <button id="tab-sequences" onclick="switchTab('sequences')" class="px-4 py-2 text-sm font-semibold border-b-2 border-brand-600 text-brand-600">
+                    Sequences
+                </button>
+                <button id="tab-enrollments" onclick="switchTab('enrollments')" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+                    Active Enrollments
+                </button>
+            </div>
+
+            <!-- Sequences Tab -->
+            <div id="sequences-tab">
+                <!-- Sequences Grid -->
+                <div id="sequences-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Sequences will be loaded here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="sequences-empty" class="hidden text-center py-16">
+                    <i class="fas fa-envelope-open-text text-5xl text-slate-300 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-slate-600 mb-2">No sequences yet</h3>
+                    <p class="text-sm text-slate-500 mb-6">Create your first email sequence to automate outreach</p>
+                </div>
+            </div>
+
+            <!-- Enrollments Tab -->
+            <div id="enrollments-tab" class="hidden">
+                <!-- Enrollments Table -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Sequence</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Progress</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Next Send</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enrollments-tbody" class="divide-y divide-slate-200">
+                            <!-- Enrollments will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="enrollments-empty" class="hidden text-center py-16">
+                    <i class="fas fa-users text-5xl text-slate-300 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-slate-600 mb-2">No active enrollments</h3>
+                    <p class="text-sm text-slate-500">Contacts enrolled in sequences will appear here</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Person Modal -->
+    <div id="add-person-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900">Add Contact to Sequence</h3>
+                <button onclick="closeAddPersonModal()" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="modal-sequence-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Search Contacts</label>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="contact-search" oninput="searchContacts(this.value)" placeholder="Type to search..." 
+                            class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100">
+                    </div>
+                </div>
+                <div id="contact-results" class="max-h-64 overflow-y-auto space-y-2">
+                    <!-- Contact search results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 text-white font-medium">
+        <i id="toast-icon" class="fas fa-check-circle"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const API = '/api/v1/email';
+        let allContacts = [];
+        let currentTab = 'sequences';
+
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(endpoint, options);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Request failed');
+            return data;
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('sequences-tab').classList.toggle('hidden', tab !== 'sequences');
+            document.getElementById('enrollments-tab').classList.toggle('hidden', tab !== 'enrollments');
+            
+            document.getElementById('tab-sequences').classList.toggle('border-brand-600', tab === 'sequences');
+            document.getElementById('tab-sequences').classList.toggle('text-brand-600', tab === 'sequences');
+            document.getElementById('tab-sequences').classList.toggle('border-transparent', tab !== 'sequences');
+            document.getElementById('tab-sequences').classList.toggle('text-slate-500', tab !== 'sequences');
+            
+            document.getElementById('tab-enrollments').classList.toggle('border-brand-600', tab === 'enrollments');
+            document.getElementById('tab-enrollments').classList.toggle('text-brand-600', tab === 'enrollments');
+            document.getElementById('tab-enrollments').classList.toggle('border-transparent', tab !== 'enrollments');
+            document.getElementById('tab-enrollments').classList.toggle('text-slate-500', tab !== 'enrollments');
+        }
+
+        async function loadSequences() {
+            try {
+                const data = await api(`${API}/sequences`);
+                const sequences = data.data || [];
+                renderSequences(sequences);
+            } catch (err) {
+                showToast('Failed to load sequences: ' + err.message, 'error');
+            }
+        }
+
+        function renderSequences(sequences) {
+            const grid = document.getElementById('sequences-grid');
+            const empty = document.getElementById('sequences-empty');
+            
+            if (!sequences.length) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            grid.innerHTML = sequences.map(seq => `
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="font-bold text-slate-900">${escapeHtml(seq.name)}</h3>
+                                <p class="text-sm text-slate-500 mt-1">${escapeHtml(seq.description || 'No description')}</p>
+                            </div>
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${seq.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">
+                                ${seq.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-4 text-sm text-slate-500 mb-4">
+                            <span><i class="fas fa-list-ol mr-1"></i>${seq.steps?.length || 0} steps</span>
+                            <span><i class="fas fa-users mr-1"></i><span id="seq-count-${seq.id}">${seq.enrollment_count || 0}</span> enrolled</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openAddPersonModal(${seq.id})" class="flex-1 px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-user-plus"></i>
+                                Add Person
+                            </button>
+                            <button onclick="viewSequenceEnrollments(${seq.id})" class="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAddPersonModal(sequenceId) {
+            document.getElementById('modal-sequence-id').value = sequenceId;
+            document.getElementById('contact-search').value = '';
+            document.getElementById('contact-results').innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Start typing to search contacts...</p>';
+            document.getElementById('add-person-modal').classList.remove('hidden');
+            loadContacts();
+        }
+
+        function closeAddPersonModal() {
+            document.getElementById('add-person-modal').classList.add('hidden');
+        }
+
+        async function loadContacts() {
+            try {
+                const data = await api('/api/v1/contacts?limit=100');
+                allContacts = data.contacts || data.data || [];
+            } catch (err) {
+                console.error('Failed to load contacts:', err);
+            }
+        }
+
+        function searchContacts(query) {
+            const results = document.getElementById('contact-results');
+            if (!query.trim()) {
+                results.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Start typing to search contacts...</p>';
+                return;
+            }
+            
+            const q = query.toLowerCase();
+            const filtered = allContacts.filter(c => 
+                (c.name || '').toLowerCase().includes(q) ||
+                (c.email || '').toLowerCase().includes(q)
+            );
+            
+            if (!filtered.length) {
+                results.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">No contacts found</p>';
+                return;
+            }
+            
+            results.innerHTML = filtered.slice(0, 10).map(c => `
+                <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors" onclick="enrollContact(${c.id}, '${escapeHtml(c.name || c.email || '')}')">
+                    <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-semibold text-sm">
+                        ${getInitials(c.name)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-slate-900 truncate">${escapeHtml(c.name || 'Unknown')}</div>
+                        <div class="text-xs text-slate-500 truncate">${escapeHtml(c.email || 'No email')}</div>
+                    </div>
+                    <i class="fas fa-plus text-slate-400 hover:text-brand-600"></i>
+                </div>
+            `).join('');
+        }
+
+        async function enrollContact(contactId, contactName) {
+            const sequenceId = document.getElementById('modal-sequence-id').value;
+            try {
+                await api(`${API}/sequences/${sequenceId}/enroll`, 'POST', { contact_id: contactId });
+                closeAddPersonModal();
+                showToast(`${contactName} enrolled successfully`, 'success');
+                loadSequences();
+                
+                // Update count
+                const countEl = document.getElementById(`seq-count-${sequenceId}`);
+                if (countEl) {
+                    countEl.textContent = parseInt(countEl.textContent || 0) + 1;
+                }
+            } catch (err) {
+                showToast('Failed to enroll: ' + err.message, 'error');
+            }
+        }
+
+        async function viewSequenceEnrollments(sequenceId) {
+            switchTab('enrollments');
+            try {
+                const data = await api(`${API}/sequences/${sequenceId}/enrollments`);
+                renderEnrollments(data.enrollments || []);
+            } catch (err) {
+                showToast('Failed to load enrollments', 'error');
+            }
+        }
+
+        async function loadAllEnrollments() {
+            try {
+                const data = await api(`${API}/sequences`);
+                const sequences = data.data || [];
+                let allEnrollments = [];
+                
+                for (const seq of sequences) {
+                    try {
+                        const enrollData = await api(`${API}/sequences/${seq.id}/enrollments`);
+                        if (enrollData.enrollments) {
+                            enrollData.enrollments.forEach(e => e.sequence_name = seq.name);
+                            allEnrollments = allEnrollments.concat(enrollData.enrollments);
+                        }
+                    } catch (e) {}
+                }
+                
+                renderEnrollments(allEnrollments);
+            } catch (err) {
+                showToast('Failed to load enrollments', 'error');
+            }
+        }
+
+        function renderEnrollments(enrollments) {
+            const tbody = document.getElementById('enrollments-tbody');
+            const empty = document.getElementById('enrollments-empty');
+            
+            if (!enrollments.length) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            tbody.innerHTML = enrollments.map(e => `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-slate-900">${escapeHtml(e.contact_name || 'Unknown')}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(e.contact_email || '')}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-700">${escapeHtml(e.sequence_name || '')}</td>
+                    <td class="px-6 py-4">
+                        ${getStatusBadge(e.status)}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-700">
+                        Step ${(e.current_step_index || 0) + 1} of ${e.total_steps || '?'}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">
+                        ${e.next_send_at ? formatDate(e.next_send_at) : 'N/A'}
+                    </td>
+                    <td class="px-6 py-4">
+                        ${e.status === 'active' ? `
+                            <button onclick="unenrollContact(${e.id})" class="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                                Remove
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function unenrollContact(enrollmentId) {
+            if (!confirm('Remove this contact from the sequence?')) return;
+            try {
+                await api(`${API}/enrollments/${enrollmentId}`, 'DELETE');
+                showToast('Contact removed from sequence', 'success');
+                loadAllEnrollments();
+                loadSequences();
+            } catch (err) {
+                showToast('Failed to remove: ' + err.message, 'error');
+            }
+        }
+
+        function getStatusBadge(status) {
+            const colors = {
+                'active': 'bg-green-100 text-green-700',
+                'paused': 'bg-yellow-100 text-yellow-700',
+                'completed': 'bg-blue-100 text-blue-700',
+                'stopped': 'bg-red-100 text-red-700'
+            };
+            const labels = {
+                'active': 'Active',
+                'paused': 'Paused',
+                'completed': 'Completed',
+                'stopped': 'Stopped'
+            };
+            const cls = colors[status] || 'bg-slate-100 text-slate-700';
+            const label = labels[status] || status;
+            return `<span class="px-2.5 py-1 text-xs font-semibold rounded-full ${cls}">${label}</span>`;
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            
+            toast.className = `fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 text-white font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            msg.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Tab change handler for enrollments
+        const originalSwitchTab = switchTab;
+        switchTab = function(tab) {
+            originalSwitchTab(tab);
+            if (tab === 'enrollments') {
+                loadAllEnrollments();
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSequences();
+            loadContacts();
+        });
+    </script>
+</body>
+</html>

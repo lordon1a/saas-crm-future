@@ -21,8 +21,8 @@ This guide covers deploying the WhatsApp CRM to production platforms like Render
 
 2. **Configure Build Settings**
    ```
-   Build Command: pip install -r requirements.txt
-   Start Command: gunicorn app:app
+   Build Command: bash scripts/render-build.sh
+   Start Command: gunicorn app:app --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --workers 1 --timeout 120 --bind 0.0.0.0:$PORT
    ```
 
 3. **Add Environment Variables**
@@ -35,6 +35,7 @@ This guide covers deploying the WhatsApp CRM to production platforms like Render
    WHATSAPP_PHONE_NUMBER_ID=<your-phone-id>
    WEBHOOK_VERIFY_TOKEN=<your-webhook-token>
    CORS_ORIGINS=https://your-domain.com
+   NODE_VERSION=20
    ```
 
 4. **Create PostgreSQL Database**

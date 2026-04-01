@@ -13,6 +13,7 @@ from models_crm import (
     Activity,
     EmailSendQueue,
     EmailSequence,
+    EmailSequenceEnrollment,
     EmailSequenceStep,
     EmailSync,
     EmailTemplate,
@@ -447,7 +448,15 @@ You're receiving this because you were assigned to this {entity_type}.
         return Template(template_text or '').render(**(variables or {}))
 
     @staticmethod
-    def create_template(workspace_id, user_id, name, subject_template, body_template):
+    def create_template(
+        workspace_id,
+        user_id,
+        name,
+        subject_template,
+        body_template,
+        design_json=None,
+        editor_type='html',
+    ):
         if not name:
             raise ValueError('Template name is required')
         if not subject_template:
@@ -466,10 +475,61 @@ You're receiving this because you were assigned to this {entity_type}.
             subject_template=subject_template,
             body_template=body_template,
             variables_json=json.dumps(variables),
+            design_json=design_json,
+            editor_type=editor_type or 'html',
             created_by=user_id,
         )
-        db.session.add(row)
-        db.session.commit()
+        try:
+            db.session.add(row)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        return row
+
+    @staticmethod
+    def get_template(workspace_id, template_id):
+        return EmailTemplate.query.filter_by(workspace_id=workspace_id, id=template_id).first()
+
+    @staticmethod
+    def update_template(
+        workspace_id,
+        template_id,
+        name=None,
+        subject_template=None,
+        body_template=None,
+        design_json=None,
+        editor_type=None,
+        is_active=None,
+    ):
+        row = EmailTemplate.query.filter_by(workspace_id=workspace_id, id=template_id).first()
+        if not row:
+            raise ValueError('Template not found')
+
+        if name is not None:
+            row.name = (name or '').strip()
+        if subject_template is not None:
+            row.subject_template = subject_template
+        if body_template is not None:
+            row.body_template = body_template
+        if design_json is not None:
+            row.design_json = design_json
+        if editor_type is not None:
+            row.editor_type = editor_type
+        if is_active is not None:
+            row.is_active = bool(is_active)
+
+        variables = sorted(
+            set(EmailHubService.extract_variables(row.subject_template))
+            | set(EmailHubService.extract_variables(row.body_template))
+        )
+        row.variables_json = json.dumps(variables)
+
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
         return row
 
     @staticmethod
@@ -486,6 +546,8 @@ You're receiving this because you were assigned to this {entity_type}.
                 'name': row.name,
                 'subject_template': row.subject_template,
                 'body_template': row.body_template,
+                'design_json': row.design_json,
+                'editor_type': row.editor_type or 'html',
                 'variables': variables,
                 'is_active': bool(row.is_active),
                 'created_at': row.created_at.isoformat() if row.created_at else None,
@@ -1106,3 +1168,292 @@ For security reasons, never share this link with anyone.
                 to_email, subject, str(exc)
             )
             return {'success': False, 'error': str(exc)}
+
+    @staticmethod
+    def enroll_contact(workspace_id, sequence_id, contact_id, enrolled_by):
+        """
+        Creates EmailSequenceEnrollment, sets next_send_at = now + step[0].delay_hours.
+        Raises error if same contact is already active in this sequence.
+        
+        Args:
+            workspace_id: Workspace ID
+            sequence_id: EmailSequence ID
+            contact_id: Contact ID to enroll
+            enrolled_by: User ID who enrolled the contact
+            
+        Returns:
+            EmailSequenceEnrollment object
+            
+        Raises:
+            ValueError: If sequence not found, no steps, or contact already enrolled
+        """
+        # Check for existing active enrollment
+        existing = EmailSequenceEnrollment.query.filter_by(
+            workspace_id=workspace_id,
+            sequence_id=sequence_id,
+            contact_id=contact_id,
+            status='active'
+        ).first()
+        if existing:
+            raise ValueError('Contact is already enrolled and active in this sequence')
+        
+        # Get sequence with steps
+        sequence = EmailSequence.query.filter_by(
+            id=sequence_id,
+            workspace_id=workspace_id,
+            is_active=True
+        ).first()
+        if not sequence:
+            raise ValueError('Email sequence not found or inactive')
+        
+        # Get first step
+        steps = sorted(sequence.steps, key=lambda s: s.step_order)
+        if not steps:
+            raise ValueError('Email sequence has no steps')
+        
+        first_step = steps[0]
+        next_send_at = datetime.utcnow() + timedelta(hours=first_step.delay_hours)
+        
+        enrollment = EmailSequenceEnrollment(
+            workspace_id=workspace_id,
+            sequence_id=sequence_id,
+            contact_id=contact_id,
+            enrolled_by=enrolled_by,
+            status='active',
+            current_step_index=0,
+            next_send_at=next_send_at,
+        )
+        
+        try:
+            db.session.add(enrollment)
+            db.session.commit()
+            logger.info(
+                'Contact enrolled in sequence. enrollment_id=%s contact=%s sequence=%s next_send_at=%s',
+                enrollment.id, contact_id, sequence_id, next_send_at
+            )
+            return enrollment
+        except Exception as exc:
+            db.session.rollback()
+            logger.error(
+                'Failed to enroll contact. contact=%s sequence=%s error=%s',
+                contact_id, sequence_id, str(exc)
+            )
+            raise
+
+    @staticmethod
+    def process_enrollment_queue():
+        """
+        Called by APScheduler every 15 minutes.
+        - Fetches active enrollments where next_send_at <= now
+        - Sends step email via queue_outbound_email()
+        - Increments current_step_index, updates next_send_at
+        - Sets status='completed' if last step
+        
+        Returns:
+            dict with 'processed' count and 'errors' list
+        """
+        now = datetime.utcnow()
+        processed = 0
+        errors = []
+        
+        # Fetch enrollments ready to send
+        enrollments = EmailSequenceEnrollment.query.filter(
+            EmailSequenceEnrollment.status == 'active',
+            EmailSequenceEnrollment.next_send_at <= now
+        ).all()
+        
+        for enrollment in enrollments:
+            try:
+                # Get sequence and steps
+                sequence = enrollment.sequence
+                if not sequence or not sequence.is_active:
+                    enrollment.status = 'stopped'
+                    enrollment.stopped_reason = 'sequence_inactive'
+                    db.session.commit()
+                    continue
+                
+                steps = sorted(sequence.steps, key=lambda s: s.step_order)
+                if not steps or enrollment.current_step_index >= len(steps):
+                    enrollment.status = 'completed'
+                    enrollment.completed_at = datetime.utcnow()
+                    db.session.commit()
+                    continue
+                
+                current_step = steps[enrollment.current_step_index]
+                
+                # Get contact email
+                contact = enrollment.contact
+                if not contact or not contact.email:
+                    enrollment.status = 'stopped'
+                    enrollment.stopped_reason = 'no_contact_email'
+                    db.session.commit()
+                    continue
+                
+                # Prepare email content
+                if current_step.template_id:
+                    template = EmailTemplate.query.get(current_step.template_id)
+                    if template:
+                        subject = EmailHubService.render_template_text(
+                            template.subject_template,
+                            {'contact': contact}
+                        )
+                        body = EmailHubService.render_template_text(
+                            template.body_template,
+                            {'contact': contact}
+                        )
+                    else:
+                        subject = current_step.subject_override or ' '
+                        body = current_step.body_override or ''
+                else:
+                    subject = current_step.subject_override or ' '
+                    body = current_step.body_override or ''
+                
+                # Queue the email
+                EmailHubService.queue_outbound_email(
+                    workspace_id=enrollment.workspace_id,
+                    user_id=enrollment.enrolled_by,
+                    to_email=contact.email,
+                    subject=subject.strip(),
+                    body_text=body,
+                    body_html=None,
+                    contact_id=contact.id,
+                )
+                
+                # Move to next step
+                enrollment.current_step_index += 1
+                
+                if enrollment.current_step_index >= len(steps):
+                    # Completed all steps
+                    enrollment.status = 'completed'
+                    enrollment.completed_at = datetime.utcnow()
+                    enrollment.next_send_at = None
+                else:
+                    # Schedule next step
+                    next_step = steps[enrollment.current_step_index]
+                    enrollment.next_send_at = datetime.utcnow() + timedelta(hours=next_step.delay_hours)
+                
+                db.session.commit()
+                processed += 1
+                
+                logger.info(
+                    'Processed enrollment step. enrollment_id=%s step=%s contact=%s',
+                    enrollment.id, enrollment.current_step_index - 1, contact.id
+                )
+                
+            except Exception as exc:
+                db.session.rollback()
+                errors.append({'enrollment_id': enrollment.id, 'error': str(exc)})
+                logger.error(
+                    'Failed to process enrollment. enrollment_id=%s error=%s',
+                    enrollment.id, str(exc)
+                )
+        
+        return {'processed': processed, 'errors': errors}
+
+    @staticmethod
+    def unenroll_contact(enrollment_id, reason):
+        """
+        Sets status='stopped', stopped_reason=reason.
+        
+        Args:
+            enrollment_id: EmailSequenceEnrollment ID
+            reason: One of 'reply_detected' | 'manual' | 'bounced'
+            
+        Returns:
+            EmailSequenceEnrollment object
+            
+        Raises:
+            ValueError: If enrollment not found or invalid reason
+        """
+        valid_reasons = ('reply_detected', 'manual', 'bounced')
+        if reason not in valid_reasons:
+            raise ValueError(f'Invalid reason. Must be one of: {", ".join(valid_reasons)}')
+        
+        enrollment = EmailSequenceEnrollment.query.get(enrollment_id)
+        if not enrollment:
+            raise ValueError('Enrollment not found')
+        
+        if enrollment.status == 'stopped':
+            # Already unenrolled, return as-is
+            return enrollment
+        
+        try:
+            enrollment.status = 'stopped'
+            enrollment.stopped_reason = reason
+            enrollment.next_send_at = None
+            db.session.commit()
+            
+            logger.info(
+                'Contact unenrolled from sequence. enrollment_id=%s reason=%s',
+                enrollment_id, reason
+            )
+            return enrollment
+        except Exception as exc:
+            db.session.rollback()
+            logger.error(
+                'Failed to unenroll contact. enrollment_id=%s error=%s',
+                enrollment_id, str(exc)
+            )
+            raise
+
+    @staticmethod
+    def process_reply(workspace_id, from_email, in_reply_to_message_id):
+        """
+        Called by gmail_sync_service when reply detected.
+        - Finds OutboundEmail matching message_id
+        - Finds active enrollments for that contact
+        - Calls unenroll_contact(..., reason='reply_detected')
+        
+        Args:
+            workspace_id: Workspace ID
+            from_email: Email address that sent the reply
+            in_reply_to_message_id: Message-ID header from the original outbound email
+            
+        Returns:
+            dict with 'unenrolled' list of enrollment IDs
+        """
+        # Find outbound email by provider_message_id
+        outbound = OutboundEmail.query.filter_by(
+            workspace_id=workspace_id,
+            provider_message_id=in_reply_to_message_id
+        ).first()
+        
+        if not outbound:
+            logger.warning(
+                'process_reply: OutboundEmail not found. workspace=%s message_id=%s',
+                workspace_id, in_reply_to_message_id
+            )
+            return {'unenrolled': []}
+        
+        contact_id = outbound.contact_id
+        if not contact_id:
+            logger.warning(
+                'process_reply: OutboundEmail has no contact_id. outbound_id=%s',
+                outbound.id
+            )
+            return {'unenrolled': []}
+        
+        # Find active enrollments for this contact in this workspace
+        enrollments = EmailSequenceEnrollment.query.filter_by(
+            workspace_id=workspace_id,
+            contact_id=contact_id,
+            status='active'
+        ).all()
+        
+        unenrolled_ids = []
+        for enrollment in enrollments:
+            try:
+                EmailHubService.unenroll_contact(enrollment.id, reason='reply_detected')
+                unenrolled_ids.append(enrollment.id)
+            except Exception as exc:
+                logger.error(
+                    'Failed to unenroll on reply. enrollment_id=%s error=%s',
+                    enrollment.id, str(exc)
+                )
+        
+        logger.info(
+            'process_reply: Found %s active enrollments for contact=%s, unenrolled=%s',
+            len(enrollments), contact_id, unenrolled_ids
+        )
+        
+        return {'unenrolled': unenrolled_ids}

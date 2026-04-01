@@ -161,6 +161,12 @@ from routes.scheduled_messages import scheduled_messages_bp
 from routes.documents import documents_bp
 from routes.email_hub import email_hub_bp
 from routes.import_wizard import import_bp
+from routes.segments import segments_bp
+from routes.meeting_links import meeting_links_bp
+from routes.forms import forms_bp
+from routes.webchat import webchat_bp
+from routes.calls import calls_bp
+from routes.integrations import integrations_bp
 from routes.pipeline_settings import pipeline_settings_bp
 from routes.search import search_bp
 from routes.dashboard import dashboard_bp
@@ -1650,6 +1656,12 @@ app.register_blueprint(scheduled_messages_bp)
 app.register_blueprint(documents_bp)
 app.register_blueprint(email_hub_bp)
 app.register_blueprint(import_bp)
+app.register_blueprint(segments_bp)
+app.register_blueprint(meeting_links_bp)
+app.register_blueprint(forms_bp)
+app.register_blueprint(webchat_bp)
+app.register_blueprint(calls_bp)
+app.register_blueprint(integrations_bp)
 app.register_blueprint(team_route.bp)
 app.register_blueprint(assignments_route.bp)
 app.register_blueprint(onboarding_route.bp)
@@ -2081,6 +2093,30 @@ def broadcast():
 @login_required
 def automation():
     return render_template('automation.html')
+
+
+@app.route('/email-hub')
+@login_required
+def email_hub():
+    return render_template('email_hub.html')
+
+
+@app.route('/segments')
+@login_required
+def segments():
+    return render_template('segments.html')
+
+
+@app.route('/forms')
+@login_required
+def forms_page():
+    return render_template('forms.html')
+
+
+@app.route('/meeting-links')
+@login_required
+def meeting_links_page():
+    return render_template('meeting_links.html')
 
 
 @app.route('/workflows')

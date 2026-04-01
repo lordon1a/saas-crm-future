@@ -136,7 +136,19 @@ def create_task():
                 assignee_id=task.assignee_id,
                 actor_user_id=current_user.id,
             )
-        
+
+        # Trigger workflow automation for task_created
+        try:
+            from services.workflow_service import WorkflowService
+            WorkflowService.trigger_event(
+                workspace_id=current_user.workspace_id,
+                trigger_type='task_created',
+                entity_type='task',
+                entity_id=task.id
+            )
+        except Exception as e:
+            logger.error(f"Workflow trigger error for task_created: {e}")
+
         return jsonify({
             'id': task.id,
             'title': task.title,

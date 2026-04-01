@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='csrf-protection.js') }}"></script>
+    <script src="{{ url_for('static', filename='sidebar-early-init.js') }}"></script>
+    <title>Forms Studio - WhatsApp CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --brand: #0f766e;
+            --brand-dark: #115e59;
+            --ink: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --card: #ffffff;
+            --bg-1: #f8fafc;
+            --bg-2: #ecfeff;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at 0% 0%, var(--bg-2) 0%, transparent 28%),
+                radial-gradient(circle at 100% 0%, #f0fdfa 0%, transparent 24%),
+                linear-gradient(135deg, var(--bg-1), #f8fafc 40%, #f0f9ff 100%);
+        }
+        .heading-font { font-family: 'Inter', sans-serif; }
+        html.sidebar-collapsed #mainSidebar { width: 64px !important; transition: none !important; }
+        html.sidebar-collapsed #mainSidebar .sidebar-text,
+        html.sidebar-collapsed #mainSidebar .nav-text { opacity: 0 !important; width: 0 !important; overflow: hidden !important; }
+        html.sidebar-collapsed #mainSidebar .sidebar-toggle-icon,
+        html.sidebar-collapsed #mainSidebar .sidebar-toggle i { transform: rotate(180deg) !important; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+        .field-palette-item {
+            transition: all 0.2s ease;
+        }
+        .field-palette-item:hover {
+            transform: translateY(-1px);
+        }
+        .preview-field {
+            transition: all 0.2s ease;
+        }
+        .preview-field.selected {
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+            background: #f0fdfa;
+        }
+        .toast {
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+    <div class="h-screen overflow-hidden flex font-sans antialiased">
+        {% include '_sidebar_light.html' %}
+
+        <main class="flex-1 overflow-auto bg-slate-50">
+            <section class="px-6 pt-6 pb-3">
+                <div class="glass-card rounded-2xl px-6 py-5">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Capture Engine</p>
+                            <h1 class="heading-font mt-1 text-3xl font-bold text-slate-900">Forms Studio</h1>
+                            <p class="mt-1 text-sm text-slate-600">Build, publish and track lead forms with a cleaner builder workflow.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openCreateModal()" class="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800">
+                                <i class="fas fa-plus mr-2"></i>Create Form
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Total Forms</p>
+                            <p id="stat-total-forms" class="mt-1 text-2xl font-bold text-slate-900">0</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Active</p>
+                            <p id="stat-active-forms" class="mt-1 text-2xl font-bold text-emerald-700">0</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Total Submissions</p>
+                            <p id="stat-submissions" class="mt-1 text-2xl font-bold text-teal-700">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="px-6 pb-6">
+                <div id="forms-grid" class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="form-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4">
+        <div class="h-[94vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div>
+                    <h2 id="modal-title" class="heading-font text-2xl font-bold text-slate-900">Create Form</h2>
+                    <p class="text-sm text-slate-500">Build on the left, preview in the center, tweak details on the right.</p>
+                </div>
+                <button onclick="closeModal()" class="rounded-lg border border-slate-200 px-3 py-2 text-slate-500 hover:bg-slate-50">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="grid h-[calc(94vh-74px)] grid-cols-12">
+                <div class="col-span-12 border-r border-slate-200 bg-slate-50 p-4 lg:col-span-3">
+                    <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-slate-600">Field Palette</h3>
+                    <div class="space-y-2">
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="text">
+                            <span><i class="fas fa-font mr-2 text-slate-500"></i>Text</span><span class="text-xs text-slate-400">input</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="email">
+                            <span><i class="fas fa-envelope mr-2 text-slate-500"></i>Email</span><span class="text-xs text-slate-400">required</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="tel">
+                            <span><i class="fas fa-phone mr-2 text-slate-500"></i>Phone</span><span class="text-xs text-slate-400">tel</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="number">
+                            <span><i class="fas fa-hashtag mr-2 text-slate-500"></i>Number</span><span class="text-xs text-slate-400">numeric</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="date">
+                            <span><i class="fas fa-calendar mr-2 text-slate-500"></i>Date</span><span class="text-xs text-slate-400">picker</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="select">
+                            <span><i class="fas fa-caret-square-down mr-2 text-slate-500"></i>Select</span><span class="text-xs text-slate-400">options</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="textarea">
+                            <span><i class="fas fa-align-left mr-2 text-slate-500"></i>Textarea</span><span class="text-xs text-slate-400">long text</span>
+                        </button>
+                        <button class="field-palette-item flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-300" data-field-type="checkbox">
+                            <span><i class="fas fa-check-square mr-2 text-slate-500"></i>Checkbox</span><span class="text-xs text-slate-400">boolean</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-span-12 overflow-y-auto p-5 lg:col-span-6">
+                    <div class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Form Name</label>
+                            <input id="form-name" type="text" placeholder="Lead Capture - Homepage" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-600 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Submit Action</label>
+                            <select id="submit-action" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-600 focus:outline-none">
+                                <option value="create_contact">Create Contact</option>
+                                <option value="update_contact">Update Contact</option>
+                                <option value="create_deal">Create Deal</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Redirect URL</label>
+                            <input id="redirect-url" type="url" placeholder="https://example.com/thank-you" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-600 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div class="mb-3 flex items-center justify-between">
+                            <h3 class="heading-font text-lg font-bold text-slate-900">Form Preview</h3>
+                            <span class="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-800"><span id="preview-field-count">0</span> fields</span>
+                        </div>
+                        <div id="form-preview" class="space-y-3 rounded-xl border border-dashed border-slate-300 bg-white p-4 min-h-[340px]"></div>
+                    </div>
+                </div>
+
+                <div class="col-span-12 border-l border-slate-200 bg-white p-5 lg:col-span-3">
+                    <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-slate-600">Field Settings</h3>
+                    <div id="inspector-empty" class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                        Select a field from preview to edit label, placeholder and mapping.
+                    </div>
+                    <div id="inspector" class="hidden space-y-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Label</label>
+                            <input id="field-label" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Field Map</label>
+                            <input id="field-map" type="text" placeholder="email / phone / custom.interest" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Placeholder</label>
+                            <input id="field-placeholder" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none">
+                        </div>
+                        <div id="select-options-wrap" class="hidden">
+                            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Select Options</label>
+                            <textarea id="field-options" rows="3" placeholder="Option A, Option B, Option C" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none"></textarea>
+                        </div>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-200 p-2">
+                            <input id="field-required" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600">
+                            <span class="text-sm text-slate-700">Required field</span>
+                        </label>
+                        <button onclick="removeSelectedField()" type="button" class="w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
+                            <i class="fas fa-trash mr-1"></i>Remove Field
+                        </button>
+                    </div>
+
+                    <div class="mt-6 grid grid-cols-2 gap-2">
+                        <button onclick="closeModal()" type="button" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                        <button onclick="saveForm()" type="button" class="rounded-xl bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800">Save Form</button>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" id="form-id" value="">
+            <input type="hidden" id="fields-json" value="[]">
+        </div>
+    </div>
+
+    <div id="embed-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4">
+        <div class="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <h2 class="heading-font text-xl font-bold text-slate-900">Publish Form</h2>
+                <button onclick="closeEmbedModal()" class="rounded-lg border border-slate-200 px-3 py-2 text-slate-500 hover:bg-slate-50"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-4 p-5">
+                <div>
+                    <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Direct Link</label>
+                    <div class="flex gap-2">
+                        <input id="form-url" readonly class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
+                        <button onclick="copyToClipboard('form-url')" class="rounded-lg border border-slate-300 px-3 text-slate-700 hover:bg-slate-50"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Embed Script</label>
+                    <textarea id="embed-code" readonly rows="4" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-800"></textarea>
+                </div>
+                <button onclick="copyToClipboard('embed-code')" class="w-full rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Copy Embed Script</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>
+
+    <script>
+        let currentFields = [];
+        let selectedFieldIndex = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            bindPaletteButtons();
+            bindInspectorInputs();
+            loadForms();
+        });
+
+        function notify(message, type = 'info') {
+            const colors = {
+                info: 'bg-slate-900 text-white',
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white'
+            };
+            const toast = document.createElement('div');
+            toast.className = `toast rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${colors[type] || colors.info}`;
+            toast.textContent = message;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), 2200);
+        }
+
+        async function loadForms() {
+            try {
+                const response = await fetch('/api/v1/forms');
+                const data = await response.json();
+                const forms = Array.isArray(data.forms) ? data.forms : [];
+                renderStats(forms);
+                renderForms(forms);
+            } catch (error) {
+                console.error('Failed to load forms:', error);
+                notify('Failed to load forms', 'error');
+            }
+        }
+
+        function renderStats(forms) {
+            const total = forms.length;
+            const active = forms.filter(f => !!f.is_active).length;
+            const submissions = forms.reduce((acc, f) => acc + (f.submission_count || 0), 0);
+            document.getElementById('stat-total-forms').textContent = total;
+            document.getElementById('stat-active-forms').textContent = active;
+            document.getElementById('stat-submissions').textContent = submissions;
+        }
+
+        function renderForms(forms) {
+            const grid = document.getElementById('forms-grid');
+            if (!forms.length) {
+                grid.innerHTML = `
+                    <div class="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+                        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                            <i class="fas fa-wpforms text-2xl"></i>
+                        </div>
+                        <h3 class="heading-font text-2xl font-bold text-slate-900">No forms yet</h3>
+                        <p class="mt-2 text-slate-500">Create your first form and start capturing leads from your website.</p>
+                        <button onclick="openCreateModal()" class="mt-5 rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800">Create Form</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = forms.map(form => {
+                const statusClass = form.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600';
+                return `
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                        <div class="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">${escapeHtml(form.name)}</h3>
+                                <p class="text-sm text-slate-500">${form.submission_count || 0} submissions</p>
+                            </div>
+                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}">${form.is_active ? 'Active' : 'Inactive'}</span>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Form URL</p>
+                            <div class="flex gap-2">
+                                <input readonly value="${window.location.origin}/f/${form.id}" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600">
+                                <button onclick="copyUrl('/f/${form.id}')" class="rounded-lg border border-slate-300 px-2 text-slate-600 hover:bg-slate-100"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-4 gap-2">
+                            <button onclick="viewSubmissions(${form.id}, '${escapeAttr(form.name)}')" class="col-span-2 rounded-lg border border-slate-300 px-2 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><i class="fas fa-list mr-1"></i>Submissions</button>
+                            <button onclick="showEmbedCode(${form.id})" class="rounded-lg border border-slate-300 px-2 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><i class="fas fa-code"></i></button>
+                            <button onclick="openEditModal(${form.id})" class="rounded-lg border border-slate-300 px-2 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteForm(${form.id})" class="rounded-lg border border-rose-200 px-2 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function bindPaletteButtons() {
+            document.querySelectorAll('.field-palette-item').forEach(item => {
+                item.addEventListener('click', () => addField(item.dataset.fieldType));
+            });
+        }
+
+        function bindInspectorInputs() {
+            document.getElementById('field-label').addEventListener('input', (e) => updateSelectedField('label', e.target.value));
+            document.getElementById('field-map').addEventListener('input', (e) => updateSelectedField('field_map', e.target.value));
+            document.getElementById('field-placeholder').addEventListener('input', (e) => updateSelectedField('placeholder', e.target.value));
+            document.getElementById('field-options').addEventListener('input', (e) => {
+                const options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                updateSelectedField('options', options);
+            });
+            document.getElementById('field-required').addEventListener('change', (e) => updateSelectedField('required', e.target.checked));
+        }
+
+        function addField(type) {
+            const id = 'f_' + Math.random().toString(36).slice(2, 10);
+            const defaults = {
+                text: 'Text Field',
+                email: 'Email Address',
+                tel: 'Phone Number',
+                number: 'Number',
+                date: 'Date',
+                select: 'Select Option',
+                textarea: 'Message',
+                checkbox: 'Checkbox'
+            };
+
+            const newField = {
+                id,
+                type,
+                label: defaults[type] || 'Field',
+                field_map: '',
+                required: type === 'email',
+                placeholder: ''
+            };
+
+            if (type === 'select') {
+                newField.options = ['Option 1', 'Option 2'];
+            }
+
+            currentFields.push(newField);
+            selectedFieldIndex = currentFields.length - 1;
+            renderFormPreview();
+            renderInspector();
+        }
+
+        function renderFormPreview() {
+            const preview = document.getElementById('form-preview');
+            document.getElementById('preview-field-count').textContent = currentFields.length;
+
+            if (!currentFields.length) {
+                preview.innerHTML = '<div class="py-16 text-center text-slate-400"><i class="fas fa-plus-circle mb-2 text-2xl"></i><p>Add fields from the left panel.</p></div>';
+                updateFieldsJson();
+                return;
+            }
+
+            preview.innerHTML = currentFields.map((field, index) => {
+                const selected = selectedFieldIndex === index;
+                return `
+                    <div class="preview-field cursor-pointer rounded-xl border p-3 ${selected ? 'selected border-teal-600 bg-teal-50' : 'border-slate-200 bg-white'}" onclick="selectField(${index})">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">${escapeHtml(field.label || 'Untitled field')}</p>
+                                <p class="text-xs uppercase tracking-wide text-slate-500">${escapeHtml(field.type)} ${field.field_map ? '-> ' + escapeHtml(field.field_map) : ''}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${field.required ? '<span class="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">Required</span>' : ''}
+                                <button onclick="event.stopPropagation(); removeField(${index});" class="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:bg-slate-50"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        ${getFieldHTML(field)}
+                    </div>
+                `;
+            }).join('');
+
+            updateFieldsJson();
+        }
+
+        function getFieldHTML(field) {
+            const placeholder = escapeAttr(field.placeholder || '');
+            if (['text', 'email', 'tel', 'number', 'date'].includes(field.type)) {
+                return `<input type="${field.type}" placeholder="${placeholder}" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" disabled>`;
+            }
+            if (field.type === 'textarea') {
+                return `<textarea rows="2" placeholder="${placeholder}" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" disabled></textarea>`;
+            }
+            if (field.type === 'select') {
+                const options = Array.isArray(field.options) ? field.options : ['Option'];
+                return `<select class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" disabled>${options.map(o => `<option>${escapeHtml(o)}</option>`).join('')}</select>`;
+            }
+            if (field.type === 'checkbox') {
+                return `<label class="inline-flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" disabled>${placeholder || 'I agree'}</label>`;
+            }
+            return '';
+        }
+
+        function selectField(index) {
+            selectedFieldIndex = index;
+            renderFormPreview();
+            renderInspector();
+        }
+
+        function renderInspector() {
+            const hasSelection = selectedFieldIndex !== null && selectedFieldIndex >= 0 && selectedFieldIndex < currentFields.length;
+            const empty = document.getElementById('inspector-empty');
+            const inspector = document.getElementById('inspector');
+            if (!hasSelection) {
+                empty.classList.remove('hidden');
+                inspector.classList.add('hidden');
+                return;
+            }
+
+            const field = currentFields[selectedFieldIndex];
+            empty.classList.add('hidden');
+            inspector.classList.remove('hidden');
+
+            document.getElementById('field-label').value = field.label || '';
+            document.getElementById('field-map').value = field.field_map || '';
+            document.getElementById('field-placeholder').value = field.placeholder || '';
+            document.getElementById('field-required').checked = !!field.required;
+
+            const selectWrap = document.getElementById('select-options-wrap');
+            if (field.type === 'select') {
+                selectWrap.classList.remove('hidden');
+                document.getElementById('field-options').value = (field.options || []).join(', ');
+            } else {
+                selectWrap.classList.add('hidden');
+                document.getElementById('field-options').value = '';
+            }
+        }
+
+        function updateSelectedField(key, value) {
+            if (selectedFieldIndex === null || !currentFields[selectedFieldIndex]) return;
+            currentFields[selectedFieldIndex][key] = value;
+            renderFormPreview();
+            renderInspector();
+        }
+
+        function removeField(index) {
+            currentFields.splice(index, 1);
+            if (selectedFieldIndex === index) {
+                selectedFieldIndex = null;
+            } else if (selectedFieldIndex > index) {
+                selectedFieldIndex -= 1;
+            }
+            renderFormPreview();
+            renderInspector();
+        }
+
+        function removeSelectedField() {
+            if (selectedFieldIndex === null) return;
+            removeField(selectedFieldIndex);
+        }
+
+        function updateFieldsJson() {
+            document.getElementById('fields-json').value = JSON.stringify(currentFields);
+        }
+
+        function openCreateModal() {
+            document.getElementById('modal-title').textContent = 'Create Form';
+            document.getElementById('form-id').value = '';
+            document.getElementById('form-name').value = '';
+            document.getElementById('submit-action').value = 'create_contact';
+            document.getElementById('redirect-url').value = '';
+            currentFields = [];
+            selectedFieldIndex = null;
+            renderFormPreview();
+            renderInspector();
+            document.getElementById('form-modal').classList.remove('hidden');
+            document.getElementById('form-modal').classList.add('flex');
+        }
+
+        async function openEditModal(formId) {
+            try {
+                const response = await fetch(`/api/v1/forms/${formId}`);
+                const data = await response.json();
+                const form = data.form;
+
+                document.getElementById('modal-title').textContent = 'Edit Form';
+                document.getElementById('form-id').value = form.id;
+                document.getElementById('form-name').value = form.name || '';
+                document.getElementById('submit-action').value = form.submit_action || 'create_contact';
+                document.getElementById('redirect-url').value = form.redirect_url || '';
+
+                try {
+                    currentFields = JSON.parse(form.fields_json || '[]');
+                } catch {
+                    currentFields = [];
+                }
+
+                selectedFieldIndex = currentFields.length ? 0 : null;
+                renderFormPreview();
+                renderInspector();
+                document.getElementById('form-modal').classList.remove('hidden');
+                document.getElementById('form-modal').classList.add('flex');
+            } catch (error) {
+                console.error('Failed to load form:', error);
+                notify('Failed to load form', 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('form-modal').classList.add('hidden');
+            document.getElementById('form-modal').classList.remove('flex');
+        }
+
+        async function saveForm() {
+            const name = document.getElementById('form-name').value.trim();
+            if (!name) {
+                notify('Form name is required', 'error');
+                return;
+            }
+            if (!currentFields.length) {
+                notify('Add at least one field before saving', 'error');
+                return;
+            }
+
+            const data = {
+                name,
+                fields_json: JSON.stringify(currentFields),
+                submit_action: document.getElementById('submit-action').value,
+                redirect_url: document.getElementById('redirect-url').value || null
+            };
+
+            try {
+                const formId = document.getElementById('form-id').value;
+                const url = formId ? `/api/v1/forms/${formId}` : '/api/v1/forms';
+                const method = formId ? 'PATCH' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    closeModal();
+                    notify('Form saved', 'success');
+                    loadForms();
+                } else {
+                    const error = await response.json();
+                    notify(error.error || 'Failed to save form', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to save form:', error);
+                notify('Failed to save form', 'error');
+            }
+        }
+
+        async function deleteForm(formId) {
+            if (!confirm('Are you sure you want to delete this form?')) return;
+            try {
+                const response = await fetch(`/api/v1/forms/${formId}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    notify('Could not delete form', 'error');
+                    return;
+                }
+                notify('Form deleted', 'success');
+                loadForms();
+            } catch (error) {
+                console.error('Failed to delete form:', error);
+                notify('Failed to delete form', 'error');
+            }
+        }
+
+        function showEmbedCode(formId) {
+            document.getElementById('form-url').value = `${window.location.origin}/f/${formId}`;
+            document.getElementById('embed-code').value = `<script src="${window.location.origin}/static/form-embed.js" data-form-id="${formId}" data-theme="light"><\/script>`;
+            document.getElementById('embed-modal').classList.remove('hidden');
+            document.getElementById('embed-modal').classList.add('flex');
+        }
+
+        function closeEmbedModal() {
+            document.getElementById('embed-modal').classList.add('hidden');
+            document.getElementById('embed-modal').classList.remove('flex');
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(window.location.origin + url);
+            notify('URL copied', 'success');
+        }
+
+        function copyToClipboard(elementId) {
+            const target = document.getElementById(elementId);
+            navigator.clipboard.writeText(target.value);
+            notify('Copied to clipboard', 'success');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        function escapeAttr(text) {
+            return String(text || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        }
+
+        async function viewSubmissions(formId, formName) {
+            notify(`Submissions view for ${formName} is coming soon`, 'info');
+        }
+    </script>
+</body>
+</html>

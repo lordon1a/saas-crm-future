@@ -587,7 +587,21 @@ def update_deal(deal_id):
             )
         except Exception as notify_error:
             logger.warning(f"Failed to spawn follower notification: {notify_error}")
-        
+
+        # Trigger deal_amount_changed workflow if value was updated
+        if 'value' in data:
+            try:
+                from services.workflow_service import WorkflowService
+                WorkflowService.trigger_event(
+                    workspace_id=workspace_id,
+                    trigger_type='deal_amount_changed',
+                    entity_type='deal',
+                    entity_id=deal.id,
+                    context={'new_value': float(deal.value)}
+                )
+            except Exception as e:
+                logger.error(f"Workflow trigger error for deal_amount_changed: {e}")
+
         return jsonify(response_data), 200
     
     except ValueError as e:
@@ -906,6 +920,18 @@ def close_deal(deal_id):
                 )
             except Exception as exc:
                 logger.warning('QuickBooks invoice spawn failed for deal %s: %s', deal.id, exc)
+
+            try:
+                from services.ads_sync_service import GoogleAdsService
+                import gevent
+                gevent.spawn(
+                    GoogleAdsService.send_conversion,
+                    workspace_id,
+                    deal.id,
+                    float(deal.value or 0),
+                )
+            except Exception as exc:
+                logger.warning('Google Ads conversion spawn failed for deal %s: %s', deal.id, exc)
 
         # Notify followers AFTER commit (asenkron spawn - response'u bloklamaz)
         try:
