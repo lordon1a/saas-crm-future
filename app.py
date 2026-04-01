@@ -1,7 +1,7 @@
 from gevent import monkey
 monkey.patch_all()
 
-from flask import Flask, request, render_template, session, redirect, url_for, jsonify
+from flask import Flask, request, render_template, session, redirect, url_for, jsonify, flash
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
@@ -197,8 +197,12 @@ def run_migrations():
             if database_url.startswith('postgres://'):
                 database_url = database_url.replace('postgres://', 'postgresql://', 1)
             
-            conn = psycopg2.connect(database_url)
+            conn = psycopg2.connect(database_url, connect_timeout=10)
             cur = conn.cursor()
+            # Prevent startup from hanging for minutes on blocked DDL.
+            cur.execute("SET lock_timeout TO '5s'")
+            cur.execute("SET statement_timeout TO '25000ms'")
+            conn.commit()
             
             # === DEAL_STAGES TABLE MIGRATIONS ===
             # Check if rotting_days column exists
@@ -1015,43 +1019,40 @@ def run_migrations():
             ]
 
             for col_name, col_type in contact_ads_columns:
-                cur.execute(f"""
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name='contacts' AND column_name='{col_name}'
-                """)
-
-                if not cur.fetchone():
-                    logger.info(f"Running migration: add {col_name} column to contacts...")
+                try:
                     cur.execute(f"""
-                        ALTER TABLE contacts
-                        ADD COLUMN {col_name} {col_type}
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_name='contacts' AND column_name='{col_name}'
                     """)
-                    conn.commit()
-                    logger.info(f"✓ Added {col_name} column to contacts")
 
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_contacts_utm_source
-                ON contacts(utm_source)
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_contacts_utm_medium
-                ON contacts(utm_medium)
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_contacts_utm_campaign
-                ON contacts(utm_campaign)
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_contacts_gclid
-                ON contacts(gclid)
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_contacts_fbclid
-                ON contacts(fbclid)
-            """)
-            conn.commit()
-            logger.info("✓ Contact attribution indexes ensured")
+                    if not cur.fetchone():
+                        logger.info(f"Running migration: add {col_name} column to contacts...")
+                        cur.execute(f"""
+                            ALTER TABLE contacts
+                            ADD COLUMN IF NOT EXISTS {col_name} {col_type}
+                        """)
+                        conn.commit()
+                        logger.info(f"✓ Added {col_name} column to contacts")
+                except Exception as col_err:
+                    conn.rollback()
+                    logger.warning(f"Skipping contacts.{col_name} migration for now: {col_err}")
+
+            contact_indexes = [
+                "CREATE INDEX IF NOT EXISTS idx_contacts_utm_source ON contacts(utm_source)",
+                "CREATE INDEX IF NOT EXISTS idx_contacts_utm_medium ON contacts(utm_medium)",
+                "CREATE INDEX IF NOT EXISTS idx_contacts_utm_campaign ON contacts(utm_campaign)",
+                "CREATE INDEX IF NOT EXISTS idx_contacts_gclid ON contacts(gclid)",
+                "CREATE INDEX IF NOT EXISTS idx_contacts_fbclid ON contacts(fbclid)",
+            ]
+            for index_stmt in contact_indexes:
+                try:
+                    cur.execute(index_stmt)
+                    conn.commit()
+                except Exception as idx_err:
+                    conn.rollback()
+                    logger.warning(f"Skipping contact index migration for now: {idx_err}")
+            logger.info("✓ Contact attribution index checks completed")
             
             # === CALENDAR TASK MANAGEMENT MIGRATIONS ===
             # Check if start_time column exists in tasks
@@ -1722,13 +1723,15 @@ def ensure_critical_phase_schema():
 
         def execute_ddl(statement, success_message=None):
             try:
-                db.session.execute(text(statement))
-                db.session.commit()
+                with db.engine.begin() as conn:
+                    # Do not block startup for a long time on locked tables.
+                    conn.execute(text("SET LOCAL lock_timeout = '5s'"))
+                    conn.execute(text("SET LOCAL statement_timeout = '25000ms'"))
+                    conn.execute(text(statement))
                 if success_message:
                     logger.info(success_message)
                 return True
             except Exception as ddl_error:
-                db.session.rollback()
                 logger.warning(f"Critical schema self-heal statement failed: {ddl_error}")
                 return False
 
@@ -1762,7 +1765,7 @@ def ensure_critical_phase_schema():
             for column_name, column_type in contact_columns:
                 if not has_column('contacts', column_name):
                     execute_ddl(
-                        f"ALTER TABLE contacts ADD COLUMN {column_name} {column_type}",
+                        f"ALTER TABLE contacts ADD COLUMN IF NOT EXISTS {column_name} {column_type}",
                         f"✓ Added contacts.{column_name}"
                     )
 
@@ -1777,14 +1780,14 @@ def ensure_critical_phase_schema():
             execute_ddl(
                 """
                 ALTER TABLE workflow_automations
-                ADD COLUMN re_enrollment_mode VARCHAR(30) DEFAULT 'always' NOT NULL
+                ADD COLUMN IF NOT EXISTS re_enrollment_mode VARCHAR(30) DEFAULT 'always' NOT NULL
                 """,
                 "✓ Added workflow_automations.re_enrollment_mode"
             )
 
         if not has_table('workflow_enrollments') and has_table('workflow_automations') and has_table('workspaces'):
             table_created = execute_ddl("""
-                CREATE TABLE workflow_enrollments (
+                CREATE TABLE IF NOT EXISTS workflow_enrollments (
                     id SERIAL PRIMARY KEY,
                     workflow_id INTEGER NOT NULL REFERENCES workflow_automations(id) ON DELETE CASCADE,
                     workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
