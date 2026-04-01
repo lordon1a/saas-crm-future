@@ -266,6 +266,58 @@ def run_migrations():
                 """)
                 conn.commit()
                 logger.info("✓ Added canvas_data column")
+
+            # Check if re_enrollment_mode column exists
+            cur.execute("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='workflow_automations' AND column_name='re_enrollment_mode'
+            """)
+
+            if not cur.fetchone():
+                logger.info("Running migration: add re_enrollment_mode column...")
+                cur.execute("""
+                    ALTER TABLE workflow_automations
+                    ADD COLUMN re_enrollment_mode VARCHAR(30) DEFAULT 'always' NOT NULL
+                """)
+                conn.commit()
+                logger.info("✓ Added re_enrollment_mode column")
+
+            # Check if workflow_enrollments table exists
+            cur.execute("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_name='workflow_enrollments'
+            """)
+
+            if not cur.fetchone():
+                logger.info("Running migration: create workflow_enrollments table...")
+                cur.execute("""
+                    CREATE TABLE workflow_enrollments (
+                        id SERIAL PRIMARY KEY,
+                        workflow_id INTEGER NOT NULL REFERENCES workflow_automations(id) ON DELETE CASCADE,
+                        workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                        entity_id INTEGER NOT NULL,
+                        entity_type VARCHAR(50) NOT NULL,
+                        enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                        completed_at TIMESTAMP,
+                        status VARCHAR(20) DEFAULT 'running' NOT NULL
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_workflow_enrollment_workflow_entity
+                    ON workflow_enrollments(workflow_id, entity_id, entity_type)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_workflow_enrollment_workspace
+                    ON workflow_enrollments(workspace_id, status)
+                """)
+                cur.execute("""
+                    CREATE INDEX idx_workflow_enrollment_entity
+                    ON workflow_enrollments(entity_type, entity_id, enrolled_at)
+                """)
+                conn.commit()
+                logger.info("✓ Created workflow_enrollments table")
             
             # Check if is_deleted column exists
             cur.execute("""
@@ -1611,10 +1663,100 @@ def check_db_schema():
     except Exception as e:
         logger.warning(f"Schema check failed: {e}")
 
+
+def ensure_critical_phase_schema():
+    """Best-effort self-heal for critical Phase 1-3 columns/tables in production."""
+    try:
+        from sqlalchemy import inspect, text
+
+        def has_table(table_name):
+            try:
+                inspector = inspect(db.engine)
+                return inspector.has_table(table_name)
+            except Exception:
+                return False
+
+        def has_column(table_name, column_name):
+            try:
+                inspector = inspect(db.engine)
+                return any(col['name'] == column_name for col in inspector.get_columns(table_name))
+            except Exception:
+                return False
+
+        # Contacts attribution + enrichment columns used by dashboard/workflow features.
+        contact_columns = [
+            ('utm_source', 'VARCHAR(120)'),
+            ('utm_medium', 'VARCHAR(120)'),
+            ('utm_campaign', 'VARCHAR(180)'),
+            ('utm_content', 'VARCHAR(180)'),
+            ('gclid', 'VARCHAR(255)'),
+            ('fbclid', 'VARCHAR(255)'),
+            ('linkedin_url', 'VARCHAR(500)'),
+            ('linkedin_enriched_at', 'TIMESTAMP'),
+        ]
+
+        if has_table('contacts'):
+            for column_name, column_type in contact_columns:
+                if not has_column('contacts', column_name):
+                    db.session.execute(text(f"ALTER TABLE contacts ADD COLUMN {column_name} {column_type}"))
+                    logger.info(f"✓ Added contacts.{column_name}")
+
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_utm_source ON contacts(utm_source)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_utm_medium ON contacts(utm_medium)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_utm_campaign ON contacts(utm_campaign)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_gclid ON contacts(gclid)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_fbclid ON contacts(fbclid)"))
+
+        # Workflow re-enrollment controls used by workflow UI/backend.
+        if has_table('workflow_automations') and not has_column('workflow_automations', 're_enrollment_mode'):
+            db.session.execute(text("""
+                ALTER TABLE workflow_automations
+                ADD COLUMN re_enrollment_mode VARCHAR(30) DEFAULT 'always' NOT NULL
+            """))
+            logger.info("✓ Added workflow_automations.re_enrollment_mode")
+
+        if not has_table('workflow_enrollments') and has_table('workflow_automations') and has_table('workspaces'):
+            db.session.execute(text("""
+                CREATE TABLE workflow_enrollments (
+                    id SERIAL PRIMARY KEY,
+                    workflow_id INTEGER NOT NULL REFERENCES workflow_automations(id) ON DELETE CASCADE,
+                    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                    entity_id INTEGER NOT NULL,
+                    entity_type VARCHAR(50) NOT NULL,
+                    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    completed_at TIMESTAMP,
+                    status VARCHAR(20) DEFAULT 'running' NOT NULL
+                )
+            """))
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_workflow_entity
+                ON workflow_enrollments(workflow_id, entity_id, entity_type)
+            """))
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_workspace
+                ON workflow_enrollments(workspace_id, status)
+            """))
+            db.session.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_entity
+                ON workflow_enrollments(entity_type, entity_id, enrolled_at)
+            """))
+            logger.info("✓ Created workflow_enrollments table")
+
+        try:
+            db.session.commit()
+        except Exception as commit_error:
+            db.session.rollback()
+            logger.warning(f"Critical schema self-heal commit failed: {commit_error}")
+
+    except Exception as e:
+        db.session.rollback()
+        logger.warning(f"Critical schema self-heal failed: {e}")
+
 # Run migrations with app context
 with app.app_context():
     try:
         run_migrations()
+        ensure_critical_phase_schema()
         create_default_pipelines()
         check_db_schema()
     except Exception as e:

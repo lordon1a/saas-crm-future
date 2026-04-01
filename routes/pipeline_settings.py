@@ -66,6 +66,16 @@ def get_pipeline_settings():
         return jsonify({'error': 'Internal server error'}), 500
 
 
+@pipeline_settings_bp.route('/stages', methods=['GET'])
+@login_required_api
+def get_pipeline_stages_compat():
+    """
+    GET /api/v1/pipeline/stages
+    Compatibility alias for workflow builder clients.
+    """
+    return get_pipeline_settings()
+
+
 @pipeline_settings_bp.route('/settings', methods=['PUT'])
 @login_required_api
 def update_pipeline_settings():

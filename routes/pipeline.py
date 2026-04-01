@@ -100,6 +100,40 @@ def get_pipeline(pipeline_id):
     }), 200
 
 
+@bp.route('/pipeline/stages', methods=['GET'])
+@login_required_api
+def get_pipeline_stages_compat():
+    """Compatibility endpoint for workflow builder clients."""
+    workspace_id = session.get('workspace_id')
+
+    try:
+        pipeline = Pipeline.query.filter_by(workspace_id=workspace_id, is_default=True).first()
+        if not pipeline:
+            return jsonify({'error': 'Pipeline not found'}), 404
+
+        stages = DealStage.query.filter_by(
+            pipeline_id=pipeline.id,
+            is_active=True
+        ).order_by(DealStage.order).all()
+
+        return jsonify({
+            'pipeline_id': pipeline.id,
+            'pipeline_name': pipeline.name,
+            'stages': [{
+                'id': stage.id,
+                'name': stage.name,
+                'probability': stage.probability,
+                'rotting_days': stage.rotting_days,
+                'order': stage.order,
+                'is_active': stage.is_active,
+            } for stage in stages]
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching pipeline stages compatibility endpoint: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 # ═══ DEALS ═══
 
 @bp.route('/deals', methods=['GET'])
