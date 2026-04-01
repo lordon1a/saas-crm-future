@@ -1001,6 +1001,57 @@ def run_migrations():
                 """)
                 conn.commit()
                 logger.info("✓ Added converted_at column to contacts")
+
+            # === CONTACT ATTRIBUTION / ADS COLUMNS ===
+            contact_ads_columns = [
+                ('utm_source', 'VARCHAR(120)'),
+                ('utm_medium', 'VARCHAR(120)'),
+                ('utm_campaign', 'VARCHAR(180)'),
+                ('utm_content', 'VARCHAR(180)'),
+                ('gclid', 'VARCHAR(255)'),
+                ('fbclid', 'VARCHAR(255)'),
+                ('linkedin_url', 'VARCHAR(500)'),
+                ('linkedin_enriched_at', 'TIMESTAMP'),
+            ]
+
+            for col_name, col_type in contact_ads_columns:
+                cur.execute(f"""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name='contacts' AND column_name='{col_name}'
+                """)
+
+                if not cur.fetchone():
+                    logger.info(f"Running migration: add {col_name} column to contacts...")
+                    cur.execute(f"""
+                        ALTER TABLE contacts
+                        ADD COLUMN {col_name} {col_type}
+                    """)
+                    conn.commit()
+                    logger.info(f"✓ Added {col_name} column to contacts")
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_contacts_utm_source
+                ON contacts(utm_source)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_contacts_utm_medium
+                ON contacts(utm_medium)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_contacts_utm_campaign
+                ON contacts(utm_campaign)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_contacts_gclid
+                ON contacts(gclid)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_contacts_fbclid
+                ON contacts(fbclid)
+            """)
+            conn.commit()
+            logger.info("✓ Contact attribution indexes ensured")
             
             # === CALENDAR TASK MANAGEMENT MIGRATIONS ===
             # Check if start_time column exists in tasks
@@ -1669,6 +1720,18 @@ def ensure_critical_phase_schema():
     try:
         from sqlalchemy import inspect, text
 
+        def execute_ddl(statement, success_message=None):
+            try:
+                db.session.execute(text(statement))
+                db.session.commit()
+                if success_message:
+                    logger.info(success_message)
+                return True
+            except Exception as ddl_error:
+                db.session.rollback()
+                logger.warning(f"Critical schema self-heal statement failed: {ddl_error}")
+                return False
+
         def has_table(table_name):
             try:
                 inspector = inspect(db.engine)
@@ -1698,25 +1761,29 @@ def ensure_critical_phase_schema():
         if has_table('contacts'):
             for column_name, column_type in contact_columns:
                 if not has_column('contacts', column_name):
-                    db.session.execute(text(f"ALTER TABLE contacts ADD COLUMN {column_name} {column_type}"))
-                    logger.info(f"✓ Added contacts.{column_name}")
+                    execute_ddl(
+                        f"ALTER TABLE contacts ADD COLUMN {column_name} {column_type}",
+                        f"✓ Added contacts.{column_name}"
+                    )
 
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_utm_source ON contacts(utm_source)"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_utm_medium ON contacts(utm_medium)"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_utm_campaign ON contacts(utm_campaign)"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_gclid ON contacts(gclid)"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_contacts_fbclid ON contacts(fbclid)"))
+            execute_ddl("CREATE INDEX IF NOT EXISTS idx_contacts_utm_source ON contacts(utm_source)")
+            execute_ddl("CREATE INDEX IF NOT EXISTS idx_contacts_utm_medium ON contacts(utm_medium)")
+            execute_ddl("CREATE INDEX IF NOT EXISTS idx_contacts_utm_campaign ON contacts(utm_campaign)")
+            execute_ddl("CREATE INDEX IF NOT EXISTS idx_contacts_gclid ON contacts(gclid)")
+            execute_ddl("CREATE INDEX IF NOT EXISTS idx_contacts_fbclid ON contacts(fbclid)")
 
         # Workflow re-enrollment controls used by workflow UI/backend.
         if has_table('workflow_automations') and not has_column('workflow_automations', 're_enrollment_mode'):
-            db.session.execute(text("""
+            execute_ddl(
+                """
                 ALTER TABLE workflow_automations
                 ADD COLUMN re_enrollment_mode VARCHAR(30) DEFAULT 'always' NOT NULL
-            """))
-            logger.info("✓ Added workflow_automations.re_enrollment_mode")
+                """,
+                "✓ Added workflow_automations.re_enrollment_mode"
+            )
 
         if not has_table('workflow_enrollments') and has_table('workflow_automations') and has_table('workspaces'):
-            db.session.execute(text("""
+            table_created = execute_ddl("""
                 CREATE TABLE workflow_enrollments (
                     id SERIAL PRIMARY KEY,
                     workflow_id INTEGER NOT NULL REFERENCES workflow_automations(id) ON DELETE CASCADE,
@@ -1727,26 +1794,20 @@ def ensure_critical_phase_schema():
                     completed_at TIMESTAMP,
                     status VARCHAR(20) DEFAULT 'running' NOT NULL
                 )
-            """))
-            db.session.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_workflow_entity
-                ON workflow_enrollments(workflow_id, entity_id, entity_type)
-            """))
-            db.session.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_workspace
-                ON workflow_enrollments(workspace_id, status)
-            """))
-            db.session.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_entity
-                ON workflow_enrollments(entity_type, entity_id, enrolled_at)
-            """))
-            logger.info("✓ Created workflow_enrollments table")
-
-        try:
-            db.session.commit()
-        except Exception as commit_error:
-            db.session.rollback()
-            logger.warning(f"Critical schema self-heal commit failed: {commit_error}")
+            """, "✓ Created workflow_enrollments table")
+            if table_created:
+                execute_ddl("""
+                    CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_workflow_entity
+                    ON workflow_enrollments(workflow_id, entity_id, entity_type)
+                """)
+                execute_ddl("""
+                    CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_workspace
+                    ON workflow_enrollments(workspace_id, status)
+                """)
+                execute_ddl("""
+                    CREATE INDEX IF NOT EXISTS idx_workflow_enrollment_entity
+                    ON workflow_enrollments(entity_type, entity_id, enrolled_at)
+                """)
 
     except Exception as e:
         db.session.rollback()

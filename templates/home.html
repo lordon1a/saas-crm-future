@@ -1411,7 +1411,7 @@
         // ─── LOAD TASKS ───
         async function loadHomeTasks() {
             try {
-                var res = await fetch('/api/tasks?limit=5&status=pending');
+                var res = await fetch('/api/v1/tasks?limit=5&status=pending');
                 if (!res.ok) throw new Error('Failed');
                 var data = await res.json();
                 var tasks = data.tasks || data || [];
