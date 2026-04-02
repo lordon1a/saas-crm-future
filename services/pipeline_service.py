@@ -18,14 +18,6 @@ class PipelineService:
     VALID_FORECAST_CATEGORIES = {'pipeline', 'best_case', 'commit'}
     VALID_REVENUE_TYPES = {'one_time', 'recurring'}
     VALID_CHURN_RISKS = {'low', 'medium', 'high'}
-
-    @staticmethod
-    def _emit_webhook_event(workspace_id: int, event_type: str, payload: Dict[str, Any]):
-        try:
-            from services.webhook_service import WebhookService
-            WebhookService.dispatch_event(workspace_id, event_type, payload)
-        except Exception as exc:
-            logger.warning('Webhook dispatch failed for %s: %s', event_type, exc)
     
     @staticmethod
     def create_deal(workspace_id: int, data: Dict[str, Any]) -> Deal:
@@ -947,45 +939,13 @@ class PipelineService:
     
     @staticmethod
     def _emit_webhook_event(workspace_id: int, event_type: str, payload: dict):
-        """
-        Emit webhook event for external integrations with HMAC signing.
-        """
+        """Emit webhook event via the shared webhook delivery service."""
         try:
-            import json
-            import hmac
-            import hashlib
-            from models import Workspace
-            
-            # Get workspace webhook configuration
-            workspace = Workspace.query.get(workspace_id)
-            if not workspace or not hasattr(workspace, 'webhook_url') or not workspace.webhook_url:
-                return  # No webhook configured
-            
-            # Create signed payload
-            payload_json = json.dumps(payload, sort_keys=True)
-            
-            # Get or generate webhook secret
-            webhook_secret = getattr(workspace, 'webhook_secret', None)
-            if not webhook_secret:
-                return  # No secret configured
-            
-            # Generate HMAC signature
-            signature = hmac.new(
-                webhook_secret.encode('utf-8'),
-                payload_json.encode('utf-8'),
-                hashlib.sha256
-            ).hexdigest()
-            
-            # TODO: Implement actual HTTP POST to webhook_url with signature
-            # headers = {
-            #     'Content-Type': 'application/json',
-            #     'X-Webhook-Signature': signature,
-            #     'X-Event-Type': event_type
-            # }
-            # requests.post(workspace.webhook_url, data=payload_json, headers=headers, timeout=5)
-            
-        except Exception as e:
-            logger.warning(f"Webhook dispatch failed (non-blocking): {e}")
+            from services.webhook_service import WebhookService
+
+            WebhookService.dispatch_event(workspace_id, event_type, payload)
+        except Exception as exc:
+            logger.warning("Webhook dispatch failed for %s: %s", event_type, exc)
     
     @staticmethod
     def get_rotting_deals(workspace_id: int, pipeline_id: Optional[int] = None) -> List[Dict[str, Any]]:
