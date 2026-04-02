@@ -16,7 +16,11 @@ class ContactMergeService:
     """Service for detecting and merging duplicate contacts"""
 
     @staticmethod
-    def find_duplicates(workspace_id: int, contact_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    def find_duplicates(
+        workspace_id: int,
+        contact_id: Optional[int] = None,
+        current_user=None,
+    ) -> List[Dict[str, Any]]:
         """
         Find potential duplicate contacts in a workspace.
         Groups contacts by matching email or phone.
@@ -25,9 +29,16 @@ class ContactMergeService:
         """
         from sqlalchemy import or_, and_, func
 
-        base_query = Contact.query.filter_by(
-            workspace_id=workspace_id, is_deleted=False
-        )
+        base_query = Contact.query.filter_by(workspace_id=workspace_id, is_deleted=False)
+        if current_user is not None:
+            from utils.permissions import get_accessible_entities_query
+
+            base_query = get_accessible_entities_query(
+                current_user,
+                Contact,
+                base_query=base_query,
+            )
+            base_query = base_query.filter(Contact.is_deleted == False)
 
         if contact_id:
             contact = base_query.filter_by(id=contact_id).first()

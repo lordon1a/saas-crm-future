@@ -2372,8 +2372,13 @@ def bulk_update_contacts():
             return jsonify({'error': 'No updates provided'}), 400
         
         # Validate contact IDs belong to workspace
-        from models_crm import Contact
-        from models import db
+        from models_crm import Contact, Company
+        from models import db, User
+        from utils.permissions import check_entity_access
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
         
         contacts = Contact.query.filter(
             Contact.id.in_(contact_ids),
@@ -2383,6 +2388,42 @@ def bulk_update_contacts():
         
         if len(contacts) != len(contact_ids):
             return jsonify({'error': 'Some contacts not found'}), 404
+
+        denied_ids = [
+            contact.id
+            for contact in contacts
+            if not check_entity_access(current_user, contact, 'write')
+        ]
+        if denied_ids:
+            return jsonify({
+                'error': 'Access denied to one or more contacts',
+                'denied_ids': denied_ids,
+            }), 403
+
+        # Validate optional company reassignment target
+        if 'company_id' in updates:
+            company_id_value = updates.get('company_id')
+            if company_id_value in ['', 'null']:
+                company_id_value = None
+
+            if company_id_value is not None:
+                try:
+                    company_id_value = int(company_id_value)
+                except (TypeError, ValueError):
+                    return jsonify({'error': 'Invalid company_id in updates'}), 400
+
+                company = Company.query.filter_by(
+                    id=company_id_value,
+                    workspace_id=workspace_id,
+                    is_deleted=False,
+                ).first()
+                if not company:
+                    return jsonify({'error': 'Target company not found'}), 404
+
+                if not check_entity_access(current_user, company, 'read'):
+                    return jsonify({'error': 'Access denied to target company'}), 403
+
+            updates['company_id'] = company_id_value
         
         # Update each contact
         updated_count = 0
@@ -2421,6 +2462,7 @@ def bulk_delete_contacts():
     """Bulk delete multiple contacts"""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
         
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
@@ -2434,12 +2476,36 @@ def bulk_delete_contacts():
         if not contact_ids:
             return jsonify({'error': 'No contact IDs provided'}), 400
         
-        # Hard delete contacts
         from models_crm import Contact
-        from models import db
-        
-        deleted_count = db.session.query(Contact).filter(
+        from models import db, User
+        from utils.permissions import check_entity_access
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        contacts = Contact.query.filter(
             Contact.id.in_(contact_ids),
+            Contact.workspace_id == workspace_id,
+            Contact.is_deleted == False,
+        ).all()
+
+        if len(contacts) != len(contact_ids):
+            return jsonify({'error': 'Some contacts not found'}), 404
+
+        denied_ids = [
+            contact.id
+            for contact in contacts
+            if not check_entity_access(current_user, contact, 'delete')
+        ]
+        if denied_ids:
+            return jsonify({
+                'error': 'Access denied to one or more contacts',
+                'denied_ids': denied_ids,
+            }), 403
+
+        deleted_count = db.session.query(Contact).filter(
+            Contact.id.in_([contact.id for contact in contacts]),
             Contact.workspace_id == workspace_id,
             Contact.is_deleted == False,
         ).delete(synchronize_session=False)
@@ -2466,12 +2532,21 @@ def bulk_delete_all_contacts():
     """Delete ALL contacts in workspace (dangerous operation)"""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
         
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         from models_crm import Contact
-        from models import db
+        from models import db, User
+        from utils.permissions import check_permission
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        if not check_permission(current_user, 'edit_all'):
+            return jsonify({'error': 'Insufficient permissions'}), 403
         
         count = Contact.query.filter_by(
             workspace_id=workspace_id,
@@ -2507,12 +2582,21 @@ def bulk_delete_all_companies():
     """Delete ALL companies in workspace (dangerous operation)"""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
         
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
         
         from models_crm import Company
-        from models import db
+        from models import db, User
+        from utils.permissions import check_permission
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        if not check_permission(current_user, 'edit_all'):
+            return jsonify({'error': 'Insufficient permissions'}), 403
         
         # Hard delete all non-deleted companies
         deleted_count = db.session.query(Company).filter(
@@ -3983,13 +4067,24 @@ def find_company_duplicates():
     """Find duplicate companies in the workspace."""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+
+        from models import User
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
 
         company_id = request.args.get('company_id', type=int)
 
         from services.company_merge_service import CompanyMergeService
-        groups = CompanyMergeService.find_duplicates(workspace_id, company_id)
+        groups = CompanyMergeService.find_duplicates(
+            workspace_id,
+            company_id,
+            current_user=current_user,
+        )
         return jsonify({'duplicate_groups': groups}), 200
 
     except LookupError as e:
@@ -4017,6 +4112,35 @@ def merge_companies():
         secondary_id = data.get('secondary_id')
         if not primary_id or not secondary_id:
             return jsonify({'error': 'primary_id and secondary_id are required'}), 400
+
+        from models import User
+        from models_crm import Company
+        from utils.permissions import check_entity_access
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        primary = Company.query.filter_by(
+            id=primary_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not primary:
+            return jsonify({'error': 'Primary company not found'}), 404
+
+        secondary = Company.query.filter_by(
+            id=secondary_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not secondary:
+            return jsonify({'error': 'Secondary company not found'}), 404
+
+        if not check_entity_access(current_user, primary, 'write'):
+            return jsonify({'error': 'Access denied to primary company'}), 403
+        if not check_entity_access(current_user, secondary, 'write'):
+            return jsonify({'error': 'Access denied to secondary company'}), 403
 
         from services.company_merge_service import CompanyMergeService
         company = CompanyMergeService.merge_companies(
@@ -4058,13 +4182,24 @@ def find_duplicates():
     """Find duplicate contacts in the workspace"""
     try:
         workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
         if not workspace_id:
             return jsonify({'error': 'Workspace not found'}), 400
+
+        from models import User
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
 
         contact_id = request.args.get('contact_id', type=int)
 
         from services.contact_merge_service import ContactMergeService
-        groups = ContactMergeService.find_duplicates(workspace_id, contact_id)
+        groups = ContactMergeService.find_duplicates(
+            workspace_id,
+            contact_id,
+            current_user=current_user,
+        )
         return jsonify({'duplicate_groups': groups}), 200
 
     except LookupError as e:
@@ -4092,6 +4227,35 @@ def merge_contacts():
         secondary_id = data.get('secondary_id')
         if not primary_id or not secondary_id:
             return jsonify({'error': 'primary_id and secondary_id are required'}), 400
+
+        from models import User
+        from models_crm import Contact
+        from utils.permissions import check_entity_access
+
+        current_user = User.query.filter_by(id=user_id, workspace_id=workspace_id).first()
+        if not current_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        primary = Contact.query.filter_by(
+            id=primary_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not primary:
+            return jsonify({'error': 'Primary contact not found'}), 404
+
+        secondary = Contact.query.filter_by(
+            id=secondary_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not secondary:
+            return jsonify({'error': 'Secondary contact not found'}), 404
+
+        if not check_entity_access(current_user, primary, 'write'):
+            return jsonify({'error': 'Access denied to primary contact'}), 403
+        if not check_entity_access(current_user, secondary, 'write'):
+            return jsonify({'error': 'Access denied to secondary contact'}), 403
 
         from services.contact_merge_service import ContactMergeService
         contact = ContactMergeService.merge_contacts(

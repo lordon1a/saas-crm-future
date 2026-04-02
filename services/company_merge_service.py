@@ -34,9 +34,22 @@ class CompanyMergeService:
     """Service for detecting and merging duplicate companies."""
 
     @staticmethod
-    def find_duplicates(workspace_id: int, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    def find_duplicates(
+        workspace_id: int,
+        company_id: Optional[int] = None,
+        current_user=None,
+    ) -> List[Dict[str, Any]]:
         """Find potential duplicate companies by normalized name, website, or phone."""
         base_query = Company.query.filter_by(workspace_id=workspace_id, is_deleted=False)
+        if current_user is not None:
+            from utils.permissions import get_accessible_entities_query
+
+            base_query = get_accessible_entities_query(
+                current_user,
+                Company,
+                base_query=base_query,
+            )
+            base_query = base_query.filter(Company.is_deleted == False)
         companies = base_query.all()
 
         if company_id is not None:
