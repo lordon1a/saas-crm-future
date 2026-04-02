@@ -2,8 +2,20 @@
 Task Service - Business logic for task and project management
 Handles task CRUD, dependencies, milestones, and templates
 """
-from models import db
-from models_crm import Task, TaskDependency, Milestone, TaskComment, TaskAttachment, TaskNotification, NotificationPreference, Activity
+from models import db, User
+from models_crm import (
+    Activity,
+    Company,
+    Contact,
+    Deal,
+    Milestone,
+    NotificationPreference,
+    Task,
+    TaskAttachment,
+    TaskComment,
+    TaskDependency,
+    TaskNotification,
+)
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
 import json
@@ -14,6 +26,96 @@ logger = logging.getLogger(__name__)
 
 class TaskService:
     """Service for managing tasks and projects"""
+
+    @staticmethod
+    def _get_workspace_user(workspace_id, user_id):
+        return User.query.filter_by(
+            id=user_id,
+            workspace_id=workspace_id,
+            is_active=True,
+        ).first()
+
+    @staticmethod
+    def _get_workspace_company(workspace_id, company_id):
+        return Company.query.filter_by(
+            id=company_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+
+    @staticmethod
+    def _get_workspace_deal(workspace_id, deal_id):
+        return Deal.query.filter_by(
+            id=deal_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+
+    @staticmethod
+    def _get_workspace_contact(workspace_id, contact_id):
+        return Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+
+    @staticmethod
+    def _validate_task_relations(
+        workspace_id,
+        assignee_id=None,
+        company_id=None,
+        deal_id=None,
+        milestone_id=None,
+        contact_id=None,
+    ):
+        """Validate task-linked entities within a workspace boundary."""
+        assignee = None
+        company = None
+        deal = None
+        milestone = None
+        contact = None
+
+        if assignee_id is not None:
+            assignee = TaskService._get_workspace_user(workspace_id, assignee_id)
+            if not assignee:
+                raise ValueError("Assignee not found")
+
+        if company_id is not None:
+            company = TaskService._get_workspace_company(workspace_id, company_id)
+            if not company:
+                raise ValueError("Company not found")
+
+        if deal_id is not None:
+            deal = TaskService._get_workspace_deal(workspace_id, deal_id)
+            if not deal:
+                raise ValueError("Deal not found")
+
+        if milestone_id is not None:
+            milestone = TaskService.get_milestone(milestone_id, workspace_id)
+            if not milestone:
+                raise ValueError("Milestone not found")
+
+        if contact_id is not None:
+            contact = TaskService._get_workspace_contact(workspace_id, contact_id)
+            if not contact:
+                raise ValueError("Contact not found")
+
+        if company and deal and deal.company_id and deal.company_id != company.id:
+            raise ValueError("Deal does not belong to selected company")
+
+        if company and milestone and milestone.company_id and milestone.company_id != company.id:
+            raise ValueError("Milestone does not belong to selected company")
+
+        if company and contact and contact.company_id and contact.company_id != company.id:
+            raise ValueError("Contact does not belong to selected company")
+
+        return {
+            'assignee': assignee,
+            'company': company,
+            'deal': deal,
+            'milestone': milestone,
+            'contact': contact,
+        }
     
     @staticmethod
     def create_task(workspace_id, title, description=None, assignee_id=None, 
@@ -53,6 +155,15 @@ class TaskService:
         if start_time and end_time:
             if start_time >= end_time:
                 raise ValueError("Bitiş zamanı başlangıç zamanından sonra olmalıdır")
+
+        TaskService._validate_task_relations(
+            workspace_id=workspace_id,
+            assignee_id=assignee_id,
+            company_id=company_id,
+            deal_id=deal_id,
+            milestone_id=milestone_id,
+            contact_id=contact_id,
+        )
         
         task = Task(
             workspace_id=workspace_id,
@@ -161,6 +272,23 @@ class TaskService:
             return None
 
         previous_status = task.status
+
+        relation_fields = {'assignee_id', 'company_id', 'deal_id', 'milestone_id', 'contact_id'}
+        if relation_fields.intersection(kwargs.keys()):
+            final_assignee_id = kwargs.get('assignee_id', task.assignee_id)
+            final_company_id = kwargs.get('company_id', task.company_id)
+            final_deal_id = kwargs.get('deal_id', task.deal_id)
+            final_milestone_id = kwargs.get('milestone_id', task.milestone_id)
+            final_contact_id = kwargs.get('contact_id', task.contact_id)
+
+            TaskService._validate_task_relations(
+                workspace_id=workspace_id,
+                assignee_id=final_assignee_id,
+                company_id=final_company_id,
+                deal_id=final_deal_id,
+                milestone_id=final_milestone_id,
+                contact_id=final_contact_id,
+            )
         
         # Zaman değişikliği kontrolü
         time_changed = False
@@ -184,6 +312,8 @@ class TaskService:
         # Set completed_at when status changes to completed
         if 'status' in kwargs and kwargs['status'] == 'completed':
             task.completed_at = datetime.utcnow()
+        elif 'status' in kwargs and kwargs['status'] != 'completed':
+            task.completed_at = None
         
         # Zaman değişti ise bildirimleri yeniden oluştur
         if time_changed and task.assignee_id:
@@ -385,6 +515,9 @@ class TaskService:
     @staticmethod
     def create_milestone(workspace_id, name, company_id=None, due_date=None):
         """Create a new milestone"""
+        if company_id is not None and not TaskService._get_workspace_company(workspace_id, company_id):
+            raise ValueError("Company not found")
+
         milestone = Milestone(
             workspace_id=workspace_id,
             name=name,
@@ -452,6 +585,10 @@ class TaskService:
         milestone = TaskService.get_milestone(milestone_id, workspace_id)
         if not milestone:
             return None
+
+        if 'company_id' in kwargs and kwargs['company_id'] is not None:
+            if not TaskService._get_workspace_company(workspace_id, kwargs['company_id']):
+                raise ValueError("Company not found")
         
         allowed_fields = ['name', 'company_id', 'due_date', 'status']
         

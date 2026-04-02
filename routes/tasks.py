@@ -34,6 +34,22 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
+def write_access_required(f):
+    """Block mutation endpoints for read-only roles."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        role = (session.get('user_role') or '').lower()
+        if role in {'read-only', 'readonly', 'viewer'}:
+            return jsonify({'error': 'Write permission required'}), 403
+
+        return f(*args, **kwargs)
+
+    return decorated
+
 def get_current_user():
     """Get current user from session"""
     user_id = session.get('user_id')
@@ -52,6 +68,7 @@ def allowed_file(filename):
 
 @tasks_bp.route('/api/v1/tasks', methods=['POST'])
 @login_required
+@write_access_required
 def create_task():
     """
     Create a new task
@@ -303,6 +320,7 @@ def get_task(task_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>', methods=['PATCH'])
 @login_required
+@write_access_required
 def update_task(task_id):
     """
     Update task fields
@@ -421,6 +439,7 @@ def update_task(task_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>', methods=['DELETE'])
 @login_required
+@write_access_required
 def delete_task(task_id):
     """Delete a task"""
     from utils.permissions import check_entity_access
@@ -449,6 +468,7 @@ def delete_task(task_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/complete', methods=['POST'])
 @login_required
+@write_access_required
 def complete_task(task_id):
     """
     Mark a task as completed
@@ -511,6 +531,7 @@ def complete_task(task_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/dependencies', methods=['POST'])
 @login_required
+@write_access_required
 def add_dependency(task_id):
     """
     Add a task dependency
@@ -544,6 +565,7 @@ def add_dependency(task_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/dependencies/<int:depends_on_task_id>', methods=['DELETE'])
 @login_required
+@write_access_required
 def remove_dependency(task_id, depends_on_task_id):
     """Remove a task dependency"""
     success = TaskService.remove_dependency(task_id, depends_on_task_id, get_current_user().workspace_id)
@@ -560,6 +582,7 @@ def remove_dependency(task_id, depends_on_task_id):
 
 @tasks_bp.route('/api/v1/milestones', methods=['POST'])
 @login_required
+@write_access_required
 def create_milestone():
     """
     Create a new milestone
@@ -584,12 +607,15 @@ def create_milestone():
         except ValueError:
             return jsonify({'error': 'Invalid due_date format'}), 400
     
-    milestone = TaskService.create_milestone(
-        workspace_id=get_current_user().workspace_id,
-        name=data['name'],
-        company_id=data.get('company_id'),
-        due_date=due_date
-    )
+    try:
+        milestone = TaskService.create_milestone(
+            workspace_id=get_current_user().workspace_id,
+            name=data['name'],
+            company_id=data.get('company_id'),
+            due_date=due_date
+        )
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
     
     return jsonify({
         'id': milestone.id,
@@ -669,6 +695,7 @@ def get_milestone(milestone_id):
 
 @tasks_bp.route('/api/v1/milestones/<int:milestone_id>', methods=['PATCH'])
 @login_required
+@write_access_required
 def update_milestone(milestone_id):
     """Update milestone fields"""
     data = request.get_json()
@@ -683,7 +710,10 @@ def update_milestone(milestone_id):
         except ValueError:
             return jsonify({'error': 'Invalid due_date format'}), 400
     
-    milestone = TaskService.update_milestone(milestone_id, get_current_user().workspace_id, **data)
+    try:
+        milestone = TaskService.update_milestone(milestone_id, get_current_user().workspace_id, **data)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
     
     if not milestone:
         return jsonify({'error': 'Milestone not found'}), 404
@@ -710,6 +740,7 @@ def update_milestone(milestone_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/attachments', methods=['POST'])
 @login_required
+@write_access_required
 def upload_attachment(task_id):
     """
     Upload a file attachment to a task
@@ -819,6 +850,7 @@ def download_attachment(task_id, attachment_id):
 
 @tasks_bp.route('/api/v1/tasks/from-template', methods=['POST'])
 @login_required
+@write_access_required
 def create_from_template():
     """
     Create tasks from a template
@@ -853,13 +885,16 @@ def create_from_template():
     if not data or 'template_tasks' not in data:
         return jsonify({'error': 'template_tasks is required'}), 400
     
-    tasks = TaskService.create_from_template(
-        workspace_id=get_current_user().workspace_id,
-        template_tasks=data['template_tasks'],
-        company_id=data.get('company_id'),
-        deal_id=data.get('deal_id'),
-        milestone_id=data.get('milestone_id')
-    )
+    try:
+        tasks = TaskService.create_from_template(
+            workspace_id=get_current_user().workspace_id,
+            template_tasks=data['template_tasks'],
+            company_id=data.get('company_id'),
+            deal_id=data.get('deal_id'),
+            milestone_id=data.get('milestone_id')
+        )
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     
     return jsonify({
         'tasks': [{
@@ -880,6 +915,7 @@ def create_from_template():
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/comments', methods=['POST'])
 @login_required
+@write_access_required
 def create_task_comment(task_id):
     """Create a comment on a task"""
     from services.task_comment_service import TaskCommentService
@@ -932,6 +968,7 @@ def get_task_comments(task_id):
 
 @tasks_bp.route('/api/v1/tasks/comments/<int:comment_id>', methods=['DELETE'])
 @login_required
+@write_access_required
 def delete_task_comment(comment_id):
     """Delete a comment"""
     from services.task_comment_service import TaskCommentService
@@ -955,6 +992,7 @@ def delete_task_comment(comment_id):
 
 @tasks_bp.route('/api/v1/tasks/<int:task_id>/attachments', methods=['POST'])
 @login_required
+@write_access_required
 def create_task_attachment(task_id):
     """Upload an attachment to a task"""
     from services.task_comment_service import TaskCommentService
@@ -1024,6 +1062,7 @@ def get_task_attachments(task_id):
 
 @tasks_bp.route('/api/v1/tasks/attachments/<int:attachment_id>', methods=['DELETE'])
 @login_required
+@write_access_required
 def delete_task_attachment(attachment_id):
     """Delete an attachment"""
     from services.task_comment_service import TaskCommentService
