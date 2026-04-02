@@ -6,7 +6,7 @@ import json
 import logging
 from difflib import SequenceMatcher
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 from models import db
 from models_crm import (
@@ -43,6 +43,19 @@ DEFAULT_WIN_LOSS_REASONS = {
 
 class PipelineAdvancedService:
     """Advanced business logic for pipeline module."""
+
+    @staticmethod
+    def _normalize_accessible_deal_ids(accessible_deal_ids: Optional[Iterable[int]]) -> Optional[Set[int]]:
+        """Normalize access scope values into a set of integer deal IDs."""
+        if accessible_deal_ids is None:
+            return None
+        normalized: Set[int] = set()
+        for deal_id in accessible_deal_ids:
+            try:
+                normalized.add(int(deal_id))
+            except (TypeError, ValueError):
+                continue
+        return normalized
 
     @staticmethod
     def list_products(workspace_id: int, search: Optional[str] = None, active_only: bool = True) -> List[Product]:
@@ -288,8 +301,19 @@ class PipelineAdvancedService:
             raise
 
     @staticmethod
-    def find_deal_duplicates(workspace_id: int) -> List[Dict[str, Any]]:
-        deals = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False).all()
+    def find_deal_duplicates(
+        workspace_id: int,
+        accessible_deal_ids: Optional[Iterable[int]] = None,
+    ) -> List[Dict[str, Any]]:
+        allowed_ids = PipelineAdvancedService._normalize_accessible_deal_ids(accessible_deal_ids)
+        if allowed_ids is not None and not allowed_ids:
+            return []
+
+        query = Deal.query.filter_by(workspace_id=workspace_id, is_deleted=False)
+        if allowed_ids is not None:
+            query = query.filter(Deal.id.in_(allowed_ids))
+
+        deals = query.all()
         by_company: Dict[int, List[Deal]] = {}
         for deal in deals:
             by_company.setdefault(deal.company_id, []).append(deal)
@@ -339,7 +363,19 @@ class PipelineAdvancedService:
         return duplicate_groups
 
     @staticmethod
-    def merge_deals(workspace_id: int, primary_id: int, secondary_id: int, user_id: int) -> Deal:
+    def merge_deals(
+        workspace_id: int,
+        primary_id: int,
+        secondary_id: int,
+        user_id: int,
+        accessible_deal_ids: Optional[Iterable[int]] = None,
+    ) -> Deal:
+        allowed_ids = PipelineAdvancedService._normalize_accessible_deal_ids(accessible_deal_ids)
+        if allowed_ids is not None and (
+            int(primary_id) not in allowed_ids or int(secondary_id) not in allowed_ids
+        ):
+            raise PermissionError('Access denied to one or more deals')
+
         primary = Deal.query.filter_by(id=primary_id, workspace_id=workspace_id, is_deleted=False).first()
         secondary = Deal.query.filter_by(id=secondary_id, workspace_id=workspace_id, is_deleted=False).first()
         if not primary or not secondary:

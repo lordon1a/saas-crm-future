@@ -1301,9 +1301,20 @@ def get_deal_hygiene():
 @login_required_api
 def find_deal_duplicates():
     """Find likely duplicate deals."""
+    from utils.permissions import get_accessible_entities_query, get_current_user_from_session
+
     workspace_id = session.get('workspace_id')
     try:
-        groups = PipelineAdvancedService.find_deal_duplicates(workspace_id)
+        user = get_current_user_from_session()
+        accessible_deal_rows = get_accessible_entities_query(user, Deal).with_entities(Deal.id).all()
+        accessible_deal_ids = {int(row[0]) for row in accessible_deal_rows}
+        if not accessible_deal_ids:
+            return jsonify({'duplicate_groups': []}), 200
+
+        groups = PipelineAdvancedService.find_deal_duplicates(
+            workspace_id,
+            accessible_deal_ids=accessible_deal_ids,
+        )
         return jsonify({'duplicate_groups': groups}), 200
     except Exception as e:
         logger.error(f"Error finding deal duplicates: {e}")
@@ -1314,6 +1325,12 @@ def find_deal_duplicates():
 @login_required_api
 def merge_deals():
     """Merge two deals. Body: { primary_id, secondary_id }"""
+    from utils.permissions import (
+        check_entity_access,
+        get_accessible_entities_query,
+        get_current_user_from_session,
+    )
+
     workspace_id = session.get('workspace_id')
     user_id = session.get('user_id')
     data = request.get_json() or {}
@@ -1322,7 +1339,36 @@ def merge_deals():
     if not primary_id or not secondary_id:
         return jsonify({'error': 'primary_id and secondary_id are required'}), 400
     try:
-        deal = PipelineAdvancedService.merge_deals(workspace_id, int(primary_id), int(secondary_id), user_id)
+        primary_id = int(primary_id)
+        secondary_id = int(secondary_id)
+        user = get_current_user_from_session()
+
+        primary_deal = Deal.query.filter_by(id=primary_id, workspace_id=workspace_id, is_deleted=False).first()
+        secondary_deal = Deal.query.filter_by(id=secondary_id, workspace_id=workspace_id, is_deleted=False).first()
+        if not primary_deal or not secondary_deal:
+            return jsonify({'error': 'Deal not found'}), 404
+
+        if (
+            not check_entity_access(user, primary_deal, 'write')
+            or not check_entity_access(user, secondary_deal, 'write')
+        ):
+            logger.warning(
+                "Access denied: user %s attempted to merge deals %s and %s",
+                user.id,
+                primary_id,
+                secondary_id,
+            )
+            return jsonify({'error': 'Access denied to one or more deals'}), 403
+
+        accessible_deal_rows = get_accessible_entities_query(user, Deal).with_entities(Deal.id).all()
+        accessible_deal_ids = {int(row[0]) for row in accessible_deal_rows}
+        deal = PipelineAdvancedService.merge_deals(
+            workspace_id,
+            primary_id,
+            secondary_id,
+            user_id,
+            accessible_deal_ids=accessible_deal_ids,
+        )
         return jsonify({
             'message': 'Deals merged successfully',
             'deal': {
@@ -1332,6 +1378,10 @@ def merge_deals():
                 'status': deal.status,
             }
         }), 200
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 403
+    except TypeError:
+        return jsonify({'error': 'primary_id and secondary_id must be integers'}), 400
     except (ValueError, LookupError) as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
