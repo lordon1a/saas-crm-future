@@ -16,7 +16,7 @@ from models_crm import (
     TaskDependency,
     TaskNotification,
 )
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from sqlalchemy import and_, or_
 import json
 import logging
@@ -828,11 +828,15 @@ class TaskService:
         Args:
             workspace_id: Workspace ID
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
+
+        # Include legacy 'pending' for backward compatibility with older rows.
+        overdue_eligible_statuses = ['not_started', 'in_progress', 'blocked', 'pending']
         
         overdue_tasks = Task.query.filter(
             Task.workspace_id == workspace_id,
-            Task.status == 'pending',
+            Task.status.in_(overdue_eligible_statuses),
+            Task.end_time.isnot(None),
             Task.end_time < now
         ).all()
         
