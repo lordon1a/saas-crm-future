@@ -92,14 +92,14 @@ class FacebookLeadAdsService:
 
         workspace_id = value.get('workspace_id')
         if not workspace_id:
-            return {'ok': False, 'reason': 'workspace_id missing in payload'}
+            return {'ok': False, 'reason': 'workspace_id missing in payload', 'workspace_id': None}
 
         email = value.get('email')
         name = value.get('full_name') or 'Lead'
         phone = value.get('phone_number')
 
         if not email:
-            return {'ok': False, 'reason': 'email missing in payload'}
+            return {'ok': False, 'reason': 'email missing in payload', 'workspace_id': workspace_id}
 
         contact = Contact.query.filter_by(workspace_id=workspace_id, email=email.lower()).first()
         if not contact:
@@ -132,7 +132,7 @@ class FacebookLeadAdsService:
             db.session.rollback()
             raise
 
-        return {'ok': True, 'contact_id': contact.id}
+        return {'ok': True, 'contact_id': contact.id, 'workspace_id': workspace_id}
 
 
 class GoogleAdsService:

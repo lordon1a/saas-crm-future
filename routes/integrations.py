@@ -5,6 +5,7 @@ import secrets
 from urllib.parse import parse_qs, urlparse
 
 from models import User
+from services.audit_service import AuditService
 from services.zoom_service import ZoomService
 from services.linkedin_service import LinkedInService
 from services.ads_sync_service import FacebookLeadAdsService, GoogleAdsService
@@ -32,6 +33,25 @@ def _workspace_id():
 
 def _user_id():
     return session.get('user_id')
+
+
+def _audit_integration_event(provider: str, action: str, workspace_id=None, user_id=None, metadata=None):
+    resolved_workspace = workspace_id if workspace_id is not None else _workspace_id()
+    if not resolved_workspace:
+        return
+
+    payload = {'provider': provider}
+    if metadata:
+        payload.update(metadata)
+
+    AuditService.log_event(
+        workspace_id=resolved_workspace,
+        user_id=user_id if user_id is not None else _user_id(),
+        action=action,
+        entity_type='integration',
+        entity_id=provider,
+        metadata=payload,
+    )
 
 
 def _extract_state_from_auth_url(auth_url):
@@ -69,10 +89,20 @@ def zoom_callback():
     code = request.args.get('code')
     state = request.args.get('state', '')
     if not code or not state:
+        _audit_integration_event(
+            provider='zoom',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'missing_code_or_state'},
+        )
         return jsonify({'error': 'Missing code/state'}), 400
 
     valid_state, state_error = _validate_oauth_state('zoom', state)
     if not valid_state:
+        _audit_integration_event(
+            provider='zoom',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'invalid_state', 'error': state_error},
+        )
         return jsonify({'error': state_error}), 400
 
     try:
@@ -81,13 +111,32 @@ def zoom_callback():
         user_id = int(user_id)
 
         if workspace_id != _workspace_id() or user_id != _user_id():
+            _audit_integration_event(
+                provider='zoom',
+                action='integration.oauth_failed',
+                workspace_id=workspace_id,
+                user_id=user_id,
+                metadata={'failure_reason': 'session_mismatch'},
+            )
             return jsonify({'error': 'OAuth state does not match active session'}), 403
 
         session.pop('zoom_oauth_state', None)
         integration = ZoomService.handle_oauth_callback(code, int(workspace_id), int(user_id))
+        _audit_integration_event(
+            provider='zoom',
+            action='integration.oauth_connected',
+            workspace_id=workspace_id,
+            user_id=user_id,
+            metadata={'integration_id': integration.id},
+        )
         return jsonify({'success': True, 'integration_id': integration.id})
     except Exception as exc:
         current_app.logger.error('Zoom OAuth callback failed: %s', exc)
+        _audit_integration_event(
+            provider='zoom',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'callback_exception', 'error': str(exc)},
+        )
         return jsonify({'error': str(exc)}), 400
 
 
@@ -95,6 +144,11 @@ def zoom_callback():
 @login_required
 def zoom_disconnect():
     ok = ZoomService.disconnect(_workspace_id(), _user_id())
+    _audit_integration_event(
+        provider='zoom',
+        action='integration.disconnected',
+        metadata={'success': bool(ok)},
+    )
     return jsonify({'success': ok})
 
 
@@ -124,10 +178,20 @@ def linkedin_callback():
     code = request.args.get('code')
     state = request.args.get('state', '')
     if not code or not state:
+        _audit_integration_event(
+            provider='linkedin',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'missing_code_or_state'},
+        )
         return jsonify({'error': 'Missing code/state'}), 400
 
     valid_state, state_error = _validate_oauth_state('linkedin', state)
     if not valid_state:
+        _audit_integration_event(
+            provider='linkedin',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'invalid_state', 'error': state_error},
+        )
         return jsonify({'error': state_error}), 400
 
     try:
@@ -136,13 +200,32 @@ def linkedin_callback():
         user_id = int(user_id)
 
         if workspace_id != _workspace_id() or user_id != _user_id():
+            _audit_integration_event(
+                provider='linkedin',
+                action='integration.oauth_failed',
+                workspace_id=workspace_id,
+                user_id=user_id,
+                metadata={'failure_reason': 'session_mismatch'},
+            )
             return jsonify({'error': 'OAuth state does not match active session'}), 403
 
         session.pop('linkedin_oauth_state', None)
         integration = LinkedInService.handle_oauth_callback(code, int(workspace_id), int(user_id))
+        _audit_integration_event(
+            provider='linkedin',
+            action='integration.oauth_connected',
+            workspace_id=workspace_id,
+            user_id=user_id,
+            metadata={'integration_id': integration.id},
+        )
         return jsonify({'success': True, 'integration_id': integration.id})
     except Exception as exc:
         current_app.logger.error('LinkedIn OAuth callback failed: %s', exc)
+        _audit_integration_event(
+            provider='linkedin',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'callback_exception', 'error': str(exc)},
+        )
         return jsonify({'error': str(exc)}), 400
 
 
@@ -176,7 +259,22 @@ def facebook_lead_event():
     payload = request.get_json() or {}
     result = FacebookLeadAdsService.process_lead_webhook(payload)
     if not result.get('ok'):
+        _audit_integration_event(
+            provider='facebook',
+            action='integration.webhook_rejected',
+            workspace_id=result.get('workspace_id'),
+            user_id=None,
+            metadata={'reason': result.get('reason')},
+        )
         return jsonify(result), 400
+
+    _audit_integration_event(
+        provider='facebook',
+        action='integration.webhook_processed',
+        workspace_id=result.get('workspace_id'),
+        user_id=None,
+        metadata={'contact_id': result.get('contact_id')},
+    )
     return jsonify(result)
 
 
@@ -200,10 +298,20 @@ def facebook_callback():
     code = request.args.get('code')
     state = request.args.get('state', '')
     if not code or not state:
+        _audit_integration_event(
+            provider='facebook',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'missing_code_or_state'},
+        )
         return jsonify({'error': 'Missing code/state'}), 400
 
     valid_state, state_error = _validate_oauth_state('facebook', state)
     if not valid_state:
+        _audit_integration_event(
+            provider='facebook',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'invalid_state', 'error': state_error},
+        )
         return jsonify({'error': state_error}), 400
 
     try:
@@ -212,13 +320,32 @@ def facebook_callback():
         user_id = int(user_id)
 
         if workspace_id != _workspace_id() or user_id != _user_id():
+            _audit_integration_event(
+                provider='facebook',
+                action='integration.oauth_failed',
+                workspace_id=workspace_id,
+                user_id=user_id,
+                metadata={'failure_reason': 'session_mismatch'},
+            )
             return jsonify({'error': 'OAuth state does not match active session'}), 403
 
         session.pop('facebook_oauth_state', None)
         integration = FacebookLeadAdsService.handle_oauth_callback(code, workspace_id, user_id)
+        _audit_integration_event(
+            provider='facebook',
+            action='integration.oauth_connected',
+            workspace_id=workspace_id,
+            user_id=user_id,
+            metadata={'integration_id': integration.id},
+        )
         return jsonify({'success': True, 'integration_id': integration.id})
     except Exception as exc:
         current_app.logger.error('Facebook OAuth callback failed: %s', exc)
+        _audit_integration_event(
+            provider='facebook',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'callback_exception', 'error': str(exc)},
+        )
         return jsonify({'error': str(exc)}), 400
 
 
@@ -226,6 +353,11 @@ def facebook_callback():
 @login_required
 def facebook_disconnect():
     ok = FacebookLeadAdsService.disconnect(_workspace_id())
+    _audit_integration_event(
+        provider='facebook',
+        action='integration.disconnected',
+        metadata={'success': bool(ok)},
+    )
     return jsonify({'success': ok})
 
 
@@ -249,10 +381,20 @@ def google_ads_callback():
     code = request.args.get('code')
     state = request.args.get('state', '')
     if not code or not state:
+        _audit_integration_event(
+            provider='google_ads',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'missing_code_or_state'},
+        )
         return jsonify({'error': 'Missing code/state'}), 400
 
     valid_state, state_error = _validate_oauth_state('google_ads', state)
     if not valid_state:
+        _audit_integration_event(
+            provider='google_ads',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'invalid_state', 'error': state_error},
+        )
         return jsonify({'error': state_error}), 400
 
     try:
@@ -261,13 +403,32 @@ def google_ads_callback():
         user_id = int(user_id)
 
         if workspace_id != _workspace_id() or user_id != _user_id():
+            _audit_integration_event(
+                provider='google_ads',
+                action='integration.oauth_failed',
+                workspace_id=workspace_id,
+                user_id=user_id,
+                metadata={'failure_reason': 'session_mismatch'},
+            )
             return jsonify({'error': 'OAuth state does not match active session'}), 403
 
         session.pop('google_ads_oauth_state', None)
         integration = GoogleAdsService.handle_oauth_callback(code, workspace_id, user_id)
+        _audit_integration_event(
+            provider='google_ads',
+            action='integration.oauth_connected',
+            workspace_id=workspace_id,
+            user_id=user_id,
+            metadata={'integration_id': integration.id},
+        )
         return jsonify({'success': True, 'integration_id': integration.id})
     except Exception as exc:
         current_app.logger.error('Google Ads OAuth callback failed: %s', exc)
+        _audit_integration_event(
+            provider='google_ads',
+            action='integration.oauth_failed',
+            metadata={'failure_reason': 'callback_exception', 'error': str(exc)},
+        )
         return jsonify({'error': str(exc)}), 400
 
 
@@ -275,4 +436,9 @@ def google_ads_callback():
 @login_required
 def google_ads_disconnect():
     ok = GoogleAdsService.disconnect(_workspace_id(), _user_id())
+    _audit_integration_event(
+        provider='google_ads',
+        action='integration.disconnected',
+        metadata={'success': bool(ok)},
+    )
     return jsonify({'success': ok})
