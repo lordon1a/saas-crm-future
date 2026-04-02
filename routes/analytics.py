@@ -163,17 +163,30 @@ def _get_monthly_performance(workspace_id, months=6):
     Get monthly won deal totals for the last N months
     """
     try:
+        try:
+            months = int(months)
+        except (TypeError, ValueError):
+            months = 6
+        months = max(1, min(months, 36))
+
         now = datetime.now(UTC)
-        start_date = now - timedelta(days=months * 30)
-        
+        current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Build an exact month window to avoid day-of-month rollover issues.
+        total_month_index = current_month.year * 12 + (current_month.month - 1)
+        start_month_index = total_month_index - (months - 1)
+        start_year = start_month_index // 12
+        start_month = (start_month_index % 12) + 1
+        window_start = datetime(start_year, start_month, 1, tzinfo=UTC)
+
         # Get all won deals in the period
         deals = Deal.query.filter(
             Deal.workspace_id == workspace_id,
             Deal.is_deleted == False,
             Deal.status == 'won',
-            Deal.closed_at >= start_date
+            Deal.closed_at >= window_start
         ).all()
-        
+
         # Group by month
         monthly_data = {}
         for deal in deals:
@@ -182,24 +195,22 @@ def _get_monthly_performance(workspace_id, months=6):
                 if month_key not in monthly_data:
                     monthly_data[month_key] = 0.0
                 monthly_data[month_key] += float(deal.value)
-        
-        # Fill in missing months with 0
+
+        # Fill in missing months with 0 using a stable month iterator.
         result = []
-        current = start_date
-        while current <= now:
+        for offset in range(months):
+            month_index = start_month_index + offset
+            year = month_index // 12
+            month = (month_index % 12) + 1
+            current = datetime(year, month, 1, tzinfo=UTC)
             month_key = current.strftime('%Y-%m')
             result.append({
                 'month': month_key,
                 'revenue': monthly_data.get(month_key, 0.0)
             })
-            # Move to next month
-            if current.month == 12:
-                current = current.replace(year=current.year + 1, month=1)
-            else:
-                current = current.replace(month=current.month + 1)
-        
+
         return {'months': result}
-        
+
     except Exception as e:
         logger.error(f'Monthly performance error: {e}')
         return {'months': []}
