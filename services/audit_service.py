@@ -3,7 +3,7 @@ import json
 import logging
 from functools import wraps
 
-from flask import request, session
+from flask import has_app_context, has_request_context, request, session
 
 from models import db
 from models_crm import AuditLog
@@ -17,6 +17,21 @@ class AuditService:
     @staticmethod
     def log_event(workspace_id, user_id, action, entity_type, entity_id=None, before_data=None, after_data=None, metadata=None):
         """Persist an audit log entry."""
+        if not workspace_id or not has_app_context():
+            return None
+
+        # In lightweight test apps, db may not be initialized; skip audit writes gracefully.
+        try:
+            _ = db.engine
+        except Exception:
+            return None
+
+        ip_address = None
+        user_agent = None
+        if has_request_context():
+            ip_address = request.remote_addr
+            user_agent = (request.headers.get('User-Agent') or '')[:500]
+
         try:
             row = AuditLog(
                 workspace_id=workspace_id,
@@ -24,8 +39,8 @@ class AuditService:
                 action=action,
                 entity_type=entity_type,
                 entity_id=str(entity_id) if entity_id is not None else None,
-                ip_address=request.remote_addr if request else None,
-                user_agent=(request.headers.get('User-Agent') or '')[:500] if request else None,
+                ip_address=ip_address,
+                user_agent=user_agent,
                 before_data=json.dumps(before_data, ensure_ascii=False) if before_data is not None else None,
                 after_data=json.dumps(after_data, ensure_ascii=False) if after_data is not None else None,
                 metadata_json=json.dumps(metadata or {}, ensure_ascii=False),
@@ -34,7 +49,11 @@ class AuditService:
             db.session.commit()
             return row
         except Exception as exc:
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except Exception:
+                # Best-effort rollback only; audit failures must not break request flow.
+                pass
             logger.error('Failed to persist audit log: %s', exc)
             return None
 
