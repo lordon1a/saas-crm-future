@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file
+from flask import Blueprint, render_template, request, jsonify, send_file, session, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
 try:
@@ -14,7 +14,8 @@ except ImportError:
     Font = None
     PatternFill = None
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, UTC, timedelta
+from threading import Lock
 import csv
 import json
 
@@ -25,6 +26,10 @@ UPLOAD_FOLDER = 'uploads/imports'
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 MAX_ROWS = 100000
+IMPORT_JOB_TTL_SECONDS = 6 * 60 * 60
+
+_import_jobs = {}
+_import_jobs_lock = Lock()
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -38,6 +43,98 @@ def _ensure_import_dependencies(require_excel=False):
     if require_excel and openpyxl is None:
         return jsonify({'error': 'Import module dependency missing: openpyxl'}), 503
     return None
+
+
+def _utc_now():
+    return datetime.now(UTC)
+
+
+def _prune_expired_import_jobs(now=None):
+    now = now or _utc_now()
+    with _import_jobs_lock:
+        expired = [
+            job_id
+            for job_id, row in _import_jobs.items()
+            if (row.get('expires_at') or now) <= now
+        ]
+        for job_id in expired:
+            _import_jobs.pop(job_id, None)
+
+
+def _create_import_job(job_id, workspace_id, object_type, file_id):
+    now = _utc_now()
+    row = {
+        'job_id': job_id,
+        'workspace_id': int(workspace_id),
+        'object_type': object_type,
+        'file_id': file_id,
+        'status': 'processing',
+        'progress': 10,
+        'created_at': now,
+        'updated_at': now,
+        'expires_at': now + timedelta(seconds=IMPORT_JOB_TTL_SECONDS),
+    }
+    _prune_expired_import_jobs(now=now)
+    with _import_jobs_lock:
+        _import_jobs[job_id] = row
+
+
+def _update_import_job(job_id, **updates):
+    now = _utc_now()
+    _prune_expired_import_jobs(now=now)
+    with _import_jobs_lock:
+        row = _import_jobs.get(job_id)
+        if not row:
+            return None
+        row.update(updates)
+        row['updated_at'] = now
+        row['expires_at'] = now + timedelta(seconds=IMPORT_JOB_TTL_SECONDS)
+        return row.copy()
+
+
+def _serialize_import_job(row):
+    if not row:
+        return None
+    data = row.copy()
+    for key in ('created_at', 'updated_at'):
+        value = data.get(key)
+        if hasattr(value, 'isoformat'):
+            data[key] = value.isoformat()
+    data.pop('expires_at', None)
+    data.pop('workspace_id', None)
+    return data
+
+
+def _get_import_job(job_id, workspace_id):
+    _prune_expired_import_jobs()
+    with _import_jobs_lock:
+        row = _import_jobs.get(job_id)
+        if not row:
+            return None
+        if int(row.get('workspace_id') or 0) != int(workspace_id):
+            return None
+        return row.copy()
+
+
+def clear_import_jobs():
+    """Test helper: clear in-memory import status store."""
+    with _import_jobs_lock:
+        _import_jobs.clear()
+
+
+@import_bp.before_request
+def enforce_import_auth():
+    """Require active session for import pages and APIs."""
+    if not (request.path == '/import' or request.path.startswith('/api/v1/import')):
+        return None
+
+    if session.get('user_id'):
+        return None
+
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Authentication required'}), 401
+
+    return redirect(url_for('auth.login_page'))
 
 @import_bp.route('/import')
 def import_page():
@@ -650,21 +747,33 @@ def execute_import():
         return dep_error
     from models_crm import Contact, Company, CustomField, CustomFieldValue
     from models import db
-    from flask import session
-    
-    data = request.json
+
+    data = request.json or {}
     file_id = data.get('file_id')
     field_mapping = data.get('field_mapping')
     object_type = data.get('object_type')
     duplicate_action = data.get('duplicate_action', 'skip')  # skip, update, create, or create_with_suffix
-    
-    # Get workspace_id from session
-    workspace_id = session.get('workspace_id', 1)  # Default to 1 if not in session
+
+    workspace_id = session.get('workspace_id')
+    if not workspace_id:
+        return jsonify({'error': 'Workspace context missing'}), 400
+
+    if object_type not in ('contacts', 'companies'):
+        return jsonify({'error': 'Invalid object type'}), 400
+
+    if not isinstance(field_mapping, dict) or not field_mapping:
+        return jsonify({'error': 'field_mapping is required'}), 400
+
+    if not file_id:
+        return jsonify({'error': 'file_id is required'}), 400
     
     filepath = os.path.join(UPLOAD_FOLDER, file_id)
     
     if not os.path.exists(filepath):
         return jsonify({'error': 'File not found'}), 404
+
+    import_job_id = f"import_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.urandom(3).hex()}"
+    _create_import_job(import_job_id, workspace_id, object_type, file_id)
     
     try:
         # Read file
@@ -984,21 +1093,43 @@ def execute_import():
         except:
             pass
         
-        import_job_id = f"import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        
+        job_payload = _update_import_job(
+            import_job_id,
+            status='completed',
+            progress=100,
+            message='Import completed',
+            imported_rows=imported_count,
+            updated_rows=updated_count,
+            skipped_rows=skipped_count,
+            failed_rows=failed_count,
+            total_rows=len(df),
+            errors=errors[:10],
+        )
+
         return jsonify({
             'success': True,
-            'job_id': import_job_id,
-            'message': 'Import completed',
-            'imported_rows': imported_count,
-            'updated_rows': updated_count,
-            'skipped_rows': skipped_count,
-            'failed_rows': failed_count,
-            'total_rows': len(df),
-            'errors': errors[:10]  # Return first 10 errors
+            **(_serialize_import_job(job_payload) or {
+                'job_id': import_job_id,
+                'status': 'completed',
+                'progress': 100,
+                'message': 'Import completed',
+                'imported_rows': imported_count,
+                'updated_rows': updated_count,
+                'skipped_rows': skipped_count,
+                'failed_rows': failed_count,
+                'total_rows': len(df),
+                'errors': errors[:10],
+            }),
         })
         
     except Exception as e:
+        _update_import_job(
+            import_job_id,
+            status='failed',
+            progress=100,
+            message='Import failed',
+            error=str(e),
+        )
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Import error: {str(e)}'}), 500
@@ -1007,12 +1138,13 @@ def execute_import():
 @import_bp.route('/api/v1/import/status/<job_id>')
 def import_status(job_id):
     """Check import job status"""
-    
-    # Since we're doing synchronous import, return completed status
-    # In production with Celery, this would check actual task status
-    
-    return jsonify({
-        'job_id': job_id,
-        'status': 'completed',
-        'progress': 100
-    })
+
+    workspace_id = session.get('workspace_id')
+    if not workspace_id:
+        return jsonify({'error': 'Workspace context missing'}), 400
+
+    job = _get_import_job(job_id, workspace_id)
+    if not job:
+        return jsonify({'error': 'Import job not found'}), 404
+
+    return jsonify(_serialize_import_job(job))

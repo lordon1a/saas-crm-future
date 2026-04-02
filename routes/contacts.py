@@ -13,15 +13,33 @@ import shutil
 import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from utils.rate_limiter import get_rate_limit_status
 
 logger = logging.getLogger(__name__)
 MAX_CONTACT_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+FILTER_LIST_RATE_LIMIT_MAX_REQUESTS = 60
+FILTER_LIST_RATE_LIMIT_WINDOW_SECONDS = 60
+FILTER_EXPORT_RATE_LIMIT_MAX_REQUESTS = 20
+FILTER_EXPORT_RATE_LIMIT_WINDOW_SECONDS = 60
+DEFAULT_LIST_PER_PAGE = 50
+MAX_LIST_PER_PAGE = 100
 
 
 def _format_file_size(size_bytes):
     if size_bytes >= 1024 * 1024:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
     return f"{size_bytes / 1024:.2f} KB"
+
+
+def _sanitize_pagination(page, per_page, default_per_page=DEFAULT_LIST_PER_PAGE, max_per_page=MAX_LIST_PER_PAGE):
+    """Normalize pagination inputs to safe positive bounds."""
+    page = page if isinstance(page, int) and page > 0 else 1
+
+    if not isinstance(per_page, int) or per_page <= 0:
+        per_page = default_per_page
+
+    per_page = min(per_page, max_per_page)
+    return page, per_page
 
 contacts_bp = Blueprint('contacts', __name__)
 
@@ -34,6 +52,31 @@ def login_required(f):
             return jsonify({'error': 'Authentication required'}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+
+def _enforce_filter_rate_limit(
+    user_id,
+    max_requests=FILTER_LIST_RATE_LIMIT_MAX_REQUESTS,
+    window_seconds=FILTER_LIST_RATE_LIMIT_WINDOW_SECONDS,
+):
+    """Consume one rate-limit slot and return a 429 response tuple when exhausted."""
+    current_count, max_count, window = get_rate_limit_status(
+        user_id,
+        max_requests=max_requests,
+        window_seconds=window_seconds,
+    )
+
+    if current_count >= max_count:
+        response = jsonify(
+            {
+                'error': f'Rate limit exceeded. Maximum {max_count} filter requests allowed per {window} seconds.',
+                'retry_after': window,
+            }
+        )
+        response.headers['Retry-After'] = str(window)
+        return response, 429
+
+    return None
 
 
 # ============================================================================
@@ -57,7 +100,8 @@ def get_companies():
         
         # Pagination parameters
         page = request.args.get('page', 1, type=int)
-        per_page = min(request.args.get('per_page', 50, type=int), 100)
+        per_page = request.args.get('per_page', DEFAULT_LIST_PER_PAGE, type=int)
+        page, per_page = _sanitize_pagination(page, per_page)
         
         # Check for advanced filtering parameters
         filters_json = request.args.get('filters')
@@ -89,18 +133,13 @@ def get_companies():
         from services.filter_service import FilterService
         from services.filter_validation_service import FilterValidationService
         from services.filter_cache_service import FilterCacheService
-        from utils.rate_limiter import get_rate_limit_status
         
         # Use FilterService if advanced filters are provided
         if filters_json or quick_filter:
             try:
-                # Check rate limit
-                current_count, max_count, window_seconds = get_rate_limit_status(user_id)
-                if current_count >= max_count:
-                    return jsonify({
-                        'error': f'Rate limit exceeded. Maximum {max_count} concurrent filter requests allowed. Please wait and try again.',
-                        'retry_after': window_seconds
-                    }), 429
+                rate_limited = _enforce_filter_rate_limit(user_id)
+                if rate_limited:
+                    return rate_limited
                 
                 # Parse filters JSON
                 filter_config = None
@@ -116,6 +155,13 @@ def get_companies():
                         filter_config = FilterService.evaluate_quick_filter(quick_filter, 'company')
                     except ValueError as e:
                         return jsonify({'error': str(e)}), 400
+
+                is_valid_filters, validation_error = FilterValidationService.validate_filters(
+                    filter_config,
+                    'company',
+                )
+                if not is_valid_filters:
+                    return jsonify({'error': validation_error}), 400
                 
                 # Validate workspace access
                 if not FilterValidationService.check_workspace_access(workspace_id, user_id):
@@ -123,7 +169,15 @@ def get_companies():
                     return jsonify({'error': 'Access denied to this workspace'}), 403
                 
                 # Check cache first
-                cache_key = FilterCacheService.generate_cache_key('company', filter_config, workspace_id)
+                cache_key = FilterCacheService.generate_cache_key(
+                    'company',
+                    filter_config,
+                    workspace_id,
+                    page=page,
+                    per_page=per_page,
+                    sort_by=sort_by,
+                    sort_order=sort_order,
+                )
                 cached_results = FilterCacheService.get_cached_results(cache_key)
                 
                 if cached_results:
@@ -524,7 +578,7 @@ def get_contacts():
         
         # Pagination parameters
         page = request.args.get('page', 1, type=int)
-        per_page = min(request.args.get('per_page', 50, type=int), 100)
+        per_page = request.args.get('per_page', DEFAULT_LIST_PER_PAGE, type=int)
         
         # Check for advanced filtering parameters
         filters_json = request.args.get('filters')
@@ -545,9 +599,10 @@ def get_contacts():
             legacy_filters['search'] = request.args.get('search')
         if request.args.get('limit'):
             try:
-                per_page = min(int(request.args.get('limit')), 100)
+                per_page = int(request.args.get('limit'))
             except (TypeError, ValueError):
                 pass
+        page, per_page = _sanitize_pagination(page, per_page)
         # Add assigned_to filter
         if request.args.get('assigned_to'):
             assigned_to_value = request.args.get('assigned_to')
@@ -565,18 +620,13 @@ def get_contacts():
         from services.filter_service import FilterService
         from services.filter_validation_service import FilterValidationService
         from services.filter_cache_service import FilterCacheService
-        from utils.rate_limiter import filter_rate_limit, get_rate_limit_status
         
         # Use FilterService if advanced filters are provided
         if filters_json or quick_filter:
             try:
-                # Check rate limit
-                current_count, max_count, window_seconds = get_rate_limit_status(user_id)
-                if current_count >= max_count:
-                    return jsonify({
-                        'error': f'Rate limit exceeded. Maximum {max_count} concurrent filter requests allowed. Please wait and try again.',
-                        'retry_after': window_seconds
-                    }), 429
+                rate_limited = _enforce_filter_rate_limit(user_id)
+                if rate_limited:
+                    return rate_limited
                 
                 # Parse filters JSON
                 filter_config = None
@@ -592,6 +642,13 @@ def get_contacts():
                         filter_config = FilterService.evaluate_quick_filter(quick_filter, 'contact')
                     except ValueError as e:
                         return jsonify({'error': str(e)}), 400
+
+                is_valid_filters, validation_error = FilterValidationService.validate_filters(
+                    filter_config,
+                    'contact',
+                )
+                if not is_valid_filters:
+                    return jsonify({'error': validation_error}), 400
                 
                 # Validate workspace access
                 if not FilterValidationService.check_workspace_access(workspace_id, user_id):
@@ -2020,6 +2077,14 @@ def export_contacts():
         
         # Handle POST request with advanced filtering
         if request.method == 'POST':
+            rate_limited = _enforce_filter_rate_limit(
+                user_id,
+                max_requests=FILTER_EXPORT_RATE_LIMIT_MAX_REQUESTS,
+                window_seconds=FILTER_EXPORT_RATE_LIMIT_WINDOW_SECONDS,
+            )
+            if rate_limited:
+                return rate_limited
+
             data = request.get_json()
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
@@ -2038,6 +2103,14 @@ def export_contacts():
                 return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
             
             from services.filter_service import FilterService
+            from services.filter_validation_service import FilterValidationService
+
+            is_valid_filters, validation_error = FilterValidationService.validate_filters(
+                filters,
+                'contact',
+            )
+            if not is_valid_filters:
+                return jsonify({'error': validation_error}), 400
             
             # Apply filters without pagination (max 10,000 records)
             try:
@@ -2167,6 +2240,14 @@ def export_companies():
         
         # Handle POST request with advanced filtering
         if request.method == 'POST':
+            rate_limited = _enforce_filter_rate_limit(
+                user_id,
+                max_requests=FILTER_EXPORT_RATE_LIMIT_MAX_REQUESTS,
+                window_seconds=FILTER_EXPORT_RATE_LIMIT_WINDOW_SECONDS,
+            )
+            if rate_limited:
+                return rate_limited
+
             data = request.get_json()
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
@@ -2184,6 +2265,14 @@ def export_companies():
                 return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
             
             from services.filter_service import FilterService
+            from services.filter_validation_service import FilterValidationService
+
+            is_valid_filters, validation_error = FilterValidationService.validate_filters(
+                filters,
+                'company',
+            )
+            if not is_valid_filters:
+                return jsonify({'error': validation_error}), 400
             
             # Apply filters without pagination (max 10,000 records)
             try:
@@ -2975,6 +3064,15 @@ def create_saved_filter():
         # Validate entity_type
         if data['entity_type'] not in ['contact', 'company']:
             return jsonify({'error': 'Invalid entity type. Must be contact or company'}), 400
+
+        from services.filter_validation_service import FilterValidationService
+
+        is_valid_filters, validation_error = FilterValidationService.validate_filters(
+            data['filter_config'],
+            data['entity_type'],
+        )
+        if not is_valid_filters:
+            return jsonify({'error': validation_error}), 400
         
         from services.saved_filter_service import SavedFilterService
         
@@ -3034,20 +3132,33 @@ def get_saved_filters():
             user_id=user_id,
             entity_type=entity_type
         )
+
+        serialized_filters = [
+            {
+                'id': f.id,
+                'name': f.name,
+                'entity_type': f.entity_type,
+                'filter_config': f.filter_config,
+                'is_shared': f.is_shared,
+                'created_at': f.created_at.isoformat() if f.created_at else None,
+                'updated_at': f.updated_at.isoformat() if f.updated_at else None
+            }
+            for f in filters
+        ]
+
+        user_filters = [
+            serialized for serialized, model in zip(serialized_filters, filters)
+            if model.user_id == user_id
+        ]
+        shared_filters = [
+            serialized for serialized, model in zip(serialized_filters, filters)
+            if model.user_id != user_id and model.is_shared
+        ]
         
         return jsonify({
-            'filters': [
-                {
-                    'id': f.id,
-                    'name': f.name,
-                    'entity_type': f.entity_type,
-                    'filter_config': f.filter_config,
-                    'is_shared': f.is_shared,
-                    'created_at': f.created_at.isoformat() if f.created_at else None,
-                    'updated_at': f.updated_at.isoformat() if f.updated_at else None
-                }
-                for f in filters
-            ]
+            'filters': serialized_filters,
+            'user_filters': user_filters,
+            'shared_filters': shared_filters,
         }), 200
         
     except Exception as e:
@@ -3079,8 +3190,9 @@ def delete_saved_filter(filter_id):
             
         except PermissionError as e:
             return jsonify({'error': str(e)}), 403
-        except LookupError as e:
-            return jsonify({'error': str(e)}), 404
+        except ValueError as e:
+            status_code = 404 if 'not found' in str(e).lower() else 400
+            return jsonify({'error': str(e)}), status_code
         except Exception as e:
             logger.error(f"Error deleting saved filter: {str(e)}")
             return jsonify({'error': 'Failed to delete filter'}), 500
@@ -3127,8 +3239,9 @@ def share_saved_filter(filter_id):
             
         except PermissionError as e:
             return jsonify({'error': str(e)}), 403
-        except LookupError as e:
-            return jsonify({'error': str(e)}), 404
+        except ValueError as e:
+            status_code = 404 if 'not found' in str(e).lower() else 400
+            return jsonify({'error': str(e)}), status_code
         except Exception as e:
             logger.error(f"Error sharing saved filter: {str(e)}")
             return jsonify({'error': 'Failed to update filter'}), 500
@@ -3152,6 +3265,14 @@ def export_contacts_filtered():
         
         if not workspace_id or not user_id:
             return jsonify({'error': 'Authentication required'}), 401
+
+        rate_limited = _enforce_filter_rate_limit(
+            user_id,
+            max_requests=FILTER_EXPORT_RATE_LIMIT_MAX_REQUESTS,
+            window_seconds=FILTER_EXPORT_RATE_LIMIT_WINDOW_SECONDS,
+        )
+        if rate_limited:
+            return rate_limited
         
         data = request.get_json()
         if not data:
@@ -3171,6 +3292,14 @@ def export_contacts_filtered():
             return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
         
         from services.filter_service import FilterService
+        from services.filter_validation_service import FilterValidationService
+
+        is_valid_filters, validation_error = FilterValidationService.validate_filters(
+            filters,
+            'contact',
+        )
+        if not is_valid_filters:
+            return jsonify({'error': validation_error}), 400
         
         # Apply filters without pagination (max 5000 records)
         try:
@@ -3229,6 +3358,14 @@ def export_companies_filtered():
         
         if not workspace_id or not user_id:
             return jsonify({'error': 'Authentication required'}), 401
+
+        rate_limited = _enforce_filter_rate_limit(
+            user_id,
+            max_requests=FILTER_EXPORT_RATE_LIMIT_MAX_REQUESTS,
+            window_seconds=FILTER_EXPORT_RATE_LIMIT_WINDOW_SECONDS,
+        )
+        if rate_limited:
+            return rate_limited
         
         data = request.get_json()
         if not data:
@@ -3248,6 +3385,14 @@ def export_companies_filtered():
             return jsonify({'error': 'Invalid format. Must be csv or xlsx'}), 400
         
         from services.filter_service import FilterService
+        from services.filter_validation_service import FilterValidationService
+
+        is_valid_filters, validation_error = FilterValidationService.validate_filters(
+            filters,
+            'company',
+        )
+        if not is_valid_filters:
+            return jsonify({'error': validation_error}), 400
         
         # Apply filters without pagination (max 5000 records)
         try:

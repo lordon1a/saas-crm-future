@@ -18,6 +18,18 @@ class SavedFilterService:
     # In-memory cache for filter results (filter_id -> (results, timestamp))
     _cache = {}
     CACHE_TTL = 300  # 5 minutes in seconds
+
+    @staticmethod
+    def _validate_filter_config(filter_config: Dict[str, Any], entity_type: str):
+        """Validate filter config and raise ValueError on invalid input."""
+        from services.filter_validation_service import FilterValidationService
+
+        is_valid, validation_error = FilterValidationService.validate_filters(
+            filter_config,
+            entity_type,
+        )
+        if not is_valid:
+            raise ValueError(validation_error or 'Invalid filter configuration')
     
     @staticmethod
     def create_filter(
@@ -45,19 +57,21 @@ class SavedFilterService:
         Raises:
             ValueError: If user has reached limit (20 filters per entity type)
         """
+        # Validate entity type
+        if entity_type not in ['contact', 'company']:
+            raise ValueError(f"Invalid entity type: {entity_type}")
+
+        SavedFilterService._validate_filter_config(filter_config, entity_type)
+
         # Check user's filter count (limit: 50 per entity type)
         existing_count = db.session.query(SavedFilter).filter(
             SavedFilter.workspace_id == workspace_id,
             SavedFilter.user_id == user_id,
             SavedFilter.entity_type == entity_type
         ).count()
-        
+
         if existing_count >= 50:
             raise ValueError(f"Maximum 50 saved filters per entity type reached")
-        
-        # Validate entity type
-        if entity_type not in ['contact', 'company']:
-            raise ValueError(f"Invalid entity type: {entity_type}")
         
         # Create filter
         saved_filter = SavedFilter(
@@ -266,6 +280,8 @@ class SavedFilterService:
         # Validate entity type
         if entity_type not in ['contact', 'company']:
             raise ValueError(f"Invalid entity type: {entity_type}")
+
+        SavedFilterService._validate_filter_config(filter_config, entity_type)
         
         # Create filter
         user_filter = UserDefinedFilter(
@@ -361,6 +377,7 @@ class SavedFilterService:
             if description is not None:
                 user_filter.description = description
             if filter_config is not None:
+                SavedFilterService._validate_filter_config(filter_config, user_filter.entity_type)
                 user_filter.filter_config = json.dumps(filter_config)
             
             user_filter.updated_at = datetime.utcnow()
@@ -469,6 +486,7 @@ class SavedFilterService:
                 saved_filter.name = name
             
             if filter_config is not None:
+                SavedFilterService._validate_filter_config(filter_config, saved_filter.entity_type)
                 saved_filter.filter_config = json.dumps(filter_config)
             
             if is_shared is not None:

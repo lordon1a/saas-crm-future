@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 from models import User
 from services.zoom_service import ZoomService
 from services.linkedin_service import LinkedInService
-from services.ads_sync_service import FacebookLeadAdsService
+from services.ads_sync_service import FacebookLeadAdsService, GoogleAdsService
 
 integrations_bp = Blueprint('integrations', __name__)
 
@@ -182,16 +182,97 @@ def facebook_lead_event():
 
 @integrations_bp.route('/api/v1/integrations/facebook/auth', methods=['GET'])
 @login_required
-def facebook_auth_stub():
-    return jsonify({'message': 'Configure OAuth in UI and callback endpoint', 'workspace_id': _workspace_id()})
+def facebook_auth_url():
+    try:
+        auth_url = FacebookLeadAdsService.get_oauth_url(_workspace_id(), _user_id())
+        state = _extract_state_from_auth_url(auth_url)
+        if not state:
+            return jsonify({'error': 'Failed to initialize OAuth state'}), 500
+        session['facebook_oauth_state'] = state
+        return jsonify({'auth_url': auth_url})
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
 
 
 @integrations_bp.route('/api/v1/integrations/facebook/callback', methods=['GET'])
-def facebook_callback_stub():
-    return jsonify({'success': True, 'message': 'Facebook callback acknowledged'})
+@login_required
+def facebook_callback():
+    code = request.args.get('code')
+    state = request.args.get('state', '')
+    if not code or not state:
+        return jsonify({'error': 'Missing code/state'}), 400
+
+    valid_state, state_error = _validate_oauth_state('facebook', state)
+    if not valid_state:
+        return jsonify({'error': state_error}), 400
+
+    try:
+        workspace_id, user_id, _nonce = state.split(':', 2)
+        workspace_id = int(workspace_id)
+        user_id = int(user_id)
+
+        if workspace_id != _workspace_id() or user_id != _user_id():
+            return jsonify({'error': 'OAuth state does not match active session'}), 403
+
+        session.pop('facebook_oauth_state', None)
+        integration = FacebookLeadAdsService.handle_oauth_callback(code, workspace_id, user_id)
+        return jsonify({'success': True, 'integration_id': integration.id})
+    except Exception as exc:
+        current_app.logger.error('Facebook OAuth callback failed: %s', exc)
+        return jsonify({'error': str(exc)}), 400
+
+
+@integrations_bp.route('/api/v1/integrations/facebook', methods=['DELETE'])
+@login_required
+def facebook_disconnect():
+    ok = FacebookLeadAdsService.disconnect(_workspace_id())
+    return jsonify({'success': ok})
 
 
 @integrations_bp.route('/api/v1/integrations/google-ads/auth', methods=['GET'])
 @login_required
-def google_ads_auth_stub():
-    return jsonify({'message': 'Google Ads OAuth placeholder ready', 'workspace_id': _workspace_id()})
+def google_ads_auth_url():
+    try:
+        auth_url = GoogleAdsService.get_oauth_url(_workspace_id(), _user_id())
+        state = _extract_state_from_auth_url(auth_url)
+        if not state:
+            return jsonify({'error': 'Failed to initialize OAuth state'}), 500
+        session['google_ads_oauth_state'] = state
+        return jsonify({'auth_url': auth_url})
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+
+
+@integrations_bp.route('/api/v1/integrations/google-ads/callback', methods=['GET'])
+@login_required
+def google_ads_callback():
+    code = request.args.get('code')
+    state = request.args.get('state', '')
+    if not code or not state:
+        return jsonify({'error': 'Missing code/state'}), 400
+
+    valid_state, state_error = _validate_oauth_state('google_ads', state)
+    if not valid_state:
+        return jsonify({'error': state_error}), 400
+
+    try:
+        workspace_id, user_id, _nonce = state.split(':', 2)
+        workspace_id = int(workspace_id)
+        user_id = int(user_id)
+
+        if workspace_id != _workspace_id() or user_id != _user_id():
+            return jsonify({'error': 'OAuth state does not match active session'}), 403
+
+        session.pop('google_ads_oauth_state', None)
+        integration = GoogleAdsService.handle_oauth_callback(code, workspace_id, user_id)
+        return jsonify({'success': True, 'integration_id': integration.id})
+    except Exception as exc:
+        current_app.logger.error('Google Ads OAuth callback failed: %s', exc)
+        return jsonify({'error': str(exc)}), 400
+
+
+@integrations_bp.route('/api/v1/integrations/google-ads', methods=['DELETE'])
+@login_required
+def google_ads_disconnect():
+    ok = GoogleAdsService.disconnect(_workspace_id(), _user_id())
+    return jsonify({'success': ok})

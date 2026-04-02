@@ -75,6 +75,30 @@ class Config:
     WHATSAPP_PHONE_NUMBER_ID = os.getenv('WHATSAPP_PHONE_NUMBER_ID')
     WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
 
+    # Facebook Lead Ads Integration
+    FACEBOOK_APP_ID = os.getenv('FACEBOOK_APP_ID', '').strip()
+    FACEBOOK_APP_SECRET = os.getenv('FACEBOOK_APP_SECRET', '').strip()
+    FACEBOOK_REDIRECT_URI = os.getenv(
+        'FACEBOOK_REDIRECT_URI',
+        'http://127.0.0.1:5000/api/v1/integrations/facebook/callback'
+    ).strip()
+    FACEBOOK_OAUTH_SCOPES = os.getenv(
+        'FACEBOOK_OAUTH_SCOPES',
+        'leads_retrieval,pages_show_list,pages_manage_metadata'
+    ).strip()
+
+    # Google Ads Integration
+    GOOGLE_ADS_CLIENT_ID = os.getenv('GOOGLE_ADS_CLIENT_ID', '').strip()
+    GOOGLE_ADS_CLIENT_SECRET = os.getenv('GOOGLE_ADS_CLIENT_SECRET', '').strip()
+    GOOGLE_ADS_REDIRECT_URI = os.getenv(
+        'GOOGLE_ADS_REDIRECT_URI',
+        'http://127.0.0.1:5000/api/v1/integrations/google-ads/callback'
+    ).strip()
+    GOOGLE_ADS_OAUTH_SCOPES = os.getenv(
+        'GOOGLE_ADS_OAUTH_SCOPES',
+        'https://www.googleapis.com/auth/adwords'
+    ).strip()
+
     # API Settings
     META_API_BASE_URL = 'https://graph.facebook.com/v18.0'
     PUBLIC_API_RATE_LIMIT_PER_HOUR = int(os.getenv('PUBLIC_API_RATE_LIMIT_PER_HOUR', '1000'))

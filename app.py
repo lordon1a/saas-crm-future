@@ -1720,13 +1720,15 @@ def ensure_critical_phase_schema():
     """Best-effort self-heal for critical Phase 1-3 columns/tables in production."""
     try:
         from sqlalchemy import inspect, text
+        is_postgres = db.engine.dialect.name == 'postgresql'
 
         def execute_ddl(statement, success_message=None):
             try:
                 with db.engine.begin() as conn:
                     # Do not block startup for a long time on locked tables.
-                    conn.execute(text("SET LOCAL lock_timeout = '5s'"))
-                    conn.execute(text("SET LOCAL statement_timeout = '25000ms'"))
+                    if is_postgres:
+                        conn.execute(text("SET LOCAL lock_timeout = '5s'"))
+                        conn.execute(text("SET LOCAL statement_timeout = '25000ms'"))
                     conn.execute(text(statement))
                 if success_message:
                     logger.info(success_message)
@@ -2839,13 +2841,21 @@ with app.app_context():
             
             if company_count == 0:
                 logger.info('🌱 No demo data found, creating sample data...')
-                # Import and run seed function
-                import sys
-                import os
-                sys.path.insert(0, os.path.dirname(__file__))
-                from seed_demo_data import seed_demo_data
-                seed_demo_data()
-                logger.info('✅ Demo data created!')
+                # seed_demo_data.py may not exist in all deployments.
+                try:
+                    import importlib
+
+                    seed_module = importlib.import_module('seed_demo_data')
+                    seed_func = getattr(seed_module, 'seed_demo_data', None)
+                    if callable(seed_func):
+                        seed_func()
+                        logger.info('✅ Demo data created!')
+                    else:
+                        logger.info('ℹ️ Demo data seed module found but function is missing, skipping')
+                except ModuleNotFoundError:
+                    logger.info('ℹ️ Demo data seed module not found, skipping sample data seeding')
+                except Exception as seed_error:
+                    logger.warning('Demo data seed failed: %s', seed_error)
             else:
                 logger.info(f'✓ Demo data exists ({company_count} companies)')
         except Exception as e:
@@ -2871,4 +2881,26 @@ def health():
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=Config.DEBUG, port=int(os.getenv('PORT', 5000)), host='0.0.0.0')
+    use_reloader = os.getenv('SOCKETIO_USE_RELOADER', '0').lower() in ('1', 'true', 'yes')
+    host = '0.0.0.0'
+    port = int(os.getenv('PORT', 5000))
+
+    def _run_socketio(selected_port):
+        socketio.run(
+            app,
+            debug=Config.DEBUG,
+            use_reloader=use_reloader,
+            port=selected_port,
+            host=host,
+        )
+
+    try:
+        _run_socketio(port)
+    except OSError as exc:
+        is_port_in_use = getattr(exc, 'winerror', None) == 10048 or 'Address already in use' in str(exc)
+        if Config.ENV != 'development' or not is_port_in_use:
+            raise
+
+        fallback_port = int(os.getenv('PORT_FALLBACK', str(port + 1)))
+        logger.warning('Port %s is busy, retrying on fallback port %s', port, fallback_port)
+        _run_socketio(fallback_port)

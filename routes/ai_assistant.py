@@ -1,13 +1,22 @@
 import os
+import logging
+import warnings
 import requests
-import google.generativeai as genai
 import anthropic
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Blueprint, request, jsonify, g, session
 from utils.app_guard import require_app
 
+try:
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', FutureWarning)
+        import google.generativeai as genai
+except Exception:
+    genai = None
+
 bp = Blueprint('ai_assistant', __name__)
+logger = logging.getLogger(__name__)
 
 def login_required(f):
     @wraps(f)
@@ -28,9 +37,11 @@ ANTHROPIC_KEY = os.environ.get('ANTHROPIC_API_KEY')
 GROQ_KEY = os.environ.get('GROQ_API_KEY')
 
 gemini_client = None
-if GEMINI_KEY:
+if GEMINI_KEY and genai is not None:
     genai.configure(api_key=GEMINI_KEY)
     gemini_client = genai
+elif GEMINI_KEY:
+    logger.warning('GEMINI_API_KEY is set but google.generativeai is unavailable; Gemini features disabled')
 
 anthropic_client = None
 if ANTHROPIC_KEY:
