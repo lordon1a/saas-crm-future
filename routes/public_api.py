@@ -125,6 +125,17 @@ def list_api_keys():
     }), 200
 
 
+@bp.route('/api/v1/public-auth/api-keys/<int:api_key_id>', methods=['DELETE'])
+@_agent_session_required
+def revoke_api_key(api_key_id):
+    workspace_id = session.get('workspace_id')
+    record = APIAuthService.deactivate_api_key(workspace_id, api_key_id)
+    if not record:
+        return jsonify({'error': 'API key not found'}), 404
+
+    return jsonify({'status': 'revoked', 'id': record.id}), 200
+
+
 @bp.route('/api/v1/public-auth/oauth-clients', methods=['POST'])
 @_agent_session_required
 def create_oauth_client():
@@ -181,6 +192,21 @@ def list_oauth_clients():
             }
             for client in clients
         ]
+    }), 200
+
+
+@bp.route('/api/v1/public-auth/oauth-clients/<int:client_row_id>', methods=['DELETE'])
+@_agent_session_required
+def deactivate_oauth_client(client_row_id):
+    workspace_id = session.get('workspace_id')
+    client, revoked_count = APIAuthService.deactivate_oauth_client(workspace_id, client_row_id)
+    if not client:
+        return jsonify({'error': 'OAuth client not found'}), 404
+
+    return jsonify({
+        'status': 'deactivated',
+        'id': client.id,
+        'revoked_tokens': revoked_count,
     }), 200
 
 
@@ -369,6 +395,25 @@ def oauth_token():
         return jsonify({'error': 'invalid_grant'}), 400
 
     return jsonify(token_payload), 200
+
+
+@bp.route('/public/oauth/revoke', methods=['POST'])
+def oauth_revoke_token():
+    data = request.get_json(silent=True) if request.is_json else request.form
+
+    token = data.get('token') if data else None
+    client_id = data.get('client_id') if data else None
+    client_secret = data.get('client_secret') if data else None
+
+    client = APIAuthService.get_oauth_client(client_id)
+    if not client:
+        return jsonify({'error': 'invalid_client'}), 401
+
+    if not APIAuthService.validate_oauth_client_secret(client, client_secret):
+        return jsonify({'error': 'invalid_client'}), 401
+
+    APIAuthService.revoke_oauth_access_token(client, token)
+    return jsonify({'status': 'revoked'}), 200
 
 
 # ---------------------------------------------------------------------------

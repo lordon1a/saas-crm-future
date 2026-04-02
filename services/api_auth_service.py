@@ -133,6 +133,19 @@ class APIAuthService:
         return record
 
     @staticmethod
+    def deactivate_api_key(workspace_id: int, api_key_id: int):
+        record = APIKey.query.filter_by(
+            id=api_key_id,
+            workspace_id=workspace_id,
+        ).first()
+        if not record:
+            return None
+
+        record.is_active = False
+        db.session.commit()
+        return record
+
+    @staticmethod
     def create_oauth_client(workspace_id: int, name: str, redirect_uris, created_by: int | None = None, scopes=None):
         client_id = f"cli_{secrets.token_urlsafe(20)}"
         client_secret = f"sec_{secrets.token_urlsafe(32)}"
@@ -154,6 +167,32 @@ class APIAuthService:
     @staticmethod
     def get_oauth_client(client_id: str):
         return OAuthClient.query.filter_by(client_id=client_id, is_active=True).first()
+
+    @staticmethod
+    def deactivate_oauth_client(workspace_id: int, client_row_id: int):
+        client = OAuthClient.query.filter_by(
+            id=client_row_id,
+            workspace_id=workspace_id,
+        ).first()
+        if not client:
+            return None, 0
+
+        revoked_count = 0
+        now = datetime.utcnow()
+
+        if client.is_active:
+            client.is_active = False
+
+        tokens = OAuthAccessToken.query.filter_by(
+            client_id=client.id,
+        ).filter(OAuthAccessToken.revoked_at.is_(None)).all()
+
+        for token in tokens:
+            token.revoked_at = now
+            revoked_count += 1
+
+        db.session.commit()
+        return client, revoked_count
 
     @staticmethod
     def validate_oauth_client_secret(client: OAuthClient, client_secret: str) -> bool:
@@ -242,6 +281,26 @@ class APIAuthService:
             return None
 
         return token_row
+
+    @staticmethod
+    def revoke_oauth_access_token(client: OAuthClient, raw_token: str):
+        if not client or not raw_token:
+            return False
+
+        token_hash = APIAuthService._hash_secret(raw_token)
+        token_row = OAuthAccessToken.query.filter_by(
+            client_id=client.id,
+            token_hash=token_hash,
+        ).first()
+
+        if not token_row:
+            return False
+
+        if token_row.revoked_at is None:
+            token_row.revoked_at = datetime.utcnow()
+            db.session.commit()
+
+        return True
 
 
 def _extract_bearer_token() -> str | None:
