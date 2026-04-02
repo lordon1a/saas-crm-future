@@ -490,12 +490,13 @@ class WorkflowService:
             for action in actions:
                 if action.delay_minutes > 0:
                     # Queue delayed action
-                    WorkflowService._queue_delayed_action(action, entity, context)
+                    queued = WorkflowService._queue_delayed_action(action, entity, context)
                     execution_result['actions_executed'].append({
                         'action_id': action.id,
                         'type': action.action_type,
-                        'status': 'queued',
-                        'delay_minutes': action.delay_minutes
+                        'status': queued.get('status', 'queued'),
+                        'delay_minutes': action.delay_minutes,
+                        'queue_item_id': queued.get('queue_item_id'),
                     })
                 else:
                     # Execute immediately
@@ -1259,16 +1260,55 @@ class WorkflowService:
     
     @staticmethod
     def _queue_delayed_action(action, entity, context: Dict):
-        """Queue an action for delayed execution"""
+        """
+        Queue an action for delayed execution.
+
+        To keep delayed execution idempotent across retried triggers,
+        we deduplicate queue items in the same minute bucket for the same
+        workflow/action/entity tuple.
+        """
         from models_crm import WorkflowExecutionQueue
         from models import db
-        
-        scheduled_at = datetime.utcnow() + timedelta(minutes=action.delay_minutes)
+
+        delay_minutes = int(action.delay_minutes or 0)
+        scheduled_at = datetime.utcnow() + timedelta(minutes=delay_minutes)
+        entity_type = entity.__class__.__name__.lower()
+
+        # Minute-level bucketing avoids duplicate delayed jobs from near-identical
+        # repeated trigger events.
+        bucket_start = scheduled_at.replace(second=0, microsecond=0)
+        bucket_end = bucket_start + timedelta(minutes=1)
+
+        existing = WorkflowExecutionQueue.query.filter_by(
+            workflow_id=action.workflow_id,
+            workspace_id=action.workspace_id,
+            entity_type=entity_type,
+            entity_id=entity.id,
+            action_id=action.id,
+        ).filter(
+            WorkflowExecutionQueue.status.in_(['pending', 'running']),
+            WorkflowExecutionQueue.scheduled_at >= bucket_start,
+            WorkflowExecutionQueue.scheduled_at < bucket_end,
+        ).first()
+
+        if existing:
+            logger.debug(
+                "Skipped duplicate delayed action queue item for workflow=%s action=%s entity=%s:%s",
+                action.workflow_id,
+                action.id,
+                entity_type,
+                entity.id,
+            )
+            return {
+                'status': 'deduplicated',
+                'queue_item_id': existing.id,
+                'scheduled_at': existing.scheduled_at,
+            }
         
         queue_item = WorkflowExecutionQueue(
             workflow_id=action.workflow_id,
             workspace_id=action.workspace_id,
-            entity_type=entity.__class__.__name__.lower(),
+            entity_type=entity_type,
             entity_id=entity.id,
             action_id=action.id,
             scheduled_at=scheduled_at,
@@ -1279,6 +1319,11 @@ class WorkflowService:
         db.session.commit()
         
         logger.debug(f"Queued action {action.id} for execution at {scheduled_at}")
+        return {
+            'status': 'queued',
+            'queue_item_id': queue_item.id,
+            'scheduled_at': scheduled_at,
+        }
     
     @staticmethod
     def process_queue():
@@ -1290,43 +1335,73 @@ class WorkflowService:
         from models import db
         
         now = datetime.utcnow()
-        
+
+        # Recover orphaned claims (e.g., worker crash after claiming an item).
+        stale_running_cutoff = now - timedelta(minutes=30)
+        recovered = WorkflowExecutionQueue.query.filter(
+            WorkflowExecutionQueue.status == 'running',
+            WorkflowExecutionQueue.scheduled_at <= stale_running_cutoff,
+        ).update({'status': 'pending'}, synchronize_session=False)
+        if recovered:
+            db.session.commit()
+            logger.warning(
+                "Recovered %s stale running workflow queue items back to pending",
+                recovered,
+            )
+
         # Find all pending items scheduled for now or earlier
         pending_items = WorkflowExecutionQueue.query.filter(
             WorkflowExecutionQueue.status == 'pending',
             WorkflowExecutionQueue.scheduled_at <= now
         ).limit(100).all()  # Process in batches
-        
+
         processed = 0
-        
+
         for item in pending_items:
+            # Claim item atomically to avoid duplicate execution in concurrent workers.
+            claimed = WorkflowExecutionQueue.query.filter_by(
+                id=item.id,
+                status='pending',
+            ).update({'status': 'running'}, synchronize_session=False)
+            if claimed == 0:
+                continue
+
+            db.session.commit()
+            item.status = 'running'
+
             try:
                 # Load the action
                 action = WorkflowAction.query.get(item.action_id)
                 if not action:
                     item.status = 'cancelled'
+                    db.session.commit()
                     continue
-                
+
                 # Load the entity
                 entity = WorkflowService._load_entity(item.entity_type, item.entity_id)
                 if not entity:
                     item.status = 'cancelled'
+                    db.session.commit()
                     continue
-                
+
                 # Execute the action
-                result = WorkflowService.execute_action(action, entity, {})
-                
+                WorkflowService.execute_action(action, entity, {})
+
                 # Update queue item
                 item.status = 'executed'
                 item.executed_at = datetime.utcnow()
-                
+                db.session.commit()
+
                 processed += 1
-                
+
             except Exception as e:
                 logger.error(f"Error processing queued action {item.id}: {e}")
-                item.status = 'cancelled'
-        
-        db.session.commit()
+                db.session.rollback()
+                try:
+                    item.status = 'cancelled'
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
         
         if processed > 0:
             logger.info(f"Processed {processed} queued workflow actions")
@@ -1344,7 +1419,7 @@ class WorkflowService:
         - deal_close_date_approaching (7 days before)
         """
         import models_crm as crm_models
-        from models_crm import WorkflowAutomation, Contact, Deal
+        from models_crm import WorkflowAutomation, Contact, Deal, WorkflowExecution
         from models import db
         from datetime import timedelta
         import json
@@ -1473,8 +1548,25 @@ class WorkflowService:
                 Deal.closedate <= seven_days_from_now,
                 Deal.closedate >= datetime.utcnow()
             ).limit(50).all()
+
+            start_of_day = datetime.combine(today, datetime.min.time())
             
             for deal in deals:
+                # Idempotency guard: if scheduler runs more than once per day,
+                # do not re-trigger the same workflow/deal pair on the same day.
+                already_triggered_today = WorkflowExecution.query.filter_by(
+                    workflow_id=workflow.id,
+                    entity_type='deal',
+                    entity_id=deal.id,
+                    status='completed',
+                    triggered_by='deal_close_date_approaching',
+                ).filter(
+                    WorkflowExecution.started_at >= start_of_day
+                ).first()
+
+                if already_triggered_today:
+                    continue
+
                 try:
                     days_until_close = (deal.closedate.date() - today).days
                     WorkflowService.trigger_event(
