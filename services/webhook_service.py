@@ -159,6 +159,73 @@ class WebhookService:
         return rows
 
     @staticmethod
+    def get_delivery(workspace_id: int, subscription_id: int, delivery_id: int):
+        return WebhookDelivery.query.filter_by(
+            id=delivery_id,
+            workspace_id=workspace_id,
+            subscription_id=subscription_id,
+        ).first()
+
+    @staticmethod
+    def get_delivery_stats(workspace_id: int, subscription_id: int, hours: int = 24):
+        hours = max(1, min(168, int(hours or 24)))
+        window_start = datetime.utcnow() - timedelta(hours=hours)
+
+        rows = WebhookDelivery.query.filter(
+            WebhookDelivery.workspace_id == workspace_id,
+            WebhookDelivery.subscription_id == subscription_id,
+            WebhookDelivery.created_at >= window_start,
+        ).all()
+
+        total = len(rows)
+        success = sum(1 for row in rows if row.status == 'success')
+        failed = sum(1 for row in rows if row.status == 'failed')
+        pending = sum(1 for row in rows if row.status == 'pending')
+
+        success_rate = 0.0
+        if total > 0:
+            success_rate = round((success / total) * 100.0, 2)
+
+        latest = (
+            WebhookDelivery.query.filter_by(
+                workspace_id=workspace_id,
+                subscription_id=subscription_id,
+            )
+            .order_by(WebhookDelivery.created_at.desc())
+            .first()
+        )
+
+        return {
+            'window_hours': hours,
+            'window_started_at': window_start.isoformat(),
+            'total': total,
+            'success': success,
+            'failed': failed,
+            'pending': pending,
+            'success_rate': success_rate,
+            'latest_delivery': WebhookService._serialize_delivery(latest) if latest else None,
+        }
+
+    @staticmethod
+    def retry_delivery(workspace_id: int, subscription: WebhookSubscription, delivery_id: int):
+        delivery = WebhookService.get_delivery(workspace_id, subscription.id, delivery_id)
+        if not delivery:
+            raise LookupError('Webhook delivery not found')
+        if delivery.status != 'failed':
+            raise ValueError('Only failed deliveries can be retried')
+
+        try:
+            payload = json.loads(delivery.payload or '{}')
+        except Exception as exc:
+            raise ValueError('Stored webhook payload is invalid') from exc
+
+        return WebhookService._deliver_with_retry(
+            subscription=subscription,
+            event_type=delivery.event_type,
+            payload=payload,
+        )
+
+    @staticmethod
     def _sign_payload(secret: str, payload_json: str) -> str:
         digest = hmac.new(secret.encode('utf-8'), payload_json.encode('utf-8'), sha256).hexdigest()
         return f'sha256={digest}'

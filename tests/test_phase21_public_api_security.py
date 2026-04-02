@@ -1,12 +1,15 @@
 import unittest
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from flask import Flask
 
 from models import User, Workspace, db
 import models_crm  # noqa: F401
-from models_crm import APIKey, OAuthAccessToken, OAuthClient
+from models_crm import APIKey, OAuthAccessToken, OAuthClient, WebhookDelivery
 from routes.public_api import bp as public_api_bp
 from services.api_auth_service import APIAuthService
+from services.webhook_service import WebhookService
 
 
 class TestPhase21PublicAPISecurity(unittest.TestCase):
@@ -83,6 +86,15 @@ class TestPhase21PublicAPISecurity(unittest.TestCase):
             redirect_uri='https://example.com/callback',
         )
         return client, client_secret, token_payload['access_token']
+
+    def _create_webhook_subscription(self):
+        return WebhookService.create_subscription(
+            workspace_id=self.ws1_id,
+            name='Phase21 Webhook',
+            target_url='https://example.com/webhooks/crm',
+            event_types=['deal.updated'],
+            created_by=self.user1_id,
+        )
 
     def test_revoke_api_key_deactivates_key_and_blocks_public_access(self):
         api_key_row, plaintext_key = APIAuthService.generate_api_key(
@@ -177,6 +189,120 @@ class TestPhase21PublicAPISecurity(unittest.TestCase):
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.get_json().get('error'), 'invalid_client')
+
+    def test_webhook_delivery_stats_returns_window_counts(self):
+        subscription = self._create_webhook_subscription()
+        now = datetime.utcnow()
+
+        db.session.add_all([
+            WebhookDelivery(
+                subscription_id=subscription.id,
+                workspace_id=self.ws1_id,
+                event_type='deal.updated',
+                status='success',
+                payload='{}',
+                signature='sig',
+                attempt_count=1,
+                max_attempts=3,
+                created_at=now - timedelta(hours=1),
+            ),
+            WebhookDelivery(
+                subscription_id=subscription.id,
+                workspace_id=self.ws1_id,
+                event_type='deal.updated',
+                status='failed',
+                payload='{}',
+                signature='sig',
+                attempt_count=3,
+                max_attempts=3,
+                created_at=now - timedelta(minutes=20),
+            ),
+            WebhookDelivery(
+                subscription_id=subscription.id,
+                workspace_id=self.ws1_id,
+                event_type='deal.updated',
+                status='pending',
+                payload='{}',
+                signature='sig',
+                attempt_count=1,
+                max_attempts=3,
+                created_at=now - timedelta(minutes=10),
+            ),
+        ])
+        db.session.commit()
+
+        with self.app.test_client() as client:
+            self._login(client, self.ws1_id, self.user1_id)
+            response = client.get(f'/api/v1/public-auth/webhooks/{subscription.id}/stats?hours=24')
+
+        self.assertEqual(response.status_code, 200)
+        stats = response.get_json().get('stats', {})
+        self.assertEqual(stats.get('total'), 3)
+        self.assertEqual(stats.get('success'), 1)
+        self.assertEqual(stats.get('failed'), 1)
+        self.assertEqual(stats.get('pending'), 1)
+
+    def test_retry_failed_webhook_delivery_creates_new_attempt(self):
+        subscription = self._create_webhook_subscription()
+
+        failed = WebhookDelivery(
+            subscription_id=subscription.id,
+            workspace_id=self.ws1_id,
+            event_type='deal.updated',
+            status='failed',
+            payload='{"event":"deal.updated","data":{"id":123}}',
+            signature='sig',
+            attempt_count=3,
+            max_attempts=3,
+        )
+        db.session.add(failed)
+        db.session.commit()
+
+        class _Response:
+            status_code = 200
+            text = 'ok'
+
+        with patch('services.webhook_service.requests.post', return_value=_Response()):
+            with self.app.test_client() as client:
+                self._login(client, self.ws1_id, self.user1_id)
+                response = client.post(
+                    f'/api/v1/public-auth/webhooks/{subscription.id}/deliveries/{failed.id}/retry'
+                )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload.get('status'), 'success')
+
+        rows = WebhookDelivery.query.filter_by(
+            workspace_id=self.ws1_id,
+            subscription_id=subscription.id,
+        ).all()
+        self.assertEqual(len(rows), 2)
+
+    def test_retry_non_failed_webhook_delivery_returns_400(self):
+        subscription = self._create_webhook_subscription()
+
+        success = WebhookDelivery(
+            subscription_id=subscription.id,
+            workspace_id=self.ws1_id,
+            event_type='deal.updated',
+            status='success',
+            payload='{}',
+            signature='sig',
+            attempt_count=1,
+            max_attempts=3,
+        )
+        db.session.add(success)
+        db.session.commit()
+
+        with self.app.test_client() as client:
+            self._login(client, self.ws1_id, self.user1_id)
+            response = client.post(
+                f'/api/v1/public-auth/webhooks/{subscription.id}/deliveries/{success.id}/retry'
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Only failed deliveries can be retried', response.get_json().get('error', ''))
 
 
 if __name__ == '__main__':

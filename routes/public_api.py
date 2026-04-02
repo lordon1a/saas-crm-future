@@ -306,6 +306,45 @@ def list_webhook_deliveries(subscription_id):
     return jsonify({'deliveries': [WebhookService.serialize_delivery(row) for row in rows]}), 200
 
 
+@bp.route('/api/v1/public-auth/webhooks/<int:subscription_id>/stats', methods=['GET'])
+@_agent_session_required
+def get_webhook_delivery_stats(subscription_id):
+    workspace_id = session.get('workspace_id')
+
+    subscription = WebhookService.get_subscription(workspace_id, subscription_id)
+    if not subscription:
+        return jsonify({'error': 'Webhook subscription not found'}), 404
+
+    hours = request.args.get('hours', 24)
+    try:
+        hours = int(hours)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'hours must be integer'}), 400
+
+    stats = WebhookService.get_delivery_stats(workspace_id, subscription_id, hours=hours)
+    return jsonify({'stats': stats}), 200
+
+
+@bp.route('/api/v1/public-auth/webhooks/<int:subscription_id>/deliveries/<int:delivery_id>/retry', methods=['POST'])
+@_agent_session_required
+def retry_webhook_delivery(subscription_id, delivery_id):
+    workspace_id = session.get('workspace_id')
+
+    subscription = WebhookService.get_subscription(workspace_id, subscription_id)
+    if not subscription:
+        return jsonify({'error': 'Webhook subscription not found'}), 404
+
+    try:
+        delivery = WebhookService.retry_delivery(workspace_id, subscription, delivery_id)
+    except LookupError as exc:
+        return jsonify({'error': str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+
+    payload = WebhookService.serialize_delivery(delivery)
+    return jsonify(payload), 200
+
+
 @bp.route('/api/v1/public-auth/webhooks/<int:subscription_id>/test', methods=['POST'])
 @_agent_session_required
 def test_webhook_delivery(subscription_id):
