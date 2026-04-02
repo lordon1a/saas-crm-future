@@ -15,7 +15,7 @@ class AnalyticsService:
     """Service for generating analytics and reports"""
     
     @staticmethod
-    def get_kpi_metrics(workspace_id):
+    def get_kpi_metrics(workspace_id, config=None):
         """
         Get critical KPI metrics
         
@@ -83,6 +83,250 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f'Failed to get KPI metrics: {e}')
+            raise
+
+    @staticmethod
+    def get_bar_chart_data(workspace_id, config=None):
+        """
+        Get bar chart data from pipeline stage distribution.
+        """
+        try:
+            distribution = AnalyticsService.get_pipeline_distribution(workspace_id)
+            stages = distribution.get('stages', [])
+
+            return {
+                'labels': [row.get('stage_name', 'Unknown') for row in stages],
+                'datasets': [
+                    {
+                        'label': 'Deal Count',
+                        'data': [int(row.get('deal_count', 0)) for row in stages],
+                    },
+                    {
+                        'label': 'Total Value',
+                        'data': [float(row.get('total_value', 0.0)) for row in stages],
+                    },
+                ],
+            }
+        except Exception as e:
+            logger.error(f'Failed to get bar chart data: {e}')
+            raise
+
+    @staticmethod
+    def get_funnel_data(workspace_id, config=None):
+        """
+        Get funnel view data with stage-by-stage conversion information.
+        """
+        try:
+            distribution = AnalyticsService.get_pipeline_distribution(workspace_id)
+            stages = distribution.get('stages', [])
+
+            total_deals = sum(int(row.get('deal_count', 0)) for row in stages)
+            previous_count = None
+            funnel_rows = []
+
+            for row in stages:
+                current_count = int(row.get('deal_count', 0))
+                if previous_count in (None, 0):
+                    step_conversion = 100.0 if current_count > 0 else 0.0
+                else:
+                    step_conversion = (current_count / previous_count) * 100
+
+                overall_conversion = (current_count / total_deals) * 100 if total_deals else 0.0
+                funnel_rows.append({
+                    'stage_name': row.get('stage_name', 'Unknown'),
+                    'deal_count': current_count,
+                    'total_value': float(row.get('total_value', 0.0)),
+                    'step_conversion_rate': round(step_conversion, 2),
+                    'overall_conversion_rate': round(overall_conversion, 2),
+                })
+                previous_count = current_count
+
+            return {
+                'stages': funnel_rows,
+                'total_open_deals': total_deals,
+            }
+        except Exception as e:
+            logger.error(f'Failed to get funnel data: {e}')
+            raise
+
+    @staticmethod
+    def get_pie_chart_data(workspace_id, config=None):
+        """
+        Get pie chart data for deal status distribution.
+        """
+        try:
+            status_rows = db.session.query(
+                Deal.status,
+                func.count(Deal.id).label('deal_count'),
+            ).filter(
+                Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
+            ).group_by(
+                Deal.status,
+            ).all()
+
+            labels = []
+            values = []
+            for status, count in status_rows:
+                labels.append(status or 'unknown')
+                values.append(int(count or 0))
+
+            return {
+                'labels': labels,
+                'values': values,
+                'total': sum(values),
+            }
+        except Exception as e:
+            logger.error(f'Failed to get pie chart data: {e}')
+            raise
+
+    @staticmethod
+    def get_leaderboard_data(workspace_id, config=None):
+        """
+        Get leaderboard data for top performers.
+        """
+        try:
+            config = config or {}
+            raw_limit = config.get('limit', 5)
+            try:
+                limit = int(raw_limit)
+            except (TypeError, ValueError):
+                limit = 5
+            limit = max(1, min(limit, 20))
+
+            return AnalyticsService.get_top_performers(workspace_id, limit=limit)
+        except Exception as e:
+            logger.error(f'Failed to get leaderboard data: {e}')
+            raise
+
+    @staticmethod
+    def get_activity_feed_data(workspace_id, config=None):
+        """
+        Get recent activity feed rows for dashboard widgets.
+        """
+        try:
+            config = config or {}
+            raw_limit = config.get('limit', 10)
+            try:
+                limit = int(raw_limit)
+            except (TypeError, ValueError):
+                limit = 10
+            limit = max(1, min(limit, 50))
+
+            rows = Activity.query.filter(
+                Activity.workspace_id == workspace_id,
+                Activity.is_deleted == False,
+            ).order_by(
+                Activity.created_at.desc()
+            ).limit(limit).all()
+
+            return {
+                'activities': [
+                    {
+                        'id': row.id,
+                        'activity_type': row.activity_type,
+                        'subject': row.subject,
+                        'created_at': row.created_at.isoformat() if row.created_at else None,
+                        'contact_id': row.contact_id,
+                        'company_id': row.company_id,
+                        'deal_id': row.deal_id,
+                        'user_id': row.user_id,
+                    }
+                    for row in rows
+                ]
+            }
+        except Exception as e:
+            logger.error(f'Failed to get activity feed data: {e}')
+            raise
+
+    @staticmethod
+    def get_goal_progress_data(workspace_id, config=None):
+        """
+        Get basic goal progress metrics for revenue and won deal count.
+        """
+        try:
+            config = config or {}
+            revenue_target = float(config.get('revenue_target', 0) or 0)
+            deals_target = int(config.get('deals_target', 0) or 0)
+
+            now = datetime.now(UTC)
+            period = (config.get('period') or 'month').lower()
+            if period == 'quarter':
+                quarter_start_month = ((now.month - 1) // 3) * 3 + 1
+                start_date = now.replace(month=quarter_start_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+            elif period == 'year':
+                start_date = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            else:
+                start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+            won_rows = Deal.query.filter(
+                Deal.workspace_id == workspace_id,
+                Deal.is_deleted == False,
+                Deal.status == 'won',
+                Deal.closed_at >= start_date,
+            ).all()
+
+            current_revenue = sum(float(row.value or 0) for row in won_rows)
+            current_deals = len(won_rows)
+
+            revenue_progress = (current_revenue / revenue_target * 100) if revenue_target > 0 else 0.0
+            deals_progress = (current_deals / deals_target * 100) if deals_target > 0 else 0.0
+
+            return {
+                'period': period,
+                'start_date': start_date.isoformat(),
+                'revenue_target': revenue_target,
+                'revenue_current': round(current_revenue, 2),
+                'revenue_progress_pct': round(revenue_progress, 2),
+                'deals_target': deals_target,
+                'deals_current': current_deals,
+                'deals_progress_pct': round(deals_progress, 2),
+            }
+        except Exception as e:
+            logger.error(f'Failed to get goal progress data: {e}')
+            raise
+
+    @staticmethod
+    def get_heatmap_data(workspace_id, config=None):
+        """
+        Get activity heatmap matrix by weekday and hour.
+        """
+        try:
+            config = config or {}
+            raw_days = config.get('days', 30)
+            try:
+                days = int(raw_days)
+            except (TypeError, ValueError):
+                days = 30
+            days = max(7, min(days, 365))
+
+            start_date = datetime.now(UTC) - timedelta(days=days)
+            rows = Activity.query.filter(
+                Activity.workspace_id == workspace_id,
+                Activity.is_deleted == False,
+                Activity.created_at >= start_date,
+            ).all()
+
+            matrix = [[0 for _ in range(24)] for _ in range(7)]
+            max_count = 0
+
+            for row in rows:
+                if not row.created_at:
+                    continue
+                weekday = row.created_at.weekday()  # Monday=0
+                hour = row.created_at.hour
+                matrix[weekday][hour] += 1
+                if matrix[weekday][hour] > max_count:
+                    max_count = matrix[weekday][hour]
+
+            return {
+                'days': ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+                'hours': list(range(24)),
+                'matrix': matrix,
+                'max_count': max_count,
+            }
+        except Exception as e:
+            logger.error(f'Failed to get heatmap data: {e}')
             raise
     
     @staticmethod
