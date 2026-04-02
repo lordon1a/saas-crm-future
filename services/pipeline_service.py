@@ -852,33 +852,42 @@ class PipelineService:
         if pipeline_id:
             query = query.filter_by(pipeline_id=pipeline_id)
         
-        deals = query.all()
+        deals = query.options(db.joinedload(Deal.stage)).all()
         
         # Calculate totals
-        total_forecast = sum(deal.get_weighted_value() for deal in deals)
+        total_forecast = sum(float(deal.get_weighted_value() or 0.0) for deal in deals)
         
         # Group by stage
         stage_data = {}
         for deal in deals:
-            stage_name = deal.stage.name
+            stage_name = deal.stage.name if deal.stage else 'Unknown'
+            stage_order = deal.stage.order if deal.stage and deal.stage.order is not None else 9999
             if stage_name not in stage_data:
                 stage_data[stage_name] = {
                     'stage_name': stage_name,
-                    'stage_order': deal.stage.order,
+                    'stage_order': stage_order,
                     'deal_count': 0,
                     'total_value': 0,
                     'weighted_value': 0
                 }
             
             stage_data[stage_name]['deal_count'] += 1
-            stage_data[stage_name]['total_value'] += float(deal.value)
-            stage_data[stage_name]['weighted_value'] += deal.get_weighted_value()
+            stage_data[stage_name]['total_value'] += float(deal.value or 0.0)
+            stage_data[stage_name]['weighted_value'] += float(deal.get_weighted_value() or 0.0)
         
         # Sort by stage order
         by_stage = sorted(stage_data.values(), key=lambda x: x['stage_order'])
+        by_stage = [
+            {
+                **stage,
+                'total_value': round(float(stage['total_value']), 2),
+                'weighted_value': round(float(stage['weighted_value']), 2),
+            }
+            for stage in by_stage
+        ]
         
         return {
-            'total_forecast': total_forecast,
+            'total_forecast': round(float(total_forecast), 2),
             'total_deals': len(deals),
             'by_stage': by_stage,
             'by_category': {
