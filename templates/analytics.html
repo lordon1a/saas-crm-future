@@ -371,6 +371,7 @@
 
     <script>
         const API = '/api';
+        const ANALYTICS_V1 = '/api/v1/analytics';
         let trendChart, tagChart, customerChart;
         let pipelineDashboardChart, winLossDashboardChart;
         let dashboardInsightsEnabled = false;
@@ -631,7 +632,7 @@
                 return;
             }
             try {
-                const res = await fetch('/api/analytics/dashboard');
+                const res = await fetch(`${ANALYTICS_V1}/dashboard`);
                 if (!res.ok) return;
                 const data = await res.json();
 
@@ -685,7 +686,7 @@
 
         async function loadReports() {
             try {
-                const res = await fetch('/api/analytics/reports');
+                const res = await fetch(`${ANALYTICS_V1}/reports`);
                 const data = await res.json();
                 const list = document.getElementById('reportList');
                 const reports = data.reports || [];
@@ -729,7 +730,7 @@
             } : {};
 
             try {
-                const res = await fetch('/api/analytics/reports', {
+                const res = await fetch(`${ANALYTICS_V1}/reports`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -758,7 +759,7 @@
             }
 
             try {
-                const res = await fetch('/api/analytics/reports/custom-query', {
+                const res = await fetch(`${ANALYTICS_V1}/reports/custom-query`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -779,7 +780,7 @@
 
         async function runReport(reportId) {
             try {
-                const res = await fetch(`/api/analytics/reports/${reportId}/run`);
+                const res = await fetch(`${ANALYTICS_V1}/reports/${reportId}/run`);
                 const data = await res.json();
                 if (!res.ok) {
                     alert(data.error || 'Rapor çalıştırılamadı');
@@ -792,7 +793,7 @@
         }
 
         function exportReport(reportId, format) {
-            window.open(`/api/analytics/reports/${reportId}/export?format=${encodeURIComponent(format)}`, '_blank');
+            window.open(`${ANALYTICS_V1}/reports/${reportId}/export?format=${encodeURIComponent(format)}`, '_blank');
         }
 
         async function createSchedule(reportId) {
@@ -807,7 +808,7 @@
             }
 
             try {
-                const res = await fetch('/api/analytics/report-schedules', {
+                const res = await fetch(`${ANALYTICS_V1}/report-schedules`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

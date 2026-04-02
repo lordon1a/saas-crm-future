@@ -2,13 +2,14 @@
 Sales Analytics API Routes
 Provides comprehensive analytics endpoints for pipeline, deals, and performance metrics
 """
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, send_file
 from models import db
 from models_crm import Deal, DealStage, Pipeline, DashboardWidget
 from datetime import datetime, timedelta, UTC
 from sqlalchemy import func
 import logging
 import json
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,10 @@ def login_required_api(f):
             
         return f(*args, **kwargs)
     return decorated
+
+
+# Keep endpoint decorators aligned with repository convention.
+login_required = login_required_api
 
 
 @bp.route('/overview', methods=['GET'])
@@ -627,4 +632,207 @@ def get_widget_data(widget_id):
     except Exception as e:
         logger.error(f'Get widget data error: {e}', exc_info=True)
         return jsonify({'error': 'Failed to fetch widget data'}), 500
+
+
+# =============================================================================
+# Saved Reports & Scheduling Endpoints
+# =============================================================================
+
+@bp.route('/reports', methods=['GET'])
+@login_required
+def list_saved_reports():
+    """List saved reports for current workspace."""
+    try:
+        from services.report_service import ReportService
+
+        workspace_id = session.get('workspace_id')
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+
+        reports = ReportService.list_reports(workspace_id)
+        return jsonify({'success': True, 'reports': reports}), 200
+
+    except Exception as e:
+        logger.error(f'List reports error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to fetch reports'}), 500
+
+
+@bp.route('/reports', methods=['POST'])
+@login_required
+def create_saved_report():
+    """Create a saved report definition."""
+    try:
+        from services.report_service import ReportService
+
+        workspace_id = session.get('workspace_id')
+        user_id = session.get('user_id')
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+
+        data = request.get_json(silent=True) or {}
+        report = ReportService.create_report(
+            workspace_id=workspace_id,
+            created_by=user_id,
+            name=data.get('name'),
+            report_type=data.get('report_type'),
+            config=data.get('config') or {}
+        )
+
+        return jsonify({
+            'success': True,
+            'report': ReportService.serialize_report(report)
+        }), 201
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Create report error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to create report'}), 500
+
+
+@bp.route('/reports/custom-query', methods=['POST'])
+@login_required
+def run_custom_report_preview():
+    """Preview a custom report query without saving a report."""
+    try:
+        from services.report_service import ReportService
+
+        workspace_id = session.get('workspace_id')
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+
+        data = request.get_json(silent=True) or {}
+        result = ReportService.run_custom_report(workspace_id, {
+            'dimension': data.get('dimension'),
+            'metric': data.get('metric'),
+        })
+
+        return jsonify({
+            'success': True,
+            'report_type': 'custom',
+            'generated_at': datetime.now(UTC).isoformat(),
+            'data': result,
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Custom report preview error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to run custom report'}), 500
+
+
+@bp.route('/reports/<int:report_id>/run', methods=['GET'])
+@login_required
+def run_saved_report(report_id):
+    """Execute a saved report and return the output."""
+    try:
+        from services.report_service import ReportService
+
+        workspace_id = session.get('workspace_id')
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+
+        report = ReportService.get_report(report_id, workspace_id)
+        if not report:
+            return jsonify({'error': 'Report not found'}), 404
+
+        result = ReportService.run_report(report, workspace_id)
+        return jsonify({
+            'success': True,
+            'report': ReportService.serialize_report(report),
+            **result,
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Run report error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to run report'}), 500
+
+
+@bp.route('/reports/<int:report_id>/export', methods=['GET'])
+@login_required
+def export_saved_report(report_id):
+    """Export a saved report output as Excel or PDF."""
+    try:
+        from services.report_service import ReportService
+
+        workspace_id = session.get('workspace_id')
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+
+        export_format = (request.args.get('format', 'excel') or 'excel').lower()
+        if export_format not in {'excel', 'pdf'}:
+            return jsonify({'error': 'Invalid export format'}), 400
+
+        report = ReportService.get_report(report_id, workspace_id)
+        if not report:
+            return jsonify({'error': 'Report not found'}), 404
+
+        report_result = ReportService.run_report(report, workspace_id)
+
+        if export_format == 'pdf':
+            payload = ReportService.export_pdf(report.name, report_result)
+            mimetype = 'application/pdf'
+            extension = 'pdf'
+        else:
+            payload = ReportService.export_excel(report.name, report_result)
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            extension = 'xlsx'
+
+        base_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in (report.name or 'report'))
+        safe_name = base_name.strip('_') or 'report'
+
+        return send_file(
+            io.BytesIO(payload),
+            as_attachment=True,
+            download_name=f'{safe_name}.{extension}',
+            mimetype=mimetype,
+        )
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Export report error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to export report'}), 500
+
+
+@bp.route('/report-schedules', methods=['POST'])
+@login_required
+def create_report_schedule():
+    """Create a report delivery schedule."""
+    try:
+        from services.report_service import ReportService
+
+        workspace_id = session.get('workspace_id')
+        if not workspace_id or not isinstance(workspace_id, int):
+            return jsonify({'error': 'Invalid workspace'}), 400
+
+        data = request.get_json(silent=True) or {}
+        schedule = ReportService.create_schedule(
+            workspace_id=workspace_id,
+            report_id=data.get('report_id'),
+            frequency=data.get('frequency'),
+            delivery_channel=(data.get('delivery_channel') or 'email'),
+            delivery_target=data.get('delivery_target'),
+        )
+
+        return jsonify({
+            'success': True,
+            'schedule': {
+                'id': schedule.id,
+                'report_id': schedule.report_id,
+                'frequency': schedule.frequency,
+                'delivery_channel': schedule.delivery_channel,
+                'delivery_target': schedule.delivery_target,
+                'is_active': schedule.is_active,
+                'created_at': schedule.created_at.isoformat() if schedule.created_at else None,
+            },
+        }), 201
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Create report schedule error: {e}', exc_info=True)
+        return jsonify({'error': 'Failed to create report schedule'}), 500
 

@@ -26,9 +26,12 @@ class ActionBell {
      * Inserts bell icon with badge and dropdown into topbar
      */
     createBellHTML() {
-        const topbar = document.querySelector('header');
+        const userMenuButton = document.querySelector('[data-topbar-menu-button]');
+        const topbar = (userMenuButton && userMenuButton.closest('header, .topbar'))
+            || document.querySelector('.topbar')
+            || document.querySelector('header');
+
         if (!topbar) {
-            console.error('Topbar not found for action bell');
             return;
         }
 
@@ -64,18 +67,21 @@ class ActionBell {
             </div>
         `;
 
-        // Find the right container - look for the div with buttons in the header
-        const buttonContainer = topbar.querySelector('.flex.items-center.gap-1\\.5, .flex.items-center.gap-2');
-        const userMenuButton = topbar.querySelector('[data-topbar-menu-button]');
+        // Find the right container near user menu and inject action bell before it.
+        const buttonContainer = userMenuButton
+            ? userMenuButton.closest('.flex.items-center')
+            : topbar.querySelector('.flex.items-center.gap-1\\.5, .flex.items-center.gap-2, .flex.items-center');
         
-        if (buttonContainer && userMenuButton) {
+        if (buttonContainer && userMenuButton && userMenuButton.parentElement) {
             // Insert before user menu button
             buttonContainer.insertBefore(bellContainer, userMenuButton.parentElement);
+        } else if (buttonContainer) {
+            // Fallback: append at the end of the controls row
+            buttonContainer.appendChild(bellContainer);
         } else if (userMenuButton) {
             // Fallback: insert before user menu
             userMenuButton.parentElement.parentElement.insertBefore(bellContainer, userMenuButton.parentElement);
         } else {
-            console.error('Could not find suitable location for action bell');
             return;
         }
 
