@@ -69,6 +69,24 @@ class WorkflowService:
         'wait': 'Bekle',
         'ai_agent': 'AI Agent',
     }
+
+    @staticmethod
+    def _should_record_enrollment(execution_result: Dict[str, Any]) -> bool:
+        """
+        Decide whether an execution should create an enrollment record.
+
+        Failed/error/cancelled executions are excluded so re-enrollment
+        policies do not block legitimate retries after unsuccessful runs.
+        """
+        if not isinstance(execution_result, dict):
+            return False
+
+        status = str(execution_result.get('status', '')).strip().lower()
+        if not status:
+            # Backward compatibility: treat missing status as successful.
+            return True
+
+        return status not in {'failed', 'error', 'cancelled'}
     
     @staticmethod
     def _check_enrollment_allowed(workflow, entity_type: str, entity_id: int) -> bool:
@@ -182,34 +200,58 @@ class WorkflowService:
             
             # Process each matching workflow
             for workflow in workflows:
-                # Legacy condition rows only apply to old-style workflows (no canvas_data)
-                if not workflow.canvas_data and not WorkflowService.evaluate_conditions(workflow, entity, context):
-                    logger.debug(f"Workflow {workflow.id} conditions not met, skipping")
-                    continue
+                try:
+                    # Legacy condition rows only apply to old-style workflows (no canvas_data)
+                    if not workflow.canvas_data and not WorkflowService.evaluate_conditions(workflow, entity, context):
+                        logger.debug(f"Workflow {workflow.id} conditions not met, skipping")
+                        continue
 
-                # Check enrollment allowed based on re_enrollment_mode
-                if not WorkflowService._check_enrollment_allowed(workflow, entity_type, entity_id):
-                    logger.debug(f"Workflow {workflow.id} enrollment not allowed for {entity_type}:{entity_id}, skipping")
-                    continue
+                    # Check enrollment allowed based on re_enrollment_mode
+                    if not WorkflowService._check_enrollment_allowed(workflow, entity_type, entity_id):
+                        logger.debug(f"Workflow {workflow.id} enrollment not allowed for {entity_type}:{entity_id}, skipping")
+                        continue
 
-                # Canvas-based workflows → use graph runner
-                if workflow.canvas_data:
-                    execution_result = WorkflowService._execute_graph_workflow(
-                        workflow, entity, entity_type, entity_id, trigger_type, context
+                    # Canvas-based workflows → use graph runner
+                    if workflow.canvas_data:
+                        execution_result = WorkflowService._execute_graph_workflow(
+                            workflow, entity, entity_type, entity_id, trigger_type, context
+                        )
+                    else:
+                        # Legacy action-row based execution
+                        execution_result = WorkflowService._execute_workflow(
+                            workflow, entity, trigger_type, context
+                        )
+
+                    # Create enrollment record only for successful execution states.
+                    if WorkflowService._should_record_enrollment(execution_result):
+                        WorkflowService._create_enrollment_record(
+                            workflow.id, entity_type, entity_id, trigger_type
+                        )
+                    else:
+                        logger.info(
+                            "Skipping enrollment record for workflow %s due to execution status=%s",
+                            workflow.id,
+                            execution_result.get('status'),
+                        )
+
+                    results['executions'].append(execution_result)
+                    results['workflows_triggered'] += 1
+
+                except Exception as workflow_error:
+                    logger.error(
+                        "Error executing workflow %s for %s:%s: %s",
+                        getattr(workflow, 'id', 'unknown'),
+                        entity_type,
+                        entity_id,
+                        workflow_error,
+                        exc_info=True,
                     )
-                else:
-                    # Legacy action-row based execution
-                    execution_result = WorkflowService._execute_workflow(
-                        workflow, entity, trigger_type, context
-                    )
-                
-                # Create enrollment record after successful execution
-                WorkflowService._create_enrollment_record(
-                    workflow.id, entity_type, entity_id, trigger_type
-                )
-                
-                results['executions'].append(execution_result)
-                results['workflows_triggered'] += 1
+                    results['executions'].append({
+                        'workflow_id': getattr(workflow, 'id', None),
+                        'status': 'failed',
+                        'error': str(workflow_error),
+                    })
+                    continue
             
             return results
             

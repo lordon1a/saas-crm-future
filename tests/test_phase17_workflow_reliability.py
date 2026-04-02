@@ -229,6 +229,188 @@ class TestPhase17WorkflowReliability(unittest.TestCase):
 
         trigger_event_mock.assert_not_called()
 
+    def test_trigger_event_canvas_path_skips_legacy_conditions(self):
+        workflow = SimpleNamespace(
+            id=901,
+            workspace_id=44,
+            canvas_data='{"nodes":[]}',
+            re_enrollment_mode='always',
+        )
+
+        workflow_query = MagicMock()
+        workflow_query.filter_by.return_value.all.return_value = [workflow]
+        fake_workflow_model = type('FakeWorkflowModel', (), {'query': workflow_query})
+        fake_execution_model = type('FakeExecutionModel', (), {})
+
+        entity = SimpleNamespace(id=77, workspace_id=44)
+
+        with patch('models_crm.WorkflowAutomation', fake_workflow_model), patch(
+            'models_crm.WorkflowExecution', fake_execution_model
+        ), patch.object(
+            WorkflowService, '_load_entity', return_value=entity
+        ), patch.object(
+            WorkflowService, 'evaluate_conditions', return_value=False
+        ) as evaluate_mock, patch.object(
+            WorkflowService, '_check_enrollment_allowed', return_value=True
+        ) as enrollment_allowed_mock, patch.object(
+            WorkflowService,
+            '_execute_graph_workflow',
+            return_value={'status': 'completed', 'workflow_id': workflow.id},
+        ) as execute_graph_mock, patch.object(
+            WorkflowService, '_execute_workflow'
+        ) as execute_legacy_mock, patch.object(
+            WorkflowService, '_create_enrollment_record'
+        ) as enrollment_record_mock:
+            result = WorkflowService.trigger_event(
+                workspace_id=44,
+                trigger_type='deal_created',
+                entity_type='deal',
+                entity_id=77,
+                context={'source': 'unit-test'},
+            )
+
+        evaluate_mock.assert_not_called()
+        enrollment_allowed_mock.assert_called_once_with(workflow, 'deal', 77)
+        execute_graph_mock.assert_called_once()
+        execute_legacy_mock.assert_not_called()
+        enrollment_record_mock.assert_called_once_with(workflow.id, 'deal', 77, 'deal_created')
+        self.assertEqual(result.get('workflows_triggered'), 1)
+
+    def test_trigger_event_legacy_path_respects_conditions(self):
+        workflow = SimpleNamespace(
+            id=902,
+            workspace_id=45,
+            canvas_data=None,
+            re_enrollment_mode='always',
+        )
+
+        workflow_query = MagicMock()
+        workflow_query.filter_by.return_value.all.return_value = [workflow]
+        fake_workflow_model = type('FakeWorkflowModel', (), {'query': workflow_query})
+        fake_execution_model = type('FakeExecutionModel', (), {})
+
+        entity = SimpleNamespace(id=88, workspace_id=45)
+
+        with patch('models_crm.WorkflowAutomation', fake_workflow_model), patch(
+            'models_crm.WorkflowExecution', fake_execution_model
+        ), patch.object(
+            WorkflowService, '_load_entity', return_value=entity
+        ), patch.object(
+            WorkflowService, 'evaluate_conditions', return_value=False
+        ) as evaluate_mock, patch.object(
+            WorkflowService, '_check_enrollment_allowed'
+        ) as enrollment_allowed_mock, patch.object(
+            WorkflowService, '_execute_workflow'
+        ) as execute_legacy_mock, patch.object(
+            WorkflowService, '_create_enrollment_record'
+        ) as enrollment_record_mock:
+            result = WorkflowService.trigger_event(
+                workspace_id=45,
+                trigger_type='deal_created',
+                entity_type='deal',
+                entity_id=88,
+                context={},
+            )
+
+        evaluate_mock.assert_called_once_with(workflow, entity, {})
+        enrollment_allowed_mock.assert_not_called()
+        execute_legacy_mock.assert_not_called()
+        enrollment_record_mock.assert_not_called()
+        self.assertEqual(result.get('workflows_triggered'), 0)
+
+    def test_trigger_event_does_not_record_enrollment_when_execution_failed(self):
+        workflow = SimpleNamespace(
+            id=903,
+            workspace_id=46,
+            canvas_data=None,
+            re_enrollment_mode='always',
+        )
+
+        workflow_query = MagicMock()
+        workflow_query.filter_by.return_value.all.return_value = [workflow]
+        fake_workflow_model = type('FakeWorkflowModel', (), {'query': workflow_query})
+        fake_execution_model = type('FakeExecutionModel', (), {})
+
+        entity = SimpleNamespace(id=99, workspace_id=46)
+
+        with patch('models_crm.WorkflowAutomation', fake_workflow_model), patch(
+            'models_crm.WorkflowExecution', fake_execution_model
+        ), patch.object(
+            WorkflowService, '_load_entity', return_value=entity
+        ), patch.object(
+            WorkflowService, 'evaluate_conditions', return_value=True
+        ), patch.object(
+            WorkflowService, '_check_enrollment_allowed', return_value=True
+        ), patch.object(
+            WorkflowService,
+            '_execute_workflow',
+            return_value={'status': 'failed', 'error': 'boom'},
+        ), patch.object(
+            WorkflowService, '_create_enrollment_record'
+        ) as enrollment_record_mock:
+            result = WorkflowService.trigger_event(
+                workspace_id=46,
+                trigger_type='deal_created',
+                entity_type='deal',
+                entity_id=99,
+                context={},
+            )
+
+        enrollment_record_mock.assert_not_called()
+        self.assertEqual(result.get('workflows_triggered'), 1)
+        self.assertEqual(result['executions'][0].get('status'), 'failed')
+
+    def test_trigger_event_continues_when_one_workflow_raises(self):
+        workflow_a = SimpleNamespace(
+            id=904,
+            workspace_id=47,
+            canvas_data=None,
+            re_enrollment_mode='always',
+        )
+        workflow_b = SimpleNamespace(
+            id=905,
+            workspace_id=47,
+            canvas_data=None,
+            re_enrollment_mode='always',
+        )
+
+        workflow_query = MagicMock()
+        workflow_query.filter_by.return_value.all.return_value = [workflow_a, workflow_b]
+        fake_workflow_model = type('FakeWorkflowModel', (), {'query': workflow_query})
+        fake_execution_model = type('FakeExecutionModel', (), {})
+
+        entity = SimpleNamespace(id=100, workspace_id=47)
+
+        with patch('models_crm.WorkflowAutomation', fake_workflow_model), patch(
+            'models_crm.WorkflowExecution', fake_execution_model
+        ), patch.object(
+            WorkflowService, '_load_entity', return_value=entity
+        ), patch.object(
+            WorkflowService, 'evaluate_conditions', return_value=True
+        ), patch.object(
+            WorkflowService, '_check_enrollment_allowed', return_value=True
+        ), patch.object(
+            WorkflowService,
+            '_execute_workflow',
+            side_effect=[RuntimeError('first failed'), {'status': 'completed'}],
+        ), patch.object(
+            WorkflowService, '_create_enrollment_record'
+        ) as enrollment_record_mock:
+            result = WorkflowService.trigger_event(
+                workspace_id=47,
+                trigger_type='deal_created',
+                entity_type='deal',
+                entity_id=100,
+                context={},
+            )
+
+        self.assertEqual(result.get('workflows_triggered'), 1)
+        self.assertEqual(len(result.get('executions', [])), 2)
+        self.assertEqual(result['executions'][0].get('workflow_id'), workflow_a.id)
+        self.assertEqual(result['executions'][0].get('status'), 'failed')
+        self.assertEqual(result['executions'][1].get('status'), 'completed')
+        enrollment_record_mock.assert_called_once_with(workflow_b.id, 'deal', 100, 'deal_created')
+
 
 if __name__ == '__main__':
     unittest.main()
