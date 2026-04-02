@@ -11,6 +11,7 @@ from config import Config
 from models import Conversation, Customer, Message, db
 from models_crm import (
     Activity,
+    Contact,
     EmailSendQueue,
     EmailSequence,
     EmailSequenceEnrollment,
@@ -1205,6 +1206,16 @@ For security reasons, never share this link with anyone.
         ).first()
         if not sequence:
             raise ValueError('Email sequence not found or inactive')
+
+        contact = Contact.query.filter_by(
+            id=contact_id,
+            workspace_id=workspace_id,
+            is_deleted=False,
+        ).first()
+        if not contact:
+            raise ValueError('Contact not found')
+        if not contact.email:
+            raise ValueError('Contact does not have an email address')
         
         # Get first step
         steps = sorted(sequence.steps, key=lambda s: s.step_order)
@@ -1351,7 +1362,7 @@ For security reasons, never share this link with anyone.
         return {'processed': processed, 'errors': errors}
 
     @staticmethod
-    def unenroll_contact(enrollment_id, reason):
+    def unenroll_contact(enrollment_id, reason, workspace_id=None):
         """
         Sets status='stopped', stopped_reason=reason.
         
@@ -1371,6 +1382,9 @@ For security reasons, never share this link with anyone.
         
         enrollment = EmailSequenceEnrollment.query.get(enrollment_id)
         if not enrollment:
+            raise ValueError('Enrollment not found')
+
+        if workspace_id and int(enrollment.workspace_id) != int(workspace_id):
             raise ValueError('Enrollment not found')
         
         if enrollment.status == 'stopped':
@@ -1443,7 +1457,11 @@ For security reasons, never share this link with anyone.
         unenrolled_ids = []
         for enrollment in enrollments:
             try:
-                EmailHubService.unenroll_contact(enrollment.id, reason='reply_detected')
+                EmailHubService.unenroll_contact(
+                    enrollment.id,
+                    reason='reply_detected',
+                    workspace_id=workspace_id,
+                )
                 unenrolled_ids.append(enrollment.id)
             except Exception as exc:
                 logger.error(

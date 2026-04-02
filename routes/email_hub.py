@@ -206,7 +206,7 @@ def unified_inbox():
 
 
 @email_hub_bp.route('/sequences/<int:sequence_id>/enroll', methods=['POST'])
-@login_required
+@write_access_required
 def enroll_contact_in_sequence(sequence_id):
     """Enroll a contact in an email sequence."""
     workspace_id = session.get('workspace_id')
@@ -226,15 +226,19 @@ def enroll_contact_in_sequence(sequence_id):
         )
         return jsonify({'success': True, 'data': {'id': enrollment.id}}), 201
     except ValueError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        message = str(exc)
+        if message in {'Contact not found', 'Email sequence not found or inactive'}:
+            return jsonify({'success': False, 'error': message}), 404
+        return jsonify({'success': False, 'error': message}), 400
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 500
 
 
 @email_hub_bp.route('/enrollments/<int:enrollment_id>', methods=['DELETE'])
-@login_required
+@write_access_required
 def unenroll_contact(enrollment_id):
     """Unenroll a contact from a sequence."""
+    workspace_id = session.get('workspace_id')
     payload = request.get_json(silent=True) or {}
     reason = payload.get('reason', 'manual')
 
@@ -242,10 +246,14 @@ def unenroll_contact(enrollment_id):
         enrollment = EmailHubService.unenroll_contact(
             enrollment_id=enrollment_id,
             reason=reason,
+            workspace_id=workspace_id,
         )
         return jsonify({'success': True, 'data': {'id': enrollment.id}})
     except ValueError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        message = str(exc)
+        if message == 'Enrollment not found':
+            return jsonify({'success': False, 'error': message}), 404
+        return jsonify({'success': False, 'error': message}), 400
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 500
 
