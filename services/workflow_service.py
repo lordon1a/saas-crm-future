@@ -124,26 +124,30 @@ class WorkflowService:
         return True
     
     @staticmethod
-    def _create_enrollment_record(workflow_id: int, entity_type: str, entity_id: int, trigger_type: str):
+    def _create_enrollment_record(
+        workflow_id: int,
+        workspace_id: int,
+        entity_type: str,
+        entity_id: int,
+    ):
         """
         Create a WorkflowEnrollment record to track that an entity was enrolled in a workflow.
         
         Args:
             workflow_id: ID of the workflow
+            workspace_id: ID of the workspace
             entity_type: Type of entity (deal, contact, task)
             entity_id: ID of the entity
-            trigger_type: The trigger type that caused enrollment
         """
         from models_crm import WorkflowEnrollment, db
-        from datetime import datetime
         
         try:
             enrollment = WorkflowEnrollment(
                 workflow_id=workflow_id,
+                workspace_id=workspace_id,
                 entity_id=entity_id,
                 entity_type=entity_type,
                 enrolled_at=datetime.utcnow(),
-                trigger_type=trigger_type
             )
             db.session.add(enrollment)
             db.session.commit()
@@ -225,7 +229,10 @@ class WorkflowService:
                     # Create enrollment record only for successful execution states.
                     if WorkflowService._should_record_enrollment(execution_result):
                         WorkflowService._create_enrollment_record(
-                            workflow.id, entity_type, entity_id, trigger_type
+                            workflow.id,
+                            workspace_id,
+                            entity_type,
+                            entity_id,
                         )
                     else:
                         logger.info(

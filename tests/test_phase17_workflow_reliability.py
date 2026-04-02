@@ -273,7 +273,7 @@ class TestPhase17WorkflowReliability(unittest.TestCase):
         enrollment_allowed_mock.assert_called_once_with(workflow, 'deal', 77)
         execute_graph_mock.assert_called_once()
         execute_legacy_mock.assert_not_called()
-        enrollment_record_mock.assert_called_once_with(workflow.id, 'deal', 77, 'deal_created')
+        enrollment_record_mock.assert_called_once_with(workflow.id, 44, 'deal', 77)
         self.assertEqual(result.get('workflows_triggered'), 1)
 
     def test_trigger_event_legacy_path_respects_conditions(self):
@@ -409,7 +409,35 @@ class TestPhase17WorkflowReliability(unittest.TestCase):
         self.assertEqual(result['executions'][0].get('workflow_id'), workflow_a.id)
         self.assertEqual(result['executions'][0].get('status'), 'failed')
         self.assertEqual(result['executions'][1].get('status'), 'completed')
-        enrollment_record_mock.assert_called_once_with(workflow_b.id, 'deal', 100, 'deal_created')
+        enrollment_record_mock.assert_called_once_with(workflow_b.id, 47, 'deal', 100)
+
+    def test_create_enrollment_record_uses_workspace_scope(self):
+        created = []
+
+        class FakeEnrollment:
+            def __init__(self, **kwargs):
+                if 'trigger_type' in kwargs:
+                    raise AssertionError('trigger_type must not be set on WorkflowEnrollment')
+                self.__dict__.update(kwargs)
+                created.append(self)
+
+        db_mock = SimpleNamespace(session=MagicMock())
+
+        with patch('models_crm.WorkflowEnrollment', FakeEnrollment), patch('models_crm.db', db_mock):
+            WorkflowService._create_enrollment_record(
+                workflow_id=777,
+                workspace_id=66,
+                entity_type='deal',
+                entity_id=909,
+            )
+
+        self.assertEqual(len(created), 1)
+        self.assertEqual(created[0].workflow_id, 777)
+        self.assertEqual(created[0].workspace_id, 66)
+        self.assertEqual(created[0].entity_type, 'deal')
+        self.assertEqual(created[0].entity_id, 909)
+        db_mock.session.add.assert_called_once_with(created[0])
+        db_mock.session.commit.assert_called_once()
 
 
 if __name__ == '__main__':
