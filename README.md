@@ -12,7 +12,15 @@
 
 <br/>
 
-![Dashboard Preview](docs/assets/hero.jpg)
+<div align="center">
+  <img src="docs/assets/dashboard_1.png" width="800" alt="Dashboard View 1" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
+  <br/><br/>
+  <img src="docs/assets/dashboard_2.png" width="49%" alt="View 2" style="border-radius: 8px;"/>
+  <img src="docs/assets/dashboard_3.png" width="49%" alt="View 3" style="border-radius: 8px;"/>
+  <br/><br/>
+  <img src="docs/assets/dashboard_4.png" width="49%" alt="View 4" style="border-radius: 8px;"/>
+  <img src="docs/assets/dashboard_5.png" width="49%" alt="View 5" style="border-radius: 8px;"/>
+</div>
 
 <br/>
 
